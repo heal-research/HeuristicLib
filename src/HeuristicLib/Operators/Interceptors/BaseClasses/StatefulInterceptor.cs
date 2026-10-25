@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
 /// It must not contain operator or algorithm configurations, executors or executor resolution facilities.
-/// <see cref="CreateExecutionState"/> must return a fresh state object. Resolution requests it once per owning execution state, and every executor built there shares it.
+/// <see cref="CreateScopedState"/> must return a fresh state object. Resolution requests it once per owning scope, and every executor built there shares it.
 /// Calls are not inherently thread safe.
 /// </remarks>
 public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState>
@@ -19,18 +19,18 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TProblem, T
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
 
-    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState operatorState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     protected sealed override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
-    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState state)
+    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState, TState> interceptor, TState operatorState)
         : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            interceptor.Transform(currentState, previousState, state, random, searchSpace, problem);
+            interceptor.Transform(currentState, previousState, operatorState, random, searchSpace, problem);
     }
 }
 
@@ -40,18 +40,18 @@ public abstract record StatefulInterceptor<TCandidate, TSearchSpace, TSearchStat
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
 
-    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState operatorState, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     protected sealed override IInterceptionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
-    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState state)
+    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchSpace, TSearchState, TState> interceptor, TState operatorState)
         : InterceptionExecutor<TCandidate, TSearchSpace, TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
-            interceptor.Transform(currentState, previousState, state, random, searchSpace);
+            interceptor.Transform(currentState, previousState, operatorState, random, searchSpace);
     }
 }
 
@@ -60,17 +60,17 @@ public abstract record StatefulInterceptor<TCandidate, TSearchState, TState>
     where TSearchState : class, ISearchState
     where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
 
-    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState state, IRandomNumberGenerator random);
+    protected abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, TState operatorState, IRandomNumberGenerator random);
 
     protected sealed override IInterceptionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
-    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState state)
+    private sealed class Executor(StatefulInterceptor<TCandidate, TSearchState, TState> interceptor, TState operatorState)
         : InterceptionExecutor<TCandidate, TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) =>
-            interceptor.Transform(currentState, previousState, state, random);
+            interceptor.Transform(currentState, previousState, operatorState, random);
     }
 }

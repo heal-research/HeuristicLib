@@ -55,15 +55,15 @@ var algorithm = GeneticAlgorithm.For(problem)
 
 Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs the operator does not use. Choose a search space or problem specific base when the operation needs those values.
 
-## Keep execution state out of configuration
+## Keep scoped state out of configuration
 
 Operator records are reusable configuration. Do not store counters, caches or other changing run data in their properties.
 
-Use a stateful base for ordinary mutable execution data. It prepares one state object per selected logical execution; descendant bindings can share ancestor state, while independent root scopes start fresh. Keep `CreateExecutionState()` and the ordinary operation override. Use an explicit executor when the operator owns child operators or more complex run resources.
+Use a stateful base for ordinary mutable execution data. It prepares one state object per selected logical execution; descendant bindings can share ancestor state, while independent root scopes start fresh. Keep `CreateScopedState()` and the ordinary operation override. Use an explicit executor when the operator owns child operators or more complex run resources.
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
 
-Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and takes shared state from `scope.GetExecutionState(this, create)`. A fixed-signature leaf using the explicit executor base instead overrides `CreateExecutor(ResolutionScope scope)`.
+Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and takes shared state from `scope.GetScopedState(this, create)`. A fixed-signature leaf using the explicit executor base instead overrides `CreateExecutor(ResolutionScope scope)`.
 
 Custom advice for one role derives from a role advice base such as `MutatorAdvice<TCandidate>` and wraps typed executors. Advice for every operation derives from `OperatorAdvice` and passes a struct `IInvocationWrapper` to the operation's `Wrap`. See [Write custom advice](/guide/extending/writing-advice) for complete examples.
 

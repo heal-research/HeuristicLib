@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Diagnostics;
 namespace HEAL.HeuristicLib.Tests.Operators;
 
 /// <summary>Compile real construction contracts before checking that building a child cannot silently bypass resolution.</summary>
-public class ExecutorFactoryAnalyzerTests
+public class ChildResolutionAnalyzerTests
 {
     private const string Preamble = """
         using System.Collections.Generic;
@@ -47,7 +47,7 @@ public class ExecutorFactoryAnalyzerTests
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     [Theory]
@@ -66,25 +66,39 @@ public class ExecutorFactoryAnalyzerTests
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
-    [Fact]
-    public async Task Reports_WhenAChildFactoryIsStoredDuringPreparation()
+    [Theory]
+    [InlineData("Algorithm<BypassingAlgorithm, int, PopulationState<int>>", "<TSearchSpace, TProblem>", "TSearchSpace, TProblem")]
+    [InlineData("Algorithm<BypassingAlgorithm, int, SS, P, PopulationState<int>>", "", "SS, P")]
+    public async Task Reports_WhenAnAlgorithmBuildsItsChildAlgorithmDirectly(string algorithmBase, string hookParameters, string runTypes)
     {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+            file sealed record BypassingAlgorithm : {{algorithmBase}}
             {
-                public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory()
-                {
-                    var factory = Child.CreateExecutorFactory();
-                    return scope => factory(scope);
-                }
+                public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
+                protected override IAlgorithmExecutor<int, {{runTypes}}, PopulationState<int>> CreateExecutor{{hookParameters}}(ResolutionScope<int, {{runTypes}}, PopulationState<int>> scope) =>
+                    Child.CreateExecutor(scope);
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task DoesNotReport_WhenAnAlgorithmResolvesItsChildThroughTheScope()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record ResolvingAlgorithm : Algorithm<ResolvingAlgorithm, int, PopulationState<int>>
+            {
+                public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
+                protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+                    scope.Resolve(Child);
+            }
+            """);
+
+        diagnostics.ShouldBeEmpty();
     }
 
     [Fact]
@@ -143,7 +157,7 @@ public class ExecutorFactoryAnalyzerTests
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -153,7 +167,7 @@ public class ExecutorFactoryAnalyzerTests
             file sealed record BridgingCrossover : ChildCrossover, IOperator<Crossover, int>
             {
                 IExecutor IOperator<Crossover, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
-                    CreateExecutor(scope.Scope);
+                    CreateExecutor(scope);
             }
             """);
 
@@ -172,7 +186,7 @@ public class ExecutorFactoryAnalyzerTests
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -187,37 +201,20 @@ public class ExecutorFactoryAnalyzerTests
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
-    }
-
-    [Theory]
-    [InlineData("source.CreateExecutorFactory()", 0)]
-    [InlineData("Other.CreateExecutorFactory()", 1)]
-    public async Task ResolutionPreparation_OnlyAllowsItsOwnSource(string preparation, int count)
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + $$"""
-            file static class CustomResolution
-            {
-                public static ICustomExecutor Resolve(ResolutionScope scope, IConfigurationNode<ICustomExecutor> configuration, IConfigurationNode<ICustomExecutor> Other) =>
-                    scope.Resolve(configuration, source => { var factory = {{preparation}}; return new ExecutorFactory<ICustomExecutor>(innerScope => factory(innerScope)); },
-                        static (_, _) => throw new System.InvalidOperationException());
-            }
-            """);
-        diagnostics.Length.ShouldBe(count);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     [Fact]
-    public async Task Reports_WhenPreparationOfTheSourceIsDeferredInsideAFactoryCallback()
+    public async Task Reports_WhenACustomResolverBuildsTheConfigurationItself()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
             file static class CustomResolution
             {
                 public static ICustomExecutor Resolve(ResolutionScope scope, IConfigurationNode<ICustomExecutor> configuration) =>
-                    scope.Resolve<IConfigurationNode<ICustomExecutor>, ICustomExecutor>(configuration, source => innerScope => source.CreateExecutorFactory()(innerScope),
-                        static (_, _) => throw new System.InvalidOperationException());
+                    configuration.CreateExecutor(scope);
             }
             """);
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -233,21 +230,21 @@ public class ExecutorFactoryAnalyzerTests
                 }
             }
             """);
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     [Fact]
-    public async Task Reports_ForAConsumerDefinedExecutionContract()
+    public async Task Reports_ForAConsumerDefinedRole()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
             {
                 public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory() => scope => Child.CreateExecutorFactory()(scope);
+                public ICustomExecutor CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
             }
             """);
 
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     [Fact]
@@ -256,12 +253,11 @@ public class ExecutorFactoryAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed class UnrelatedChild
             {
-                public System.Func<ResolutionScope, int> CreateExecutorFactory() => _ => 0;
                 public int CreateExecutor(ResolutionScope scope) => 0;
             }
             file sealed class DeliberateCaller
             {
-                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutorFactory()(scope) + new UnrelatedChild().CreateExecutor(scope);
+                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutor(scope);
             }
             """);
 
@@ -279,7 +275,7 @@ public class ExecutorFactoryAnalyzerTests
                     Child is null ? throw new System.InvalidOperationException() : Child.CreateExecutor(scope);
             }
             """);
-        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ExecutorFactoryAnalyzer.DiagnosticId);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
     }
 
     private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)
@@ -296,8 +292,8 @@ public class ExecutorFactoryAnalyzerTests
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         compilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
-        var diagnostics = await compilation.WithAnalyzers([new ExecutorFactoryAnalyzer()]).GetAnalyzerDiagnosticsAsync();
+        var diagnostics = await compilation.WithAnalyzers([new ChildResolutionAnalyzer()]).GetAnalyzerDiagnosticsAsync();
         diagnostics.ShouldNotContain(static diagnostic => diagnostic.Id == "AD0001");
-        return [.. diagnostics.Where(static diagnostic => diagnostic.Id == ExecutorFactoryAnalyzer.DiagnosticId)];
+        return [.. diagnostics.Where(static diagnostic => diagnostic.Id == ChildResolutionAnalyzer.DiagnosticId)];
     }
 }

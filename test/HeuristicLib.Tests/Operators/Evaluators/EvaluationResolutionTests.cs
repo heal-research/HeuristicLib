@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
 
-public sealed class EvaluationExecutorFactoryTests
+public sealed class EvaluationResolutionTests
 {
     [Theory]
     [InlineData(null)]
@@ -126,7 +126,7 @@ public sealed class EvaluationExecutorFactoryTests
 
     private sealed record CountingEvaluator(Action Prepare, Action EvaluateCall) : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>
     {
-        protected override CounterState CreateExecutionState()
+        protected override CounterState CreateScopedState()
         {
             Prepare();
             return new CounterState();

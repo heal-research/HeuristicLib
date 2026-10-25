@@ -57,7 +57,7 @@ public class PointcutSpecs
     }
 
     [Fact]
-    public void NamingWrappersShareTheirChildsExecutionState()
+    public void NamingWrappersShareTheirChildsScopedState()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var exploration = new Named<Mutation, RealVector>(child, "exploration");
@@ -281,11 +281,7 @@ public class PointcutSpecs
 
     private sealed record GeometricCooling(double StartTemperature, double Factor) : ICoolingSchedule
     {
-        public ExecutorFactory<ICoolingScheduleExecutor> CreateExecutorFactory()
-        {
-            var executor = new Executor(StartTemperature, Factor);
-            return _ => executor;
-        }
+        public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) => new Executor(StartTemperature, Factor);
 
         private sealed class Executor(double startTemperature, double factor) : ICoolingScheduleExecutor
         {
@@ -293,13 +289,9 @@ public class PointcutSpecs
         }
     }
 
-    private static WrapperExecutorFactory<ICoolingScheduleExecutor> PrepareCoolingAdvice(Advice advice, ICoolingSchedule schedule) =>
-        ((RecordedCoolingAdvice)advice).CreateWrapperFactory(schedule);
-
-    private sealed class RecordedCoolingAdvice(Action<double> record) : Advice<ICoolingSchedule>
+    private sealed class RecordedCoolingAdvice(Action<double> record) : Advice<ICoolingSchedule, ICoolingScheduleExecutor>
     {
-        public WrapperExecutorFactory<ICoolingScheduleExecutor> CreateWrapperFactory(ICoolingSchedule schedule) =>
-            inner => new Executor(inner, record);
+        public override ICoolingScheduleExecutor Wrap(ICoolingScheduleExecutor executor, ICoolingSchedule source) => new Executor(executor, record);
 
         private sealed class Executor(ICoolingScheduleExecutor schedule, Action<double> record) : ICoolingScheduleExecutor
         {
@@ -315,8 +307,7 @@ public class PointcutSpecs
     private sealed record AnnealingPlan(ICoolingSchedule Warmup, ICoolingSchedule Main, int WarmupSteps)
         : IConfigurationNode<AnnealingPlan.Executor>
     {
-        public ExecutorFactory<Executor> CreateExecutorFactory() =>
-            scope => new Executor(scope.Resolve(Warmup, static source => source.CreateExecutorFactory(), PrepareCoolingAdvice), scope.Resolve(Main, static source => source.CreateExecutorFactory(), PrepareCoolingAdvice), WarmupSteps);
+        public Executor CreateExecutor(ResolutionScope scope) => new(scope.Resolve(Warmup), scope.Resolve(Main), WarmupSteps);
 
         public sealed class Executor(ICoolingScheduleExecutor warmup, ICoolingScheduleExecutor main, int warmupSteps) : IExecutor
         {

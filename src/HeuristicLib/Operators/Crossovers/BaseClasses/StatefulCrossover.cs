@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 /// <remarks>
 /// <typeparamref name="TState"/> may contain mutable execution data and helper data structures.
 /// It must not contain operator or algorithm configurations, executors or executor resolution facilities.
-/// <see cref="CreateExecutionState"/> must return a fresh state object. Resolution requests it once per owning execution state, and every executor built there shares it.
+/// <see cref="CreateScopedState"/> must return a fresh state object. Resolution requests it once per owning scope, and every executor built there shares it.
 /// Calls are not inherently thread safe.
 /// Use <see cref="Crossover{TCandidate,TSearchSpace,TProblem}"/> when the crossover needs execution graph dependencies.
 /// </remarks>
@@ -18,12 +18,12 @@ public abstract record StatefulCrossover<TCandidate, TSearchSpace, TProblem, TSt
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     protected sealed override ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
     private sealed class Executor(StatefulCrossover<TCandidate, TSearchSpace, TProblem, TState> crossover, TState state)
         : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>
@@ -38,12 +38,12 @@ public abstract record StatefulCrossover<TCandidate, TSearchSpace, TState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     protected sealed override ICrossoverExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
     private sealed class Executor(StatefulCrossover<TCandidate, TSearchSpace, TState> crossover, TState state)
         : CrossoverExecutor<TCandidate, TSearchSpace>
@@ -57,12 +57,12 @@ public abstract record StatefulCrossover<TCandidate, TState>
     : Crossover<TCandidate>
     where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
 
     protected abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, TState state, IRandomNumberGenerator random);
 
     protected sealed override ICrossoverExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
     private sealed class Executor(StatefulCrossover<TCandidate, TState> crossover, TState state)
         : CrossoverExecutor<TCandidate>

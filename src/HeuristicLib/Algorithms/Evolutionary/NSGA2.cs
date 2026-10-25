@@ -37,14 +37,20 @@ public record NSGA2<TCandidate>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; } = NSGA2Defaults.MaximumGenerations;
 
-    protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-        scope =>
-        {
-            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
-            return new Executor<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
-                typed.Resolve(Mutator), typed.Resolve(Selector),
-                typed.Resolve(Replacer), typed.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, MutationRate);
-        };
+    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
+    {
+        var interceptor = scope.ResolveOptional(Interceptor);
+        var evaluator = scope.Resolve(Evaluator);
+        var creator = scope.Resolve(Creator);
+        var crossover = scope.Resolve(Crossover);
+        var mutator = scope.Resolve(Mutator);
+        var selector = scope.Resolve(Selector);
+        var replacer = scope.Resolve(Replacer);
+        var refiner = scope.ResolveOptional(Refiner);
+        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, replacer, refiner,
+            PopulationSize, MaximumGenerations, MutationRate);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(
         IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,

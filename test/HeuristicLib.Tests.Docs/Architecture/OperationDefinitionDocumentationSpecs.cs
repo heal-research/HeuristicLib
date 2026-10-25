@@ -81,7 +81,7 @@ public static class EstimationResolutionExtensions
 
         public bool TryResolve(IOperator<Estimation, TCandidate> source,
             [NotNullWhen(true)] out IEstimationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 }
 #endregion operation-resolution

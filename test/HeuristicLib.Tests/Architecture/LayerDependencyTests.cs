@@ -151,7 +151,7 @@ public sealed class LayerDependencyTests
     [Theory]
     [InlineData("ResolutionScope.Create().CreateChildState()")]
     [InlineData("ResolutionScope.Create().WithState(null!)")]
-    public void SemanticCheck_KeepsAspectPreparationInternalToResolution(string operation)
+    public void SemanticCheck_KeepsChildStateOperationsInternalToResolution(string operation)
     {
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);

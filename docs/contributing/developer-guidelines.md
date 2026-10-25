@@ -119,7 +119,7 @@ See [execution resolution](/contributing/architecture/execution-resolution) for 
 
 ### § 4.1 Separate reusable configurations from executors
 
-Configurations own immutable settings and child configurations. Prepare persistent execution state once, then bind nodes with resolved children and observations for each context. Nodes own typed behavior and binding-local references; invocation-local values stay in the operation or iterator. Never store run data on a configuration.
+Configurations own immutable settings and child configurations. Every build creates nodes with resolved children and observations for its context; persistent data is scoped state, created once per owning scope. Nodes own typed behavior and binding-local references; invocation-local values stay in the operation or iterator. Never store run data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
@@ -127,19 +127,21 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the resolution scope
 
-An operator's `CreateExecutor` receives a scope typed to the run; resolve children through it and pass them to the executor. An algorithm's preparation receives no scope; the returned `ExecutorFactory<TExecutor>` receives a `ResolutionScope` construction frame, and children resolve inside that factory. Retain a scope only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state prepares one `ChildScopeSelector` and reuses it across bindings; each activation supplies its current construction scope. Do not add another scope abstraction or call a child's hook or factory directly.
+Every configuration's `CreateExecutor` receives a scope, typed to the run for operators and algorithms; resolve children through it and pass them to the executor. Retain a scope only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state keeps one `ChildScopeSelector` as scoped state; each activation supplies its current scope. Do not add another scope abstraction or call a child's hook directly.
 
 Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
 Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executors and introduces no configuration children.
 
-### § 4.4 Expose one preparation entry
+### § 4.4 Expose one construction hook
 
-Algorithms expose one public `CreateExecutorFactory(...)` returning `ExecutorFactory<TExecutor>`. Preparation runs once per selected configuration owner; construction may bind several nodes. Operation-parameterized operators expose one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which resolution calls for every build and which builds an executor for the operation and run types. Data shared by those builds comes from `scope.GetExecutionState(this, create)`, which creates it once per owner for every operation and run type. Do not add a second initializer per operation, role-named alternatives or a competing public factory.
+Every configuration exposes one `CreateExecutor` hook, which resolution calls for every build. Operation-parameterized operators expose `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds an executor for the operation and run types. Algorithms expose `CreateExecutor<TSearchSpace, TProblem>(scope)` with a scope typed to the run and their search state. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Data shared by those builds comes from `scope.GetScopedState(this, create)`, which creates it once per owner for every operation and run type. Do not add a second initializer per operation, role-named alternatives or a competing public entry.
 
-Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor(ResolutionScope scope)`; generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
+Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor(ResolutionScope scope)`; generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or wrap that resolved child with `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(childOperator, wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
 
-Algorithm wrapping bases own the public method and expose one protected preparation hook: `CreateWrapperFactory` returns `WrapperExecutorFactory<TExecutor>`. The hook prepares persistent state and returns a factory accepting the newly resolved child. Use the same executor interface for the child and result.
+A hook resolves each child into a local variable named after its property, in the order the children must be built, and then passes the variables to the executor constructor. Only a hook that does nothing but return one resolved child returns the resolution directly.
+
+Algorithm authoring bases own the public entry and expose one protected `CreateExecutor`: run-generic for agnostic algorithms, typed to the declared search space and problem for bound ones. A wrapping algorithm resolves its `ChildAlgorithm` through the scope and builds its executor around the result, using the same executor interface for the child and result.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -154,17 +156,17 @@ A setting has one input path.
 - Every configuration property is `{ get; init; }` so `with` can vary it.
 - Executor children and run data are `{ get; }` because executions are not reconfigured.
 
-### § 4.7 Validate complete configurations during preparation
+### § 4.7 Validate complete configurations when building
 
-Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor`, in `CreateExecutorFactory` or in the protected preparation hook and throw `InvalidOperationException` before execution begins. Bound bridges validate run-type compatibility before preparation. Do not add a separate validation API.
+Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor` and throw `InvalidOperationException` before execution begins. Bound bases validate run-type compatibility before calling the hook. Do not add a separate validation API.
 
-For operation-parameterized operators, validate immutable configuration at the start of `CreateExecutor`, before requesting execution state. `Fits` supplies preflight metadata, and resolution checks each constructed executor against the requested executor interface. Advice rejects an operator it cannot wrap in `Check`, which runs before raw construction so unsupported metrics fail before child work and before the execution state is created. A failed construction keeps execution state that was already created.
+For operation-parameterized operators, validate immutable configuration at the start of `CreateExecutor`, before requesting scoped state. `Fits` supplies preflight metadata, and resolution checks each constructed executor against the requested executor interface. Advice rejects an operator it cannot wrap in `Check`, which runs before raw construction so unsupported metrics fail before child work and before the scoped state is created. A failed construction keeps scoped state that was already created.
 
-Persistent initialization must not depend on whichever binding first resolves a live child. Failed preparation is not cached, so a later resolution can retry. Successful preparation remains available when a later contextual construction or advice application fails; that binding can also be retried.
+Scoped state must not depend on whichever build first resolves a live child. A failed state creation is not cached, so a later resolution can retry. Created scoped state remains available when a later construction or advice application fails; that build can also be retried.
 
 ### § 4.8 Represent configured behavior with value strategies
 
-Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Executor factories are runtime preparation/binding machinery and are not persisted configuration strategies.
+Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Construction hooks are runtime machinery and are not persisted configuration strategies.
 
 ### § 4.9 Use records only for value semantics
 
@@ -184,7 +186,7 @@ Executors keep resolved children and machinery private or protected. Use nested 
 
 ### § 4.12 Keep role authoring hierarchies symmetric
 
-Keep configuration and execution authoring hierarchies symmetric. Every full role base has a matching executor base, and derived configurations and executions use the matching pair. `WrappingOperator` and `MultiOperator` have none: their factories resolve the children, and the executor they construct holds them. Pass required resolved children and prepared state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
+Keep configuration and execution authoring hierarchies symmetric. Every full role base has a matching executor base, and derived configurations and executions use the matching pair. `WrappingOperator` and `MultiOperator` have none: their hooks resolve the children, and the executor they construct holds them. Pass required resolved children and scoped state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
 
 ### § 4.13 Give each child slot one public name
 
@@ -203,7 +205,7 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 - Use a single item base for independent per item work.
 - Never put configurations, executions, registries, scopes or child bound delegates in framework managed operator state.
 
-Stateless and ordinary stateful leaf bases hide executor construction. Composite authors take persistent `ExecutionState` from `scope.GetExecutionState(this, create)` and keep it apart from bound children. Executors have no general disposal contract; resources still require an explicit lifecycle owner.
+Stateless and ordinary stateful leaf bases hide executor construction. Composite authors take persistent scoped state from `scope.GetScopedState(this, create)` and keep it apart from bound children. Executors have no general disposal contract; resources still require an explicit lifecycle owner.
 
 ### § 4.15 Keep single item batching explicit and deterministic
 
@@ -215,9 +217,9 @@ Operator scaffolding remains checked in source. Do not add source generators, ID
 
 ### § 4.17 Give algorithms explicit executors
 
-Algorithms use a configuration paired with an explicitly authored executor. Persistent execution data is prepared once; child operators and interceptors bind per context. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
+Algorithms use a configuration paired with an explicitly authored executor. Persistent data is scoped state, created once per owning scope; child operators and interceptors bind per build. Active iterators retain their original children, RNG forks, progress and timers when another binding is created. See [Algorithms](/guide/fundamentals/algorithms).
 
-Iterative bases expose public `CreateExecutorFactory` and a protected, scope-free `CreateIterationFactory` returning `ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>`. Prepare persistent data in that hook. The returned factory resolves the optional interceptor and other declared children through its construction scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before preparation.
+Iterative algorithms build an `IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` in their protected `CreateExecutor`. Both bases declare that return type, so an iterative algorithm cannot return an executor that skips its interceptor; the bound base derives from the bound `Algorithm` base, which converts the executor to the run's types, and declares `Interceptor` itself. The hook resolves the optional interceptor and other declared children through its scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before calling the hook.
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 

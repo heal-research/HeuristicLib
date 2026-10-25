@@ -451,6 +451,22 @@ Layers and namespaces answer different questions. Layers direct dependencies for
 
 Reopen only if a layer gains an audience of its own, such as a separately distributed package with a consumer that must not see the layers above it.
 
+### A marker interface naming what a configuration is written for
+
+Tried and reverted on 2026-10-25, in the Package 4 review of the [operator role parameterization plan](operator-role-parameterization-rework.md). Once algorithm resolution checked `Fits` first, the bound bases' own mismatch message, which names the types a configuration is written for, was no longer reached. An internal `IDeclaresSupportedExecution` on the operator and algorithm bases brought that wording back into the fit report.
+
+The developer rejected it: an interface added to every authoring base to improve one message. The fit report names each configuration at fault, with its path and the run it cannot serve, which is the information the check owes. Reopen only if users cannot tell from that report what to change.
+
+### Detaching the bound operator bases from the agnostic one
+
+Proposed and rejected on 2026-10-25, against Sonar S4019 after the typed scopes began deriving from `ResolutionScope`. The bound bases would implement `IOperator<TOperation, TCandidate>` themselves, so they would inherit no run-generic hook for the leaf hook to hide. The hierarchy of authoring bases is deliberate, and removing or bypassing a base is not a fix for a warning about it. The two bound bases suppress S4019 instead; author code never triggers it.
+
+### A library advice base keyed on the executor type
+
+Tried and replaced on 2026-10-26, in the Package 4 review of the [operator role parameterization plan](operator-role-parameterization-rework.md). Resolution of a consumer-defined role knows only the executor type, while the author's advice names the configuration type, so resolution needs an entry it can call with the executor type alone. First an internal `IConfigurationNodeAdvice<TExecutor>`, then a public base `ConfigurationNodeAdvice<TExecutor>` between `Advice<TConfiguration>` and `Advice<TConfiguration, TExecutor>`, provided it.
+
+The developer rejected both: a type in the hierarchy that exists only so resolution can find the advice. The base also made role advice an `Advice<IConfigurationNode<TExecutor>>`, so `Aspect.Create` accepted a pointcut for another role with the same executor type. An internal untyped `WrapNode` on the root `Advice` replaces it. Reopen only if resolution comes to know a consumer role's configuration type.
+
 ## Source material
 
 The active guiding docs remain:

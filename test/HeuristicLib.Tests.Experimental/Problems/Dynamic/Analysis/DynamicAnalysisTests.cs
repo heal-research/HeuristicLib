@@ -255,8 +255,9 @@ public class DynamicAnalysisTests
     {
         public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator();
 
-        public override ExecutorFactory<AlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>> CreateExecutorFactory() =>
-            scope => new Executor(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
+        protected override IAlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>> CreateExecutor(
+            ResolutionScope<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>> scope) =>
+            new Executor(scope.Resolve(Evaluator), Batches);
 
         private sealed class Executor(
             IEvaluationExecutor<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,

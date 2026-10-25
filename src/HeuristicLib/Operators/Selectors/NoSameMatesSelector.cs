@@ -19,8 +19,11 @@ public record NoSameMatesSelector<TCandidate>
     public int MaxAttempts { get; init; }
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), MaxAttempts);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var childSelector = scope.Resolve(ChildOperator);
+        return new Executor<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
         : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>

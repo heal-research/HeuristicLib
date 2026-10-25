@@ -26,7 +26,8 @@ public sealed record Retry<TOperation, TCandidate> : WrappingOperator<TOperation
     {
         if (MaximumAttempts < 1)
             throw new InvalidOperationException("MaximumAttempts must be positive.");
-        return TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, RetryWrapper>(scope.ResolveOperator(ChildOperator), new RetryWrapper(MaximumAttempts));
+        var childOperator = scope.ResolveOperator(ChildOperator);
+        return TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, RetryWrapper>(childOperator, new RetryWrapper(MaximumAttempts));
     }
 }
 

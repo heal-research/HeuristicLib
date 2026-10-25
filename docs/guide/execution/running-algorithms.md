@@ -12,7 +12,7 @@ Running an algorithm combines an immutable configuration with one problem and on
   <div class="flow-arrow" aria-hidden="true"><span>create</span><strong>↓</strong></div>
   <section class="flow-card flow-card--primary">
     <h3>Algorithm run</h3>
-    <p>Fresh execution state</p>
+    <p>Fresh scoped state</p>
   </section>
   <div class="flow-arrow" aria-hidden="true"><span>consume with</span><strong>↓</strong></div>
   <div class="flow-chart__outputs">
@@ -91,7 +91,7 @@ See [Observability and analysis](/guide/execution/observability-and-analysis) fo
 
 An explicit `AlgorithmRun` starts in `Preparing` and accepts attachments until `Stream` starts execution. Consume each returned stream only once and finish or dispose it before requesting another stream from the run. Requesting another stream while one is active throws without changing the active execution.
 
-Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained execution state. The root scope is created and the root algorithm is resolved with its aspects only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
+Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained scoped state. The root scope is created and the root algorithm is resolved with its aspects only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
 
 Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup failure sets `Failed` and propagates the original exception, including an `OperationCanceledException` thrown during cleanup. Execution-graph setup or execution failures are terminal; cancellation thrown during graph setup sets `Canceled`. A failed or canceled run cannot resume. This run lifecycle is separate from a resolution scope's ability to retry a failed construction.
 

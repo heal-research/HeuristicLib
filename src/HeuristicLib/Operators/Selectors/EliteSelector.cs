@@ -36,8 +36,11 @@ public record EliteSelector<TCandidate>
     public int Elites { get; init; } = 1;
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(SelectorForRemaining), Elites);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var selectorForRemaining = scope.Resolve(SelectorForRemaining);
+        return new Executor<TRunSearchSpace, TRunProblem>(selectorForRemaining, Elites);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
         : SelectionExecutor<TCandidate, TSearchSpace, TProblem>

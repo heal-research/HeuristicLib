@@ -23,8 +23,9 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
-        scope => new PipelineAlgorithmExecutor<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope, Algorithms);
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        new PipelineAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms);
 }
 
 public static class PipelineAlgorithm

@@ -24,10 +24,10 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int ExecutionCount { get; private set; }
 
-    // Counts the execution states it creates, one per owning state.
+    // Counts the scoped states it creates, one per owning scope.
     protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
     {
-        scope.GetExecutionState(this, () =>
+        scope.GetScopedState(this, () =>
         {
             ExecutionCount++;
             return new Preparation();
@@ -49,11 +49,19 @@ public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluat
 {
     public int ExecutionCount { get; private set; }
 
-    public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+    // Counts the scoped states it creates, one per owning scope.
+    protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
     {
-        ExecutionCount++;
-        return scope => new Executor<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
+        scope.GetScopedState(this, () =>
+        {
+            ExecutionCount++;
+            return new Preparation();
+        });
+        return new Executor<TSearchSpace, TProblem>(Increment, scope.Resolve(Evaluator));
     }
+
+    private sealed class Preparation;
 
     private sealed class Executor<TSearchSpace, TProblem>(int increment, IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator)
         : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>

@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 
-public class MoveExecutorFactoryTests
+public class MoveResolutionTests
 {
     private static readonly UnrestrictedSearchSpace<int> SearchSpace = UnrestrictedSearchSpace<int>.Instance;
     private static readonly IProblem<int, UnrestrictedSearchSpace<int>> Problem = new NoProblem<int, UnrestrictedSearchSpace<int>>(SearchSpace);
@@ -17,7 +17,7 @@ public class MoveExecutorFactoryTests
     [InlineData("creator")]
     [InlineData("applier")]
     [InlineData("evaluator")]
-    public void StatefulMoveRoles_PrepareOnceAcrossBindingsAndIsolateIndependentRoots(string role)
+    public void StatefulMoveRoles_CreateStateOnceAcrossBuildsAndIsolateIndependentRoots(string role)
     {
         var preparations = new Counter();
         IOperator source = role switch
@@ -69,7 +69,7 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingCreator(Counter Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter CreateExecutionState()
+        protected override Counter CreateScopedState()
         {
             Preparations.Value++;
             return new Counter();
@@ -83,7 +83,7 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingApplier(Counter Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter CreateExecutionState()
+        protected override Counter CreateScopedState()
         {
             Preparations.Value++;
             return new Counter();
@@ -94,7 +94,7 @@ public class MoveExecutorFactoryTests
 
     private sealed record CountingEvaluator(Counter Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
     {
-        protected override Counter CreateExecutionState()
+        protected override Counter CreateScopedState()
         {
             Preparations.Value++;
             return new Counter();

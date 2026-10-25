@@ -107,7 +107,7 @@ public sealed class NamedOperatorTests
 
     private sealed record AdvancingMutator : StatefulMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, MutationState>
     {
-        protected override MutationState CreateExecutionState() => new();
+        protected override MutationState CreateScopedState() => new();
 
         protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationState state, IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>

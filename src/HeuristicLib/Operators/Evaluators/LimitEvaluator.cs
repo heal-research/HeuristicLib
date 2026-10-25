@@ -34,7 +34,7 @@ public sealed record LimitEvaluator<TCandidate>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var counter = scope.GetExecutionState(this, static () => new CountAccumulator());
+        var counter = scope.GetScopedState(this, static () => new CountAccumulator());
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter);
     }

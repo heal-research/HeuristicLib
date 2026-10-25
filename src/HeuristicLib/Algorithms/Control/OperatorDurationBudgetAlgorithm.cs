@@ -34,15 +34,25 @@ public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchSta
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+    /// <remarks>The accumulator and its timing aspect are the budget's scoped state, so usage survives every rebuild in its owner.</remarks>
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var duration = new DurationAccumulator();
-        var measuring = Aspect.Create(Pointcut.Reference(ObservedOperator), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(duration, TimeProvider));
-        return scope =>
+        var budget = scope.GetScopedState(this, () => new Budget(ObservedOperator, TimeProvider));
+        var algorithm = scope.With(budget.Measuring).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, budget.Duration, MaximumDuration);
+    }
+
+    private sealed class Budget
+    {
+        public Budget(IOperator<TOperation, TCandidate> observedOperator, TimeProvider timeProvider)
         {
-            var childScope = scope.With(measuring);
-            return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
-        };
+            Measuring = Aspect.Create(Pointcut.Reference(observedOperator), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(Duration, timeProvider));
+        }
+
+        public DurationAccumulator Duration { get; } = new();
+
+        public Aspect Measuring { get; }
     }
 }
 

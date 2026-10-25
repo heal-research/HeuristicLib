@@ -17,13 +17,14 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
 
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() => scope =>
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start before wrapped algorithm construction.
-        var terminator = typed.Resolve(Terminator);
-        return new StateTerminatedAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(typed.Resolve(Algorithm), terminator);
-    };
+        var terminator = scope.Resolve(Terminator);
+        var algorithm = scope.Resolve(Algorithm);
+        return new StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, terminator);
+    }
 }
 
 public static class StateTerminatedAlgorithm

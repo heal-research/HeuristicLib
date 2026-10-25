@@ -164,7 +164,7 @@ public class DynamicEvaluationCacheTests
     [Theory]
     [InlineData(null)]
     [InlineData(10L)]
-    public void Cache_DiscardedPreparationReleasesEntriesWhileProblemAndConfigurationRemainAlive(long? sizeLimit)
+    public void Cache_DiscardedScopeReleasesEntriesWhileProblemAndConfigurationRemainAlive(long? sizeLimit)
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
         var source = new CountingEvaluator().Cached(problem) with { SizeLimit = sizeLimit };
@@ -275,7 +275,7 @@ public class DynamicEvaluationCacheTests
     [Theory]
     [InlineData(0)]
     [InlineData(3)]
-    public void Reevaluation_InitialEpochIsCapturedDuringPreparation(int initialEpoch)
+    public void Reevaluation_InitialEpochIsCapturedWhenItsStateIsCreated(int initialEpoch)
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
         for (var epoch = 0; epoch < initialEpoch; epoch++)
@@ -383,7 +383,7 @@ public class DynamicEvaluationCacheTests
     }
 
     [Fact]
-    public void Reevaluation_DiscardedPreparationReleasesExecutionAndChild()
+    public void Reevaluation_DiscardedScopeReleasesExecutorAndChild()
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
         var (execution, child) = CreateDiscardedReferences(problem);

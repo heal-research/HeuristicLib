@@ -10,7 +10,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
-public sealed class TopologyExecutorFactoryTests
+public sealed class TopologyResolutionTests
 {
     [Theory]
     [InlineData(false)]
@@ -39,7 +39,7 @@ public sealed class TopologyExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void CompositeTargetAdviceWrapsEachFreshNodeOverPreparedState(bool chooseOne)
+    public void CompositeTargetAdviceWrapsEachFreshExecutorOverScopedState(bool chooseOne)
     {
         var preparations = 0;
         var wraps = 0;
@@ -76,7 +76,7 @@ public sealed class TopologyExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ExecutionState_PrecedesChildResolutionAndIsCreatedOncePerOwningState(bool multi)
+    public void ScopedState_PrecedesChildResolutionAndIsCreatedOncePerOwningState(bool multi)
     {
         var events = new List<string>();
         var leaf = new CountingLeaf(() => events.Add("prepare child"));
@@ -93,11 +93,11 @@ public sealed class TopologyExecutorFactoryTests
     }
 
     [Fact]
-    public void ExecutionState_IsReachableOnlyForAConfigurationBeingBuilt()
+    public void ScopedState_IsReachableOnlyForAConfigurationBeingBuilt()
     {
         var leaf = new CountingLeaf(() => { });
 
-        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().GetExecutionState(leaf, static () => new CounterState()));
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().GetScopedState(leaf, static () => new CounterState()));
         Should.Throw<InvalidOperationException>(() => Resolve(ResolutionScope.Create(), new ChildStateRequest(leaf)));
     }
 
@@ -158,7 +158,7 @@ public sealed class TopologyExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void IndependentRoots_PrepareIndependentCompositeAndChildState(bool multi)
+    public void IndependentRoots_CreateIndependentCompositeAndChildState(bool multi)
     {
         var preparations = 0;
         var childPreparations = 0;
@@ -177,7 +177,7 @@ public sealed class TopologyExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void PreparationFailure_IsRetriedAndDoesNotResolveChildren(bool multi)
+    public void StateCreationFailure_IsRetriedAndDoesNotResolveChildren(bool multi)
     {
         var preparations = 0;
         var childPreparations = 0;
@@ -195,7 +195,7 @@ public sealed class TopologyExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ConstructionFailureIsRetriedOverTheSamePreparedState(bool multi)
+    public void ConstructionFailureIsRetriedOverTheSameScopedState(bool multi)
     {
         var preparations = 0;
         var childPreparations = 0;
@@ -264,7 +264,7 @@ public sealed class TopologyExecutorFactoryTests
 
     private sealed record CountingLeaf(Action Prepare) : StatefulMutator<RealVector, CounterState>
     {
-        protected override CounterState CreateExecutionState()
+        protected override CounterState CreateScopedState()
         {
             Prepare();
             return new CounterState();
@@ -274,7 +274,7 @@ public sealed class TopologyExecutorFactoryTests
             [RealVector.Repeat(++state.Calls, 1)];
     }
 
-    // Requests the execution state of its child, whose build has already finished.
+    // Requests the scoped state of its child, whose build has already finished.
     private sealed record ChildStateRequest : WrappingOperator<Mutation, RealVector>
     {
         public ChildStateRequest(IOperator<Mutation, RealVector> childMutator) : base(childMutator)
@@ -285,7 +285,7 @@ public sealed class TopologyExecutorFactoryTests
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             var child = scope.Resolve(ChildOperator);
-            scope.GetExecutionState(ChildOperator, static () => new CounterState());
+            scope.GetScopedState(ChildOperator, static () => new CounterState());
             return child;
         }
     }
@@ -304,7 +304,7 @@ public sealed class TopologyExecutorFactoryTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            var state = scope.GetExecutionState(this, () =>
+            var state = scope.GetScopedState(this, () =>
             {
                 prepare();
                 return new CounterState();
@@ -341,7 +341,7 @@ public sealed class TopologyExecutorFactoryTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            var state = scope.GetExecutionState(this, () =>
+            var state = scope.GetScopedState(this, () =>
             {
                 prepare();
                 return new CounterState();

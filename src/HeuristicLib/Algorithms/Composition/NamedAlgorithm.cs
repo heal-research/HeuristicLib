@@ -15,8 +15,9 @@ public sealed record NamedAlgorithm<TCandidate, TSearchState> : WrappingAlgorith
 
     public string Name { get; init; }
 
-    protected override WrapperExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-        child => child;
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        scope.Resolve(ChildAlgorithm);
 }
 
 public static class NamedAlgorithm

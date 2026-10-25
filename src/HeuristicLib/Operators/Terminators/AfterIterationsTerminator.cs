@@ -5,9 +5,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AfterIterationsTerminator<TCandidate>
-    : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.ExecutionState>
+    : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.State>
 {
-    public sealed class ExecutionState
+    public sealed class State
     {
         public int CurrentCount { get; set; }
     }
@@ -23,12 +23,12 @@ public sealed record AfterIterationsTerminator<TCandidate>
     /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
     public int MaximumIterations { get; init; }
 
-    protected override ExecutionState CreateExecutionState() => new();
+    protected override State CreateScopedState() => new();
 
-    protected override bool IsTerminalState(ExecutionState executionState)
+    protected override bool IsTerminalState(State state)
     {
-        executionState.CurrentCount += 1;
-        return executionState.CurrentCount >= MaximumIterations;
+        state.CurrentCount += 1;
+        return state.CurrentCount >= MaximumIterations;
     }
 }
 

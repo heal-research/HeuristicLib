@@ -28,8 +28,12 @@ public record GenderSpecificSelector<TCandidate>
     public IOperator<Selection, TCandidate> MaleSelector { get; init; }
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(FemaleSelector), scope.Resolve(MaleSelector));
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var femaleSelector = scope.Resolve(FemaleSelector);
+        var maleSelector = scope.Resolve(MaleSelector);
+        return new Executor<TRunSearchSpace, TRunProblem>(femaleSelector, maleSelector);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectionExecutor<TCandidate, TSearchSpace, TProblem> maleSelector)
         : SelectionExecutor<TCandidate, TSearchSpace, TProblem>

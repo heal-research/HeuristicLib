@@ -11,9 +11,9 @@ namespace HEAL.HeuristicLib.Operators;
 /// Terminates after a configured number of consecutive produced search states without strict objective improvement.
 /// </summary>
 public sealed record StagnationTerminator<TCandidate>
-    : StatefulTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>, StagnationTerminator<TCandidate>.ExecutionState>
+    : StatefulTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>, StagnationTerminator<TCandidate>.State>
 {
-    public sealed class ExecutionState
+    public sealed class State
     {
         public ObjectiveVector? BestObjectiveVectorSoFar { get; set; }
         public int StagnationCounter { get; set; }
@@ -26,27 +26,27 @@ public sealed record StagnationTerminator<TCandidate>
     /// <remarks>A zero or negative threshold terminates on the first checked produced search state.</remarks>
     public int StagnationThreshold { get; init; } = 20;
 
-    protected override ExecutionState CreateExecutionState() => new();
+    protected override State CreateScopedState() => new();
 
-    protected override bool IsTerminalState(PopulationState<TCandidate> algorithmState, ExecutionState executionState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+    protected override bool IsTerminalState(PopulationState<TCandidate> searchState, State operatorState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
     {
         if (StagnationThreshold <= 0)
             return true;
 
-        executionState.BestObjectiveVectorSoFar ??= problem.Objective.Worst;
+        operatorState.BestObjectiveVectorSoFar ??= problem.Objective.Worst;
 
         var comparer = problem.Objective.TotalOrderComparer;
 
-        var currentBestObjectiveVector = algorithmState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
-        if (comparer.Compare(currentBestObjectiveVector, executionState.BestObjectiveVectorSoFar) < 0)
+        var currentBestObjectiveVector = searchState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
+        if (comparer.Compare(currentBestObjectiveVector, operatorState.BestObjectiveVectorSoFar) < 0)
         {
-            executionState.BestObjectiveVectorSoFar = currentBestObjectiveVector;
-            executionState.StagnationCounter = 0;
+            operatorState.BestObjectiveVectorSoFar = currentBestObjectiveVector;
+            operatorState.StagnationCounter = 0;
         }
         else
         {
-            executionState.StagnationCounter++;
-            if (executionState.StagnationCounter >= StagnationThreshold)
+            operatorState.StagnationCounter++;
+            if (operatorState.StagnationCounter >= StagnationThreshold)
             {
                 return true;
             }

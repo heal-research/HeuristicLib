@@ -97,7 +97,7 @@ public class RefinerFailureTests
     private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         protected override IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
-            new Executor(scope.GetExecutionState(this, static () => new Counter()), SuccessfulBatches);
+            new Executor(scope.GetScopedState(this, static () => new Counter()), SuccessfulBatches);
 
         private sealed class Counter
         {

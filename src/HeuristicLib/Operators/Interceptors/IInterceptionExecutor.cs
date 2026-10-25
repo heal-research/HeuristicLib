@@ -50,7 +50,7 @@ public static class InterceptionOperationResolutionExtensions
     {
         public IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source)
             where TSearchState : class, ISearchState =>
-            (IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)scope.Scope.ResolveOperator<Interception<TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>(source);
+            (IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)scope.ResolveOperator<Interception<TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>(source);
 
         public IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TSearchState, TControl>(IOperator<Interception<TSearchState>, TCandidate> source, out TControl? control)
             where TSearchState : class, ISearchState
@@ -68,6 +68,6 @@ public static class InterceptionOperationResolutionExtensions
         public bool TryResolve<TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source,
             [NotNullWhen(true)] out IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchState : class, ISearchState =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>().TryResolveOperator(source, out executor, out reason);
     }
 }

@@ -9,23 +9,23 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 public class AlgorithmRunTests
 {
     [Fact]
-    public async Task Stream_PreparesOnceBeforeEnumerationAndReusesPreparationOnResume()
+    public async Task Stream_ResolvesOnceBeforeEnumerationAndKeepsTheExecutorsOnResume()
     {
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingExecutionAlgorithm(1, evaluator);
-        var module = new PreparationCountingAspect();
+        var aspect = new CheckCountingAspect();
         var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
-            .AddAspect(module);
+            .AddAspect(aspect);
         var cancellationToken = TestContext.Current.CancellationToken;
 
         algorithm.ExecutionCount.ShouldBe(0);
-        module.PreparationCount.ShouldBe(0);
+        aspect.CheckCount.ShouldBe(0);
         var stream = run.Stream(cancellationToken: cancellationToken);
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Running);
         algorithm.ExecutionCount.ShouldBe(1);
         evaluator.ExecutionCount.ShouldBe(1);
-        module.PreparationCount.ShouldBe(1);
+        aspect.CheckCount.ShouldBe(1);
         await using (var enumerator = stream.GetAsyncEnumerator(cancellationToken))
             (await enumerator.MoveNextAsync()).ShouldBeTrue();
 
@@ -36,7 +36,7 @@ public class AlgorithmRunTests
         run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
         algorithm.ExecutionCount.ShouldBe(1);
         evaluator.ExecutionCount.ShouldBe(1);
-        module.PreparationCount.ShouldBe(1);
+        aspect.CheckCount.ShouldBe(1);
     }
 
     [Theory]
@@ -85,7 +85,7 @@ public class AlgorithmRunTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void AdvicePreparationFailure_IsTerminal(bool canceled)
+    public void AdviceFailure_IsTerminal(bool canceled)
     {
         Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException();
         var run = new SequenceAlgorithm().CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
@@ -259,51 +259,49 @@ public class AlgorithmRunTests
     }
 
     [Fact]
-    public void TheSameAspectAddedTwice_PreparesItsAdviceOnce()
+    public void TheSameAspectAddedTwice_ChecksItsAdviceOnce()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42));
-        var attachment = new PreparationCountingAspect();
+        var aspect = new CheckCountingAspect();
 
-        run.AddAspect(attachment).AddAspect(attachment);
+        run.AddAspect(aspect).AddAspect(aspect);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        attachment.PreparationCount.ShouldBe(1);
+        aspect.CheckCount.ShouldBe(1);
     }
 
     private sealed class FailingModule : Aspect
     {
         public FailingModule(Exception failure)
         {
-            Advices = [(Pointcut.OfType<IAlgorithm<int, PopulationState<int>>>(), new PreparingAlgorithmAdvice(() => throw failure))];
+            Advices = [(Pointcut.OfType<IAlgorithm<int, PopulationState<int>>>(), new ThrowingAlgorithmAdvice(failure))];
         }
     }
 
-    private sealed class PreparingAlgorithmAdvice(Action prepare) : AlgorithmAdvice<int, PopulationState<int>>
+    private sealed class ThrowingAlgorithmAdvice(Exception failure) : AlgorithmAdvice<int, PopulationState<int>>
     {
-        public override WrapperExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<int, PopulationState<int>> algorithm)
-        {
-            prepare();
-            return inner => inner;
-        }
+        public override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> Wrap<TSearchSpace, TProblem>(
+            IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> executor, IAlgorithm<int, PopulationState<int>> source) =>
+            throw failure;
     }
 
-    private sealed class PreparingEvaluatorAdvice(Action prepare) : OperatorAdvice<Evaluation, int>
+    private sealed class CheckingEvaluatorAdvice(Action check) : OperatorAdvice<Evaluation, int>
     {
         public override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
-            IOperator<Evaluation, int> source) => prepare();
+            IOperator<Evaluation, int> source) => check();
 
         public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
             IOperator<Evaluation, int> source) => executor;
     }
 
-    private sealed class PreparationCountingAspect : Aspect
+    private sealed class CheckCountingAspect : Aspect
     {
-        public int PreparationCount { get; private set; }
-        public PreparationCountingAspect()
+        public int CheckCount { get; private set; }
+        public CheckCountingAspect()
         {
-            Advices = [(Pointcut.OfType<IOperator<Evaluation, int>>(), new PreparingEvaluatorAdvice(() => PreparationCount++))];
+            Advices = [(Pointcut.OfType<IOperator<Evaluation, int>>(), new CheckingEvaluatorAdvice(() => CheckCount++))];
         }
     }
 
@@ -352,8 +350,9 @@ public class AlgorithmRunTests
     private sealed record DisposalTrackingAlgorithm(Func<ValueTask> Dispose)
         : Algorithm<DisposalTrackingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public override ExecutorFactory<AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>> CreateExecutorFactory() =>
-            _ => new Executor(Dispose);
+        protected override IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutor(
+            ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> scope) =>
+            new Executor(Dispose);
 
         private sealed class Executor(Func<ValueTask> dispose)
             : AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>,
@@ -385,8 +384,9 @@ public class AlgorithmRunTests
     private sealed record SequenceAlgorithm
         : Algorithm<SequenceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public override ExecutorFactory<AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>> CreateExecutorFactory() =>
-            _ => new Executor();
+        protected override IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutor(
+            ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> scope) =>
+            new Executor();
 
         private sealed class Executor
             : AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>

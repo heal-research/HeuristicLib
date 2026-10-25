@@ -12,7 +12,7 @@
 //{
 //    public record State(Neighbourhood Neighbourhood);
 
-//    protected override State CreateExecutionState()
+//    protected override State CreateScopedState()
 //        => new(GetNeighborhood());
 
 //    protected abstract Neighbourhood GetNeighborhood();

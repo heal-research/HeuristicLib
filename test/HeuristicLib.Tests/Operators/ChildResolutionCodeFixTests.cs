@@ -11,7 +11,7 @@ using Microsoft.CodeAnalysis.Text;
 namespace HEAL.HeuristicLib.Tests.Operators;
 
 /// <summary>Apply the offered fix and compile it against the real library, including custom execution contracts.</summary>
-public class ExecutorFactoryCodeFixTests
+public class ChildResolutionCodeFixTests
 {
     private const string Preamble = """
         using System.Collections.Generic;
@@ -29,35 +29,18 @@ public class ExecutorFactoryCodeFixTests
 
         """;
 
-    [Theory]
-    [InlineData("Child.CreateExecutorFactory()(scope)")]
-    [InlineData("(Child.CreateExecutorFactory())(scope)")]
-    [InlineData("Child.CreateExecutorFactory().Invoke(scope)")]
-    public async Task FixedCode_Compiles_ForImmediateFactoryInvocation(string binding)
-    {
-        var fixedSource = await ApplyFixAsync(Preamble + $$"""
-            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
-            {
-                public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory() => scope => {{binding}};
-            }
-            """);
-        fixedSource.ShouldContain("scope => scope.Resolve(Child)");
-        await AssertCompilesWithoutDiagnosticAsync(fixedSource);
-    }
-
     [Fact]
-    public async Task FixedCode_Compiles_WhenPreparationReturnsTheChildFactory()
+    public async Task FixedCode_Compiles_ForAConsumerDefinedRole()
     {
         var fixedSource = await ApplyFixAsync(Preamble + """
             file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
             {
                 public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory() => Child.CreateExecutorFactory();
+                public ICustomExecutor CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
             }
             """);
 
-        fixedSource.ShouldContain("scope => scope.Resolve(Child)");
+        fixedSource.ShouldContain("=> scope.Resolve(Child);");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
@@ -67,7 +50,7 @@ public class ExecutorFactoryCodeFixTests
         var fixedSource = await ApplyFixAsync(Preamble + """
             file sealed class DeferredExecutor(IConfigurationNode<ICustomExecutor> child, ResolutionScope scope) : ICustomExecutor
             {
-                public ICustomExecutor Activate() => child.CreateExecutorFactory()(scope.CreateChildScope());
+                public ICustomExecutor Activate() => child.CreateExecutor(scope.CreateChildScope());
             }
             """);
 
@@ -122,14 +105,17 @@ public class ExecutorFactoryCodeFixTests
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
-    [Fact]
-    public async Task FixedCode_Compiles_ForAConsumerDefinedExecutionContract()
+    [Theory]
+    [InlineData("Algorithm<BypassingAlgorithm, int, PopulationState<int>>", "<TSearchSpace, TProblem>", "TSearchSpace, TProblem")]
+    [InlineData("Algorithm<BypassingAlgorithm, int, SS, P, PopulationState<int>>", "", "SS, P")]
+    public async Task FixedCode_Compiles_ForAnAlgorithmHook(string algorithmBase, string hookParameters, string runTypes)
     {
-        var fixedSource = await ApplyFixAsync(Preamble + """
-            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
+        var fixedSource = await ApplyFixAsync(Preamble + $$"""
+            file sealed record BypassingAlgorithm : {{algorithmBase}}
             {
-                public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory() => scope => Child.CreateExecutorFactory()(scope);
+                public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
+                protected override IAlgorithmExecutor<int, {{runTypes}}, PopulationState<int>> CreateExecutor{{hookParameters}}(ResolutionScope<int, {{runTypes}}, PopulationState<int>> scope) =>
+                    Child.CreateExecutor(scope);
             }
             """);
 
@@ -138,59 +124,34 @@ public class ExecutorFactoryCodeFixTests
     }
 
     [Fact]
-    public async Task FixedCode_Compiles_ForAConsumerDefinedRoleAndResolver()
+    public async Task FixedCode_Compiles_ForAConsumerDefinedRoleInterface()
     {
         var fixedSource = await ApplyFixAsync(Preamble + """
-            file interface ICustomRole<T> : IConfigurationNode
-            {
-                ExecutorFactory<CustomExecutor<T>> CreateExecutorFactory();
-            }
+            file interface ICustomRole<T> : IConfigurationNode<CustomExecutor<T>>;
             file sealed class CustomExecutor<T> : IExecutor;
             file sealed record CustomConfiguration : ICustomRole<int>
             {
                 public required ICustomRole<int> Child { get; init; }
-                public ExecutorFactory<CustomExecutor<int>> CreateExecutorFactory() => scope => Child.CreateExecutorFactory()(scope);
-            }
-            file static class CustomResolution
-            {
-                public static CustomExecutor<T> Resolve<T>(this ResolutionScope scope, ICustomRole<T> source) =>
-                    scope.Resolve(source, static configuration => configuration.CreateExecutorFactory(),
-                        static (_, _) => throw new System.InvalidOperationException());
+                public CustomExecutor<int> CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
             }
             """);
 
-        fixedSource.ShouldContain("scope.Resolve<int>(Child)");
+        fixedSource.ShouldContain("=> scope.Resolve(Child);");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
     [Fact]
-    public async Task DoesNotOfferAnUncompilableFix_WhenACustomRoleHasNoResolver()
+    public async Task DoesNotOfferAnUncompilableFix_WhenACustomRoleIsNotResolvable()
     {
         await ApplyFixAsync(Preamble + """
             file interface ICustomRole : IConfigurationNode
             {
-                ExecutorFactory<ICustomExecutor> CreateExecutorFactory();
+                ICustomExecutor CreateExecutor(ResolutionScope scope);
             }
             file sealed record CustomConfiguration : ICustomRole
             {
                 public required ICustomRole Child { get; init; }
-                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory() => scope => Child.CreateExecutorFactory()(scope);
-            }
-            """, expectFix: false);
-    }
-
-    [Fact]
-    public async Task DoesNotOfferAPartialFix_ForAStoredFactory()
-    {
-        await ApplyFixAsync(Preamble + """
-            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
-            {
-                public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ExecutorFactory<ICustomExecutor> CreateExecutorFactory()
-                {
-                    var factory = Child.CreateExecutorFactory();
-                    return scope => factory(scope);
-                }
+                public ICustomExecutor CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
             }
             """, expectFix: false);
     }
@@ -206,13 +167,13 @@ public class ExecutorFactoryCodeFixTests
         var compilation = await document.Project.GetCompilationAsync();
         compilation.ShouldNotBeNull();
         compilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
-        var diagnostics = await compilation.WithAnalyzers([new ExecutorFactoryAnalyzer()]).GetAnalyzerDiagnosticsAsync();
+        var diagnostics = await compilation.WithAnalyzers([new ChildResolutionAnalyzer()]).GetAnalyzerDiagnosticsAsync();
         diagnostics.ShouldNotContain(static diagnostic => diagnostic.Id == "AD0001");
-        var diagnostic = diagnostics.Single(d => d.Id == ExecutorFactoryAnalyzer.DiagnosticId);
+        var diagnostic = diagnostics.Single(d => d.Id == ChildResolutionAnalyzer.DiagnosticId);
 
         CodeAction? registered = null;
         var context = new CodeFixContext(document, diagnostic, (action, _) => registered = action, CancellationToken.None);
-        await new ExecutorFactoryCodeFixProvider().RegisterCodeFixesAsync(context);
+        await new ChildResolutionCodeFixProvider().RegisterCodeFixesAsync(context);
         if (!expectFix)
         {
             registered.ShouldBeNull();
@@ -233,9 +194,9 @@ public class ExecutorFactoryCodeFixTests
             references: References,
             options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
         compilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
-        var remaining = await compilation.WithAnalyzers([new ExecutorFactoryAnalyzer()]).GetAnalyzerDiagnosticsAsync();
+        var remaining = await compilation.WithAnalyzers([new ChildResolutionAnalyzer()]).GetAnalyzerDiagnosticsAsync();
         remaining.ShouldNotContain(static diagnostic => diagnostic.Id == "AD0001");
-        remaining.Where(static diagnostic => diagnostic.Id == ExecutorFactoryAnalyzer.DiagnosticId).ShouldBeEmpty();
+        remaining.Where(static diagnostic => diagnostic.Id == ChildResolutionAnalyzer.DiagnosticId).ShouldBeEmpty();
     }
 
     private static IReadOnlyList<MetadataReference> References { get; } =

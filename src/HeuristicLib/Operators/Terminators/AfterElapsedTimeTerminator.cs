@@ -5,14 +5,14 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AfterElapsedTimeTerminator<TCandidate>
-    : StatefulTerminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.ExecutionState>
+    : StatefulTerminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.State>
 {
     public AfterElapsedTimeTerminator(TimeSpan maximumElapsedTime)
     {
         MaximumElapsedTime = maximumElapsedTime;
     }
 
-    public sealed class ExecutionState
+    public sealed class State
     {
         public required long StartTimestamp { get; init; }
     }
@@ -25,11 +25,11 @@ public sealed record AfterElapsedTimeTerminator<TCandidate>
 
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
-    protected override ExecutionState CreateExecutionState() =>
+    protected override State CreateScopedState() =>
         new() { StartTimestamp = TimeProvider.GetTimestamp() };
 
-    protected override bool IsTerminalState(ExecutionState executionState) =>
-        TimeProvider.GetElapsedTime(executionState.StartTimestamp) >= MaximumElapsedTime;
+    protected override bool IsTerminalState(State state) =>
+        TimeProvider.GetElapsedTime(state.StartTimestamp) >= MaximumElapsedTime;
 }
 
 public static class AfterElapsedTimeTerminator

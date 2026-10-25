@@ -15,21 +15,21 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     public const string StateContractDiagnosticId = "HLib0004";
 
     private const string OperatorMetadataName = "HEAL.HeuristicLib.Operators.IOperator";
-    private const string CreateExecutionStateMethodName = "CreateExecutionState";
-    private const string GetExecutionStateMethodName = "GetExecutionState";
+    private const string CreateScopedStateMethodName = "CreateScopedState";
+    private const string GetScopedStateMethodName = "GetScopedState";
 
     private static readonly DiagnosticDescriptor StatefulStateRule = new(
         id: StatefulStateDiagnosticId,
         title: "Stateful operator state must not contain execution graph dependencies",
-        messageFormat: "Execution state '{0}' exposes execution graph dependency '{1}'. Use the explicit executor operator path instead.",
+        messageFormat: "Scoped state '{0}' exposes execution graph dependency '{1}'. Use the explicit executor operator path instead.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor ExecutionStateOwnerRule = new(
+    private static readonly DiagnosticDescriptor ScopedStateOwnerRule = new(
         id: StatefulStateDiagnosticId,
-        title: "Execution state must be requested by the configuration it belongs to",
-        messageFormat: "Execution state is requested for '{0}' instead of this. A configuration requests only its own state; another configuration's state stays with its own build.",
+        title: "Scoped state must be requested by the configuration it belongs to",
+        messageFormat: "Scoped state is requested for '{0}' instead of this. A configuration requests only its own state; another configuration's state stays with its own build.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -50,7 +50,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ExecutionStateOwnerRule, ConfigurationMutationRule, StateContractRule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ScopedStateOwnerRule, ConfigurationMutationRule, StateContractRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -67,7 +67,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
                 SymbolKind.NamedType);
 
             startContext.RegisterSyntaxNodeAction(
-                syntaxContext => AnalyzeExecutionStateRequest(syntaxContext, forbiddenTypes),
+                syntaxContext => AnalyzeScopedStateRequest(syntaxContext, forbiddenTypes),
                 SyntaxKind.InvocationExpression);
 
             startContext.RegisterSyntaxNodeAction(
@@ -157,10 +157,10 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     }
 
     // An operator that builds its own executor requests its state from the scope, so the request names the state type.
-    private static void AnalyzeExecutionStateRequest(SyntaxNodeAnalysisContext context, ImmutableArray<INamedTypeSymbol> forbiddenTypes)
+    private static void AnalyzeScopedStateRequest(SyntaxNodeAnalysisContext context, ImmutableArray<INamedTypeSymbol> forbiddenTypes)
     {
         var invocation = (InvocationExpressionSyntax)context.Node;
-        if (context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken).Symbol is not IMethodSymbol { Name: GetExecutionStateMethodName, IsStatic: false, TypeArguments.Length: 1 } request
+        if (context.SemanticModel.GetSymbolInfo(invocation, context.CancellationToken).Symbol is not IMethodSymbol { Name: GetScopedStateMethodName, IsStatic: false, TypeArguments.Length: 1 } request
             || !ExecutionTypes.Is(request.ContainingType, "ResolutionScope"))
         {
             return;
@@ -169,7 +169,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         // A scope forwarding the request passes the configuration it received.
         if (!ExecutionTypes.Is(context.ContainingSymbol?.ContainingType, "ResolutionScope"))
         {
-            AnalyzeExecutionStateOwner(context, invocation);
+            AnalyzeScopedStateOwner(context, invocation);
         }
 
         if (request.TypeArguments[0] is not INamedTypeSymbol stateType)
@@ -192,7 +192,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     }
 
     // A configuration requests only its own state, so the request passes this.
-    private static void AnalyzeExecutionStateOwner(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
+    private static void AnalyzeScopedStateOwner(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
     {
         if (context.SemanticModel.GetOperation(invocation, context.CancellationToken) is not IInvocationOperation operation
             || operation.Arguments.FirstOrDefault(static argument => argument.Parameter?.Ordinal == 0) is not { } configuration)
@@ -212,7 +212,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         }
 
         context.ReportDiagnostic(Diagnostic.Create(
-            ExecutionStateOwnerRule,
+            ScopedStateOwnerRule,
             configuration.Syntax.GetLocation(),
             value.Syntax.ToString()));
     }
@@ -255,7 +255,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
                 continue;
             }
 
-            var stateFactory = current.OriginalDefinition.GetMembers(CreateExecutionStateMethodName)
+            var stateFactory = current.OriginalDefinition.GetMembers(CreateScopedStateMethodName)
                 .OfType<IMethodSymbol>()
                 .FirstOrDefault(static method => !method.IsStatic && method.Parameters.Length == 0 && method.ReturnType is ITypeParameterSymbol);
             if (stateFactory?.ReturnType is not ITypeParameterSymbol stateParameter

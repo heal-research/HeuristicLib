@@ -203,8 +203,9 @@ public class StateTerminatedAlgorithmTests
     private sealed record DrawingIterativeAlgorithm(List<double> Draws)
         : IterativeAlgorithm<DrawingIterativeAlgorithm, int, PopulationState<int>>
     {
-        protected override ExecutorFactory<IterativeAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-            _ => new Executor<TRunSearchSpace, TRunProblem>(Draws);
+        protected override IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            new Executor<TSearchSpace, TProblem>(Draws);
 
         private sealed class Executor<TSearchSpace, TProblem>(List<double> draws)
             : IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>(null)
@@ -239,11 +240,11 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingAlgorithm(List<string> Events)
         : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Events.Add("algorithm");
-            var executor = new Executor<TRunSearchSpace, TRunProblem>();
-            return _ => executor;
+            return new Executor<TSearchSpace, TProblem>();
         }
 
         private sealed class Executor<TSearchSpace, TProblem>

@@ -1003,7 +1003,7 @@ public class OperatorInspectionTests
 
     private sealed record AdvancingMutator(Action Prepare) : StatefulMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, MutationState>
     {
-        protected override MutationState CreateExecutionState()
+        protected override MutationState CreateScopedState()
         {
             Prepare();
             return new MutationState();

@@ -44,12 +44,12 @@ public static class TerminationOperationResolutionExtensions
         where TRunSearchState : class, ISearchState
     {
         public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve(IOperator<Termination, TCandidate> source) =>
-            (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.Scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
 
         public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve<TControl>(IOperator<Termination, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.Scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            var executor = (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
@@ -59,6 +59,6 @@ public static class TerminationOperationResolutionExtensions
 
         public bool TryResolve(IOperator<Termination, TCandidate> source,
             [NotNullWhen(true)] out ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 }

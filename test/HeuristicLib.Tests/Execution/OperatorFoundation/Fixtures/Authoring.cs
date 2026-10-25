@@ -16,7 +16,7 @@ public abstract record LeafOperator<TOperation, TCandidate, TSearchSpace, TProbl
 {
     // Explicit owner entry: authors implement only the protected construction hook.
     IExecutor IOperator<TOperation, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope.Scope);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope);
     protected abstract TExecutor CreateExecutor(ResolutionScope scope);
 
     public bool Fits(ExecutionSignature execution) =>
@@ -47,13 +47,13 @@ public abstract record StatelessMutator<TCandidate> : Mutator<TCandidate>,
 
 public abstract record StatefulMutator<TCandidate, TState> : Mutator<TCandidate> where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
     protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state,
         IRandomNumberGenerator random);
 
     protected sealed override IMutationExecutor<TCandidate, ISearchSpace<TCandidate>,
         IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
     private sealed class Executor(StatefulMutator<TCandidate, TState> source, TState state)
         : IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>

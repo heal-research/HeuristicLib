@@ -29,7 +29,7 @@ An **algorithm** uses **operators** to explore the **search space** of a **probl
   <div class="flow-arrow" aria-hidden="true"><span>combine into</span><strong>↓</strong></div>
   <section class="flow-card flow-card--primary">
     <h3>Algorithm run</h3>
-    <p>Fresh execution state</p>
+    <p>Fresh scoped state</p>
   </section>
   <div class="flow-arrow" aria-hidden="true"><span>yields</span><strong>↓</strong></div>
   <section class="flow-card flow-card--output">

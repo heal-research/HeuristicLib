@@ -24,41 +24,37 @@ public sealed record AlgorithmObservation<TCandidate, TSearchState>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     where TSearchState : class, ISearchState;
 
-/// <summary>Reports every search state yielded by each algorithm its pointcut selects.</summary>
-/// <param name="observe">Receives each observation on the thread that consumes the run.</param>
-public sealed class AlgorithmObservationAdvice<TCandidate, TSearchState>(
+// The iteration count lives on the advice, so it continues across every execution the observed algorithm builds,
+// including fresh child scopes of a cycle and runs over other search space and problem types.
+file sealed class AlgorithmObservationAdvice<TCandidate, TSearchState>(
     Action<AlgorithmObservation<TCandidate, TSearchState>> observe) : AlgorithmAdvice<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public override WrapperExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm)
-    {
-        var state = new ExecutionState();
-        return inner => new Executor<TRunSearchSpace, TRunProblem>(
-            algorithm, inner, observe, state);
-    }
+    private long iteration;
 
-    private sealed class ExecutionState
-    {
-        public long Iteration { get; set; }
-    }
+    public override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source) =>
+        new Executor<TSearchSpace, TProblem>(executor, source, this);
 
-    private sealed class Executor<TRunSearchSpace, TRunProblem>(
+    private void Observe(IAlgorithm<TCandidate, TSearchState> algorithm, TSearchState state, TSearchState? previousState,
+        ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        observe(new AlgorithmObservation<TCandidate, TSearchState>(algorithm, Interlocked.Increment(ref iteration), state, previousState, searchSpace, problem));
+
+    private sealed class Executor<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm,
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
-        IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> childAlgorithm,
-        Action<AlgorithmObservation<TCandidate, TSearchState>> observe,
-        ExecutionState state)
-        : WrappingAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childAlgorithm)
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        AlgorithmObservationAdvice<TCandidate, TSearchState> advice)
+        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TRunProblem problem, IRandomNumberGenerator random,
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
             TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             var previousState = initialState;
             await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
             {
-                observe(new AlgorithmObservation<TCandidate, TSearchState>(
-                    observedAlgorithm, ++state.Iteration, searchState, previousState, problem.SearchSpace, problem));
+                advice.Observe(observedAlgorithm, searchState, previousState, problem.SearchSpace, problem);
                 previousState = searchState;
                 yield return searchState;
             }

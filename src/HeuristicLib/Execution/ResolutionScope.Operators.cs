@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -5,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Execution;
 
-public sealed partial class ResolutionScope
+public partial class ResolutionScope
 {
     /// <summary>Resolves an operator's executor for one operation and the run's types, applying matching advice.</summary>
     /// <remarks>
@@ -27,7 +28,7 @@ public sealed partial class ResolutionScope
         try
         {
             var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
-            var owner = state.GetOrAddOperatorOwner(source);
+            var owner = state.GetOrAddOwner(source);
 
             List<Advice>? applicable = null;
             foreach (var (pointcut, advice) in Advices())
@@ -52,6 +53,20 @@ public sealed partial class ResolutionScope
         }
     }
 
+    /// <summary>Resolves an operator like <c>ResolveOperator</c> and returns its executor as the operation's interface.</summary>
+    /// <remarks>
+    /// Invalid-operation failures become reasons; other exceptions propagate. Failed attempts may be retried.
+    /// <typeparamref name="TExecutor"/> is the operation's executor interface for the run types.
+    /// </remarks>
+    public bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(IOperator<TOperation, TCandidate> source,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TOperation : IOperation<TOperation>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+        where TExecutor : class, IExecutor =>
+        Attempt(() => (TExecutor)ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source), out executor, out reason);
+
     // Returns whether the advice wraps this operation; advice for another operation of the same configuration is skipped.
     private static bool CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice,
         OperationInfo operation, IOperator<TOperation, TCandidate> source)
@@ -73,19 +88,6 @@ public sealed partial class ResolutionScope
             default:
                 throw new InvalidOperationException($"{advice.GetType().FullName} cannot wrap operation {typeof(TOperation).Name} " +
                     $"on {source.GetType().Name}. Supported extension bases are OperatorAdvice and OperatorAdvice<TOperation, TCandidate>.");
-        }
-    }
-
-    internal sealed partial class State
-    {
-        // Finds the state that owns the operator, as for every configuration, or makes this state its owner.
-        internal State GetOrAddOperatorOwner(IOperator source)
-        {
-            var selected = FindOwner(source);
-            if (selected is { } existing)
-                return existing.Entry.LegacyFactory is null ? existing.Owner : throw PreparationPathMismatch(source);
-            owners.Add(source, new ConfigurationResolutionEntry(null));
-            return this;
         }
     }
 }

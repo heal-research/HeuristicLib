@@ -25,7 +25,7 @@ Each operation's observation record keeps its domain names, such as `Parents` an
 
 The trace machinery names no operation; a ready-made trace extends the source of the observation type it reads, such as evaluator calls. An external operation declares the same three parts and is observed and traced exactly like a built-in one.
 
-Operation observation advice is file-local; its source creates it with the callback. It wraps each executor built for its observed configuration and keeps no further state. Algorithm observation prepares its iteration counter once per advice, configuration and owner state, so rebuilding contextual nodes does not reset the count. Invocation-local previous states stay in the iterator.
+Operation observation advice is file-local; its source creates it with the callback. It wraps each executor built for its observed configuration and keeps no further state. Algorithm observation advice keeps its iteration counter on the advice, so rebuilding executors, including a meta-algorithm's fresh activations, does not reset the count. Invocation-local previous states stay in the iterator.
 
 Earlier advice wraps closer to the source executor and reports completed operations first. A trace therefore includes its clocks' advice before its own observation advice. Shared clocks keep their first position. A scope with no matching advice adds no observation wrapper.
 

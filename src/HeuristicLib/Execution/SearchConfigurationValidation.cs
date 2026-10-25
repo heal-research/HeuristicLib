@@ -91,6 +91,19 @@ public static class SearchConfigurationValidation
     }
 
     /// <summary>
+    /// The failure resolution reports when <paramref name="configuration"/> does not fit <paramref name="execution"/>,
+    /// listing the configurations responsible rather than only the one being resolved.
+    /// </summary>
+    internal static InvalidOperationException Mismatch(IConfigurationNode configuration, ExecutionSignature execution)
+    {
+        var diagnostics = ImmutableArray.CreateBuilder<ValidationDiagnostic>();
+        ReportMismatch(configuration, ExecutionSignature.Name(configuration.GetType()), execution, diagnostics);
+        return new InvalidOperationException(
+            $"{ExecutionSignature.Name(configuration.GetType())} cannot run over {execution}:{Environment.NewLine}" +
+            string.Join(Environment.NewLine, diagnostics.Select(diagnostic => $"  - {diagnostic}")));
+    }
+
+    /// <summary>
     /// Reports the node and everything below it, returning the invariants already reported in this subtree.
     /// </summary>
     /// <remarks>

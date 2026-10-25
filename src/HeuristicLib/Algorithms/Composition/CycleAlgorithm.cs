@@ -32,12 +32,11 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-    {
-        var scopeSelector = new ChildScopeSelector(ScopePolicy);
-        return scope => new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(
-            scope, Algorithms, MaximumCycles, scopeSelector);
-    }
+    /// <remarks>The scope selector is the Cycle's scoped state, so retained child state survives every rebuild in its owner.</remarks>
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
+            scope, Algorithms, MaximumCycles, scope.GetScopedState(this, () => new ChildScopeSelector(ScopePolicy)));
 }
 
 public static class CycleAlgorithm

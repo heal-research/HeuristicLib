@@ -35,8 +35,8 @@ public record CachingEvaluator<TCandidate, TKey>
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
-        // on a live thread after the execution state is released.
-        var cache = scope.GetExecutionState(this, () => new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit }));
+        // on a live thread after the scoped state is released.
+        var cache = scope.GetScopedState(this, () => new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit }));
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
     }

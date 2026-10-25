@@ -43,14 +43,14 @@ public static class MoveCreationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IOperator<MoveCreation<TMove>, TCandidate> source) =>
-            (IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>)scope.Scope.ResolveOperator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            (IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>)scope.ResolveOperator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
 
         [return: NotNullIfNotNull(nameof(source))]
         public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IOperator<MoveCreation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve<TMove>(IOperator<MoveCreation<TMove>, TCandidate> source,
             [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
@@ -59,13 +59,13 @@ public static class MoveCreationOperationResolutionExtensions
         where TRunSearchState : class, ISearchState
     {
         public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IOperator<MoveCreation<TMove>, TCandidate> source) =>
-            (IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>)scope.Scope.ResolveOperator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            (IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>)scope.ResolveOperator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
 
         [return: NotNullIfNotNull(nameof(source))]
         public IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IOperator<MoveCreation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve<TMove>(IOperator<MoveCreation<TMove>, TCandidate> source,
             [NotNullWhen(true)] out IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 }

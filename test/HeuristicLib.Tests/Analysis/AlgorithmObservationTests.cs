@@ -227,21 +227,21 @@ public class AlgorithmObservationTests
     }
 
     /// <summary>
-    /// A cycle that recreates its executors restarts the observed algorithm, so its iteration count restarts
-    /// with it. Reusing the instances continues one algorithm, so the count continues.
+    /// The observation counts on its advice, so the iteration count continues across every activation of the observed
+    /// algorithm, whether the cycle recreates its scoped state or keeps it.
     /// </summary>
     [Theory]
-    [InlineData(true, new long[] { 1, 2, 3, 1, 2, 3 })]
-    [InlineData(false, new long[] { 1, 2, 3, 4, 5, 6 })]
-    public async Task IterationClock_FollowsWhetherTheCycleRecreatesItsExecutions(
-        bool newExecutionInstancesPerCycle, long[] expectedIterations)
+    [InlineData(ChildScopePolicy.Fresh)]
+    [InlineData(ChildScopePolicy.Retained)]
+    [InlineData(ChildScopePolicy.Shared)]
+    public async Task IterationClock_ContinuesAcrossTheCyclesActivations(ChildScopePolicy policy)
     {
         var problem = CreateProblem();
         var inner = CreateAlgorithm(problem, maximumGenerations: 3);
         var cycle = CycleAlgorithm.Create(inner) with
         {
             MaximumCycles = 2,
-            ScopePolicy = newExecutionInstancesPerCycle ? ChildScopePolicy.Fresh : ChildScopePolicy.Shared
+            ScopePolicy = policy
         };
 
         var iterations = Clock.FromIterations(inner);
@@ -250,7 +250,7 @@ public class AlgorithmObservationTests
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        quality.By(iterations).Select(point => point.Time).ShouldBe(expectedIterations);
+        quality.By(iterations).Select(point => point.Time).ShouldBe([1, 2, 3, 4, 5, 6]);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));

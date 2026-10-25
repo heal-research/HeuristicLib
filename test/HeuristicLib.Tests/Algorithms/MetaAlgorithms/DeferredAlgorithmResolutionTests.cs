@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
-public sealed class DeferredAlgorithmFactoryTests
+public sealed class DeferredAlgorithmResolutionTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
 
@@ -412,11 +412,16 @@ public sealed class DeferredAlgorithmFactoryTests
         public int Steps { get; init; } = 1;
         public Action<ProbeData> Prepared { get; init; } = static _ => { };
 
-        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, ProbeState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, ProbeState> scope)
         {
-            var data = new ProbeData();
-            Prepared(data);
-            return scope => new Executor<TRunSearchSpace, TRunProblem>(data, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Mutator), Steps);
+            var data = scope.GetScopedState(this, () =>
+            {
+                var created = new ProbeData();
+                Prepared(created);
+                return created;
+            });
+            return new Executor<TSearchSpace, TProblem>(data, scope.Resolve(Mutator), Steps);
         }
 
         private sealed class Executor<TSearchSpace, TProblem>(ProbeData data, IMutationExecutor<int, TSearchSpace, TProblem> mutator, int steps)
@@ -471,7 +476,7 @@ public sealed class DeferredAlgorithmFactoryTests
 
     private sealed record CountingMutations : StatefulMutator<int, MutationData>
     {
-        protected override MutationData CreateExecutionState() => new();
+        protected override MutationData CreateScopedState() => new();
         protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationData state, IRandomNumberGenerator random) => [++state.Calls];
     }
 

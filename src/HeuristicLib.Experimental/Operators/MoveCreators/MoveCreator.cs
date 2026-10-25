@@ -19,12 +19,12 @@ public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TS
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TState : class
 {
-    protected abstract TState CreateExecutionState();
+    protected abstract TState CreateScopedState();
 
     protected abstract IEnumerable<TMove> Moves(TCandidate candidate, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     protected sealed override IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetExecutionState(this, CreateExecutionState));
+        new Executor(this, scope.GetScopedState(this, CreateScopedState));
 
     private sealed class Executor(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> moveCreator, TState state)
         : IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>

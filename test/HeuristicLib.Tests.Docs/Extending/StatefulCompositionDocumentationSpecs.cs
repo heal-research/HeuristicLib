@@ -28,17 +28,17 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
             throw new InvalidOperationException("At least one mutator is required.");
         ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
             [.. ChildOperators.Select(child => scope.Resolve(child))];
-        return new Executor<TSearchSpace, TProblem>(children, scope.GetExecutionState(this, static () => new ExecutionState()));
+        return new Executor<TSearchSpace, TProblem>(children, scope.GetScopedState(this, static () => new State()));
     }
 
-    private sealed class ExecutionState
+    private sealed class State
     {
         public int NextChild { get; set; }
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
         ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children,
-        ExecutionState state)
+        State state)
         : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

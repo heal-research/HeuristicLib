@@ -17,7 +17,7 @@ public sealed class MixedOperatorResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void TypedAndUntypedResolutionShareThePreparedOwnerInEitherOrder(bool untypedFirst)
+    public void TypedAndUntypedResolutionShareTheScopedStateInEitherOrder(bool untypedFirst)
     {
         var source = new DualCrossover();
         var counter = new CallCounter();
@@ -65,32 +65,6 @@ public sealed class MixedOperatorResolutionTests
         source.Preparations.ShouldBe(3);
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void LowLevelCallbacksCannotCreateAnIndependentOwnerForTheSameConfiguration(bool untypedFirst)
-    {
-        var source = new DualCrossover();
-        var root = ResolutionScope.Create();
-        var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> LowLevelCallback() =>
-            root.Resolve<DualCrossover, ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>>(
-                source, _ => _ => new DualCrossover.Executor(new DualCrossover.ExecutionState()), (_, _) => static child => child);
-        if (untypedFirst)
-        {
-            _ = LowLevelCallback();
-            Assert.Throws<InvalidOperationException>(() => typed.Resolve((IOperator<Crossover, RealVector>)source))
-                .Message.ShouldContain("preparation path");
-            source.Preparations.ShouldBe(0);
-        }
-        else
-        {
-            _ = typed.Resolve((IOperator<Crossover, RealVector>)source);
-            Assert.Throws<InvalidOperationException>(() => LowLevelCallback()).Message.ShouldContain("preparation path");
-            source.Preparations.ShouldBe(1);
-        }
-    }
-
     private static double Invoke(ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> operation) =>
         operation.Cross([Parents.From(new RealVector(0.0), new RealVector(0.0))], RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)[0][0];
 
@@ -98,21 +72,21 @@ public sealed class MixedOperatorResolutionTests
     {
         public int Preparations { get; private set; }
 
-        // Every build in one owning state shares the live value.
+        // Every build in one owning scope shares the live value.
         IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
-            new Executor(scope.GetExecutionState(this, () =>
+            new Executor(scope.GetScopedState(this, () =>
             {
                 Preparations++;
-                return new ExecutionState();
+                return new State();
             }));
 
-        internal sealed class ExecutionState
+        private sealed class State
         {
             public int Value { get; set; }
         }
 
-        internal sealed class Executor(ExecutionState state) : ILiveValue,
+        private sealed class Executor(State state) : ILiveValue,
             ICrossoverExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         {
             public int Value

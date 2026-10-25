@@ -16,8 +16,12 @@ public record TransformedCrossover<TCandidate>(IOperator<Crossover, TCandidate> 
     : Operator<Crossover, TCandidate>
 {
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(SourceCrossover), scope.Resolve(TransformationMutator));
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var sourceCrossover = scope.Resolve(SourceCrossover);
+        var transformationMutator = scope.Resolve(TransformationMutator);
+        return new Executor<TRunSearchSpace, TRunProblem>(sourceCrossover, transformationMutator);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
         : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>

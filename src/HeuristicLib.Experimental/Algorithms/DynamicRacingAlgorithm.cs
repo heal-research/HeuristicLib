@@ -90,14 +90,18 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}"/>, so it names the search space and problem it is
     /// written for and the base reconciles them with the run's.
     /// </remarks>
-    protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory()
+    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var state = new ExecutionState();
-        return scope => new Executor(scope, scope.ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(Interceptor), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator), scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator), MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
-            EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount, ModelObservationInterval, ObjectiveValueSelector, state);
+        var interceptor = scope.ResolveOptional(Interceptor);
+        var creator = scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator);
+        var mutator = scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator);
+        var state = scope.GetScopedState(this, static () => new State());
+        return new Executor(scope, interceptor, creator, mutator, MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
+            EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount,
+            ModelObservationInterval, ObjectiveValueSelector, state);
     }
 
-    private sealed class ExecutionState
+    private sealed class State
     {
         public Dictionary<string, HallOfFameEntry> HallOfFame { get; } = [];
         public MetaOptimizationGenotype? Incumbent { get; set; }
@@ -123,7 +127,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         int minimumModelObservationCount,
         int modelObservationInterval,
         Func<ObjectiveVector, double> objectiveValueSelector,
-        ExecutionState state)
+        State state)
         : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor)
     {
         protected override TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)

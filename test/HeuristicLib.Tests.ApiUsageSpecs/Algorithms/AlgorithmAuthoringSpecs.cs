@@ -108,16 +108,15 @@ public class AlgorithmAuthoringSpecs
     }
 
     /// <summary>
-    /// Algorithm configurations expose scope-free <c>CreateExecutorFactory</c> publicly. The protected
-    /// <c>CreateIterationFactory</c> hook prepares the factory that resolves the interceptor and other children in its construction scope.
+    /// An algorithm builds its executor in the protected <c>CreateExecutor</c> hook, resolving the interceptor and other
+    /// children through the scope it receives. Callers resolve the algorithm through a scope, which applies advice.
     /// </summary>
     [Fact]
-    public void Algorithm_CreateExecutionFactory_IsCallableWithoutAnInterfaceCast()
+    public void Algorithm_ResolvesThroughTheScopeToTheExecutorItsHookBuilds()
     {
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() };
 
-        var factory = algorithm.CreateExecutorFactory();
-        var execution = factory(ResolutionScope.Create());
+        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(algorithm);
 
         execution.ShouldBeAssignableTo<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
     }
@@ -128,12 +127,9 @@ public class AlgorithmAuthoringSpecs
         public required IOperator<Creation, RealVector> Creator { get; init; }
         public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateIterationFactory() =>
-            scope =>
-            {
-                var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>();
-                return new Executor(typed.ResolveOptional(Interceptor), typed.Resolve(Creator), typed.Resolve(Evaluator));
-            };
+        protected override IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutor(
+            ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> scope) =>
+            new Executor(scope.ResolveOptional(Interceptor), scope.Resolve(Creator), scope.Resolve(Evaluator));
 
         private sealed class Executor(
             IInterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? interceptor,
@@ -157,17 +153,12 @@ public class AlgorithmAuthoringSpecs
         public required IOperator<Creation, RealVector> Creator { get; init; }
         public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-        protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateIterationFactory()
-        {
-            var state = new ExecutionState();
-            return scope =>
-            {
-                var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>();
-                return new Executor(typed.ResolveOptional(Interceptor), typed.Resolve(Creator), typed.Resolve(Evaluator), state);
-            };
-        }
+        protected override IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutor(
+            ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> scope) =>
+            new Executor(scope.ResolveOptional(Interceptor), scope.Resolve(Creator), scope.Resolve(Evaluator),
+                scope.GetScopedState(this, static () => new State()));
 
-        private sealed class ExecutionState
+        private sealed class State
         {
             public int Steps { get; set; }
         }
@@ -176,7 +167,7 @@ public class AlgorithmAuthoringSpecs
             IInterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? interceptor,
             ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
             IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator,
-            ExecutionState state)
+            State state)
             : IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(interceptor)
         {
             protected override SingleSolutionState<RealVector> ExecuteStep(SingleSolutionState<RealVector>? previousState, TestFunctionProblem problem, IRandomNumberGenerator random)
@@ -194,21 +185,21 @@ public class AlgorithmAuthoringSpecs
     }
 
     private sealed record CountingCreator
-        : StatefulCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingCreator.ExecutionState>
+        : StatefulCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingCreator.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState()
+        protected override State CreateScopedState()
         {
-            return new ExecutionState();
+            return new State();
         }
 
         protected override IReadOnlyList<RealVector> Create(
             int count,
-            ExecutionState executionState,
+            State state,
             IRandomNumberGenerator random,
             BoundedRealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
@@ -216,8 +207,8 @@ public class AlgorithmAuthoringSpecs
             return Enumerable.Range(0, count)
                              .Select(_ =>
                              {
-                                 executionState.Calls++;
-                                 return new RealVector(executionState.Calls, 0.0, 0.0);
+                                 state.Calls++;
+                                 return new RealVector(state.Calls, 0.0, 0.0);
                              })
                              .ToArray();
         }

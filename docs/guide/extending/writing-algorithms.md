@@ -7,9 +7,9 @@ Create an algorithm only when the state transition or control flow is new. Put d
 An algorithm has two parts:
 
 1. An immutable configuration record that holds operators and settings.
-2. Prepared execution state and an executor bound to resolved operators and interceptors.
+2. An executor bound to resolved operators and the interceptor, built for every resolution, and scoped state that those executors share.
 
-Each call to `Stream` or `CompleteAsync` starts an independent root execution. Preparation creates persistent state once for that logical execution; contextual bindings share it while receiving their own resolved children.
+Each call to `Stream` or `CompleteAsync` starts an independent root execution. Every resolution of the algorithm builds a new executor with its own resolved children; data those executors share is scoped state, which the scope creates once per owning scope.
 
 ## Implement an iterative algorithm
 
@@ -31,16 +31,14 @@ public sealed record SingleCreateAlgorithm
 
     public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
-    protected override ExecutorFactory<IterativeAlgorithmExecutor<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-        scope =>
-        {
-            var typed = scope.For<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>();
-
-            return new Executor<TRunSearchSpace, TRunProblem>(
-                typed.ResolveOptional(Interceptor),
-                typed.Resolve(Creator),
-                typed.Resolve(Evaluator));
-        };
+    protected override IterativeAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope)
+    {
+        var interceptor = scope.ResolveOptional(Interceptor);
+        var creator = scope.Resolve(Creator);
+        var evaluator = scope.Resolve(Evaluator);
+        return new Executor<TSearchSpace, TProblem>(interceptor, creator, evaluator);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(
         IInterceptionExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>? interceptor,
@@ -70,9 +68,9 @@ public sealed record SingleCreateAlgorithm
 
 Operator slots, including terminators, name their operation and candidate. An interceptor slot also names the search state its operation returns, as the inherited `IOperator<Interception<SingleSolutionState<RealVector>>, RealVector>? Interceptor` does. `IOperator<Creation, RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the executor is created.
 
-The run's search space and problem arrive as method type arguments on `CreateIterationFactory`. The nested executor class is generic in them and carries the matching constraints. Configurations omit the run types from operator slots.
+The run's search space and problem arrive as method type arguments on `CreateExecutor`, together with a scope typed to them. The nested executor class is generic in them and carries the matching constraints. Configurations omit the run types from operator slots.
 
-The public `CreateExecutorFactory` forwards to this protected preparation hook without a construction scope. The hook returns an ordinary `ExecutorFactory` whose result must derive from `IterativeAlgorithmExecutor`. Inside that factory, resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state. `ExecuteStep`, the interceptor and the protected `IsTerminalState` hook receive the same per-iteration random number generator, so an algorithm that owns a terminator passes that generator on.
+Resolution calls this protected hook for every build. Return an executor derived from `IterativeAlgorithmExecutor`; this base's hook declares only `IAlgorithmExecutor`, so the compiler does not check it. Resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state. `ExecuteStep`, the interceptor and the protected `IsTerminalState` hook receive the same per-iteration random number generator, so an algorithm that owns a terminator passes that generator on.
 
 ### When to name the search space and problem instead
 
@@ -88,15 +86,15 @@ public sealed record MatrixAwareAlgorithm
         SingleSolutionState<Permutation>>
 ```
 
-Its protected `CreateIterationFactory` takes no method type arguments and its executor class can be nongeneric. The hook returns `ExecutorFactory<IterativeAlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SingleSolutionState<Permutation>>>`. Operator slots still omit the run types. The public factory checks run compatibility with the declared search-space and problem contracts before preparation. Choose this base when the algorithm reads those contracts itself.
+Its protected `CreateExecutor` takes no method type arguments and receives a scope typed to the declared contracts, so its executor class can be nongeneric. The hook returns `IterativeAlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SingleSolutionState<Permutation>>`. Operator slots still omit the run types. The base rejects a run whose search space or problem does not convert to the declared contracts before it calls the hook. Choose this base when the algorithm reads those contracts itself.
 
 Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm does not stop itself.
 
-## Prepare state and bind children
+## Share state and bind children
 
-Resolve the optional interceptor and every other configured child operator through the construction scope supplied to the prepared executor factory. Retain the resolved children on that executor. Do not call operator configurations directly from `ExecuteStep` or resolve children on every iteration.
+Resolve the optional interceptor and every other configured child operator through the scope that `CreateExecutor` receives. Retain the resolved children on the executor. Do not call operator configurations directly from `ExecuteStep` or resolve children on every iteration.
 
-Allocate persistent counters and helper data in `CreateIterationFactory`, before returning its delegate, and capture that data for each binding. Keep iteration position, previous search state and per-invocation values in the operation or iterator. A paused iterator retains its original children and interceptor when another context constructs an executor. Never mutate the configuration record.
+Take data that every build shares, such as a counter or a cache, from `scope.GetScopedState(this, create)`. The scope creates it on the first request and returns the same object to every later build in the owning scope. Keep iteration position, previous search state and per-invocation values in the operation or iterator. A paused iterator retains its original children and interceptor when another context builds an executor. Never mutate the configuration record.
 
 ## Preserve run behavior
 

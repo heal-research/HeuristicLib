@@ -23,16 +23,19 @@ public record PredefinedCandidatesCreator<TCandidate>
     }
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(CreatorForRemainingCandidates), PredefinedCandidates,
-            scope.GetExecutionState(this, static () => new ExecutionState()));
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var creatorForRemainingCandidates = scope.Resolve(CreatorForRemainingCandidates);
+        var state = scope.GetScopedState(this, static () => new State());
+        return new Executor<TRunSearchSpace, TRunProblem>(creatorForRemainingCandidates, PredefinedCandidates, state);
+    }
 
-    private sealed class ExecutionState
+    private sealed class State
     {
         public int CurrentCandidateIndex { get; set; }
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates, ExecutionState state)
+    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates, State state)
         : CreationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

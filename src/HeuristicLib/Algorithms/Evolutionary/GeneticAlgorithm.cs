@@ -38,14 +38,20 @@ public record GeneticAlgorithm<TCandidate>
     public IOperator<Selection, TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
 
-    protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-        scope =>
-        {
-            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
-            return new Executor<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
-                typed.Resolve(Mutator), typed.Resolve(Selector), typed.ResolveOptional(Terminator),
-                typed.ResolveOptional(Refiner), PopulationSize, MaximumGenerations, Elites, MutationRate);
-        };
+    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
+    {
+        var interceptor = scope.ResolveOptional(Interceptor);
+        var evaluator = scope.Resolve(Evaluator);
+        var creator = scope.Resolve(Creator);
+        var crossover = scope.Resolve(Crossover);
+        var mutator = scope.Resolve(Mutator);
+        var selector = scope.Resolve(Selector);
+        var terminator = scope.ResolveOptional(Terminator);
+        var refiner = scope.ResolveOptional(Refiner);
+        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, terminator, refiner,
+            PopulationSize, MaximumGenerations, Elites, MutationRate);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(
         IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,

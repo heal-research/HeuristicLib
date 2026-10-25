@@ -21,16 +21,16 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     where TCandidate : notnull
     where TKey : notnull
 {
-    private sealed class ExecutionState
+    private sealed class State
     {
         public MemoryCache Cache { get; }
         public long HitCount { get; set; }
         public int Epoch { get; private set; }
 
-        public ExecutionState(long? sizeLimit, int initialEpoch)
+        public State(long? sizeLimit, int initialEpoch)
         {
             // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
-            // on a live thread after the prepared execution state is released. Grace accounting uses HitCount instead.
+            // on a live thread after the scoped state is released. Grace accounting uses HitCount instead.
             Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
             Epoch = initialEpoch;
         }
@@ -79,7 +79,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var state = scope.GetExecutionState(this, () => new ExecutionState(SizeLimit, SourceProblem.CurrentEpoch));
+        var state = scope.GetScopedState(this, () => new State(SizeLimit, SourceProblem.CurrentEpoch));
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
     }
@@ -89,12 +89,12 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
         private readonly IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator;
-        private readonly ExecutionState state;
+        private readonly State state;
         private readonly IDynamicProblem<TCandidate, TSearchSpace> sourceProblem;
         private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
         private readonly long graceCount;
 
-        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, ExecutionState state)
+        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, State state)
         {
             this.childEvaluator = childEvaluator;
             this.state = state;

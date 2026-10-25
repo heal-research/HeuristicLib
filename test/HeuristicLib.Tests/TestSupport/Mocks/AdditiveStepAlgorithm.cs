@@ -9,8 +9,9 @@ public sealed record AdditiveStepAlgorithm(int Increment)
 {
     public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
-    public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
-        scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), Increment);
+    protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+        new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), Increment);
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, int increment)
         : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>

@@ -57,12 +57,12 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var state = scope.GetExecutionState(this, static () => new ExecutionState());
+        var state = scope.GetScopedState(this, static () => new State());
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy, state);
     }
 
-    private sealed class ExecutionState
+    private sealed class State
     {
         public ObjectiveVector? BestKnown { get; set; }
         public int BestKnownEpoch { get; set; } = -1;
@@ -76,9 +76,9 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         private readonly IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider;
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
         private readonly IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator;
-        private readonly ExecutionState state;
+        private readonly State state;
 
-        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy, ExecutionState state)
+        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy, State state)
         {
             this.sourceProblem = sourceProblem;
             this.bestKnownProvider = bestKnownProvider;

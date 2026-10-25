@@ -23,7 +23,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
-/// way. Resolving the same evaluator configuration in a shared scope shares its execution state, including counters and caches.
+/// way. Resolving the same evaluator configuration in a shared scope shares its scoped state, including counters and caches.
 /// </para>
 /// </remarks>
 public sealed record RefinementEvaluator<TCandidate>
@@ -52,8 +52,12 @@ public sealed record RefinementEvaluator<TCandidate>
     public override bool Fits(ExecutionSignature execution) => execution.Fits(Evaluator, Refiner);
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Evaluator), scope.Resolve(Refiner));
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var evaluator = scope.Resolve(Evaluator);
+        var refiner = scope.Resolve(Refiner);
+        return new Executor<TRunSearchSpace, TRunProblem>(evaluator, refiner);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner)
         : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>

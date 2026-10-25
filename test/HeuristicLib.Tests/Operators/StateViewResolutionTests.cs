@@ -16,7 +16,7 @@ public class StateViewResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ABroadTerminator_SharesItsPreparedDataAcrossCompatibleStateViews(bool secondViewFirst)
+    public void ABroadTerminator_SharesItsScopedStateAcrossCompatibleStateViews(bool secondViewFirst)
     {
         var probe = new Probe();
         var terminator = new ThirdCallTerminator(probe);
@@ -82,7 +82,7 @@ public class StateViewResolutionTests
 
     private sealed record ThirdCallTerminator(Probe Probe) : StatefulTerminator<int, CallCount>
     {
-        protected override CallCount CreateExecutionState()
+        protected override CallCount CreateScopedState()
         {
             Probe.Preparations++;
             return new CallCount();
@@ -93,15 +93,15 @@ public class StateViewResolutionTests
 
     private sealed record CountingInterceptor(Probe Probe) : StatefulInterceptor<int, FirstState, CallCount>
     {
-        protected override CallCount CreateExecutionState()
+        protected override CallCount CreateScopedState()
         {
             Probe.Preparations++;
             return new CallCount();
         }
 
-        protected override FirstState Transform(FirstState currentState, FirstState? previousState, CallCount state, IRandomNumberGenerator random)
+        protected override FirstState Transform(FirstState currentState, FirstState? previousState, CallCount operatorState, IRandomNumberGenerator random)
         {
-            state.Calls++;
+            operatorState.Calls++;
             return currentState;
         }
     }

@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings.BoolVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
@@ -14,13 +15,13 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
-public sealed class RoleExecutorFactoryTests
+public sealed class RoleResolutionTests
 {
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
-    public void StatefulLeaf_ChildObservationPreservesStateAndPreparesOnce(int arity)
+    public void StatefulLeaf_ChildObservationKeepsStateAndCreatesItOnce(int arity)
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
@@ -89,7 +90,7 @@ public sealed class RoleExecutorFactoryTests
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    public void StatefulLeaf_CompatibleProblemContractsShareThePreparedState(int arity)
+    public void StatefulLeaf_CompatibleProblemContractsShareTheScopedState(int arity)
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
@@ -104,7 +105,7 @@ public sealed class RoleExecutorFactoryTests
     }
 
     [Fact]
-    public void BoundLeaf_IncompatibleProblemFailsBeforeStatePreparation()
+    public void BoundLeaf_IncompatibleProblemFailsBeforeCreatingState()
     {
         var preparations = 0;
         var source = new BoundMutator(() => preparations++);
@@ -120,7 +121,7 @@ public sealed class RoleExecutorFactoryTests
     }
 
     [Fact]
-    public void StatefulLeaf_PreparationFaultIsRetriedWithoutPublishingState()
+    public void StatefulLeaf_StateCreationFaultIsRetriedWithoutPublishingState()
     {
         var preparations = 0;
         var failure = new InvalidOperationException("initialization failed");
@@ -137,7 +138,7 @@ public sealed class RoleExecutorFactoryTests
     }
 
     [Fact]
-    public void InputFreeTerminator_CompatibleSearchStatesSharePreparedState()
+    public void InputFreeTerminator_CompatibleSearchStatesShareScopedState()
     {
         var preparations = 0;
         var source = new InputFreeTerminator(() => preparations++);
@@ -156,7 +157,7 @@ public sealed class RoleExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void AlgorithmBridge_IncompatibleSearchStateFailsBeforePreparation(bool bound)
+    public void AlgorithmBridge_IncompatibleSearchStateFailsBeforeCreatingState(bool bound)
     {
         var preparations = 0;
         var source = CreateAlgorithm(bound, () => preparations++);
@@ -173,27 +174,69 @@ public sealed class RoleExecutorFactoryTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void AlgorithmBridge_PreparesOnceAndBindsThroughTheRequestedRunTypes(bool bound)
+    public void AlgorithmBridge_CreatesStateOncePerOwningStateAndBindsThroughTheRequestedRunTypes(bool bound)
     {
         var preparations = 0;
         var source = CreateAlgorithm(bound, () => preparations++);
-        var factory = source.CreateExecutorFactory<BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>();
+        var scope = ResolutionScope.Create();
+
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
         preparations.ShouldBe(1);
 
-        factory(ResolutionScope.Create()).ShouldNotBeNull();
-        factory(ResolutionScope.Create()).ShouldNotBeNull();
-        preparations.ShouldBe(1);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
+        preparations.ShouldBe(2);
     }
 
     [Fact]
-    public void BoundAlgorithm_IncompatibleProblemFailsBeforePreparation()
+    public void BoundAlgorithm_IncompatibleProblemFailsBeforeCreatingState()
     {
         var preparations = 0;
         var source = new BoundAlgorithm(() => preparations++);
 
-        Should.Throw<InvalidOperationException>(() => source.CreateExecutorFactory<BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>());
+        ResolutionScope.Create().TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, SingleSolutionState<RealVector>>(
+            source, out var executor, out var reason).ShouldBeFalse();
 
+        executor.ShouldBeNull();
+        reason.ShouldNotBeNull();
+        reason.ShouldContain($"{nameof(BoundAlgorithm)} was not written for an execution over");
         preparations.ShouldBe(0);
+    }
+
+    /// <summary>
+    /// The algorithm fits only if its operators do, so the failure names each operator that does not, rather than the
+    /// algorithm that only holds them.
+    /// </summary>
+    [Fact]
+    public void AlgorithmMismatch_NamesEveryOperatorThatDoesNotFit()
+    {
+        var source = new HillClimber<BoolVector>
+        {
+            Creator = new RandomBoolVectorCreator(),
+            Mutator = new BitFlipMutator()
+        };
+
+        ResolutionScope.Create().TryResolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>, SingleSolutionState<BoolVector>>(
+            source, out var executor, out var reason).ShouldBeFalse();
+
+        executor.ShouldBeNull();
+        reason.ShouldNotBeNull();
+        reason.ShouldContain($"{nameof(HillClimber<>.Creator)}: {nameof(RandomBoolVectorCreator)} was not written for an execution over {nameof(FixedCardinalityBoolVectorSearchSpace)}");
+        reason.ShouldContain($"{nameof(HillClimber<>.Mutator)}: {nameof(BitFlipMutator)} was not written for an execution over {nameof(FixedCardinalityBoolVectorSearchSpace)}");
+        reason.Split(Environment.NewLine).Count(line => line.StartsWith("  - ", StringComparison.Ordinal)).ShouldBe(2);
+    }
+
+    [Fact]
+    public void AlgorithmAdvice_ForAnotherSearchStateOfTheSelectedAlgorithm_IsSkipped()
+    {
+        var source = new TwoStateAlgorithm();
+        var advice = new CountingSingleSolutionAdvice();
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), advice));
+
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(source).ShouldNotBeNull();
+        advice.Wraps.ShouldBe(0);
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
+        advice.Wraps.ShouldBe(1);
     }
 
     private static IOperator<Mutation, RealVector> CreateMutator(int arity, Action prepare) => arity switch
@@ -221,7 +264,7 @@ public sealed class RoleExecutorFactoryTests
     private sealed record BoundMutator(Action Prepare)
         : StatefulMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterState>
     {
-        protected override CounterState CreateExecutionState()
+        protected override CounterState CreateScopedState()
         {
             Prepare();
             return new CounterState();
@@ -234,7 +277,7 @@ public sealed class RoleExecutorFactoryTests
     private sealed record SearchSpaceMutator(Action Prepare)
         : StatefulMutator<RealVector, BoundedRealVectorSearchSpace, CounterState>
     {
-        protected override CounterState CreateExecutionState()
+        protected override CounterState CreateScopedState()
         {
             Prepare();
             return new CounterState();
@@ -246,7 +289,7 @@ public sealed class RoleExecutorFactoryTests
 
     private sealed record CandidateMutator(Action Prepare) : StatefulMutator<RealVector, CounterState>
     {
-        protected override CounterState CreateExecutionState()
+        protected override CounterState CreateScopedState()
         {
             Prepare();
             return new CounterState();
@@ -278,7 +321,7 @@ public sealed class RoleExecutorFactoryTests
 
     private sealed record InputFreeTerminator(Action Prepare) : StatefulTerminator<RealVector, CounterState>
     {
-        protected override CounterState CreateExecutionState()
+        protected override CounterState CreateScopedState()
         {
             Prepare();
             return new CounterState();
@@ -289,28 +332,67 @@ public sealed class RoleExecutorFactoryTests
 
     private sealed record AgnosticAlgorithm(Action Prepare) : Algorithm<AgnosticAlgorithm, RealVector, SingleSolutionState<RealVector>>
     {
-        public override ExecutorFactory<IAlgorithmExecutor<RealVector, TRunSearchSpace, TRunProblem, SingleSolutionState<RealVector>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+        protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope)
         {
-            Prepare();
-            return _ => new ProbeAlgorithmExecutor<TRunSearchSpace, TRunProblem>();
+            scope.GetScopedState(this, () =>
+            {
+                Prepare();
+                return new CounterState();
+            });
+            return new ProbeAlgorithmExecutor<TSearchSpace, TProblem, SingleSolutionState<RealVector>>();
         }
     }
 
     private sealed record BoundAlgorithm(Action Prepare)
         : Algorithm<BoundAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
-        public override ExecutorFactory<AlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>> CreateExecutorFactory()
+        protected override IAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutor(
+            ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> scope)
         {
-            Prepare();
-            return _ => new ProbeAlgorithmExecutor<BoundedRealVectorSearchSpace, TestFunctionProblem>();
+            scope.GetScopedState(this, () =>
+            {
+                Prepare();
+                return new CounterState();
+            });
+            return new ProbeAlgorithmExecutor<BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>();
         }
     }
 
-    private sealed class ProbeAlgorithmExecutor<TSearchSpace, TProblem> : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>
+    private sealed record TwoStateAlgorithm
+        : Algorithm<TwoStateAlgorithm, RealVector, SingleSolutionState<RealVector>>, IAlgorithm<RealVector, PopulationState<RealVector>>
+    {
+        // Resolution checks the fit before it builds, so a configuration producing two states declares both.
+        public override bool Fits(ExecutionSignature execution) =>
+            base.Fits(execution) || execution.SearchState == typeof(PopulationState<RealVector>);
+
+        protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope) =>
+            new ProbeAlgorithmExecutor<TSearchSpace, TProblem, SingleSolutionState<RealVector>>();
+
+        IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, PopulationState<RealVector>> IAlgorithm<RealVector, PopulationState<RealVector>>.CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, PopulationState<RealVector>> scope) =>
+            new ProbeAlgorithmExecutor<TSearchSpace, TProblem, PopulationState<RealVector>>();
+    }
+
+    private sealed class CountingSingleSolutionAdvice : AlgorithmAdvice<RealVector, SingleSolutionState<RealVector>>
+    {
+        public int Wraps { get; private set; }
+
+        public override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> Wrap<TSearchSpace, TProblem>(
+            IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> executor, IAlgorithm<RealVector, SingleSolutionState<RealVector>> source)
+        {
+            Wraps++;
+            return executor;
+        }
+    }
+
+    private sealed class ProbeAlgorithmExecutor<TSearchSpace, TProblem, TSearchState> : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, TSearchState>
         where TSearchSpace : class, ISearchSpace<RealVector>
         where TProblem : class, IProblem<RealVector, TSearchSpace>
+        where TSearchState : class, ISearchState
     {
-        public override async IAsyncEnumerable<SingleSolutionState<RealVector>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, SingleSolutionState<RealVector>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.Yield();
             ct.ThrowIfCancellationRequested();

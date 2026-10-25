@@ -25,21 +25,20 @@ public interface IConfigurationNode
 }
 
 /// <summary>
-/// A configuration whose executor type is known without a run's types, so it can supply a typed factory directly.
+/// A configuration whose executor type is known without a run's types, such as a consumer-defined role.
 /// </summary>
 /// <remarks>
-/// Role configurations such as mutators are not of this kind: their executor type depends on the run's search space
-/// and problem, so they are resolved through
-/// <see cref="ResolutionScope.Resolve{TConfiguration, TExecutor}(TConfiguration, Func{TConfiguration, ExecutorFactory{TExecutor}}, Func{Advice, TConfiguration, WrapperExecutorFactory{TExecutor}})"/>
-/// instead.
+/// Operators and algorithms are not of this kind: their executor type depends on the run's search space and problem,
+/// so they build through their own hooks. Advice for such a role derives from
+/// <see cref="Advice{TConfiguration, TExecutor}"/>.
 /// </remarks>
 public interface IConfigurationNode<out TExecutor> : IConfigurationNode
     where TExecutor : class, IExecutor
 {
-    /// <summary>Creates shared execution data once and returns a function that constructs executors using that data.</summary>
-    ExecutorFactory<TExecutor> CreateExecutorFactory();
+    /// <summary>Builds this configuration's executor, resolving children through the scope.</summary>
+    /// <remarks>
+    /// Resolution calls this for every build. Validate the configuration first and take shared execution data, such as
+    /// counters or caches, from <see cref="ResolutionScope.GetScopedState{TState}"/>, passing this configuration.
+    /// </remarks>
+    TExecutor CreateExecutor(ResolutionScope scope);
 }
-
-/// <summary>A runtime object that performs operations, such as mutating candidates or running an algorithm.</summary>
-/// <remarks>Operation-specific interfaces define its callable methods. One executor can serve many calls.</remarks>
-public interface IExecutor;

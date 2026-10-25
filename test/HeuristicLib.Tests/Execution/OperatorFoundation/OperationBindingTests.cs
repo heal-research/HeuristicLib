@@ -220,7 +220,7 @@ public sealed class OperationBindingTests
     [Theory]
     [InlineData(7, "Termination")]
     [InlineData(8, "Interception")]
-    public void CandidateMetricRejectionPrecedesConstructionAndExecutionState(int operation, string name)
+    public void CandidateMetricRejectionPrecedesConstructionAndScopedState(int operation, string name)
     {
         var source = new AllOperations();
         var root = ResolutionScope.Create();
@@ -230,7 +230,7 @@ public sealed class OperationBindingTests
         failure.Message.ShouldContain("candidate budget");
         failure.Message.ShouldContain(nameof(AllOperations));
         source.Constructions.ShouldBe(0);
-        // The rejection precedes the construction hook, so it also precedes the execution state the hook creates.
+        // The rejection precedes the construction hook, so it also precedes the scoped state the hook creates.
         source.Preparations.ShouldBe(0);
         InvokeOperation(root, source, operation);
         source.Constructions.ShouldBe(1);
@@ -450,13 +450,13 @@ public sealed class OperationBindingTests
         public List<IRandomNumberGenerator> RandomSources { get; } = [];
 
         // One public method implements every operation's CreateExecutor, whose signature does not name the operation.
-        // Creating the execution state counts as the preparation; every build creates its own executor.
+        // Creating the scoped state counts as the preparation; every build creates its own executor.
         public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
             where TSearchState : class, ISearchState
         {
-            scope.GetExecutionState(this, () =>
+            scope.GetScopedState(this, () =>
             {
                 Preparations++;
                 return new Preparation();

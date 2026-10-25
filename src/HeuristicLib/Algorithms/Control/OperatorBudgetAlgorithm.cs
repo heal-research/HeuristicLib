@@ -38,15 +38,25 @@ public record OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState>
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+    /// <remarks>The counter and its counting aspect are the budget's scoped state, so usage survives every rebuild in its owner.</remarks>
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var counter = new CountAccumulator();
-        var counting = Aspect.Create(Pointcut.Reference(ObservedOperator), new CountingOperatorAdvice<TOperation, TCandidate>(counter, Metric));
-        return scope =>
+        var budget = scope.GetScopedState(this, () => new Budget(ObservedOperator, Metric));
+        var algorithm = scope.With(budget.Counting).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        return new OperatorBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, budget.Counter, MaximumCount);
+    }
+
+    private sealed class Budget
+    {
+        public Budget(IOperator<TOperation, TCandidate> observedOperator, OperatorCountMetric metric)
         {
-            var childScope = scope.With(counting);
-            return new OperatorBudgetAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), counter, MaximumCount);
-        };
+            Counting = Aspect.Create(Pointcut.Reference(observedOperator), new CountingOperatorAdvice<TOperation, TCandidate>(Counter, metric));
+        }
+
+        public CountAccumulator Counter { get; } = new();
+
+        public Aspect Counting { get; }
     }
 }
 

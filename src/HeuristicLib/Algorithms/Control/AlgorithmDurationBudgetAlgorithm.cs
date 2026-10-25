@@ -21,8 +21,12 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
-        scope => new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), MaximumDuration, TimeProvider);
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        var algorithm = scope.Resolve(Algorithm);
+        return new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, MaximumDuration, TimeProvider);
+    }
 }
 
 public sealed class AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>

@@ -77,29 +77,15 @@ public sealed class RoleContractArityTests
         || (type.HasElementType && Mentions(type.GetElementType()!, parameter))
         || (type.IsGenericType && type.GetGenericArguments().Any(argument => Mentions(argument, parameter)));
 
-    [Theory]
-    [InlineData(typeof(IterativeAlgorithm<,,>))]
-    [InlineData(typeof(IterativeAlgorithm<,,,,>))]
-    public void AnIterativeBase_UsesTheCommonFactoryAndRequiresAnIterativeExecution(Type algorithm)
+    [Fact]
+    public void TheBoundIterativeBase_BuildsInOneHookAndRequiresAnIterativeExecution()
     {
-        var factories = algorithm.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(method => method.Name == "CreateExecutorFactory").ToArray();
-        factories.ShouldNotBeEmpty();
-        foreach (var factory in factories)
-        {
-            factory.GetParameters().ShouldBeEmpty();
-            factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
-        }
-        var hook = algorithm.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+        var hook = typeof(IterativeAlgorithm<,,,,>).GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
             .Single(method => method.IsAbstract);
-        hook.Name.ShouldBe("CreateIterationFactory");
+        hook.Name.ShouldBe("CreateExecutor");
         hook.IsFamily.ShouldBeTrue();
-        hook.GetParameters().ShouldBeEmpty();
-        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutorFactory<>));
-        var constructor = hook.ReturnType.GetMethod("Invoke")!;
-        constructor.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(IterativeAlgorithmExecutor<,,,>));
-        constructor.GetParameters().Select(parameter => parameter.ParameterType).ShouldBe([typeof(ResolutionScope)]);
-        algorithm.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
+        hook.GetParameters().ShouldHaveSingleItem().ParameterType.GetGenericTypeDefinition().ShouldBe(typeof(ResolutionScope<,,,>));
+        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(IterativeAlgorithmExecutor<,,,>));
     }
 
     [Theory]

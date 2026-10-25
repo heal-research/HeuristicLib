@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// Derived constructors assign <see cref="Advices"/>, and an aspect that builds on others lists their pairs, as in
 /// <c>Advices = [.. Aspect.Observe(evaluator.Calls, Record)]</c>. Each advice instance pairs with one pointcut; applying
 /// the same behavior at two pointcuts needs two instances, which may share one result object. A resolution scope applies
-/// an advice instance once, at its first occurrence, and keeps its prepared state per scope state.
+/// an advice instance once, at its first occurrence; data that outlives one executor belongs to the advice object.
 /// </remarks>
 public abstract class Aspect : IReadOnlyList<(Pointcut Pointcut, Advice Advice)>
 {

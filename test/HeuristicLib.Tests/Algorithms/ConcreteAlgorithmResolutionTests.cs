@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms;
 
-public sealed class ConcreteAlgorithmFactoryTests
+public sealed class ConcreteAlgorithmResolutionTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> Problem =
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
@@ -164,7 +164,7 @@ public sealed class ConcreteAlgorithmFactoryTests
 
     private sealed record CounterCreator(Action Prepare) : StatefulCreator<int, CounterState>
     {
-        protected override CounterState CreateExecutionState()
+        protected override CounterState CreateScopedState()
         {
             Prepare();
             return new CounterState();
@@ -182,10 +182,10 @@ public sealed class ConcreteAlgorithmFactoryTests
     private sealed record IdentityInterceptor<TSearchState>(Action Prepare) : Operator<Interception<TSearchState>, int>
         where TSearchState : class, ISearchState
     {
-        // Creating the execution state is the once-per-owner preparation the test counts.
+        // Creating the scoped state is the once-per-owner preparation the test counts.
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TRunSearchState> scope)
         {
-            scope.GetExecutionState(this, () =>
+            scope.GetScopedState(this, () =>
             {
                 Prepare();
                 return new Preparation();

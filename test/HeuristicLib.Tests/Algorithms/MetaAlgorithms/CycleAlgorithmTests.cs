@@ -138,6 +138,33 @@ public class CycleAlgorithmTests
         evaluator.ExecutionCount.ShouldBe(1);
     }
 
+    /// <summary>
+    /// The cycle keeps its child-scope selector as scoped state, so builds for different run types in one owning
+    /// state select the same child states.
+    /// </summary>
+    [Theory]
+    [InlineData(ChildScopePolicy.Fresh, 4)]
+    [InlineData(ChildScopePolicy.Retained, 1)]
+    [InlineData(ChildScopePolicy.Shared, 1)]
+    public void CycleAlgorithm_BuiltForTwoRunTypesInOneScope_SelectsChildStatesThroughOneSelector(ChildScopePolicy policy, int expectedAlgorithmExecutions)
+    {
+        var problem = (FuncProblem<int, DummySearchSpace<int>>)MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        var cycle = CycleAlgorithm.Create(algorithm) with
+        {
+            MaximumCycles = 2,
+            ScopePolicy = policy
+        };
+        var scope = ResolutionScope.Create();
+        var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
+        var concrete = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
+
+        general.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+        concrete.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+
+        algorithm.ExecutionCount.ShouldBe(expectedAlgorithmExecutions);
+    }
+
     private static GeneticAlgorithm<RealVector> CreateStampedGeneticAlgorithm(
       TestFunctionProblem problem)
     {
@@ -162,11 +189,12 @@ public class CycleAlgorithmTests
     {
         public int ExecutionCount { get; private set; }
 
-        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
+        // Counts the executors it builds, one per activation.
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             ExecutionCount++;
-            var executor = new Executor<TRunSearchSpace, TRunProblem>();
-            return _ => executor;
+            return new Executor<TSearchSpace, TProblem>();
         }
 
         private sealed class Executor<TSearchSpace, TProblem> : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
@@ -182,20 +210,20 @@ public class CycleAlgorithmTests
     }
 
     private sealed record YieldedStateStampingInterceptor
-        : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
+        : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.State>
     {
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
         protected override PopulationState<RealVector> Transform(
           PopulationState<RealVector> currentState,
           PopulationState<RealVector>? previousState,
-          ExecutionState executionState,
+          State operatorState,
           IRandomNumberGenerator random,
           BoundedRealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
-            executionState.YieldedStateCount++;
-            var objectiveVector = new ObjectiveVector(executionState.YieldedStateCount);
+            operatorState.YieldedStateCount++;
+            var objectiveVector = new ObjectiveVector(operatorState.YieldedStateCount);
             var stampedCandidates = currentState.Population.EvaluatedCandidates
                             .Select(solution => EvaluatedCandidate.From(solution.Candidate, objectiveVector));
 
@@ -205,7 +233,7 @@ public class CycleAlgorithmTests
             };
         }
 
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int YieldedStateCount { get; set; }
         }

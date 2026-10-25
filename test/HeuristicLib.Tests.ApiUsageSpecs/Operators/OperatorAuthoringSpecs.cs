@@ -146,7 +146,7 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
-    public void StatefulWrapper_PreparesItsCounterOnceAndIndependentRunsStartFresh()
+    public void StatefulWrapper_CreatesItsCounterOnceAndIndependentRunsStartFresh()
     {
         var problem = CreateRastriginProblem(dimension: 1);
         var mutator = new CallOffsetMutator(new PullTowardZeroMutator());
@@ -855,32 +855,32 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record CountingStatefulCreator : StatefulCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulCreator.ExecutionState>
+    private sealed record CountingStatefulCreator : StatefulCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulCreator.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<RealVector> Create(int count, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<RealVector> Create(int count, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
             return Enumerable.Repeat(RealVector.Repeat(state.Calls, problem.TestFunction.Dimension), count).ToArray();
         }
     }
 
-    private sealed record CountingStatefulCrossover : StatefulCrossover<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulCrossover.ExecutionState>
+    private sealed record CountingStatefulCrossover : StatefulCrossover<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulCrossover.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
             return parents.Select(parent => new RealVector(parent.Parent1.Select(value => value + state.Calls))).ToArray();
@@ -904,16 +904,16 @@ public class OperatorAuthoringSpecs
         public double SelectKey(RealVector candidate) => candidate[0];
     }
 
-    private sealed record CountingStatefulEvaluator : StatefulEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulEvaluator.ExecutionState>
+    private sealed record CountingStatefulEvaluator : StatefulEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulEvaluator.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
             return candidates.Select(candidate => new ObjectiveVector(state.Calls)).ToArray();
@@ -990,16 +990,16 @@ public class OperatorAuthoringSpecs
             population.Take(count).ToArray();
     }
 
-    private sealed record RotatingStatefulSelector : StatefulSelector<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, RotatingStatefulSelector.ExecutionState>
+    private sealed record RotatingStatefulSelector : StatefulSelector<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, RotatingStatefulSelector.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             var start = state.Calls++ % population.Count;
             return Enumerable.Range(0, count).Select(index => population[(start + index) % population.Count]).ToArray();
@@ -1084,16 +1084,16 @@ public class OperatorAuthoringSpecs
             offspringPopulation.Take(count).ToArray();
     }
 
-    private sealed record AlternatingStatefulReplacer : StatefulReplacer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, AlternatingStatefulReplacer.ExecutionState>
+    private sealed record AlternatingStatefulReplacer : StatefulReplacer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, AlternatingStatefulReplacer.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             state.Calls++ % 2 == 0 ? previousPopulation.Take(count).ToArray() : offspringPopulation.Take(count).ToArray();
     }
 
@@ -1180,39 +1180,39 @@ public class OperatorAuthoringSpecs
             currentState with { Value = currentState.Value + 1 };
     }
 
-    private sealed record StatefulSearchSpaceInterceptor : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceInterceptor.ExecutionState>
+    private sealed record StatefulSearchSpaceInterceptor : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceInterceptor.State>
     {
-        public sealed class ExecutionState { }
+        public sealed class State { }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
+        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, State operatorState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
             currentState with { Value = currentState.Value + 1 };
     }
 
-    private sealed record StatefulCandidateInterceptor : StatefulInterceptor<RealVector, CounterSearchState, StatefulCandidateInterceptor.ExecutionState>
+    private sealed record StatefulCandidateInterceptor : StatefulInterceptor<RealVector, CounterSearchState, StatefulCandidateInterceptor.State>
     {
-        public sealed class ExecutionState { }
+        public sealed class State { }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random) =>
+        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, State operatorState, IRandomNumberGenerator random) =>
             currentState with { Value = currentState.Value + 1 };
     }
 
-    private sealed record CountingStatefulInterceptor : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState, CountingStatefulInterceptor.ExecutionState>
+    private sealed record CountingStatefulInterceptor : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState, CountingStatefulInterceptor.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, State operatorState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            state.Calls++;
-            return currentState with { Value = currentState.Value + state.Calls };
+            operatorState.Calls++;
+            return currentState with { Value = currentState.Value + operatorState.Calls };
         }
     }
 
@@ -1299,43 +1299,43 @@ public class OperatorAuthoringSpecs
         public override bool IsTerminalState() => false;
     }
 
-    private sealed record StatefulSearchSpaceTerminator : StatefulTerminator<RealVector, BoundedRealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceTerminator.ExecutionState>
+    private sealed record StatefulSearchSpaceTerminator : StatefulTerminator<RealVector, BoundedRealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceTerminator.State>
     {
-        public sealed class ExecutionState { }
+        public sealed class State { }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => false;
+        protected override bool IsTerminalState(CounterSearchState searchState, State operatorState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => false;
     }
 
-    private sealed record StatefulStateTerminator : StatefulTerminator<RealVector, CounterSearchState, StatefulStateTerminator.ExecutionState>
+    private sealed record StatefulStateTerminator : StatefulTerminator<RealVector, CounterSearchState, StatefulStateTerminator.State>
     {
-        public sealed class ExecutionState { }
+        public sealed class State { }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, IRandomNumberGenerator random) => false;
+        protected override bool IsTerminalState(CounterSearchState searchState, State operatorState, IRandomNumberGenerator random) => false;
     }
 
-    private sealed record StatefulStateAgnosticTerminator : StatefulTerminator<RealVector, StatefulStateAgnosticTerminator.ExecutionState>
+    private sealed record StatefulStateAgnosticTerminator : StatefulTerminator<RealVector, StatefulStateAgnosticTerminator.State>
     {
-        public sealed class ExecutionState { }
+        public sealed class State { }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override bool IsTerminalState(ExecutionState state) => false;
+        protected override bool IsTerminalState(State state) => false;
     }
 
-    private sealed record CountingStatefulTerminator : StatefulTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState, CountingStatefulTerminator.ExecutionState>
+    private sealed record CountingStatefulTerminator : StatefulTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState, CountingStatefulTerminator.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => ++state.Calls >= 2;
+        protected override bool IsTerminalState(CounterSearchState searchState, State operatorState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => ++operatorState.Calls >= 2;
     }
 
     private sealed record ForwardingTerminator(IOperator<Termination, RealVector> Inner)
@@ -1454,16 +1454,16 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record CountingStatefulMutator : StatefulMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulMutator.ExecutionState>
+    private sealed record CountingStatefulMutator : StatefulMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulMutator.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
             return parents.Select(parent => new RealVector(parent.Select(value => value + state.Calls))).ToArray();
@@ -1504,15 +1504,15 @@ public class OperatorAuthoringSpecs
         {
         }
 
-        private sealed class ExecutionState
+        private sealed class State
         {
             public int Calls;
         }
 
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
-            new Executor<TSearchSpace, TProblem>(scope.Resolve(ChildOperator), scope.GetExecutionState(this, static () => new ExecutionState()));
+            new Executor<TSearchSpace, TProblem>(scope.Resolve(ChildOperator), scope.GetScopedState(this, static () => new State()));
 
-        private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, ExecutionState state)
+        private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, State state)
             : IMutationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
@@ -1539,16 +1539,16 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record CountingStatefulRefiner : StatefulRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulRefiner.ExecutionState>
+    private sealed record CountingStatefulRefiner : StatefulRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulRefiner.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        protected override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
             state.Calls++;
             return candidates.Select(candidate => new RealVector(candidate.Select(value => value + state.Calls))).ToArray();

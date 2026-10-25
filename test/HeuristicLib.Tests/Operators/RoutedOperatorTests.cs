@@ -809,22 +809,22 @@ public class RoutedOperatorTests
     {
         public int ExecutionsCreated { get; private set; }
 
-        // Every build in one owning state shares the call count.
+        // Every build in one owning scope shares the call count.
         IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(scope.GetExecutionState(this, CreateExecutionState));
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(scope.GetScopedState(this, CreateScopedState));
 
-        private ExecutionState CreateExecutionState()
+        private State CreateScopedState()
         {
             ExecutionsCreated++;
-            return new ExecutionState();
+            return new State();
         }
 
-        private sealed class ExecutionState
+        private sealed class State
         {
             public int Calls { get; set; }
         }
 
-        private sealed class Executor(ExecutionState state) : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(State state) : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
         {
             public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
             {

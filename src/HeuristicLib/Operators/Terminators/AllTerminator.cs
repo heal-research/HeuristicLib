@@ -15,8 +15,11 @@ public sealed record AllTerminator<TCandidate>
     }
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>([.. ChildOperators.Select(child => scope.Resolve(child))]);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        ImmutableArray<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childTerminators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
         : ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>

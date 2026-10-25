@@ -32,18 +32,18 @@ public class CycleAlgorithmAnalysisTests
 
     private sealed record IncrementingEvaluator
         : StatefulEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
-            IncrementingEvaluator.ExecutionState>
+            IncrementingEvaluator.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Value { get; set; }
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, State state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
-            return candidates.Select(_ => new ObjectiveVector(++executionState.Value)).ToArray();
+            return candidates.Select(_ => new ObjectiveVector(++state.Value)).ToArray();
         }
     }
 
@@ -62,11 +62,9 @@ public class CycleAlgorithmAnalysisTests
             Evaluator = evaluator;
         }
 
-        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() => scope =>
-        {
-            var typed = scope.For<int, TRunSearchSpace, TRunProblem, PopulationState<int>>();
-            return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Interceptor), Candidate);
-        };
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), scope.Resolve(Interceptor), Candidate);
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, IInterceptionExecutor<int, TSearchSpace, TProblem, PopulationState<int>> interceptor, int candidate)
             : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
@@ -95,7 +93,7 @@ public class CycleAlgorithmAnalysisTests
     private sealed class EvaluationTraceAnalysis
         : Aspect
     {
-        public ExecutionState Result { get; } = new();
+        public State Result { get; } = new();
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
@@ -105,7 +103,7 @@ public class CycleAlgorithmAnalysisTests
         public void Record(EvaluationObservation<int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
 
-        public sealed class ExecutionState
+        public sealed class State
         {
             private readonly List<double> objectiveValues = [];
 

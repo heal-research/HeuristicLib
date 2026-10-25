@@ -15,7 +15,7 @@ using MetaSpace = HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<HEA
 
 namespace HEAL.HeuristicLib.Tests.Algorithms;
 
-public sealed class DynamicRacingFactoryTests
+public sealed class DynamicRacingResolutionTests
 {
     [Theory]
     [InlineData(0, 1)]
@@ -209,8 +209,9 @@ public sealed class DynamicRacingFactoryTests
         public required Action Started { get; init; }
         public required Action Disposed { get; init; }
 
-        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
-            scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), BeforeMove, Started, Disposed);
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), BeforeMove, Started, Disposed);
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, Action beforeMove, Action started, Action disposed)
             : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>

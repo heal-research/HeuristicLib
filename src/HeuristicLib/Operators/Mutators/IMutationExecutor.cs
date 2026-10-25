@@ -39,12 +39,12 @@ public static class MutationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IMutationExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Mutation, TCandidate> source) =>
-            (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
 
         public IMutationExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Mutation, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            var executor = (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
@@ -54,7 +54,7 @@ public static class MutationOperationResolutionExtensions
 
         public bool TryResolve(IOperator<Mutation, TCandidate> source,
             [NotNullWhen(true)] out IMutationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
@@ -63,12 +63,12 @@ public static class MutationOperationResolutionExtensions
         where TRunSearchState : class, ISearchState
     {
         public IMutationExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Mutation, TCandidate> source) =>
-            (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
 
         public IMutationExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Mutation, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            var executor = (IMutationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
@@ -78,6 +78,6 @@ public static class MutationOperationResolutionExtensions
 
         public bool TryResolve(IOperator<Mutation, TCandidate> source,
             [NotNullWhen(true)] out IMutationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 }

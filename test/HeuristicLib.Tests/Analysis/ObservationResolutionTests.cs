@@ -15,7 +15,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
-public class ObservationFactoryTests
+public class ObservationResolutionTests
 {
     [Fact]
     public async Task AlgorithmObservation_RebindingPreservesIterationsAndPausedInvocationContext()
@@ -423,8 +423,9 @@ List<string> events,
     {
         public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator<int>();
 
-        public override ExecutorFactory<IAlgorithmExecutor<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() =>
-            scope => new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator));
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator)
             : IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>

@@ -16,8 +16,11 @@ public sealed record PipelineInterceptor<TCandidate, TSearchState>
     }
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>([.. ChildOperators.Select(child => scope.Resolve(child))]);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        ImmutableArray<IInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> childInterceptors = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor<TRunSearchSpace, TRunProblem>(childInterceptors);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
         : IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>

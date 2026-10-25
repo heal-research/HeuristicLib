@@ -221,7 +221,7 @@ public sealed class OperatorAdviceTests
         Check(Invoke(original) == 1 && Invoke(contextual) == 2 && Invoke(original) == 3 && childCounter.Value == 1,
             "newly resolved children acquire requesting advice while original parent nodes keep their old children");
         Check(Invoke(contextual) == 4 && childCounter.Value == 2 && childLog.Wraps == 1,
-            "prepared child execution state survives contextual reconstruction");
+            "prepared child scoped state survives contextual reconstruction");
     }
 
     [Fact]

@@ -246,6 +246,6 @@ Reference, type and custom pointcuts of the same configuration type combine with
 
 An aspect is the ordered list of its pointcut/advice pairs. An aspect subclass assigns several pairs to `Advices` in its constructor and can spread a clock's pairs before its own observations, as in `Advices = [.. clock, .. Aspect.Observe(evaluator.Calls, Record)]`. Resolution applies each advice instance once, at its first position; sharing a clock across several traces therefore counts each call once. If the same advice is paired with two pointcuts, the first pairing wins. Use separate advice instances for separate selections.
 
-A new scope layer precedes inherited layers. Algorithm observation prepares its iteration counter in the state owning each selected algorithm, so reusing an aspect across independent scopes does not share that counter. Operator advice keeps its data on the advice object; reusing it, or its caller-owned accumulator, intentionally combines its counts or durations.
+A new scope layer precedes inherited layers. Advice keeps its data on the advice object. Algorithm observation counts iterations there, so the count continues across every execution of the observed algorithm, including a meta-algorithm's fresh activations; reusing the aspect across runs continues it too. Reusing operator advice, or its caller-owned accumulator, intentionally combines its counts or durations.
 
 Continue with [Writing custom advice](/guide/extending/writing-advice) for complete role-specific and general advice examples and run attachment.

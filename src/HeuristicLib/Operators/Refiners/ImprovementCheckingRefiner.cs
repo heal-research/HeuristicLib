@@ -64,8 +64,12 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Refiner), scope.Resolve(Evaluator), Criterion);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var refiner = scope.Resolve(Refiner);
+        var evaluator = scope.Resolve(Evaluator);
+        return new Executor<TRunSearchSpace, TRunProblem>(refiner, evaluator, Criterion);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner, IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
         : RefinementExecutor<TCandidate, TSearchSpace, TProblem>

@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
@@ -54,7 +55,7 @@ public sealed class OperatorOwnershipTests
         Check(!Pointcut.Reference(mutation).Matches(named), "wrapper and child remain separate configurations");
         IOperator<Mutation, RealVector> counting = new CountingMutation();
         Check(Invoke(typed.Resolve(counting)) == 1 && Invoke(typed.Resolve(counting.Named("count"))) == 2,
-            "stateful author overrides CreateExecutionState and domain method only");
+            "stateful author overrides CreateScopedState and domain method only");
         Check(typed.ResolveOptional((IOperator<Mutation, RealVector>?)null) is null, "optional resolution infers its operation");
         Check(typed.TryResolve(mutation, out var resolved, out var reason) && resolved is not null && reason is null,
             "TryResolve needs no explicit executor type");
@@ -143,7 +144,7 @@ public sealed class OperatorOwnershipTests
         Check(Invoke(Typed(child).Resolve(source)) == 2, "new parent owner does not replace an existing child owner");
         var nextChild = parent.CreateChildScope();
         Check(Invoke(Typed(nextChild).Resolve(source)) == 2, "parent-first owner is reused by descendants");
-        Check(Invoke(Typed(parent.With()).Resolve(source)) == 3, "With shares prepared owner state");
+        Check(Invoke(Typed(parent.With()).Resolve(source)) == 3, "With shares the owning scope's state");
         IOperator<Mutation, RealVector> equalCopy = new CountingMutation();
         Check(source.Equals(equalCopy) && Invoke(Typed(parent).Resolve(equalCopy)) == 1, "value-equal records have separate owners");
 
@@ -186,7 +187,7 @@ public sealed class OperatorOwnershipTests
         var parentNode = Typed(parent).Resolve(parentComposite);
         var descendantNode = Typed(localScope).Resolve(parentComposite);
         Check(Invoke(local) == 1 && Invoke(parentNode) == 1 && Invoke(descendantNode) == 2,
-            "ancestor-owned composite dependencies use its owner state despite a child-local selection");
+            "ancestor-owned composite dependencies use its owning scope despite a child-local selection");
     }
 
     [Fact]
@@ -204,10 +205,11 @@ public sealed class OperatorOwnershipTests
         log.FailConstruction = false;
         Check(Invoke(typed.Resolve(mutation)) == 3 && log.Preparations == 2,
             "successful preparation survives a construction failure");
-        var selected = Aspect.Create(Pointcut.Reference(mutation), new UnimplementedAdvice());
-        Reject(() => Typed(typed.Scope.With(selected)).Resolve(mutation), "Supported extension bases");
-        Check(log.Constructions == 2, "unsupported selected advice rejects before raw construction");
-        Check(Invoke(typed.Resolve(mutation)) == 3, "advice rejection leaves unadvised owner usable");
+        var dual = new DualRoleMutation();
+        IOperator<Mutation, RealVector> dualMutation = dual;
+        var root = ResolutionScope.Create();
+        Reject(() => Typed(root.With(Aspect.Create(Pointcut.Reference(dual), new DualRoleAdvice()))).Resolve(dualMutation), "Supported extension bases");
+        Check(Invoke(Typed(root).Resolve(dualMutation)) == Input[0][0], "advice rejection leaves unadvised owner usable");
     }
 
     [Fact]
@@ -218,9 +220,14 @@ public sealed class OperatorOwnershipTests
         Check(source.Preparations == 1, "changing operation does not create a second owner or evade cycle detection");
         var mixed = new MixedCycle();
         Reject(() => Typed(ResolutionScope.Create()).Resolve(mixed), "Recursive construction");
-        var legacy = new LegacyNode();
+        var ownRole = new OwnRoleNode();
         var scope = ResolutionScope.Create();
-        Check(ReferenceEquals(scope.Resolve(legacy), scope.With().Resolve(legacy)), "shipping legacy resolution remains available");
+        var first = scope.Resolve(ownRole);
+        var second = scope.With().Resolve(ownRole);
+        Check(!ReferenceEquals(first, second) && ReferenceEquals(first.State, second.State)
+            && ReferenceEquals(first.State, scope.CreateChildScope().Resolve(ownRole).State)
+            && !ReferenceEquals(first.State, ResolutionScope.Create().Resolve(ownRole).State),
+            "an own role builds per resolution and keeps its scoped state in its owner");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
@@ -254,17 +261,27 @@ public sealed class OperatorOwnershipTests
         GC.KeepAlive(retainedSource);
     }
 
-    private sealed class UnimplementedAdvice : Advice<IOperator<Mutation, RealVector>>;
-
-    private sealed class Node : IExecutor;
-
-    private sealed class LegacyNode : IConfigurationNode<Node>
+    // A mutation that is also an own role, so advice for its own role meets it when it resolves as a mutation.
+    private sealed record DualRoleMutation : SingleCandidateMutator<RealVector>, IConfigurationNode<Node>
     {
-        public ExecutorFactory<Node> CreateExecutorFactory()
-        {
-            var node = new Node();
-            return _ => node;
-        }
+        public override RealVector MutateCandidate(RealVector parent, IRandomNumberGenerator random) => parent;
+
+        Node IConfigurationNode<Node>.CreateExecutor(ResolutionScope scope) => new();
+    }
+
+    private sealed class DualRoleAdvice : Advice<DualRoleMutation, Node>
+    {
+        public override Node Wrap(Node executor, DualRoleMutation source) => executor;
+    }
+
+    private sealed class Node(object? state = null) : IExecutor
+    {
+        public object? State { get; } = state;
+    }
+
+    private sealed class OwnRoleNode : IConfigurationNode<Node>
+    {
+        public Node CreateExecutor(ResolutionScope scope) => new(scope.GetScopedState(this, static () => new object()));
     }
 
     private sealed class CyclicOperations : IOperator<Mutation, RealVector>, IOperator<Evaluation, RealVector>
@@ -276,12 +293,12 @@ public sealed class OperatorOwnershipTests
             where TProblem : class, IProblem<RealVector, TSearchSpace>
             where TSearchState : class, ISearchState
         {
-            scope.GetExecutionState(this, () =>
+            scope.GetScopedState(this, () =>
             {
                 Preparations++;
                 return new Preparation();
             });
-            _ = Typed(scope.Scope).Resolve((IOperator<Evaluation, RealVector>)this);
+            _ = Typed(scope).Resolve((IOperator<Evaluation, RealVector>)this);
             throw new InvalidOperationException("Cycle was not detected.");
         }
 
@@ -293,17 +310,17 @@ public sealed class OperatorOwnershipTests
         IExecutor IOperator<Mutation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            _ = scope.Scope.Resolve(new Bridge(this));
+            _ = scope.Resolve(new Bridge(this));
             throw new InvalidOperationException("Mixed cycle was not detected.");
         }
 
         private sealed class Bridge(IOperator<Mutation, RealVector> child) : IConfigurationNode<Node>
         {
-            public ExecutorFactory<Node> CreateExecutorFactory() => scope =>
+            public Node CreateExecutor(ResolutionScope scope)
             {
                 _ = Typed(scope).Resolve(child);
                 return new Node();
-            };
+            }
         }
     }
 }

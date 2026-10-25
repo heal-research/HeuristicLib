@@ -35,15 +35,19 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
     public override bool Fits(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
+    // The call reaches the leaf hook, because overload resolution prefers the hook this class declares.
     protected sealed override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope.Scope);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope);
 
+    // S4019: the leaf hook hides the run-generic one on purpose; a bound operator builds only through this hook.
+#pragma warning disable S4019
     /// <summary>Builds this operator's executor, resolving children through the scope.</summary>
     /// <remarks>
     /// Resolution calls this for every build. Validate the configuration first and take shared execution data from
-    /// <see cref="ResolutionScope.GetExecutionState{TState}"/>.
+    /// <see cref="ResolutionScope.GetScopedState{TState}"/>.
     /// </remarks>
     protected abstract TExecutor CreateExecutor(ResolutionScope scope);
+#pragma warning restore S4019
 }
 
 /// <summary>An operator written for fixed search-space, problem and search-state contracts, with a typed executor hook.</summary>
@@ -62,10 +66,14 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
         && execution.Problem.IsAssignableTo(typeof(TProblem))
         && execution.SearchState.IsAssignableTo(typeof(TSearchState));
 
+    // The call reaches the leaf hook, because overload resolution prefers the hook this class declares.
     protected sealed override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope.Scope);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope);
 
+    // S4019: the leaf hook hides the run-generic one on purpose; a bound operator builds only through this hook.
+#pragma warning disable S4019
     /// <inheritdoc cref="Operator{TOperation, TCandidate, TSearchSpace, TProblem, TExecutor}.CreateExecutor(ResolutionScope)"/>
     protected abstract TExecutor CreateExecutor(ResolutionScope scope);
+#pragma warning restore S4019
 }
 

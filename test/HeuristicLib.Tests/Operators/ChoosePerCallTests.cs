@@ -35,7 +35,7 @@ public class ChoosePerCallTests
     }
 
     [Fact]
-    public void PreparationRejectsMissingChildrenAndMismatchedWeights()
+    public void ResolutionRejectsMissingChildrenAndMismatchedWeights()
     {
         var child = new IndexMutator(0, []);
         var scope = CreateScope();

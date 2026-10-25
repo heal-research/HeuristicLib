@@ -25,16 +25,16 @@ public sealed record SphereEvaluation : StatelessEvaluator<RealVector>
         candidates.Select(candidate => (ObjectiveVector)(candidate[0] * candidate[0])).ToArray();
 }
 
-public sealed record CountingMutation : StatefulMutator<RealVector, CountingMutation.ExecutionState>
+public sealed record CountingMutation : StatefulMutator<RealVector, CountingMutation.State>
 {
-    public sealed class ExecutionState
+    public sealed class State
     {
         public int Calls { get; set; }
     }
 
-    protected override ExecutionState CreateExecutionState() => new();
+    protected override State CreateScopedState() => new();
 
-    protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, ExecutionState state,
+    protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, State state,
         IRandomNumberGenerator random)
     {
         state.Calls++;
@@ -75,18 +75,18 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVe
     IOperator<Evaluation, RealVector>, IOperator<Termination, RealVector>, IOperator<Checksum, RealVector>
 {
     // One public method implements every operation's CreateExecutor, whose signature does not name the operation.
-    // Every build in one owning state shares the live value. Creating the state counts as the preparation.
+    // Every build in one owning scope shares the live value; the log records when the scope creates it.
     public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<RealVector>
         where TProblem : class, IProblem<RealVector, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        var state = scope.GetExecutionState(this, () =>
+        var state = scope.GetScopedState(this, () =>
         {
             Log.Preparations++;
             if (Log.FailPreparation)
                 throw new InvalidOperationException("Requested preparation failure.");
-            return new ExecutionState();
+            return new State();
         });
         Log.Constructions++;
         if (Log.FailConstruction)
@@ -94,12 +94,12 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVe
         return new Executor(state);
     }
 
-    private sealed class ExecutionState
+    private sealed class State
     {
         public int Value { get; set; } = 3;
     }
 
-    private sealed class Executor(ExecutionState state) : ILiveValue,
+    private sealed class Executor(State state) : ILiveValue,
         IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
         IEvaluationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
@@ -132,7 +132,7 @@ public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception<
     IExecutor IOperator<Interception<ProbeState>, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
     {
-        scope.GetExecutionState(this, () =>
+        scope.GetScopedState(this, () =>
         {
             Log.Preparations++;
             return new Preparation();
@@ -161,7 +161,7 @@ public sealed record NodeTokenMutation : Mutator<RealVector>
 
     protected override IMutationExecutor<RealVector, ISearchSpace<RealVector>,
         IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope) =>
-        new Executor(++scope.GetExecutionState(this, static () => new Sequence()).Value);
+        new Executor(++scope.GetScopedState(this, static () => new Sequence()).Value);
 
     private sealed class Executor(int token) : IMutationExecutor<RealVector, ISearchSpace<RealVector>,
         IProblem<RealVector, ISearchSpace<RealVector>>>

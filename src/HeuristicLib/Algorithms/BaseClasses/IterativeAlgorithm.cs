@@ -8,6 +8,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+/// <remarks>
+/// An iterative algorithm builds an <see cref="IterativeAlgorithmExecutor{TCandidate, TSearchSpace, TProblem, TSearchState}"/>
+/// in its <c>CreateExecutor</c> hook and passes it the resolved <see cref="Interceptor"/>; the executor base applies it
+/// after every step. The hook's return type requires that executor, so no iterative algorithm skips its interceptor.
+/// </remarks>
 public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
     : Algorithm<TSelf, TCandidate, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchState>
     where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchState>
@@ -17,14 +22,9 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 
-    /// <summary>Prepares persistent execution data and returns the contextual executor factory.</summary>
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() => CreateIterationFactory<TRunSearchSpace, TRunProblem>();
-
-    /// <summary>Prepares persistent execution data and returns a factory accepting the construction scope.</summary>
-    /// <remarks>Allocate shared state here; resolve the optional interceptor and other children and construct nodes in the returned factory.</remarks>
-    protected abstract ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+    /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
+    protected abstract override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
 /// <remarks>
@@ -32,43 +32,28 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 /// arguments on every mention of the configuration. An algorithm that just hands them to its operators belongs on
 /// <see cref="IterativeAlgorithm{TSelf, TCandidate, TSearchState}"/>.
 /// <para>
-/// A run this algorithm was not written for is reported when the execution graph is built.
+/// A run this algorithm was not written for is reported when the execution graph is built. The bound algorithm base
+/// converts the executor to the run's types, so this base declares the interceptor itself rather than deriving from
+/// the agnostic iterative base.
 /// </para>
 /// </remarks>
 public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IterativeAlgorithm<TSelf, TCandidate, TSearchState>
+    : Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchState>
     where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    /// <summary>Prepares persistent execution data and returns a factory accepting the construction scope.</summary>
-    /// <remarks>Allocate shared state here; resolve the optional interceptor and other children and construct nodes in the returned factory.</remarks>
-    protected abstract ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory();
+    public IOperator<Interception<TSearchState>, TCandidate>? Interceptor { get; init; }
 
-    /// <summary>Prepares persistent execution data and returns the contextual executor factory.</summary>
-    public ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutorFactory() => CreateIterationFactory();
+    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 
-    public override bool Fits(ExecutionSignature execution) =>
-        base.Fits(execution)
-        && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
-        && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    public sealed override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutorFactory();
-    }
-
-    protected sealed override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-        throw new NotSupportedException("A bound algorithm prepares its factory through its own preparation method.");
+    /// <summary>Builds this algorithm's executor for the types it is written for, resolving the interceptor and other children through the scope.</summary>
+    /// <remarks>
+    /// Resolution calls this for every build. Validate the configuration first and take shared execution data from
+    /// <see cref="ResolutionScope.GetScopedState{TState}"/>, passing this configuration.
+    /// </remarks>
+    protected abstract override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
 public abstract class IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>

@@ -13,14 +13,14 @@ A meta-algorithm splits into a configuration record and an executor, exactly as 
 ## Resolve child algorithms through the scope
 
 ::: warning Resolve child algorithms through the scope
-Obtain a child algorithm's executor with `scope.Resolve(childAlgorithm)`. Creating and invoking its factory directly bypasses that child's advice and state reuse.
+Obtain a child algorithm's executor with `scope.Resolve(childAlgorithm)`. Calling the child's `CreateExecutor` directly bypasses its advice and its scoped state.
 
 `ResolutionScope.Resolve` applies matching advice from the current aspects, including [analyzer observations](/guide/execution/observability-and-analysis). Bypassing a child's resolution means an analyzer observing that child misses its states.
 
-The `HLib0001` analyzer reports direct child `CreateExecutorFactory` and `CreateExecutor` calls in preparation and construction hooks, binding lambdas and deferred execution methods. It does not prove correct state ownership or follow factories passed through arbitrary helper code. Keep child construction on the scope's resolution path.
+The `HLib0001` analyzer reports direct child `CreateExecutor` calls in construction hooks, custom resolvers and deferred execution methods. It does not prove correct state ownership or follow configurations passed through arbitrary helper code. Keep child construction on the scope's resolution path.
 :::
 
-The same rule applies to operators. An operator's `CreateExecutor` resolves fixed children through its scope, takes persistent data from `scope.GetExecutionState(this, create)` and passes both to the executor it builds. A meta-algorithm with deferred children can retain its factory's construction scope for later child activation.
+The same rule applies to operators. An operator's `CreateExecutor` resolves fixed children through its scope, takes persistent data from `scope.GetScopedState(this, create)` and passes both to the executor it builds. A meta-algorithm with deferred children can retain the scope its `CreateExecutor` receives for later child activation.
 
 ## A two-stage meta-algorithm
 
@@ -42,12 +42,13 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 
     public required IAlgorithm<TCandidate, TSearchState> Second { get; init; }
 
-    public override ExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutorFactory<TRunSearchSpace, TRunProblem>() => scope =>
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
-
-        return new Executor<TRunSearchSpace, TRunProblem>(typed.Resolve(First), typed.Resolve(Second));
-    };
+        var first = scope.Resolve(First);
+        var second = scope.Resolve(Second);
+        return new Executor<TSearchSpace, TProblem>(first, second);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(
         IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> first,
@@ -81,10 +82,10 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 
 Four details carry the design:
 
-- **Both children are resolved inside the returned factory.** Each bound node receives children with the requesting context's observations while their persistent state follows the scope's sharing rules.
+- **Both children are resolved in `CreateExecutor`.** Each build receives children with the requesting context's observations, while their scoped state follows the scope's sharing rules.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
-- **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those as the method type arguments `TRunSearchSpace` and `TRunProblem` on `CreateExecutorFactory`. They are threaded into the nested executor class. Binding the types once with `scope.For<...>()` keeps the two `Resolve` calls free of type arguments.
+- **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those as the method type arguments `TSearchSpace` and `TProblem` on `CreateExecutor`. They are threaded into the nested executor class. The scope the hook receives is typed to them, which keeps the two `Resolve` calls free of type arguments.
 
 Use it by naming the two stages:
 
@@ -123,7 +124,7 @@ var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
 
 ## Child scopes
 
-Use the factory's construction scope for fixed shared children. For deferred children, retain that scope on the bound node. When an activation needs a fresh child sharing domain, create a child scope and resolve against it:
+Resolve fixed children through the scope `CreateExecutor` receives. For deferred children, retain that scope on the executor as a `ResolutionScope`. When an activation needs a fresh child sharing domain, create a child scope and resolve against it:
 
 ```csharp
 var childScope = scope.CreateChildScope();
@@ -132,15 +133,15 @@ var execution = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchSt
 
 The scope itself has no type arguments, so it cannot infer the four the resolution needs and the call names them. Where several children are resolved against the same child scope, bind it once with `childScope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()` and the individual `Resolve` calls need no type arguments at all. Both spellings reach the same resolution; the typed scope only saves the repetition.
 
-A fresh child scope inherits its parent's aspects and any execution state already selected by an ancestor. It does not reset ancestor-owned state. Pipeline creates one fresh child scope for each stage activation.
+A fresh child scope inherits its parent's aspects and any scoped state already selected by an ancestor. It does not reset ancestor-owned state. Pipeline creates one fresh child scope for each stage activation.
 
 Cycle's `ScopePolicy` selects one of three policies:
 
-| Policy                      | Inner state                                                                         |
-| --------------------------- | ----------------------------------------------------------------------------------- |
-| `ChildScopePolicy.Fresh`    | New child-local state for each activation; the default.                             |
-| `ChildScopePolicy.Retained` | Child-local state retained per inner algorithm reference within the prepared Cycle. |
-| `ChildScopePolicy.Shared`   | The Cycle's own state, shared with sibling and direct uses of the same references.  |
+| Policy                      | Inner state                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------- |
+| `ChildScopePolicy.Fresh`    | New child-local state for each activation; the default.                            |
+| `ChildScopePolicy.Retained` | Child-local state retained per inner algorithm reference within the Cycle's owner. |
+| `ChildScopePolicy.Shared`   | The Cycle's own state, shared with sibling and direct uses of the same references. |
 
 ```csharp
 var cycle = first.CycleWith(second, maximumCycles: 3, scopePolicy: ChildScopePolicy.Retained);
@@ -148,7 +149,7 @@ var cycle = first.CycleWith(second, maximumCycles: 3, scopePolicy: ChildScopePol
 
 Equal but distinct algorithm configurations retain separate child state. Repeated references retain the same child state. Common dependencies first selected in separate child states stay separate; dependencies already owned by an ancestor are reused in every mode.
 
-For a meta-algorithm with the same activation policies, prepare one `ChildScopeSelector` from its `ChildScopePolicy` before returning the executor factory. Pass that selector to each constructed node and call `GetScopeFor(child, scope)` when activating a child. The selector retains child state across bindings without retaining an earlier aspect context. Keep invocation progress and the current construction scope on the constructed executor; persistent state must not capture the first requesting scope.
+For a meta-algorithm with the same activation policies, keep one `ChildScopeSelector` as scoped state, created from its `ChildScopePolicy` through `scope.GetScopedState(this, create)`. Pass that selector to each executor and call `GetScopeFor(child, scope)` when activating a child. Every build in the owning scope, for any run type, shares the selector and its retained child state, while each activation applies its own scope's aspects. Keep invocation progress and the current scope on the executor; scoped state must not capture a requesting scope.
 
 ## Preserve run behavior
 
@@ -157,6 +158,6 @@ A meta-algorithm should:
 1. Yield every state its children yield, unless it deliberately summarizes them.
 2. Derive each child's random stream from the supplied one with a stable index.
 3. Pass the cancellation token to every child stream.
-4. Keep the configuration immutable, prepare persistent data once, and keep invocation progress and resources inside each iterator.
+4. Keep the configuration immutable, take data shared across builds from scoped state, and keep invocation progress and resources inside each iterator.
 
 Read [Observability and analysis](/guide/execution/observability-and-analysis) for what observing a child algorithm means for the resulting series.

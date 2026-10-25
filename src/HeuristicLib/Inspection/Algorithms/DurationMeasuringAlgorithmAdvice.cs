@@ -25,8 +25,9 @@ public sealed class DurationMeasuringAlgorithmAdvice<TCandidate, TSearchState> :
         TimeProvider = timeProvider;
     }
 
-    public override WrapperExecutorFactory<IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>(IAlgorithm<TCandidate, TSearchState> algorithm) =>
-        childAlgorithm => new Executor<TRunSearchSpace, TRunProblem>(childAlgorithm, Duration, TimeProvider);
+    public override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source) =>
+        new Executor<TSearchSpace, TProblem>(executor, Duration, TimeProvider);
 
     private sealed class Executor<TSearchSpace, TProblem>(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm, DurationAccumulator duration, TimeProvider timeProvider)
         : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)

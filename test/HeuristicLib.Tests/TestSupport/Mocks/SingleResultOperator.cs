@@ -25,22 +25,22 @@ public sealed class SingleResultOperator
         where TProblem : class, IProblem<int, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        var state = scope.GetExecutionState(this, () =>
+        var state = scope.GetScopedState(this, () =>
         {
             Preparations++;
-            return new ExecutionState();
+            return new State();
         });
         Constructions++;
         return new Executor(this, state);
     }
 
 
-    private sealed class ExecutionState
+    private sealed class State
     {
         public int Calls { get; set; }
     }
 
-    private sealed class Executor(SingleResultOperator owner, ExecutionState state)
+    private sealed class Executor(SingleResultOperator owner, State state)
         : ICreationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
         ICrossoverExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
         IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,

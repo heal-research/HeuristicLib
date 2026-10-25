@@ -174,7 +174,7 @@ A refinement that has to pass through a worse candidate to reach a better one is
 
 Improvement checking evaluates twice, and the algorithm then evaluates the returned candidate itself, so the naive configuration costs three problem evaluations per refined candidate where an unchecked refiner costs one. That cost is deliberately visible rather than hidden, and it is controlled by one thing: whether the refiner and the algorithm hold the **same evaluator object**.
 
-Resolution uses configuration reference identity to select prepared execution state. Reusing the same evaluator object through the same resolution scope preserves that state, including its counters and caches. Executors are ephemeral bindings and may be rebuilt around that state for each context. Two separately constructed but structurally identical configurations have independent prepared state.
+Resolution uses configuration reference identity to select prepared scoped state. Reusing the same evaluator object through the same resolution scope preserves that state, including its counters and caches. Executors are ephemeral bindings and may be rebuilt around that state for each context. Two separately constructed but structurally identical configurations have independent prepared state.
 
 The snippets in this section use these namespaces:
 
@@ -383,10 +383,10 @@ An observation wrapper can implement `IMutationExecutor` without implementing `I
 
 `EvolutionStrategy` projects this optional control during resolution and invokes mutation through the advised executor. Advice applied directly to the selected Gaussian configuration preserves access to its raw strength control. Rebinding preserves that selected state while applying the requesting scope's observations to mutation calls. Generic naming and retry wrappers pass on the same controls, including through child inspection.
 
-An algorithm author can request a control through its typed scope without supplying factory wiring:
+An algorithm author requests the control through the scope its `CreateExecutor` receives:
 
 ```csharp
-var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
+var mutator = scope.Resolve(Mutator, out IMutationStrengthControl? strength);
 ```
 
 Use `mutator` for mutation and `strength`, when non-null, to read or update the selected executor's strength.
@@ -405,7 +405,7 @@ A multi-child composite such as a pipeline exposes its own controls. It does not
 
 Every operation call receives an explicit random number generator, and compositions invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. The built in terminators and interceptors draw nothing, so `AnyTerminator`, `AllTerminator` and `PipelineInterceptor` are deterministic with respect to child ordering unless a child draws or depends on some other explicit input or external resource.
 
-Child configurations are resolved when each composition executor is built. Reusing the same child configuration elsewhere through the same resolution scope preserves its prepared execution state. The resulting child executor objects may differ because each binding applies the requesting context's aspects.
+Child configurations are resolved when each composition executor is built. Reusing the same child configuration elsewhere through the same resolution scope preserves its prepared scoped state. The resulting child executor objects may differ because each binding applies the requesting context's aspects.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 
@@ -415,7 +415,7 @@ Use `WrappingOperator<TOperation, TCandidate>` for one child and `MultiOperator<
 
 Derive from `Operator<TOperation, TCandidate>` when a composition coordinates different operations or declares children with specific domain responsibilities. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
 
-The authored executor holds resolved child bindings and the prepared execution state needed for its context. Persistent mutable state is prepared once and survives rebuilding those bindings. The reusable configuration owns parameters and child configurations.
+The authored executor holds resolved child bindings and the prepared scoped state needed for its context. Persistent mutable state is prepared once and survives rebuilding those bindings. The reusable configuration owns parameters and child configurations.
 
 ### A complete stateful composition
 
@@ -427,7 +427,7 @@ Use these imports in a C# project with implicit system usings enabled:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-type{csharp}
 
-The constructor retains child configurations through the multi base, which snapshots their collection. `CreateExecutor` validates that collection, resolves the current children through the typed scope it receives and builds an executor around the cursor from `scope.GetExecutionState`. The scope creates that `ExecutionState` on the first build and returns the same object to every later build of the composition, so each executor continues the same sequence. Creating `ExecutionState` directly inside `CreateExecutor` would reset the cursor whenever another observation context binds the composition.
+The constructor retains child configurations through the multi base, which snapshots their collection. `CreateExecutor` validates that collection, resolves the current children through the typed scope it receives and builds an executor around the cursor from `scope.GetScopedState`. The scope creates that `State` on the first build and returns the same object to every later build of the composition, so each executor continues the same sequence. Creating `State` directly inside `CreateExecutor` would reset the cursor whenever another observation context binds the composition.
 
 The executor retains the resolved children of its context; it keeps only the cursor in shared state. `offspring` is local to one invocation. This example expects sequential calls: sharing the state does not serialize concurrent mutation operations.
 

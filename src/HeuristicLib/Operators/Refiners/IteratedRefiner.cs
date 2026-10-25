@@ -35,7 +35,8 @@ public sealed record IteratedRefiner<TCandidate>
     {
         if (Iterations <= 0)
             throw new InvalidOperationException("Iterations must be positive.");
-        return new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Iterations);
+        var childRefiner = scope.Resolve(ChildOperator);
+        return new Executor<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)

@@ -331,7 +331,7 @@ Replacement: “Decide which controls, if any, a configured composition can mean
 
 **Restructure applied 2026-10-24:** Marked analyzer generation as a proposal requiring inferability, false-positive and safe-output criteria.
 
-**Keep as proposed tooling; requirements need acceptance.** [OperatorAuthoringAnalyzer][authoring-analyzer] checks state and mutation rules; [ExecutorFactoryAnalyzer][factory-analyzer] checks child resolution. Neither implements the requested inference-helper rule. Define when a helper is inferable and useful, false-positive cases and safe fix output before implementation. Respect current generic operation slots and § 8.6 rather than generating companions mechanically.
+**Keep as proposed tooling; requirements need acceptance.** [OperatorAuthoringAnalyzer][authoring-analyzer] checks state and mutation rules; [ChildResolutionAnalyzer][factory-analyzer] checks child resolution. Neither implements the requested inference-helper rule. Define when a helper is inferable and useful, false-positive cases and safe fix output before implementation. Respect current generic operation slots and § 8.6 rather than generating companions mechanically.
 
 ### B53 — Composite construction inference (line 84)
 
@@ -535,7 +535,7 @@ The edited backlog remains authoritative. This report records applied cleanup, r
 [experiments-doc]: ../docs/guide/execution/experiments.md
 [scope]: ../src/HeuristicLib/Execution/ResolutionScope.cs
 [scope-tests]: ../test/HeuristicLib.Tests/Execution/ResolutionScopeTests.cs
-[factory-lifetimes]: ../test/HeuristicLib.Tests/Execution/ExecutorFactoryResolutionTests.Lifetimes.cs
+[factory-lifetimes]: ../test/HeuristicLib.Tests/Execution/ExecutorResolutionTests.Lifetimes.cs
 [single-mutator]: ../src/HeuristicLib/Operators/Mutators/BaseClasses/SingleCandidateMutator.cs
 [single-problem]: ../src/HeuristicLib/Problems/SingleSolutionProblem.cs
 [batch]: ../src/HeuristicLib/Execution/Concurrency/BatchExecution.cs
@@ -597,7 +597,7 @@ The edited backlog remains authoritative. This report records applied cleanup, r
 [arity-tests]: ../test/HeuristicLib.Tests/Architecture/RoleContractArityTests.cs
 [layer-tests]: ../test/HeuristicLib.Tests/Architecture/LayerDependencyTests.cs
 [authoring-analyzer]: ../analyzers/HeuristicLib.Analyzers/OperatorAuthoringAnalyzer.cs
-[factory-analyzer]: ../analyzers/HeuristicLib.Analyzers/ExecutorFactoryAnalyzer.cs
+[factory-analyzer]: ../analyzers/HeuristicLib.Analyzers/ChildResolutionAnalyzer.cs
 [composite-space]: ../src/HeuristicLib.Experimental/Encodings/Composite/CompositeSearchSpace.cs
 [composite-genotype]: ../src/HeuristicLib.Experimental/Encodings/Composite/CompositeGenotype.cs
 [bool-creator]: ../src/HeuristicLib/Encodings/BoolVectors/Creators/RandomBoolVectorCreator.cs

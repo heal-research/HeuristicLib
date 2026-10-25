@@ -34,17 +34,19 @@ public record EvolutionStrategy<TCandidate>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; } = EvolutionStrategyDefaults.MaximumGenerations;
 
-    protected override ExecutorFactory<IterativeAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-        scope =>
-        {
-            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, PopulationState<TCandidate>>();
-            var interceptor = typed.ResolveOptional(Interceptor);
-            var evaluator = typed.Resolve(Evaluator);
-            var creator = typed.Resolve(Creator);
-            var mutator = typed.Resolve(Mutator, out IMutationStrengthControl? strength);
-            return new Executor<TRunSearchSpace, TRunProblem>(interceptor, evaluator, creator, mutator, strength, typed.Resolve(Selector),
-                typed.ResolveOptional(Crossover), typed.ResolveOptional(Refiner), PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
-        };
+    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
+    {
+        var interceptor = scope.ResolveOptional(Interceptor);
+        var evaluator = scope.Resolve(Evaluator);
+        var creator = scope.Resolve(Creator);
+        var mutator = scope.Resolve(Mutator, out IMutationStrengthControl? strength);
+        var selector = scope.Resolve(Selector);
+        var crossover = scope.ResolveOptional(Crossover);
+        var refiner = scope.ResolveOptional(Refiner);
+        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, mutator, strength, selector, crossover, refiner,
+            PopulationSize, NumberOfChildren, Strategy, MaximumGenerations);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(
         IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,

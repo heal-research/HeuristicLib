@@ -9,7 +9,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators;
 
-public sealed class ConcreteOperatorFactoryTests
+public sealed class ConcreteOperatorResolutionTests
 {
     [Theory]
     [InlineData(nameof(TransformedCreator<int>))]

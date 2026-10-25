@@ -40,12 +40,12 @@ public static class EvaluationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Evaluation, TCandidate> source) =>
-            (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
 
         public IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Evaluation, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            var executor = (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
@@ -55,7 +55,7 @@ public static class EvaluationOperationResolutionExtensions
 
         public bool TryResolve(IOperator<Evaluation, TCandidate> source,
             [NotNullWhen(true)] out IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
@@ -64,12 +64,12 @@ public static class EvaluationOperationResolutionExtensions
         where TRunSearchState : class, ISearchState
     {
         public IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Evaluation, TCandidate> source) =>
-            (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
 
         public IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Evaluation, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.Scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            var executor = (IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
@@ -79,6 +79,6 @@ public static class EvaluationOperationResolutionExtensions
 
         public bool TryResolve(IOperator<Evaluation, TCandidate> source,
             [NotNullWhen(true)] out IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
-            ResolutionScope.TryResolve(() => scope.Resolve(source), out executor, out reason);
+            scope.TryResolveOperator(source, out executor, out reason);
     }
 }

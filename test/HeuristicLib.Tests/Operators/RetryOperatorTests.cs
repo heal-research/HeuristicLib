@@ -77,7 +77,7 @@ public sealed class RetryOperatorTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void InvalidAttemptLimit_FailsBeforePreparingTheChild(int attempts)
+    public void InvalidAttemptLimit_FailsBeforeResolvingTheChild(int attempts)
     {
         var preparations = 0;
         var source = new PreparationProbe(() => preparations++);

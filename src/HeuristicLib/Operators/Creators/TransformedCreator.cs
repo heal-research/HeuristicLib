@@ -13,8 +13,12 @@ public record TransformedCreator<TCandidate>(IOperator<Creation, TCandidate> Sou
     : Operator<Creation, TCandidate>
 {
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-        new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(SourceCreator), scope.Resolve(TransformationMutator));
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+    {
+        var sourceCreator = scope.Resolve(SourceCreator);
+        var transformationMutator = scope.Resolve(TransformationMutator);
+        return new Executor<TRunSearchSpace, TRunProblem>(sourceCreator, transformationMutator);
+    }
 
     private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
         : CreationExecutor<TCandidate, TSearchSpace, TProblem>

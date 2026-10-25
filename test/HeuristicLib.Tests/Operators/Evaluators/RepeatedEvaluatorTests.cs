@@ -40,18 +40,18 @@ public class RepeatedEvaluatorTests
     }
 
     private sealed record StatefulObjectiveEvaluator
-        : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulObjectiveEvaluator.ExecutionState>
+        : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulObjectiveEvaluator.State>
     {
-        public sealed class ExecutionState
+        public sealed class State
         {
             public int Calls;
         }
 
-        protected override ExecutionState CreateExecutionState() => new();
+        protected override State CreateScopedState() => new();
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, State state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {
-            var calls = Interlocked.Increment(ref executionState.Calls);
+            var calls = Interlocked.Increment(ref state.Calls);
             return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
         }
     }
