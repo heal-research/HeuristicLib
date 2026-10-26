@@ -146,7 +146,7 @@ public class PointcutSpecs
         var mutations = new CountAccumulator();
         var counting = useSubclass
             ? new MutationCounter(mutations)
-            : Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Calls));
+            : Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Invocations));
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
             .AddAspect(counting);
@@ -241,7 +241,7 @@ public class PointcutSpecs
 
     // The role's calls receive no problem, so its observations are the plain temperatures each call returned.
     private static ObservationSource<double> Temperatures(ICoolingSchedule schedule) =>
-        new(schedule, observe => Aspect.Create(Pointcut.Reference(schedule), new RecordedCoolingAdvice(observe)));
+        ObservationSource.Create<double>(schedule, observe => Aspect.Create(Pointcut.Reference(schedule), new RecordedCoolingAdvice(observe)));
 
     private sealed class MutationCounter : Aspect
     {
@@ -249,7 +249,7 @@ public class PointcutSpecs
 
         public MutationCounter(CountAccumulator mutations)
         {
-            Advices = [(Mutators, new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Calls))];
+            Advices = [(Mutators, new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Invocations))];
         }
     }
 

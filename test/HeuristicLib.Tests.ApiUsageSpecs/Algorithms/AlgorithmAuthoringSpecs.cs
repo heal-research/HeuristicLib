@@ -116,9 +116,9 @@ public class AlgorithmAuthoringSpecs
     {
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() };
 
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(algorithm);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(algorithm);
 
-        execution.ShouldBeAssignableTo<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
+        executor.ShouldBeAssignableTo<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();
     }
 
     private sealed record SingleCreateAlgorithm
@@ -189,7 +189,7 @@ public class AlgorithmAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState()
@@ -207,8 +207,8 @@ public class AlgorithmAuthoringSpecs
             return Enumerable.Range(0, count)
                              .Select(_ =>
                              {
-                                 state.Calls++;
-                                 return new RealVector(state.Calls, 0.0, 0.0);
+                                 state.Invocations++;
+                                 return new RealVector(state.Invocations, 0.0, 0.0);
                              })
                              .ToArray();
         }

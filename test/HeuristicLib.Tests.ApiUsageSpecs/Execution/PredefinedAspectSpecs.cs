@@ -30,34 +30,34 @@ public sealed class PredefinedAspectSpecs
         var timeProvider = TimeProvider.System;
         (IConfigurationNode Source, Aspect Aspect)[] aspects =
         [
-            (algorithm, Aspect.CountCalls(algorithm, counter)),
+            (algorithm, Aspect.CountInvocations(algorithm, counter)),
             (algorithm, Aspect.MeasureDuration(algorithm, duration)),
             (algorithm, Aspect.MeasureDuration(algorithm, duration, timeProvider)),
-            (creator, Aspect.CountCalls(creator, counter)),
+            (creator, Aspect.CountInvocations(creator, counter)),
             (creator, Aspect.MeasureDuration(creator, duration)),
             (creator, Aspect.MeasureDuration(creator, duration, timeProvider)),
-            (crossover, Aspect.CountCalls(crossover, counter)),
+            (crossover, Aspect.CountInvocations(crossover, counter)),
             (crossover, Aspect.MeasureDuration(crossover, duration)),
             (crossover, Aspect.MeasureDuration(crossover, duration, timeProvider)),
-            (evaluator, Aspect.CountCalls(evaluator, counter)),
+            (evaluator, Aspect.CountInvocations(evaluator, counter)),
             (evaluator, Aspect.MeasureDuration(evaluator, duration)),
             (evaluator, Aspect.MeasureDuration(evaluator, duration, timeProvider)),
-            (mutator, Aspect.CountCalls(mutator, counter)),
+            (mutator, Aspect.CountInvocations(mutator, counter)),
             (mutator, Aspect.MeasureDuration(mutator, duration)),
             (mutator, Aspect.MeasureDuration(mutator, duration, timeProvider)),
-            (refiner, Aspect.CountCalls(refiner, counter)),
+            (refiner, Aspect.CountInvocations(refiner, counter)),
             (refiner, Aspect.MeasureDuration(refiner, duration)),
             (refiner, Aspect.MeasureDuration(refiner, duration, timeProvider)),
-            (selector, Aspect.CountCalls(selector, counter)),
+            (selector, Aspect.CountInvocations(selector, counter)),
             (selector, Aspect.MeasureDuration(selector, duration)),
             (selector, Aspect.MeasureDuration(selector, duration, timeProvider)),
-            (replacer, Aspect.CountCalls(replacer, counter)),
+            (replacer, Aspect.CountInvocations(replacer, counter)),
             (replacer, Aspect.MeasureDuration(replacer, duration)),
             (replacer, Aspect.MeasureDuration(replacer, duration, timeProvider)),
-            (interceptor, Aspect.CountCalls(interceptor, counter)),
+            (interceptor, Aspect.CountInvocations(interceptor, counter)),
             (interceptor, Aspect.MeasureDuration(interceptor, duration)),
             (interceptor, Aspect.MeasureDuration(interceptor, duration, timeProvider)),
-            (terminator, Aspect.CountCalls(terminator, counter)),
+            (terminator, Aspect.CountInvocations(terminator, counter)),
             (terminator, Aspect.MeasureDuration(terminator, duration)),
             (terminator, Aspect.MeasureDuration(terminator, duration, timeProvider)),
             (creator, Aspect.CountCandidates(creator, counter)),
@@ -75,17 +75,17 @@ public sealed class PredefinedAspectSpecs
             (replacer, Aspect.CountCandidates(replacer, counter)),
             (replacer, Aspect.CountCandidates(replacer, out var replacerCount)),
             (algorithm, Aspect.Observe(algorithm.Iterations, _ => { })),
-            (crossover, Aspect.Observe(crossover.Calls, _ => { })),
-            (evaluator, Aspect.Observe(evaluator.Calls, _ => { })),
-            (mutator, Aspect.Observe(mutator.Calls, _ => { })),
-            (interceptor, Aspect.Observe(interceptor.Calls, _ => { }))
+            (crossover, Aspect.Observe(crossover.Invocations, _ => { })),
+            (evaluator, Aspect.Observe(evaluator.Invocations, _ => { })),
+            (mutator, Aspect.Observe(mutator.Invocations, _ => { })),
+            (interceptor, Aspect.Observe(interceptor.Invocations, _ => { }))
         ];
 
         foreach (var (source, aspect) in aspects)
             aspect.ShouldHaveSingleItem().Pointcut.Matches(source).ShouldBeTrue();
 
         Clock.FromIterations(algorithm).ShouldHaveSingleItem().Pointcut.Matches(algorithm).ShouldBeTrue();
-        Clock.FromEvaluations(evaluator).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
+        Clock.FromCandidates(evaluator).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
         Clock.FromElapsedTime(timeProvider).ShouldBeOfType<ElapsedTimeClock>();
     }
 }

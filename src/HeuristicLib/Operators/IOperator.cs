@@ -17,8 +17,8 @@ public interface IOperator<TOperation, TCandidate> : IOperator
     /// <summary>Builds this operator's executor for the run types, resolving children through the scope.</summary>
     /// <remarks>
     /// Resolution calls this for every build. Validate the configuration first and take shared execution data, such as
-    /// counters or caches, from <see cref="ResolutionScope.GetScopedState{TState}"/>, passing this configuration. The
-    /// result implements the operation's executor interface for the run types.
+    /// counters or caches, from <see cref="ResolutionScope.GetScopedState{TState}"/>, passing this configuration.
+    /// The result implements the operation's executor interface for the run types.
     /// </remarks>
     IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>

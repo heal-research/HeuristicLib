@@ -59,12 +59,12 @@ public sealed class OperatorAdviceTests
             var source = new SharedOperations(new ProbeLog());
             IOperator<Mutation, RealVector> mutation = source;
             IOperator<Evaluation, RealVector> evaluation = source;
-            var generalTotal = new CallCounter();
+            var generalTotal = new InvocationCounter();
             var generalLog = new AdviceLog();
-            var typedTotal = new CallCounter();
+            var typedTotal = new InvocationCounter();
             var typedLog = new AdviceLog();
-            var general = Aspect.Create(Pointcut.Reference(source), new CountCalls(generalTotal, generalLog));
-            var typedAdvice = Aspect.Create(Pointcut.Reference(mutation), new CountCalls<Mutation, RealVector>(typedTotal, typedLog));
+            var general = Aspect.Create(Pointcut.Reference(source), new CountInvocations(generalTotal, generalLog));
+            var typedAdvice = Aspect.Create(Pointcut.Reference(mutation), new CountInvocations<Mutation, RealVector>(typedTotal, typedLog));
             var root = ResolutionScope.Create(general, typedAdvice);
             var scope = Typed(root);
             if (evaluationFirst)
@@ -104,12 +104,12 @@ public sealed class OperatorAdviceTests
             var generalLog = new AdviceLog();
             var typedLog = new AdviceLog();
             var skippedLog = new AdviceLog { FailCheck = true };
-            var total = new CallCounter();
+            var total = new InvocationCounter();
             var root = ResolutionScope.Create(
-                Aspect.Create(Pointcut.Reference(source), new CountCalls(total, generalLog)),
-                Aspect.Create(Pointcut.Reference(term), new CountCalls<Termination, RealVector>(new CallCounter(), typedLog)),
+                Aspect.Create(Pointcut.Reference(source), new CountInvocations(total, generalLog)),
+                Aspect.Create(Pointcut.Reference(term), new CountInvocations<Termination, RealVector>(new InvocationCounter(), typedLog)),
                 Aspect.Create(Pointcut.Reference((IOperator<Mutation, RealVector>)source),
-                    new CountCalls<Mutation, RealVector>(new CallCounter(), skippedLog)));
+                    new CountInvocations<Mutation, RealVector>(new InvocationCounter(), skippedLog)));
             var broad = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
             var narrow = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
             if (narrowFirst)
@@ -127,9 +127,9 @@ public sealed class OperatorAdviceTests
             Check(advised.IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem), "an advised terminator retains its live control");
         }
         var interceptor = new IdentityInterceptor(new ProbeLog());
-        var interceptTotal = new CallCounter();
+        var interceptTotal = new InvocationCounter();
         var interceptLog = new AdviceLog();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(interceptor), new CountCalls(interceptTotal, interceptLog)));
+        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(interceptor), new CountInvocations(interceptTotal, interceptLog)));
         var exact = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         var state = new ProbeState();
         Check(ReferenceEquals(state, exact.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
@@ -144,11 +144,11 @@ public sealed class OperatorAdviceTests
     {
         IOperator<Mutation, RealVector> source = new IdentityMutation();
         var order = new List<string>();
-        var total = new CallCounter();
+        var total = new InvocationCounter();
         var localLog = new AdviceLog { AfterSuccess = () => order.Add("local") };
-        var local = new CountCalls(total, localLog);
+        var local = new CountInvocations(total, localLog);
         var observedCount = 0;
-        var observer = new CountCalls(new CallCounter(), new AdviceLog
+        var observer = new CountInvocations(new InvocationCounter(), new AdviceLog
         {
             AfterSuccess = () =>
         {
@@ -156,8 +156,8 @@ public sealed class OperatorAdviceTests
             observedCount = total.Value;
         }
         });
-        var parentA = new CountCalls(new CallCounter(), new AdviceLog { AfterSuccess = () => order.Add("parent-a") });
-        var parentB = new CountCalls(new CallCounter(), new AdviceLog { AfterSuccess = () => order.Add("parent-b") });
+        var parentA = new CountInvocations(new InvocationCounter(), new AdviceLog { AfterSuccess = () => order.Add("parent-a") });
+        var parentB = new CountInvocations(new InvocationCounter(), new AdviceLog { AfterSuccess = () => order.Add("parent-b") });
         var parent = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), parentA), Aspect.Create(Pointcut.Reference(source), parentB));
         var scope = parent.With(new Pairs((Pointcut.Reference(source), local), (Pointcut.Reference(source), observer),
             (Pointcut.Reference(source), local)));
@@ -168,18 +168,18 @@ public sealed class OperatorAdviceTests
             "a duplicate advice neither counts twice nor moves its first position behind observation");
 
         var skipped = new AdviceLog { FailCheck = true };
-        var duplicate = new CountCalls(new CallCounter(), skipped);
+        var duplicate = new CountInvocations(new InvocationCounter(), skipped);
         var firstMiss = ResolutionScope.Create(new Pairs((Pointcut.Predicate<IOperator>(_ => false), duplicate),
             (Pointcut.Reference(source), duplicate)));
         _ = Invoke(Typed(firstMiss).Resolve(source));
         Check(skipped.Checks == 0, "first-position deduplication precedes matching, as in the shipping resolver");
 
-        var sharedResult = new CallCounter();
+        var sharedResult = new InvocationCounter();
         var first = new AdviceLog();
         var second = new AdviceLog();
         _ = Invoke(Typed(ResolutionScope.Create(
-            Aspect.Create(Pointcut.Reference(source), new CountCalls(sharedResult, first)),
-            Aspect.Create(Pointcut.Reference(source), new CountCalls(sharedResult, second)))).Resolve(source));
+            Aspect.Create(Pointcut.Reference(source), new CountInvocations(sharedResult, first)),
+            Aspect.Create(Pointcut.Reference(source), new CountInvocations(sharedResult, second)))).Resolve(source));
         Check(sharedResult.Value == 2 && first.Wraps == 1 && second.Wraps == 1,
             "distinct advice instances remain distinct even when their type and result accumulator match");
     }
@@ -193,9 +193,9 @@ public sealed class OperatorAdviceTests
         var outer = inner.Named("outer");
         var root = ResolutionScope.Create();
         var raw = Typed(root).Resolve(mutation, out ILiveValue? rawControl);
-        var count = new CallCounter();
+        var count = new InvocationCounter();
         var log = new AdviceLog();
-        var scope = Typed(root.With(Aspect.Create(Pointcut.OfType<IOperator>(), new CountCalls(count, log))));
+        var scope = Typed(root.With(Aspect.Create(Pointcut.OfType<IOperator>(), new CountInvocations(count, log))));
         var advised = scope.Resolve(outer, out ILiveValue? control);
         // Each resolution builds its own executor, so the controls share the live value rather than identity.
         Check(rawControl is not null && control is not null && advised is not ILiveValue,
@@ -215,9 +215,9 @@ public sealed class OperatorAdviceTests
         var composite = new ContextualMutation(child);
         var originalScope = ResolutionScope.Create();
         var original = Typed(originalScope).Resolve(composite);
-        var childCounter = new CallCounter();
+        var childCounter = new InvocationCounter();
         var childLog = new AdviceLog();
-        var contextual = Typed(originalScope.With(Aspect.Create(Pointcut.Reference(child), new CountCalls(childCounter, childLog)))).Resolve(composite);
+        var contextual = Typed(originalScope.With(Aspect.Create(Pointcut.Reference(child), new CountInvocations(childCounter, childLog)))).Resolve(composite);
         Check(Invoke(original) == 1 && Invoke(contextual) == 2 && Invoke(original) == 3 && childCounter.Value == 1,
             "newly resolved children acquire requesting advice while original parent nodes keep their old children");
         Check(Invoke(contextual) == 4 && childCounter.Value == 2 && childLog.Wraps == 1,
@@ -231,8 +231,8 @@ public sealed class OperatorAdviceTests
         {
             IOperator<Mutation, RealVector> source = new CountingMutation();
             var log = new AdviceLog();
-            var total = new CallCounter();
-            var aspect = Aspect.Create(Pointcut.Reference(source), new CountCalls(total, log));
+            var total = new InvocationCounter();
+            var aspect = Aspect.Create(Pointcut.Reference(source), new CountInvocations(total, log));
             var root = ResolutionScope.Create(aspect);
             var selector = new ChildScopeSelector(policy);
             var first = Typed(selector.GetScopeFor(source, root)).Resolve(source);
@@ -241,7 +241,7 @@ public sealed class OperatorAdviceTests
             Check(total.Value == 2 && log.Wraps == 2, $"{policy} applies the advice to every activation");
         }
         var references = new AdviceLog();
-        var referenceScope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator>(), new CountCalls(new CallCounter(), references))));
+        var referenceScope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator>(), new CountInvocations(new InvocationCounter(), references))));
         IOperator<Mutation, RealVector> firstRecord = new CountingMutation();
         IOperator<Mutation, RealVector> secondRecord = new CountingMutation();
         Check(Invoke(referenceScope.Resolve(firstRecord)) == 1 && Invoke(referenceScope.Resolve(secondRecord)) == 1 &&
@@ -255,8 +255,8 @@ public sealed class OperatorAdviceTests
         var child = new SharedOperations(new ProbeLog());
         var source = new ContextualMutation(child);
         var log = new AdviceLog { FailCheck = true };
-        var count = new CallCounter();
-        var scope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(count, log))));
+        var count = new InvocationCounter();
+        var scope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountInvocations(count, log))));
         Reject(() => scope.Resolve(source), "advice check failure");
         Check(child.Log.Preparations == 0 && child.Log.Constructions == 0, "a failed advice check precedes the raw child graph");
         log.FailCheck = false;
@@ -270,7 +270,7 @@ public sealed class OperatorAdviceTests
         var wrongChild = new SharedOperations(new ProbeLog());
         var wrongSource = new ContextualMutation(wrongChild);
         var wrongLog = new AdviceLog();
-        var wrong = new WrongViewAdvice(new CallCounter(), wrongLog);
+        var wrong = new WrongViewAdvice(new InvocationCounter(), wrongLog);
         var wrongScope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(wrongSource), wrong)));
         var sentinel = new ControlSentinel();
         ILiveValue? control = sentinel;
@@ -284,11 +284,11 @@ public sealed class OperatorAdviceTests
         IOperator<Termination, RealVector> term = termSource;
         var generalLog = new AdviceLog();
         var typedLog = new AdviceLog();
-        var generalTotal = new CallCounter();
-        var typedTotal = new CallCounter();
+        var generalTotal = new InvocationCounter();
+        var typedTotal = new InvocationCounter();
         var root = ResolutionScope.Create(
-            Aspect.Create(Pointcut.Reference(term), new CountCalls(generalTotal, generalLog)),
-            Aspect.Create(Pointcut.Reference(term), new CountCalls<Termination, RealVector>(typedTotal, typedLog)));
+            Aspect.Create(Pointcut.Reference(term), new CountInvocations(generalTotal, generalLog)),
+            Aspect.Create(Pointcut.Reference(term), new CountInvocations<Termination, RealVector>(typedTotal, typedLog)));
         var broad = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
         var narrow = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         var first = broad.Resolve(term);
@@ -315,8 +315,8 @@ public sealed class OperatorAdviceTests
     {
         var source = new SharedOperations(new ProbeLog { FailConstruction = true });
         var log = new AdviceLog();
-        var counter = new CallCounter();
-        var scope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, log))));
+        var counter = new InvocationCounter();
+        var scope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountInvocations(counter, log))));
         Reject(() => scope.Resolve((IOperator<Mutation, RealVector>)source), "construction failure");
         Check(log.Checks == 1 && log.Wraps == 0, "advice checks precede raw construction; wrapping follows it");
         source.Log.FailConstruction = false;
@@ -339,12 +339,12 @@ public sealed class OperatorAdviceTests
 
         var invocation = new InvocationLog();
         IOperator<Mutation, RealVector> throwing = new ThrowingMutation(invocation);
-        var inner = new CallCounter();
-        var outer = new CallCounter();
+        var inner = new InvocationCounter();
+        var outer = new InvocationCounter();
         var outerLog = new AdviceLog();
         var operation = Typed(ResolutionScope.Create(
-            Aspect.Create(Pointcut.Reference(throwing), new CountCalls(inner, new AdviceLog())),
-            Aspect.Create(Pointcut.Reference(throwing), new CountCalls(outer, outerLog)))).Resolve(throwing);
+            Aspect.Create(Pointcut.Reference(throwing), new CountInvocations(inner, new AdviceLog())),
+            Aspect.Create(Pointcut.Reference(throwing), new CountInvocations(outer, outerLog)))).Resolve(throwing);
         _ = Invoke(operation);
         invocation.Failure = new OperationCanceledException("fixture cancellation");
         RejectSame(() => Invoke(operation), invocation.Failure);
@@ -358,13 +358,13 @@ public sealed class OperatorAdviceTests
         Check(inner.Value == 2 && outer.Value == 2, "a wrapper failure after success leaves completed inner updates intact");
         outerLog.AfterSuccess = null;
         _ = Invoke(operation);
-        Check(inner.Value == 3 && outer.Value == 3 && invocation.Calls == 5, "later calls remain usable without extra child invocations");
+        Check(inner.Value == 3 && outer.Value == 3 && invocation.Invocations == 5, "later calls remain usable without extra child invocations");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference DiscardAdvice(ResolutionScope root, IOperator<Mutation, RealVector> source)
     {
-        var advice = new CountCalls(new CallCounter(), new AdviceLog());
+        var advice = new CountInvocations(new InvocationCounter(), new AdviceLog());
         _ = Typed(root.With(Aspect.Create(Pointcut.Reference(source), advice))).Resolve(source);
         return new WeakReference(advice);
     }
@@ -379,10 +379,10 @@ public sealed class OperatorAdviceTests
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static (IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Executor,
-        WeakReference Advice, CallCounter Total) KeepExecution(ResolutionScope root, IOperator<Mutation, RealVector> source)
+        WeakReference Advice, InvocationCounter Total) KeepExecution(ResolutionScope root, IOperator<Mutation, RealVector> source)
     {
-        var counter = new CallCounter();
-        var advice = new CountCalls(counter, new AdviceLog());
+        var counter = new InvocationCounter();
+        var advice = new CountInvocations(counter, new AdviceLog());
         var executor = Typed(root.With(Aspect.Create(Pointcut.Reference(source), advice))).Resolve(source);
         return (executor, new WeakReference(advice), counter);
     }
@@ -393,7 +393,7 @@ public sealed class OperatorAdviceTests
         var root = ResolutionScope.Create();
         IOperator<Mutation, RealVector> source = new CountingMutation();
         var discardedAdvice = DiscardAdvice(root, source);
-        var advice = new CountCalls(new CallCounter(), new AdviceLog());
+        var advice = new CountInvocations(new InvocationCounter(), new AdviceLog());
         var aspect = Aspect.Create(Pointcut.OfType<IOperator>(), advice);
         var discardedFresh = DiscardFreshState(root, aspect);
         var live = KeepExecution(root, source);
@@ -432,7 +432,7 @@ public sealed class OperatorAdviceTests
 
     private sealed class InvocationLog
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
         public Exception? Failure { get; set; }
     }
 
@@ -440,7 +440,7 @@ public sealed class OperatorAdviceTests
     {
         public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
         {
-            Log.Calls++;
+            Log.Invocations++;
             if (Log.Failure is { } failure)
                 throw failure;
             return parents;

@@ -271,7 +271,7 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .LimitedToCalls(algorithm.Evaluator, 2)
+            .LimitedToInvocations(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -294,7 +294,7 @@ public class PractitionerUsageSpecs
         };
 
         var statesByEvaluatorCalls = algorithm
-            .LimitedToCalls(algorithm.Evaluator, 2)
+            .LimitedToInvocations(algorithm.Evaluator, 2)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -371,9 +371,9 @@ public class PractitionerUsageSpecs
         };
 
         var statesByMutatorCalls = algorithm
-            .LimitedToCalls(
+            .LimitedToInvocations(
                 algorithm.Mutator,
-                maximumCalls: 1)
+                maximumInvocations: 1)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
@@ -452,8 +452,8 @@ public class PractitionerUsageSpecs
         var algorithm = observedAlgorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
         var states = algorithm.CreateRun(problem, RandomNumberGenerator.Create(987))
-            .AddAspect(Aspect.CountCalls(baseAlgorithm.Crossover, counter))
-            .AddAspect(Aspect.CountCalls(baseAlgorithm.Mutator, counter))
+            .AddAspect(Aspect.CountInvocations(baseAlgorithm.Crossover, counter))
+            .AddAspect(Aspect.CountInvocations(baseAlgorithm.Mutator, counter))
             .Stream(cancellationToken: TestContext.Current.CancellationToken)
               .ToList();
 

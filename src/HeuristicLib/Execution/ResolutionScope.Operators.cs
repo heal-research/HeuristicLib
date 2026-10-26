@@ -67,7 +67,8 @@ public partial class ResolutionScope
         where TExecutor : class, IExecutor =>
         Attempt(() => (TExecutor)ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source), out executor, out reason);
 
-    // Returns whether the advice wraps this operation; advice for another operation of the same configuration is skipped.
+    // Returns whether the advice wraps this operation; advice for another operation of the same configuration, and
+    // observations the operator publishes, are skipped.
     private static bool CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(Advice advice,
         OperationInfo operation, IOperator<TOperation, TCandidate> source)
         where TOperation : IOperation<TOperation>

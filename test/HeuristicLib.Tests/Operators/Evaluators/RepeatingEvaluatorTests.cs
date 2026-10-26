@@ -23,7 +23,7 @@ public class RepeatingEvaluatorTests
         var observed = new CandidateEvaluator();
         var evaluator = observed.AsRepeated(3);
 
-        ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
+        ResolutionScope.Create(Aspect.CountInvocations(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
@@ -34,9 +34,9 @@ public class RepeatingEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new RandomEvaluator().AsRepeated(5);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
-        var actual = execution.Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var actual = executor.Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
         var rootRandom = RandomNumberGenerator.Create(42);
         var repeated = Enumerable.Range(0, 5)
             .Select(repetition => Enumerable.Range(0, 2)

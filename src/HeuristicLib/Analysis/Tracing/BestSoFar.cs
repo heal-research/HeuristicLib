@@ -70,42 +70,42 @@ public sealed class BestSoFar(IComparer<ObjectiveVector>? objectiveComparer = nu
 
 public static class BestSoFarTraces
 {
-    extension<TCandidate>(ObservationSource<EvaluationObservation<TCandidate>> calls)
+    extension<TCandidate>(ObservationSource<EvaluationObservation<TCandidate>> invocations)
     {
         /// <summary>
-        /// Accumulates the best objective vector across the evaluator's calls, each ranked by its own problem's objective.
+        /// Accumulates the best objective vector across the evaluator's invocations, each ranked by its own problem's objective.
         /// By default, records only improvements.
         /// </summary>
         public TraceAnalyzer<ObjectiveVector> TraceBestSoFar(IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null) =>
-            TraceBestSoFar([calls], clocks, retention, objectiveComparer);
+            TraceBestSoFar([invocations], clocks, retention, objectiveComparer);
 
         /// <summary>
-        /// Accumulates the best evaluated candidate across the evaluator's calls, each ranked by its own problem's
+        /// Accumulates the best evaluated candidate across the evaluator's invocations, each ranked by its own problem's
         /// objective. By default, records only improvements.
         /// </summary>
         public TraceAnalyzer<EvaluatedCandidate<TCandidate>> TraceBestCandidateSoFar(IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null) =>
-            TraceBestCandidateSoFar([calls], clocks, retention, objectiveComparer);
+            TraceBestCandidateSoFar([invocations], clocks, retention, objectiveComparer);
     }
 
-    extension<TCandidate>(IReadOnlyList<ObservationSource<EvaluationObservation<TCandidate>>> calls)
+    extension<TCandidate>(IReadOnlyList<ObservationSource<EvaluationObservation<TCandidate>>> invocations)
     {
-        /// <summary>Accumulates the best objective vector across the calls of several evaluators into one trace.</summary>
+        /// <summary>Accumulates the best objective vector across the invocations of several evaluators into one trace.</summary>
         public TraceAnalyzer<ObjectiveVector> TraceBestSoFar(IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
         {
             var best = new BestSoFar(objectiveComparer);
-            return Analyzer.Trace(calls, observation => best.Update(observation.ObjectiveVectors, observation.Problem.Objective),
+            return Analyzer.Trace(invocations, observation => best.Update(observation.ObjectiveVectors, observation.Problem.Objective),
                 clocks, retention ?? TraceRetention.OnChange());
         }
 
-        /// <summary>Accumulates the best evaluated candidate across the calls of several evaluators into one trace.</summary>
+        /// <summary>Accumulates the best evaluated candidate across the invocations of several evaluators into one trace.</summary>
         public TraceAnalyzer<EvaluatedCandidate<TCandidate>> TraceBestCandidateSoFar(IReadOnlyList<Clock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null)
         {
             var best = new BestSoFar<EvaluatedCandidate<TCandidate>>(static candidate => candidate.ObjectiveVector, objectiveComparer);
-            return Analyzer.Trace(calls,
+            return Analyzer.Trace(invocations,
                 observation => best.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective),
                 clocks, retention ?? TraceRetention.OnChange());
         }

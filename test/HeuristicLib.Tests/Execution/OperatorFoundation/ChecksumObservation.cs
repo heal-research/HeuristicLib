@@ -43,7 +43,7 @@ public static class ChecksumObservations
 {
     extension<TCandidate>(IOperator<Checksum, TCandidate> checksum)
     {
-        public ObservationSource<ChecksumObservation<TCandidate>> Calls =>
-            new(checksum, observe => Aspect.Create(Pointcut.Reference(checksum), new ChecksumObservationAdvice<TCandidate>(observe)));
+        public ObservationSource<ChecksumObservation<TCandidate>> Invocations =>
+            ObservationSource.Create<ChecksumObservation<TCandidate>>(checksum, observe => Aspect.Create(Pointcut.Reference(checksum), new ChecksumObservationAdvice<TCandidate>(observe)));
     }
 }

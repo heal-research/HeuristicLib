@@ -82,7 +82,7 @@ public class GenealogyGraphTests
             MaximumGenerations = gens
         };
 
-        var evalQualities = algorithm.Evaluator.Calls.TraceBestCandidateSoFar();
+        var evalQualities = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
         var qualities = algorithm.Iterations.TracePopulationCandidates();
         var genealogyAnalysis =
             Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);

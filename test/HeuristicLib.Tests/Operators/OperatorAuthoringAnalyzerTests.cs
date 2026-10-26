@@ -29,7 +29,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public int Calls { get; set; }
+                  public int Invocations { get; set; }
                   public Dictionary<int, int> Cache { get; } = new();
               }
 
@@ -40,7 +40,7 @@ public class OperatorAuthoringAnalyzerTests
                   State state,
                   IRandomNumberGenerator random)
               {
-                  state.Calls++;
+                  state.Invocations++;
                   return parents;
               }
           }
@@ -382,7 +382,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public int Calls { get; set; }
+                  public int Invocations { get; set; }
               }
 
               protected override State CreateScopedState() => new();
@@ -393,7 +393,7 @@ public class OperatorAuthoringAnalyzerTests
                   State operatorState,
                   IRandomNumberGenerator random)
               {
-                  operatorState.Calls++;
+                  operatorState.Invocations++;
                   return currentState;
               }
           }
@@ -459,7 +459,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public int Calls { get; set; }
+                  public int Invocations { get; set; }
               }
 
               protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
@@ -470,7 +470,7 @@ public class OperatorAuthoringAnalyzerTests
                   public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
                       IProblem<int, ISearchSpace<int>> problem)
                   {
-                      state.Calls++;
+                      state.Invocations++;
                       return parents;
                   }
               }
@@ -488,7 +488,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public int Calls { get; set; }
+                  public int Invocations { get; set; }
               }
 
               protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
@@ -497,7 +497,7 @@ public class OperatorAuthoringAnalyzerTests
               private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
               {
                   public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                      IProblem<int, ISearchSpace<int>> problem) => state.Calls == 0 ? parents : [];
+                      IProblem<int, ISearchSpace<int>> problem) => state.Invocations == 0 ? parents : [];
               }
           }
           """);
@@ -515,7 +515,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public sealed class State
               {
-                  public int Calls { get; set; }
+                  public int Invocations { get; set; }
               }
 
               protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope)
@@ -527,8 +527,118 @@ public class OperatorAuthoringAnalyzerTests
               private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
               {
                   public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                      IProblem<int, ISearchSpace<int>> problem) => state.Calls == 0 ? parents : [];
+                      IProblem<int, ISearchSpace<int>> problem) => state.Invocations == 0 ? parents : [];
               }
+          }
+          """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ConfigurationMutationRule_CoversAlgorithms()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record InvalidAlgorithm : Algorithm<InvalidAlgorithm, int, PopulationState<int>>
+          {
+              public int Builds { get; set; }
+
+              protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+                  ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
+              {
+                  Builds++;
+                  throw new System.NotSupportedException();
+              }
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.ConfigurationMutationDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("'Builds'");
+    }
+
+    [Fact]
+    public async Task ConfigurationMutationRule_CoversConsumerDefinedRoles()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file interface ITickExecutor : IExecutor;
+
+          file sealed class InvalidTicker : IConfigurationNode<ITickExecutor>
+          {
+              private int builds;
+
+              public ITickExecutor CreateExecutor(ResolutionScope scope)
+              {
+                  builds = builds + 1;
+                  throw new System.NotSupportedException();
+              }
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.ConfigurationMutationDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("'builds'");
+    }
+
+    [Theory]
+    [InlineData("Child.Ticks")]
+    [InlineData("ObservationPoint.Of<int>(Child, nameof(Ticks))")]
+    public async Task ObservationPointResolution_RejectsAnotherConfiguration(string point)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+          using HEAL.HeuristicLib.Inspection;
+
+          file sealed class InvalidTicker(InvalidTicker Child) : IConfigurationNode<IObservationPointExecutor<int>>
+          {
+              public ObservationPoint<int> Ticks => ObservationPoint.Of<int>(this, nameof(Ticks));
+
+              public IObservationPointExecutor<int> CreateExecutor(ResolutionScope scope) => scope.Resolve({{point}});
+          }
+          """);
+
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("not declared by this configuration");
+    }
+
+    [Theory]
+    [InlineData("Ticks")]
+    [InlineData("this.Ticks")]
+    [InlineData("ObservationPoint.Of<int>(this, nameof(Ticks))")]
+    public async Task ObservationPointResolution_AllowsOwnPoints(string point)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+          using HEAL.HeuristicLib.Inspection;
+
+          file sealed record ValidTicker : IConfigurationNode<IObservationPointExecutor<int>>
+          {
+              public ObservationPoint<int> Ticks => ObservationPoint.Of<int>(this, nameof(Ticks));
+
+              public IObservationPointExecutor<int> CreateExecutor(ResolutionScope scope) => scope.Resolve({{point}});
+          }
+          """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ObservationPointResolution_AllowsLocalAliasesAndResolutionOutsideBuilds()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          using HEAL.HeuristicLib.Inspection;
+
+          file sealed record ValidTicker : IConfigurationNode<IObservationPointExecutor<int>>
+          {
+              public ObservationPoint<int> Ticks => ObservationPoint.Of<int>(this, nameof(Ticks));
+
+              public IObservationPointExecutor<int> CreateExecutor(ResolutionScope scope)
+              {
+                  var ticks = Ticks;
+                  return scope.Resolve(ticks);
+              }
+
+              public static IObservationPointExecutor<int> ObserveAnother(ResolutionScope scope, ValidTicker other) =>
+                  scope.Resolve(other.Ticks);
           }
           """);
 

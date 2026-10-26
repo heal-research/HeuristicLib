@@ -27,7 +27,7 @@ public sealed class GeneticAlgorithmResolutionTests
 
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountCalls(creator, observedCreations),
+        var child = parent.CreateChildScope(Aspect.CountInvocations(creator, observedCreations),
             countInterceptions(observedInterceptions));
 
         (await Next(child, algorithm)).ShouldBe(2);
@@ -93,7 +93,7 @@ public sealed class GeneticAlgorithmResolutionTests
                 MaximumGenerations = 3,
                 MutationRate = mutationRate
             };
-            return (alpsAlgorithm, counter => Aspect.CountCalls(alpsInterceptor, counter));
+            return (alpsAlgorithm, counter => Aspect.CountInvocations(alpsInterceptor, counter));
         }
 
         var interceptor = new IdentityInterceptor<PopulationState<int>>(prepareInterceptor);
@@ -109,7 +109,7 @@ public sealed class GeneticAlgorithmResolutionTests
             MaxEffort = 1,
             MaximumGenerations = 3
         };
-        return (algorithm, counter => Aspect.CountCalls(interceptor, counter));
+        return (algorithm, counter => Aspect.CountInvocations(interceptor, counter));
     }
 
     private static IAsyncEnumerable<ISearchState> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>
@@ -135,7 +135,7 @@ public sealed class GeneticAlgorithmResolutionTests
 
     private sealed class CounterState
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 
     private sealed record CounterCreator(Action Prepare) : StatefulCreator<int, CounterState>
@@ -147,7 +147,7 @@ public sealed class GeneticAlgorithmResolutionTests
         }
 
         protected override IReadOnlyList<int> Create(int count, CounterState state, IRandomNumberGenerator random) =>
-            Enumerable.Repeat(++state.Calls, count).ToArray();
+            Enumerable.Repeat(++state.Invocations, count).ToArray();
     }
 
     private sealed record ImprovingMutator : SingleCandidateMutator<int>

@@ -29,7 +29,7 @@ public sealed record CountingMutation : StatefulMutator<RealVector, CountingMuta
 {
     public sealed class State
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 
     protected override State CreateScopedState() => new();
@@ -37,8 +37,8 @@ public sealed record CountingMutation : StatefulMutator<RealVector, CountingMuta
     protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, State state,
         IRandomNumberGenerator random)
     {
-        state.Calls++;
-        return parents.Select(_ => new RealVector((double)state.Calls)).ToArray();
+        state.Invocations++;
+        return parents.Select(_ => new RealVector((double)state.Invocations)).ToArray();
     }
 }
 

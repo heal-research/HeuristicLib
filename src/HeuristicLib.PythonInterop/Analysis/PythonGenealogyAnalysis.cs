@@ -304,7 +304,7 @@ public class PythonGenealogyAnalysis
         var rankAnalysis = parameters.TrackGenealogy
             ? Analyzer.Rank(crossover, mutator, algorithm, objectiveComparer: parameters.ObjectiveComparer)
             : null;
-        var qc = evaluator.Calls.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
+        var qc = evaluator.Invocations.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
         var apt = parameters.TrackPopulations ? Analyzer.Trace(algorithm.Iterations, static observation => observation.State.Population.EvaluatedCandidates) : null;
         var c = callback != null
             ? Aspect.Observe(algorithm.Iterations, observation => callback(observation.State))

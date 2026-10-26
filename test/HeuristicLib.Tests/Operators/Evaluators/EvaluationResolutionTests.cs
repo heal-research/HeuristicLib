@@ -34,10 +34,10 @@ public sealed class EvaluationResolutionTests
         static (WeakReference Candidate, WeakReference Result) CreateCachedReferences(IOperator<Evaluation, object> source, FuncProblem<object, DummySearchSpace<object>> problem)
         {
             var scope = ResolutionScope.Create();
-            var execution = scope.Resolve<object, DummySearchSpace<object>, FuncProblem<object, DummySearchSpace<object>>>(source);
+            var executor = scope.Resolve<object, DummySearchSpace<object>, FuncProblem<object, DummySearchSpace<object>>>(source);
             var candidate = new object();
-            var result = execution.Evaluate([candidate], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Single();
-            execution.Evaluate([candidate], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).Single().ShouldBeSameAs(result);
+            var result = executor.Evaluate([candidate], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Single();
+            executor.Evaluate([candidate], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).Single().ShouldBeSameAs(result);
             return (new WeakReference(candidate), new WeakReference(result));
         }
     }
@@ -121,7 +121,7 @@ public sealed class EvaluationResolutionTests
 
     private sealed class CounterState
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 
     private sealed record CountingEvaluator(Action Prepare, Action EvaluateCall) : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>
@@ -135,7 +135,7 @@ public sealed class EvaluationResolutionTests
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, CounterState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {
             EvaluateCall();
-            var call = ++state.Calls;
+            var call = ++state.Invocations;
             return candidates.Select(candidate => new ObjectiveVector(candidate + 100 * call)).ToArray();
         }
     }

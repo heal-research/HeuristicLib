@@ -136,22 +136,22 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
 
-        execution.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
 
         timeProvider.Advance(TimeSpan.FromSeconds(5));
 
-        execution.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
 
-        execution.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]

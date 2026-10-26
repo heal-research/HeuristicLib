@@ -64,11 +64,11 @@ public sealed class RoutedOperatorBaselineTests
                 .Refine(inputs, random, problem.SearchSpace, problem));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("selection", scope.Resolve(ChoosePerCall.Create<Selection, int>([new DrawingSelect(100, log), new DrawingSelect(200, log)], [1.0, 3.0]))
+            Save("selection", scope.Resolve(ChoosePerInvocation.Create<Selection, int>([new DrawingSelect(100, log), new DrawingSelect(200, log)], [1.0, 3.0]))
                 .Select(population, problem.Objective, 12, random, problem.SearchSpace, problem).Select(x => x.Candidate));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("replacement", scope.Resolve(ChoosePerCall.Create<Replacement, int>([new DrawingReplace(100, log), new DrawingReplace(200, log)], [1.0, 3.0]))
+            Save("replacement", scope.Resolve(ChoosePerInvocation.Create<Replacement, int>([new DrawingReplace(100, log), new DrawingReplace(200, log)], [1.0, 3.0]))
                 .Replace(population, population, problem.Objective, 12, random, problem.SearchSpace, problem).Select(x => x.Candidate));
         }
         return snapshots;

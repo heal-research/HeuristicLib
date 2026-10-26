@@ -46,7 +46,7 @@ public static class CreationObservations
     extension<TCandidate>(IOperator<Creation, TCandidate> creator)
     {
         /// <summary>The observations of this creator's successful calls.</summary>
-        public ObservationSource<CreationObservation<TCandidate>> Calls =>
-            new(creator, observe => Aspect.Create(Pointcut.Reference(creator), new CreationObservationAdvice<TCandidate>(observe)));
+        public ObservationSource<CreationObservation<TCandidate>> Invocations =>
+            ObservationSource.Create<CreationObservation<TCandidate>>(creator, observe => Aspect.Create(Pointcut.Reference(creator), new CreationObservationAdvice<TCandidate>(observe)));
     }
 }

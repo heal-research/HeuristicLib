@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <summary>Ranks the values a trace reads from one observation, such as the objective vectors of one call.</summary>
 /// <remarks>
 /// Ranking receives the objective directions it orders by. A trace passes the observed call's own, as in
-/// <c>Analyzer.Trace(evaluator.Calls, observation =&gt; observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective))</c>, so each call
+/// <c>Analyzer.Trace(evaluator.Invocations, observation =&gt; observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective))</c>, so each call
 /// is ranked by its own problem. An explicit comparer replaces the directions' total order.
 /// </remarks>
 public static class Ranking

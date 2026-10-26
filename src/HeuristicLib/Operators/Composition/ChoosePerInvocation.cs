@@ -12,10 +12,10 @@ namespace HEAL.HeuristicLib.Operators;
 /// generator. Per-item routing, which splits one call's items among children, is a different composition. The choice
 /// exposes no controls of its children.
 /// </remarks>
-public sealed record ChoosePerCall<TOperation, TCandidate> : MultiOperator<TOperation, TCandidate>
+public sealed record ChoosePerInvocation<TOperation, TCandidate> : MultiOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
 {
-    public ChoosePerCall(IReadOnlyList<IOperator<TOperation, TCandidate>> childOperators)
+    public ChoosePerInvocation(IReadOnlyList<IOperator<TOperation, TCandidate>> childOperators)
         : base(childOperators)
     {
     }
@@ -43,7 +43,7 @@ file readonly struct ChoiceWrapper(WeightedItemSampler<IExecutor> sampler) : IIn
     public TControl? Get<TControl>() where TControl : class => null;
 }
 
-/// <summary>What <see cref="ChoosePerCall{TOperation, TCandidate}"/> and <see cref="ChoosePerItem{TOperation, TCandidate}"/> share.</summary>
+/// <summary>What <see cref="ChoosePerInvocation{TOperation, TCandidate}"/> and <see cref="ChoosePerItem{TOperation, TCandidate}"/> share.</summary>
 internal static class WeightedChoice
 {
     /// <summary>Checks the children and their weights, then resolves every child in child order.</summary>
@@ -66,11 +66,11 @@ internal static class WeightedChoice
     }
 }
 
-public static class ChoosePerCall
+public static class ChoosePerInvocation
 {
-    public static ChoosePerCall<TOperation, TCandidate> Create<TOperation, TCandidate>(params IReadOnlyList<IOperator<TOperation, TCandidate>> childOperators)
+    public static ChoosePerInvocation<TOperation, TCandidate> Create<TOperation, TCandidate>(params IReadOnlyList<IOperator<TOperation, TCandidate>> childOperators)
         where TOperation : IOperation<TOperation> => new(childOperators);
 
-    public static ChoosePerCall<TOperation, TCandidate> Create<TOperation, TCandidate>(IReadOnlyList<IOperator<TOperation, TCandidate>> childOperators, IReadOnlyList<double> weights)
+    public static ChoosePerInvocation<TOperation, TCandidate> Create<TOperation, TCandidate>(IReadOnlyList<IOperator<TOperation, TCandidate>> childOperators, IReadOnlyList<double> weights)
         where TOperation : IOperation<TOperation> => new(childOperators) { Weights = weights.ToValueArray() };
 }

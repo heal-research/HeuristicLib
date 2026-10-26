@@ -149,7 +149,7 @@ public class CycleAlgorithmAnalysisScenarios
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
+            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
         }
 
         public void Record(EvaluationObservation<int> observation) =>
@@ -175,7 +175,7 @@ public class CycleAlgorithmAnalysisScenarios
 
         public InterceptionTraceAnalysis(IOperator<Interception<PopulationState<int>>, int> interceptor)
         {
-            Advices = [.. Aspect.Observe(interceptor.Calls, Record)];
+            Advices = [.. Aspect.Observe(interceptor.Invocations, Record)];
         }
 
         public void Record(InterceptionObservation<int, PopulationState<int>> observation) =>

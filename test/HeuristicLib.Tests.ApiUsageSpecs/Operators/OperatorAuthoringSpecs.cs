@@ -30,7 +30,7 @@ public class OperatorAuthoringSpecs
         var gaussian = new GaussianMutator(1.0, 3.0);
         IOperator<Mutation, RealVector> mutator = gaussian;
         var observedCalls = 0;
-        var scope = ResolutionScope.Create(Aspect.Observe(mutator.Calls, _ => observedCalls++));
+        var scope = ResolutionScope.Create(Aspect.Observe(mutator.Invocations, _ => observedCalls++));
         var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator, out IMutationStrengthControl? strength);
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 0.0;
@@ -167,7 +167,7 @@ public class OperatorAuthoringSpecs
     public void MutatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Mutation, RealVector> childMutator = new PullTowardZeroMutator();
-        var counting = Aspect.CountCalls(childMutator, new CountAccumulator());
+        var counting = Aspect.CountInvocations(childMutator, new CountAccumulator());
         counting.Single().Pointcut.Matches(childMutator).ShouldBeTrue();
     }
 
@@ -274,7 +274,7 @@ public class OperatorAuthoringSpecs
     public void RefinerCompositionFactories_InferRoleTypes()
     {
         IOperator<Refinement, RealVector> childRefiner = new HalveRefiner();
-        var counting = Aspect.CountCalls(childRefiner, new CountAccumulator());
+        var counting = Aspect.CountInvocations(childRefiner, new CountAccumulator());
         var iterated = IteratedRefiner.Create(childRefiner, 2);
         counting.Single().Pointcut.Matches(childRefiner).ShouldBeTrue();
         iterated.ChildOperator.ShouldBeSameAs(childRefiner);
@@ -363,10 +363,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var crossover = new ForwardingCrossover(SelectFirstParentCrossover.For(problem));
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover);
         var parents = Parents.From(RealVector.Repeat(1.0, 3), RealVector.Repeat(2.0, 3));
 
-        var offspring = execution.Cross([parents], RandomNumberGenerator.Create(4), problem.SearchSpace, problem);
+        var offspring = executor.Cross([parents], RandomNumberGenerator.Create(4), problem.SearchSpace, problem);
 
         offspring.ShouldBe([RealVector.Repeat(1.0, 3)]);
     }
@@ -376,10 +376,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new FirstValueEvaluator();
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
 
         var candidate = RealVector.Repeat(2.0, 3);
-        var evaluatedCandidates = execution.Evaluate([candidate], RandomNumberGenerator.Create(5), problem.SearchSpace, problem);
+        var evaluatedCandidates = executor.Evaluate([candidate], RandomNumberGenerator.Create(5), problem.SearchSpace, problem);
 
         evaluatedCandidates.ShouldBe([new ObjectiveVector(2.0)]);
     }
@@ -438,10 +438,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new ForwardingEvaluator(new FirstValueEvaluator());
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
 
         var candidate = RealVector.Repeat(4.0, 3);
-        var evaluatedCandidates = execution.Evaluate([candidate], RandomNumberGenerator.Create(6), problem.SearchSpace, problem);
+        var evaluatedCandidates = executor.Evaluate([candidate], RandomNumberGenerator.Create(6), problem.SearchSpace, problem);
 
         evaluatedCandidates.ShouldBe([new ObjectiveVector(4.0)]);
     }
@@ -469,7 +469,7 @@ public class OperatorAuthoringSpecs
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Evaluation, RealVector> child = new FirstValueEvaluator();
-        var counting = Aspect.CountCalls(child, new CountAccumulator());
+        var counting = Aspect.CountInvocations(child, new CountAccumulator());
         var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
@@ -486,10 +486,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var selector = new FirstSelector();
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
         var population = CreatePopulation(1.0, 2.0);
 
-        var selected = execution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(7), problem.SearchSpace, problem);
+        var selected = executor.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(7), problem.SearchSpace, problem);
 
         selected.ShouldBe([population[0]]);
     }
@@ -517,10 +517,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var selector = new ForwardingSelector(new FirstSelector());
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
         var population = CreatePopulation(1.0, 2.0);
 
-        var selected = execution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(8), problem.SearchSpace, problem);
+        var selected = executor.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(8), problem.SearchSpace, problem);
 
         selected.ShouldBe([population[0]]);
     }
@@ -560,8 +560,8 @@ public class OperatorAuthoringSpecs
     public void SelectorCompositionFactories_InferRoleTypes()
     {
         IOperator<Selection, RealVector> childSelector = new FirstSelector();
-        var counting = Aspect.CountCalls(childSelector, new CountAccumulator());
-        var chooseOne = ChoosePerCall.Create(childSelector, new LastSelector());
+        var counting = Aspect.CountInvocations(childSelector, new CountAccumulator());
+        var chooseOne = ChoosePerInvocation.Create(childSelector, new LastSelector());
         counting.Single().Pointcut.Matches(childSelector).ShouldBeTrue();
         chooseOne.ChildOperators[0].ShouldBeSameAs(childSelector);
     }
@@ -571,11 +571,11 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var replacer = new OffspringReplacer();
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
-        var replaced = execution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(9), problem.SearchSpace, problem);
+        var replaced = executor.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(9), problem.SearchSpace, problem);
 
         replaced.ShouldBe(offspring);
     }
@@ -604,11 +604,11 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var replacer = new ForwardingReplacer(new OffspringReplacer());
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
-        var replaced = execution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(10), problem.SearchSpace, problem);
+        var replaced = executor.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(10), problem.SearchSpace, problem);
 
         replaced.ShouldBe(offspring);
     }
@@ -638,7 +638,7 @@ public class OperatorAuthoringSpecs
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
         IOperator<Replacement, RealVector> child = new OffspringReplacer();
-        var counting = Aspect.CountCalls(child, new CountAccumulator());
+        var counting = Aspect.CountInvocations(child, new CountAccumulator());
         var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
         counting.Single().Pointcut.Matches(child).ShouldBeTrue();
         duration.Single().Pointcut.Matches(child).ShouldBeTrue();
@@ -648,9 +648,9 @@ public class OperatorAuthoringSpecs
     public void StatelessInterceptor_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new IncrementingInterceptor());
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new IncrementingInterceptor());
 
-        var transformed = execution.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var transformed = executor.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         transformed.Value.ShouldBe(2);
     }
@@ -676,9 +676,9 @@ public class OperatorAuthoringSpecs
     public void ExplicitInterceptor_AuthoringExample_OwnsResolvedChildExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingInterceptor(new IncrementingInterceptor()));
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingInterceptor(new IncrementingInterceptor()));
 
-        var transformed = execution.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var transformed = executor.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         transformed.Value.ShouldBe(2);
     }
@@ -716,10 +716,10 @@ public class OperatorAuthoringSpecs
     public void StatelessTerminator_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ValueTerminator(2));
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ValueTerminator(2));
 
-        execution.IsTerminalState(new CounterSearchState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(new CounterSearchState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        executor.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -740,9 +740,9 @@ public class OperatorAuthoringSpecs
     public void ExplicitTerminator_AuthoringExample_OwnsResolvedChildExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingTerminator(new ValueTerminator(2)));
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingTerminator(new ValueTerminator(2)));
 
-        execution.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
     }
 
     [Fact]
@@ -859,15 +859,15 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<RealVector> Create(int count, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            state.Calls++;
-            return Enumerable.Repeat(RealVector.Repeat(state.Calls, problem.TestFunction.Dimension), count).ToArray();
+            state.Invocations++;
+            return Enumerable.Repeat(RealVector.Repeat(state.Invocations, problem.TestFunction.Dimension), count).ToArray();
         }
     }
 
@@ -875,15 +875,15 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            state.Calls++;
-            return parents.Select(parent => new RealVector(parent.Parent1.Select(value => value + state.Calls))).ToArray();
+            state.Invocations++;
+            return parents.Select(parent => new RealVector(parent.Parent1.Select(value => value + state.Invocations))).ToArray();
         }
     }
 
@@ -908,15 +908,15 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            state.Calls++;
-            return candidates.Select(candidate => new ObjectiveVector(state.Calls)).ToArray();
+            state.Invocations++;
+            return candidates.Select(candidate => new ObjectiveVector(state.Invocations)).ToArray();
         }
     }
 
@@ -994,14 +994,14 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            var start = state.Calls++ % population.Count;
+            var start = state.Invocations++ % population.Count;
             return Enumerable.Range(0, count).Select(index => population[(start + index) % population.Count]).ToArray();
         }
     }
@@ -1088,13 +1088,13 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-            state.Calls++ % 2 == 0 ? previousPopulation.Take(count).ToArray() : offspringPopulation.Take(count).ToArray();
+            state.Invocations++ % 2 == 0 ? previousPopulation.Take(count).ToArray() : offspringPopulation.Take(count).ToArray();
     }
 
     private sealed record ForwardingReplacer(IOperator<Replacement, RealVector> Inner)
@@ -1204,15 +1204,15 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, State operatorState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            operatorState.Calls++;
-            return currentState with { Value = currentState.Value + operatorState.Calls };
+            operatorState.Invocations++;
+            return currentState with { Value = currentState.Value + operatorState.Invocations };
         }
     }
 
@@ -1330,12 +1330,12 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
-        protected override bool IsTerminalState(CounterSearchState searchState, State operatorState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => ++operatorState.Calls >= 2;
+        protected override bool IsTerminalState(CounterSearchState searchState, State operatorState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => ++operatorState.Invocations >= 2;
     }
 
     private sealed record ForwardingTerminator(IOperator<Termination, RealVector> Inner)
@@ -1458,15 +1458,15 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            state.Calls++;
-            return parents.Select(parent => new RealVector(parent.Select(value => value + state.Calls))).ToArray();
+            state.Invocations++;
+            return parents.Select(parent => new RealVector(parent.Select(value => value + state.Invocations))).ToArray();
         }
     }
 
@@ -1506,7 +1506,7 @@ public class OperatorAuthoringSpecs
 
         private sealed class State
         {
-            public int Calls;
+            public int Invocations;
         }
 
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
@@ -1520,8 +1520,8 @@ public class OperatorAuthoringSpecs
             public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
                 var children = child.Mutate(parents, random, searchSpace, problem);
-                state.Calls++;
-                return children.Select(child => new RealVector(child.Select(value => value + state.Calls))).ToArray();
+                state.Invocations++;
+                return children.Select(child => new RealVector(child.Select(value => value + state.Invocations))).ToArray();
             }
         }
     }
@@ -1543,15 +1543,15 @@ public class OperatorAuthoringSpecs
     {
         public sealed class State
         {
-            public int Calls { get; set; }
+            public int Invocations { get; set; }
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, State state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
         {
-            state.Calls++;
-            return candidates.Select(candidate => new RealVector(candidate.Select(value => value + state.Calls))).ToArray();
+            state.Invocations++;
+            return candidates.Select(candidate => new RealVector(candidate.Select(value => value + state.Invocations))).ToArray();
         }
     }
 

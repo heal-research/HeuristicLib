@@ -122,8 +122,8 @@ public static class EstimationObservations
 {
     extension<TCandidate>(IOperator<Estimation, TCandidate> estimator)
     {
-        public ObservationSource<EstimationObservation<TCandidate>> Calls =>
-            new(estimator, observe => Aspect.Create(Pointcut.Reference(estimator), new EstimationObservationAdvice<TCandidate>(observe)));
+        public ObservationSource<EstimationObservation<TCandidate>> Invocations =>
+            ObservationSource.Create<EstimationObservation<TCandidate>>(estimator, observe => Aspect.Create(Pointcut.Reference(estimator), new EstimationObservationAdvice<TCandidate>(observe)));
     }
 }
 #endregion operation-observation
@@ -153,7 +153,7 @@ public sealed class OperationDefinitionDocumentationSpecs
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
         var problem = FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
         var estimator = ChoosePerItem.Create<Estimation, RealVector>(new ScaledEstimator(1.0), new ScaledEstimator(10.0));
-        var counts = Analyzer.Trace(estimator.Calls, observation => observation.Estimates.Count);
+        var counts = Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count);
         var scope = ResolutionScope.Create(counts).For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         RealVector[] candidates = [new(1.0), new(2.0), new(3.0)];
 

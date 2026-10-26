@@ -14,7 +14,7 @@ using HEAL.HeuristicLib.Problems.TestFunctions;
 namespace HEAL.HeuristicLib.Tests.Operators;
 
 /// <summary>
-/// Every role's binding check, over one bound operator per role.
+/// Every role's resolution check, over one bound operator per role.
 /// </summary>
 /// <remarks>
 /// The nine roles share one migration shape, and each declares its own <c>TryResolve</c> next to itself. That the
@@ -22,7 +22,7 @@ namespace HEAL.HeuristicLib.Tests.Operators;
 /// assumption: an operator written for a search space and problem resolves over exactly those, is reported over
 /// anything else, and never throws out of the check.
 /// </remarks>
-public class RoleBindingTests
+public class BoundRoleResolutionTests
 {
     public static TheoryData<string> Roles =>
     [
@@ -33,9 +33,9 @@ public class RoleBindingTests
     [MemberData(nameof(Roles))]
     public void ABoundOperator_ResolvesOverItsOwnSearchSpaceAndProblem(string role)
     {
-        var (execution, reason) = TryResolve(role, typeof(TestFunctionProblem));
+        var (executor, reason) = TryResolve(role, typeof(TestFunctionProblem));
 
-        execution.ShouldNotBeNull();
+        executor.ShouldNotBeNull();
         reason.ShouldBeNull();
     }
 
@@ -43,9 +43,9 @@ public class RoleBindingTests
     [MemberData(nameof(Roles))]
     public void ABoundOperator_IsReportedOverAWiderProblem(string role)
     {
-        var (execution, reason) = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
+        var (executor, reason) = TryResolve(role, typeof(IProblem<RealVector, BoundedRealVectorSearchSpace>));
 
-        execution.ShouldBeNull();
+        executor.ShouldBeNull();
         reason.ShouldNotBeNull();
         reason.ShouldContain(nameof(TestFunctionProblem));
     }
@@ -71,7 +71,7 @@ public class RoleBindingTests
         TryResolve(role, typeof(TestFunctionProblem), viaTypedScope: true).Execution.ShouldNotBeNull();
     }
 
-    /// <summary>Calls the role's own <c>TryResolve</c> reflectively, so the test is the same for all nine.</summary>
+    /// <summary>Invocations the role's own <c>TryResolve</c> reflectively, so the test is the same for all nine.</summary>
     private static (object? Execution, string? Reason) TryResolve(string role, Type problem, bool viaTypedScope = false)
     {
         var extensionName = role switch

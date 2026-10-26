@@ -311,7 +311,7 @@ public class AlgorithmRunTests
     {
         public ObservingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
         {
-            Advices = [.. Aspect.Observe(evaluator.Calls, _ => observed())];
+            Advices = [.. Aspect.Observe(evaluator.Invocations, _ => observed())];
         }
     }
 

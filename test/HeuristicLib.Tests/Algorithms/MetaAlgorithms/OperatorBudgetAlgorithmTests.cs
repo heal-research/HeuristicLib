@@ -20,7 +20,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToCalls(algorithm.Evaluator, 1).Stream(
+        var results = algorithm.LimitedToInvocations(algorithm.Evaluator, 1).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -38,7 +38,7 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToCalls(algorithm.Evaluator, 2).Stream(
+        var results = algorithm.LimitedToInvocations(algorithm.Evaluator, 2).Stream(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken).ToList();
@@ -272,9 +272,9 @@ public class OperatorBudgetAlgorithmTests
             MaximumGenerations = 5
         };
 
-        var results = algorithm.LimitedToCalls(
+        var results = algorithm.LimitedToInvocations(
             algorithm.Creator,
-            maximumCalls: 1)
+            maximumInvocations: 1)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -337,9 +337,9 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 0.0
         };
 
-        var results = algorithm.LimitedToCalls(
+        var results = algorithm.LimitedToInvocations(
             algorithm.Crossover,
-            maximumCalls: 1)
+            maximumInvocations: 1)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -404,9 +404,9 @@ public class OperatorBudgetAlgorithmTests
             MutationRate = 1.0
         };
 
-        var results = algorithm.LimitedToCalls(
+        var results = algorithm.LimitedToInvocations(
             algorithm.Mutator,
-            maximumCalls: 1)
+            maximumInvocations: 1)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(42),
@@ -475,8 +475,8 @@ public class OperatorBudgetAlgorithmTests
         var externallyStoppedAlgorithm = algorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 3));
 
         var results = externallyStoppedAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
-            .AddAspect(Aspect.CountCalls(algorithm.Evaluator, counter))
-            .AddAspect(Aspect.CountCalls(algorithm.Mutator, counter))
+            .AddAspect(Aspect.CountInvocations(algorithm.Evaluator, counter))
+            .AddAspect(Aspect.CountInvocations(algorithm.Mutator, counter))
             .Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
@@ -607,7 +607,7 @@ public class OperatorBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
         var clock = new ManualTimeProvider();
         var slowObservation = Aspect.Observe(
-            algorithm.Evaluator.Calls, _ => clock.Advance(TimeSpan.FromMinutes(1)));
+            algorithm.Evaluator.Invocations, _ => clock.Advance(TimeSpan.FromMinutes(1)));
         var unbudgeted = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count();
 
         var budgeted = algorithm.LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), clock)
@@ -626,8 +626,8 @@ public class OperatorBudgetAlgorithmTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
-        var withoutBudget = algorithm.Evaluator.Calls.TraceBestCandidateSoFar();
-        var withBudget = algorithm.Evaluator.Calls.TraceBestCandidateSoFar();
+        var withoutBudget = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
+        var withBudget = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
 
         await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(withoutBudget)
                        .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -671,7 +671,7 @@ public class OperatorBudgetAlgorithmTests
 
         public EvaluationObservingAnalyzer(IOperator<Evaluation, RealVector> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
+            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
         }
 
         public void Record(EvaluationObservation<RealVector> observation) =>

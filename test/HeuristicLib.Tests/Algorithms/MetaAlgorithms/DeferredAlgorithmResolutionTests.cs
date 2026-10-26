@@ -124,13 +124,13 @@ public sealed class DeferredAlgorithmResolutionTests
         };
         var root = ResolutionScope.Create();
         var observations = new List<string>();
-        var original = Resolve(root.With(Aspect.Observe(mutator.Calls, _ => observations.Add("original"))), cycle);
+        var original = Resolve(root.With(Aspect.Observe(mutator.Invocations, _ => observations.Add("original"))), cycle);
         var before = await Run(original);
         before.Select(state => state.Call).ShouldBe([1, 2, 1, 3, 4, 2]);
         before[0].Data.ShouldBeSameAs(before[1].Data);
         before[0].Data.ShouldNotBeSameAs(before[2].Data);
 
-        var rebuilt = Resolve(root.With(Aspect.Observe(mutator.Calls, _ => observations.Add("rebuilt"))), cycle);
+        var rebuilt = Resolve(root.With(Aspect.Observe(mutator.Invocations, _ => observations.Add("rebuilt"))), cycle);
         var after = await Run(rebuilt);
         after.Select(state => state.Call).ShouldBe([5, 6, 3, 7, 8, 4]);
         after[0].Data.ShouldBeSameAs(before[0].Data);
@@ -168,7 +168,7 @@ public sealed class DeferredAlgorithmResolutionTests
     private static WeakReference RunUnderTemporaryObserver(ResolutionScope root,
         CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState> cycle, IOperator<Mutation, int> mutator)
     {
-        var observer = Aspect.Observe(mutator.Calls, _ => { });
+        var observer = Aspect.Observe(mutator.Invocations, _ => { });
         Run(Resolve(root.With(observer), cycle)).GetAwaiter().GetResult();
         return new WeakReference(observer);
     }
@@ -213,7 +213,7 @@ public sealed class DeferredAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var values = new List<int> { paused.Current.Value };
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
+        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, source));
         observedCalls.CurrentCount.ShouldBe(cycle ? 4 : 2);
@@ -234,14 +234,14 @@ public sealed class DeferredAlgorithmResolutionTests
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
         IAlgorithm<int, ProbeState> budget = measureDuration
             ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
-            : algorithm.LimitedToCalls(algorithm.Mutator, 3);
+            : algorithm.LimitedToInvocations(algorithm.Mutator, 3);
         var root = ResolutionScope.Create();
         var original = Resolve(root, budget);
         await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
+        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, budget));
         observed.Select(state => state.Call).ShouldBe([2, 3]);
@@ -269,7 +269,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
         IAlgorithm<int, ProbeState> budget = measureDuration
             ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(2), clock)
-            : algorithm.LimitedToCalls(algorithm.Mutator, 2);
+            : algorithm.LimitedToInvocations(algorithm.Mutator, 2);
         var root = ResolutionScope.Create();
         var limited = Resolve(root, budget);
         var direct = await Run(Resolve(root, algorithm));
@@ -286,12 +286,12 @@ public sealed class DeferredAlgorithmResolutionTests
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
         var durationBudget = algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock);
-        var budget = durationBudget.LimitedToCalls(algorithm.Mutator, 2);
+        var budget = durationBudget.LimitedToInvocations(algorithm.Mutator, 2);
         var root = ResolutionScope.Create();
         var first = await Run(Resolve(root, budget));
         first.Select(state => state.Call).ShouldBe([1, 2]);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
+        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, budget));
         observed.Select(state => state.Call).ShouldBe([3]);
@@ -313,20 +313,20 @@ public sealed class DeferredAlgorithmResolutionTests
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
         var calls = new MutationCallClock(algorithm.Mutator);
-        var trace = Analyzer.Trace(algorithm.Mutator.Calls, observation =>
+        var trace = Analyzer.Trace(algorithm.Mutator.Invocations, observation =>
         {
             clock.Advance(10);
             return observation.Offspring[0];
         }, clocks: [calls]);
         IAlgorithm<int, ProbeState> budget = measureDuration
             ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
-            : algorithm.LimitedToCalls(algorithm.Mutator, 3);
+            : algorithm.LimitedToInvocations(algorithm.Mutator, 3);
         var root = ResolutionScope.Create(trace);
         await using var paused = Resolve(root, budget).RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = 0;
-        var child = root.CreateChildScope(Aspect.Observe(algorithm.Mutator.Calls, _ =>
+        var child = root.CreateChildScope(Aspect.Observe(algorithm.Mutator.Invocations, _ =>
         {
             observed++;
             clock.Advance(20);
@@ -349,7 +349,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var root = ResolutionScope.Create();
         (await Run(Resolve(root, source))).Count.ShouldBe(2);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountCalls(terminator, observedCalls));
+        var child = root.CreateChildScope(Aspect.CountInvocations(terminator, observedCalls));
 
         (await Run(Resolve(child, source))).Count.ShouldBe(1);
         observedCalls.CurrentCount.ShouldBe(1);
@@ -371,7 +371,7 @@ public sealed class DeferredAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         paused.Current.Value.ShouldBe(1);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountCalls(algorithm.Mutator, observedCalls));
+        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         (await Run(Resolve(child, budget))).Count.ShouldBe(2);
         observedCalls.CurrentCount.ShouldBe(2);
@@ -401,7 +401,7 @@ public sealed class DeferredAlgorithmResolutionTests
 
     private sealed class ProbeData
     {
-        public int Calls;
+        public int Invocations;
         public int Starts;
         public int Disposals;
     }
@@ -439,7 +439,7 @@ public sealed class DeferredAlgorithmResolutionTests
                     {
                         ct.ThrowIfCancellationRequested();
                         value = mutator.Mutate([value + 1], random, problem.SearchSpace, problem).Single();
-                        yield return new ProbeState(value, ++data.Calls, data);
+                        yield return new ProbeState(value, ++data.Invocations, data);
                         await Task.CompletedTask;
                     }
                 }
@@ -468,16 +468,16 @@ public sealed class DeferredAlgorithmResolutionTests
         protected override long ReadTime() => calls;
         public MutationCallClock(IOperator<Mutation, int> mutator)
         {
-            Advices = [.. Aspect.Observe(mutator.Calls, _ => calls++)];
+            Advices = [.. Aspect.Observe(mutator.Invocations, _ => calls++)];
         }
     }
 
-    private sealed class MutationData { public int Calls; }
+    private sealed class MutationData { public int Invocations; }
 
     private sealed record CountingMutations : StatefulMutator<int, MutationData>
     {
         protected override MutationData CreateScopedState() => new();
-        protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationData state, IRandomNumberGenerator random) => [++state.Calls];
+        protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationData state, IRandomNumberGenerator random) => [++state.Invocations];
     }
 
     private sealed record PassThroughMutator : StatelessMutator<int>

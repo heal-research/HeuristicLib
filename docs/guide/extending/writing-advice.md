@@ -1,6 +1,6 @@
 # Writing custom advice
 
-Write advice when a runtime policy should wrap selected algorithm or operator executions without adding child configurations to the algorithm's configuration graph. Examples include recording a domain-specific event or bridging an operation to a host application's logging system.
+Write advice when a runtime policy should wrap selected algorithm or operator executors without adding child configurations to the algorithm's configuration graph. Examples include recording a domain-specific event or bridging an operation to a host application's logging system.
 
 Use a configured operator or composition when its settings and children belong in the reusable algorithm configuration. General advice can also change behavior, but predefined inspection advice observes without intentionally changing inputs or outputs.
 

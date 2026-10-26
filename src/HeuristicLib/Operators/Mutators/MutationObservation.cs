@@ -46,7 +46,7 @@ public static class MutationObservations
     extension<TCandidate>(IOperator<Mutation, TCandidate> mutator)
     {
         /// <summary>The observations of this mutator's successful calls.</summary>
-        public ObservationSource<MutationObservation<TCandidate>> Calls =>
-            new(mutator, observe => Aspect.Create(Pointcut.Reference(mutator), new MutationObservationAdvice<TCandidate>(observe)));
+        public ObservationSource<MutationObservation<TCandidate>> Invocations =>
+            ObservationSource.Create<MutationObservation<TCandidate>>(mutator, observe => Aspect.Create(Pointcut.Reference(mutator), new MutationObservationAdvice<TCandidate>(observe)));
     }
 }

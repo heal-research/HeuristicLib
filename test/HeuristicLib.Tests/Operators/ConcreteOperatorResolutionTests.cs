@@ -54,7 +54,7 @@ public sealed class ConcreteOperatorResolutionTests
                 .Select(candidate => candidate.Candidate).ShouldBe([10, 20, 20]),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
-        int[] expectedCalls = kind switch
+        long[] expectedInvocations = kind switch
         {
             nameof(TransformedCreator<int>) => [1, 0, 1, 0, 0, 0, 0],
             nameof(TransformedCrossover<int>) => [0, 1, 1, 0, 0, 0, 0],
@@ -64,25 +64,25 @@ public sealed class ConcreteOperatorResolutionTests
             nameof(GenderSpecificSelector<int>) => [0, 0, 0, 0, 0, 1, 1],
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
-        var counters = Enumerable.Range(0, expectedCalls.Length).Select(_ => new CountAccumulator()).ToArray();
+        var counters = Enumerable.Range(0, expectedInvocations.Length).Select(_ => new CountAccumulator()).ToArray();
         var parent = ResolutionScope.Create();
         invoke(parent);
-        var child = parent.CreateChildScope(Aspect.CountCalls(creator, counters[0]),
-            Aspect.CountCalls(crossover, counters[1]),
-            Aspect.CountCalls(mutator, counters[2]),
-            Aspect.CountCalls(refiner, counters[3]),
-            Aspect.CountCalls(evaluator, counters[4]),
-            Aspect.CountCalls(female, counters[5]),
-            Aspect.CountCalls(male, counters[6]));
+        var child = parent.CreateChildScope(Aspect.CountInvocations(creator, counters[0]),
+            Aspect.CountInvocations(crossover, counters[1]),
+            Aspect.CountInvocations(mutator, counters[2]),
+            Aspect.CountInvocations(refiner, counters[3]),
+            Aspect.CountInvocations(evaluator, counters[4]),
+            Aspect.CountInvocations(female, counters[5]),
+            Aspect.CountInvocations(male, counters[6]));
 
         invoke(child);
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedCalls);
+        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations);
         invoke(parent);
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedCalls);
+        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations);
         invoke(child);
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedCalls.Select(count => 2 * count));
+        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations.Select(count => 2 * count));
         invoke(ResolutionScope.Create());
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedCalls.Select(count => 2 * count));
+        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations.Select(count => 2 * count));
     }
 
     private sealed record ConstantCreator : SingleCandidateCreator<int>

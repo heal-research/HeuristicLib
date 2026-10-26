@@ -100,7 +100,7 @@ public class AlgorithmObservationTests
         var interceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { Interceptor = interceptor };
         var atIterationEnd = algorithm.Iterations.TracePopulationCandidates();
-        var atInterceptor = Analyzer.Trace(interceptor.Calls,
+        var atInterceptor = Analyzer.Trace(interceptor.Invocations,
             static observation => observation.State.Population.BestMedianWorst(observation.Problem.Objective));
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(atIterationEnd).AddAspect(atInterceptor);
@@ -194,7 +194,7 @@ public class AlgorithmObservationTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
-        var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
+        var evaluations = Clock.FromCandidates(algorithm.Evaluator);
         var elapsed = Clock.FromElapsedTime(TimeProvider.System);
         var quality = algorithm.Iterations.TracePopulationCandidates([iterations, evaluations, elapsed]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(quality);
@@ -227,14 +227,14 @@ public class AlgorithmObservationTests
     }
 
     /// <summary>
-    /// The observation counts on its advice, so the iteration count continues across every activation of the observed
-    /// algorithm, whether the cycle recreates its scoped state or keeps it.
+    /// The clock keeps its own count, so it continues across every turn of the observed algorithm, while each turn
+    /// restarts the algorithm's own iteration count, whether the cycle recreates its scoped state or keeps it.
     /// </summary>
     [Theory]
     [InlineData(ChildScopePolicy.Fresh)]
     [InlineData(ChildScopePolicy.Retained)]
     [InlineData(ChildScopePolicy.Shared)]
-    public async Task IterationClock_ContinuesAcrossTheCyclesActivations(ChildScopePolicy policy)
+    public async Task IterationClock_ContinuesAcrossTheCyclesTurnsWhileEachTurnRestartsTheIteration(ChildScopePolicy policy)
     {
         var problem = CreateProblem();
         var inner = CreateAlgorithm(problem, maximumGenerations: 3);
@@ -245,12 +245,76 @@ public class AlgorithmObservationTests
         };
 
         var iterations = Clock.FromIterations(inner);
-        var quality = inner.Iterations.TracePopulationCandidates([iterations]);
-        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(quality);
+        var iteration = Analyzer.Trace(inner.Iterations, observation => observation.Iteration, [iterations]);
+        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(iteration);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        quality.By(iterations).Select(point => point.Time).ShouldBe([1, 2, 3, 4, 5, 6]);
+        iteration.By(iterations).ShouldBe([new(1, 1), new(2, 2), new(3, 3), new(4, 1), new(5, 2), new(6, 3)]);
+    }
+
+    /// <summary>
+    /// The cycle numbers its cycles and turns per call, whatever its scope policy, and reports the state each starts from.
+    /// </summary>
+    [Theory]
+    [InlineData(ChildScopePolicy.Fresh)]
+    [InlineData(ChildScopePolicy.Retained)]
+    [InlineData(ChildScopePolicy.Shared)]
+    public async Task CycleObservations_NumberCyclesAndTurnsAndCarryTheStateTheyStartFrom(ChildScopePolicy policy)
+    {
+        var problem = CreateProblem();
+        var first = CreateAlgorithm(problem, maximumGenerations: 3);
+        var second = CreateAlgorithm(problem, maximumGenerations: 2);
+        var cycle = CycleAlgorithm.Create(first, second) with
+        {
+            MaximumCycles = 2,
+            ScopePolicy = policy
+        };
+        var cycles = new List<CycleStart<RealVector, PopulationState<RealVector>>>();
+        var turns = new List<CycleTurn<RealVector, PopulationState<RealVector>>>();
+        var states = new List<PopulationState<RealVector>>();
+
+        await foreach (var state in cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+            .AddAspect(Aspect.Observe(cycle.Cycles, cycles.Add))
+            .AddAspect(Aspect.Observe(cycle.Turns, turns.Add))
+            .Stream(cancellationToken: TestContext.Current.CancellationToken))
+        {
+            states.Add(state);
+        }
+
+        cycles.Select(start => start.Cycle).ShouldBe([1L, 2L]);
+        cycles.Select(start => start.State).ShouldBe([null, states[4]]);
+        turns.Select(turn => (turn.Cycle, turn.Turn, turn.Index)).ShouldBe([(1L, 1L, 0), (1L, 2L, 1), (2L, 3L, 0), (2L, 4L, 1)]);
+        turns.Select(turn => turn.Algorithm).ShouldBe([first, second, first, second]);
+        turns.Select(turn => turn.State).ShouldBe([null, states[2], states[4], states[7]]);
+        turns.ShouldAllBe(turn => ReferenceEquals(turn.Problem, problem) && ReferenceEquals(turn.SearchSpace, problem.SearchSpace));
+    }
+
+    /// <summary>
+    /// A turn is published before the inner algorithm runs, so its clock has counted the turn when the inner algorithm's
+    /// iterations are recorded; a clock shared by two traces counts each turn once.
+    /// </summary>
+    [Fact]
+    public async Task CycleClocks_TickBeforeTheInnerIterationsAndCountOnceWhenShared()
+    {
+        var problem = CreateProblem();
+        var first = CreateAlgorithm(problem, maximumGenerations: 3);
+        var second = CreateAlgorithm(problem, maximumGenerations: 2);
+        var cycle = CycleAlgorithm.Create(first, second) with { MaximumCycles = 2 };
+        var cycleClock = Clock.FromCycles(cycle);
+        var turnClock = Clock.FromTurns(cycle);
+        var firstIterations = Analyzer.Trace(first.Iterations, observation => observation.Iteration, [cycleClock, turnClock]);
+        var secondIterations = Analyzer.Trace(second.Iterations, observation => observation.Iteration, [cycleClock, turnClock]);
+
+        await cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+            .AddAspect(firstIterations)
+            .AddAspect(secondIterations)
+            .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        firstIterations.By(cycleClock).Select(point => point.Time).ShouldBe([1L, 1L, 1L, 2L, 2L, 2L]);
+        firstIterations.By(turnClock).Select(point => point.Time).ShouldBe([1L, 1L, 1L, 3L, 3L, 3L]);
+        secondIterations.By(cycleClock).Select(point => point.Time).ShouldBe([1L, 1L, 2L, 2L]);
+        secondIterations.By(turnClock).Select(point => point.Time).ShouldBe([2L, 2L, 4L, 4L]);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));

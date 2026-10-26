@@ -16,8 +16,8 @@ public sealed class NamedOperatorTests
         var explored = new CountAccumulator();
         var childCalls = new CountAccumulator();
         var scope = ResolutionScope.Create(
-            Aspect.Create(Pointcut.Named<IOperator<Mutation, int>>("exploration"), new CountingOperatorAdvice<Mutation, int>(explored, OperatorCountMetric.Calls)),
-            Aspect.CountCalls(leaf, childCalls));
+            Aspect.Create(Pointcut.Named<IOperator<Mutation, int>>("exploration"), new CountingOperatorAdvice<Mutation, int>(explored, OperatorCountMetric.Invocations)),
+            Aspect.CountInvocations(leaf, childCalls));
         var typedScope = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var random = RandomNumberGenerator.Create(1);
@@ -77,8 +77,8 @@ public sealed class NamedOperatorTests
         scope.Resolve(terminator.Named("terminator")).ShouldBeSameAs(scope.Resolve(terminator));
 
         var namedAlgorithm = algorithm.Named("algorithm");
-        var namedExecution = scope.Resolve(namedAlgorithm);
-        namedExecution.ShouldNotBeNull();
+        var namedExecutor = scope.Resolve(namedAlgorithm);
+        namedExecutor.ShouldNotBeNull();
         Pointcut.Named<IAlgorithm<int, PopulationState<int>>>("algorithm").Matches(namedAlgorithm).ShouldBeTrue();
     }
 
@@ -111,11 +111,11 @@ public sealed class NamedOperatorTests
 
         protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationState state, IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
-            parents.Select(parent => parent + ++state.Calls).ToArray();
+            parents.Select(parent => parent + ++state.Invocations).ToArray();
     }
 
     private sealed class MutationState
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 }

@@ -27,7 +27,7 @@ public class SelectorConfigurationEqualityTests
         var first = new RangeSelector(1);
         var second = new RangeSelector(2);
 
-        var selector = ChoosePerCall.Create(first, second);
+        var selector = ChoosePerInvocation.Create(first, second);
 
         selector.ChildOperators.ShouldBe([first, second]);
     }
@@ -48,8 +48,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelector_WithSeparatelyBuiltEqualChildCollections_IsEqual()
     {
-        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
+        var left = ChoosePerInvocation.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerInvocation.Create(new RangeSelector(1), new RangeSelector(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -58,8 +58,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelector_WithDifferentChildSelectors_IsNotEqual()
     {
-        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(3));
+        var left = ChoosePerInvocation.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerInvocation.Create(new RangeSelector(1), new RangeSelector(3));
 
         left.ShouldNotBe(right);
     }
@@ -67,8 +67,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelector_WithReorderedChildSelectors_IsNotEqual()
     {
-        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChoosePerCall.Create(new RangeSelector(2), new RangeSelector(1));
+        var left = ChoosePerInvocation.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerInvocation.Create(new RangeSelector(2), new RangeSelector(1));
 
         left.ShouldNotBe(right);
     }
@@ -76,18 +76,18 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelector_WithDifferentChildCount_IsNotEqual()
     {
-        var left = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
-        var right = ChoosePerCall.Create(new RangeSelector(1));
+        var left = ChoosePerInvocation.Create(new RangeSelector(1), new RangeSelector(2));
+        var right = ChoosePerInvocation.Create(new RangeSelector(1));
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChoosePerCallSelector_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerInvocationSelector_WithDifferentWeights_IsNotEqual()
     {
         IOperator<Selection, int>[] childSelectors = [new RangeSelector(1), new RangeSelector(2)];
-        var left = new ChoosePerCall<Selection, int>(childSelectors) { Weights = [1.0, 2.0] };
-        var right = new ChoosePerCall<Selection, int>(childSelectors) { Weights = [2.0, 1.0] };
+        var left = new ChoosePerInvocation<Selection, int>(childSelectors) { Weights = [1.0, 2.0] };
+        var right = new ChoosePerInvocation<Selection, int>(childSelectors) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -95,7 +95,7 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void MultiSelectorTopologies_WithEqualChildSelectors_AreNotEqualAcrossTypes()
     {
-        var chooseOne = ChoosePerCall.Create(new RangeSelector(1), new RangeSelector(2));
+        var chooseOne = ChoosePerInvocation.Create(new RangeSelector(1), new RangeSelector(2));
         var firstOf = new FirstOfSelector([new RangeSelector(1), new RangeSelector(2)]);
 
         chooseOne.ShouldNotBe<object>(firstOf);
@@ -165,8 +165,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithEqualParts_IsEqual()
     {
-        var left = ChoosePerCall.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
-        var right = ChoosePerCall.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var left = ChoosePerInvocation.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChoosePerInvocation.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -175,8 +175,8 @@ public class SelectorConfigurationEqualityTests
     [Fact]
     public void NestedSelectorComposition_WithDifferentNestedChildSelector_IsNotEqual()
     {
-        var left = ChoosePerCall.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
-        var right = ChoosePerCall.Create(new RangeSelector(9).CombinedWithElites(2), new RangeSelector(2));
+        var left = ChoosePerInvocation.Create(new RangeSelector(1).CombinedWithElites(2), new RangeSelector(2));
+        var right = ChoosePerInvocation.Create(new RangeSelector(9).CombinedWithElites(2), new RangeSelector(2));
 
         left.ShouldNotBe(right);
     }

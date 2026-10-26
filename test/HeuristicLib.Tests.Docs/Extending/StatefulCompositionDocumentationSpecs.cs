@@ -85,8 +85,8 @@ public sealed class StatefulCompositionDocumentationSpecs
         var firstCalls = new CountAccumulator();
         var secondCalls = new CountAccumulator();
         var observedScope = scope.With(
-            Aspect.CountCalls(first, firstCalls),
-            Aspect.CountCalls(second, secondCalls));
+            Aspect.CountInvocations(first, firstCalls),
+            Aspect.CountInvocations(second, secondCalls));
         var observed = observedScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
@@ -102,7 +102,7 @@ public sealed class StatefulCompositionDocumentationSpecs
 
         #region stateful-composition-independent
         var independentFirstCalls = new CountAccumulator();
-        var independentScope = ResolutionScope.Create(Aspect.CountCalls(first, independentFirstCalls));
+        var independentScope = ResolutionScope.Create(Aspect.CountInvocations(first, independentFirstCalls));
         var independent = independentScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,

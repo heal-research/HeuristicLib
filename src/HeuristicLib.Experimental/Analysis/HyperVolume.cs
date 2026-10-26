@@ -36,7 +36,7 @@ public sealed class HyperVolumeSoFar<TCandidate>(ObjectiveVector referencePoint)
 
 public static class HyperVolumeTraces
 {
-    extension<TCandidate>(ObservationSource<EvaluationObservation<TCandidate>> calls)
+    extension<TCandidate>(ObservationSource<EvaluationObservation<TCandidate>> invocations)
     {
         /// <summary>
         /// Traces the hypervolume of the Pareto front accumulated over every candidate the evaluator evaluates.
@@ -49,7 +49,7 @@ public static class HyperVolumeTraces
             TraceRetention? retention = null)
         {
             var hyperVolume = new HyperVolumeSoFar<TCandidate>(referencePoint);
-            return Analyzer.Trace(calls,
+            return Analyzer.Trace(invocations,
                 observation => hyperVolume.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective),
                 clocks, retention);
         }

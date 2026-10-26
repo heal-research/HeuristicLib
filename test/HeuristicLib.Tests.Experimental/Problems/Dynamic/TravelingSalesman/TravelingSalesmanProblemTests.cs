@@ -132,11 +132,11 @@ public class TravelingSalesmanProblemTests
         var problem = new ActivatedTravelingSalesmanProblem(data, env, [true, true, true, false], 1.0);
         var evaluator = new ProblemEvaluator<Permutation>().ScaledToDynamicBestKnown(problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(new HeldKarpTravelingSalesmanExactSolver()));
-        var execution = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(evaluator);
 
-        var before = execution.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
+        var before = executor.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
         problem.UpdateOnce();
-        var after = execution.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
+        var after = executor.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
 
         before.ShouldBe(new ObjectiveVector(0.0));
         after.ShouldBe(new ObjectiveVector(0.0));

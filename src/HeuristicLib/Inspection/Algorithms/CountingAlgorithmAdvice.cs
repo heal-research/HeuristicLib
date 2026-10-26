@@ -41,7 +41,7 @@ public static class AlgorithmCounterExtensions
 {
     extension(Aspect)
     {
-        public static Aspect CountCalls<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm, CountAccumulator counter)
+        public static Aspect CountInvocations<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm, CountAccumulator counter)
             where TSearchState : class, ISearchState =>
             Aspect.Create(Pointcut.Reference(algorithm), new CountingAlgorithmAdvice<TCandidate, TSearchState>(counter));
     }

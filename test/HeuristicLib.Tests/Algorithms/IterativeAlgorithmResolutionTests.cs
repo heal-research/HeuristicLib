@@ -49,7 +49,7 @@ public sealed class IterativeAlgorithmResolutionTests
         var outer = Resolve(parent, source);
         (await Next(outer)).Value.ShouldBe(101);
 
-        var child = parent.CreateChildScope(Aspect.CountCalls(interceptor, observedCalls));
+        var child = parent.CreateChildScope(Aspect.CountInvocations(interceptor, observedCalls));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         (await Next(inner)).Value.ShouldBe(202);
@@ -81,7 +81,7 @@ public sealed class IterativeAlgorithmResolutionTests
         paused.Current.Value.ShouldBe(101);
         paused.Current.PreviousValue.ShouldBeNull();
 
-        var child = parent.CreateChildScope(Aspect.CountCalls(interceptor, observedCalls));
+        var child = parent.CreateChildScope(Aspect.CountInvocations(interceptor, observedCalls));
         var inner = Resolve(child, source);
         var innerRandom = new RecordingRandom();
         await using var observed = inner.RunStreamingAsync(Problem, innerRandom, ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();
@@ -200,7 +200,7 @@ public sealed class IterativeAlgorithmResolutionTests
 
     private sealed class CounterState
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 
     private sealed record AgnosticAlgorithm(Action Prepare, Action Bind) : IterativeAlgorithm<AgnosticAlgorithm, int, ProbeState>
@@ -252,7 +252,7 @@ public sealed class IterativeAlgorithmResolutionTests
         where TProblem : class, IProblem<int, TSearchSpace>
     {
         protected override ProbeState ExecuteStep(ProbeState? previousState, TProblem problem, IRandomNumberGenerator random) =>
-            new(++state.Calls, previousState?.Value);
+            new(++state.Invocations, previousState?.Value);
 
         protected override bool HasCompleted(int yieldedStateCount, ProbeState? previousState, TProblem problem) => yieldedStateCount == 2;
     }
@@ -266,7 +266,7 @@ public sealed class IterativeAlgorithmResolutionTests
         }
 
         protected override ProbeState Transform(ProbeState currentState, ProbeState? previousState, CounterState operatorState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
-            currentState with { Value = currentState.Value + 100 * ++operatorState.Calls };
+            currentState with { Value = currentState.Value + 100 * ++operatorState.Invocations };
     }
 
     private sealed class RecordingRandom : IRandomNumberGenerator

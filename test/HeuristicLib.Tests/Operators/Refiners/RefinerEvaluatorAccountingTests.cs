@@ -53,11 +53,11 @@ public class RefinerEvaluatorAccountingTests
         var algorithmEvaluator = CreateEvaluator().LimitEvaluations(2);
         var scope = ResolutionScope.Create();
         var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().LimitEvaluations(2)));
-        var evaluatorExecution = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
+        var evaluatorExecutor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
 
         refiner.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        evaluatorExecution.Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem)
+        evaluatorExecutor.Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem)
             .ShouldBe([new ObjectiveVector(10.0)]);
     }
 
@@ -91,10 +91,10 @@ public class RefinerEvaluatorAccountingTests
         var refiner = PipelineRefiner.Create(
             new AddOffsetRefiner(-1),
             new AddOffsetRefiner(-5).CheckedForImprovement(observed));
-        var execution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
+        var executor = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var problem = CreateProblem();
 
-        execution.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         // Two candidates, evaluated once as supplied and once as refined, by the checking stage alone.
         counter.CurrentCount.ShouldBe(4);

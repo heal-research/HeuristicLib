@@ -48,7 +48,7 @@ public static class TerminationObservations
     extension<TCandidate>(IOperator<Termination, TCandidate> terminator)
     {
         /// <summary>The observations of this terminator's successful calls.</summary>
-        public ObservationSource<TerminationObservation<TCandidate>> Calls =>
-            new(terminator, observe => Aspect.Create(Pointcut.Reference(terminator), new TerminationObservationAdvice<TCandidate>(observe)));
+        public ObservationSource<TerminationObservation<TCandidate>> Invocations =>
+            ObservationSource.Create<TerminationObservation<TCandidate>>(terminator, observe => Aspect.Create(Pointcut.Reference(terminator), new TerminationObservationAdvice<TCandidate>(observe)));
     }
 }

@@ -45,8 +45,8 @@ public class StateViewResolutionTests
     [Fact]
     public void GeneralAdvice_WrapsTerminationAndInterception()
     {
-        var total = new CallCounter();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator>(), new CountCalls(total, new AdviceLog())));
+        var total = new InvocationCounter();
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator>(), new CountInvocations(total, new AdviceLog())));
         var scope = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>();
         var terminator = scope.Resolve(new ThirdCallTerminator(new Probe()));
         var interceptor = scope.Resolve(new CountingInterceptor(new Probe()));
@@ -73,7 +73,7 @@ public class StateViewResolutionTests
 
     private sealed class CallCount
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 
     private sealed record FirstState : SearchState;
@@ -88,7 +88,7 @@ public class StateViewResolutionTests
             return new CallCount();
         }
 
-        protected override bool IsTerminalState(CallCount state) => ++state.Calls >= 3;
+        protected override bool IsTerminalState(CallCount state) => ++state.Invocations >= 3;
     }
 
     private sealed record CountingInterceptor(Probe Probe) : StatefulInterceptor<int, FirstState, CallCount>
@@ -101,7 +101,7 @@ public class StateViewResolutionTests
 
         protected override FirstState Transform(FirstState currentState, FirstState? previousState, CallCount operatorState, IRandomNumberGenerator random)
         {
-            operatorState.Calls++;
+            operatorState.Invocations++;
             return currentState;
         }
     }

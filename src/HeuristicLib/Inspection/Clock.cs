@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Inspection;
 /// <remarks>
 /// Derive from <see cref="Clock{TTime}"/> to add a clock of your own, such as one over a domain quantity the library
 /// knows nothing about. A clock belongs beside the thing it reads and is offered as an extension on <see cref="Clock"/>
-/// named for the time it reads, such as <c>Clock.FromEvaluations</c>. A clock whose time is kept current by advice
+/// named for the time it reads, such as <c>Clock.FromCandidates</c>. A clock whose time is kept current by advice
 /// assigns it in its constructor; traces apply a clock's advice before their own observations.
 /// </remarks>
 public abstract class Clock : Aspect

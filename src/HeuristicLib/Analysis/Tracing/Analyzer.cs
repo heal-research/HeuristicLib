@@ -6,9 +6,9 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <remarks>
 /// <para>
 /// A trace reads one value from each observation through a function, such as
-/// <c>Analyzer.Trace(crossover.Calls, observation =&gt; observation.Offspring.Count)</c>. Counting, collecting and ranking are ordinary
+/// <c>Analyzer.Trace(crossover.Invocations, observation =&gt; observation.Offspring.Count)</c>. Counting, collecting and ranking are ordinary
 /// functions in that form; ranking receives the call's own objective directions, as in
-/// <c>Analyzer.Trace(evaluator.Calls, observation =&gt; observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective))</c>.
+/// <c>Analyzer.Trace(evaluator.Invocations, observation =&gt; observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective))</c>.
 /// </para>
 /// <para>
 /// A trace observes each boundary once, by its configuration and observation type, so a source given twice counts once.

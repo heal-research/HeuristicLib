@@ -12,14 +12,14 @@ public class EvaluatorInspectionTests
     {
         var counter = new CountAccumulator();
         var evaluator = CreateEvaluator();
-        var aspect = Aspect.CountCalls(evaluator, counter);
+        var aspect = Aspect.CountInvocations(evaluator, counter);
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var executor = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
-        execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(2);
     }
@@ -30,11 +30,11 @@ public class EvaluatorInspectionTests
         var counter = new CountAccumulator();
         var evaluator = CreateEvaluator();
         var aspect = Aspect.CountCandidates(evaluator, counter);
-        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
-        execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -48,11 +48,11 @@ public class EvaluatorInspectionTests
         var aspect = Aspect.MeasureDuration(evaluator, duration, timeProvider);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
-        execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -62,7 +62,7 @@ public class EvaluatorInspectionTests
     {
         var counter = new CountAccumulator();
         var evaluator = new ThrowingEvaluator();
-        var aspect = Aspect.CountCalls(evaluator, counter);
+        var aspect = Aspect.CountInvocations(evaluator, counter);
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>

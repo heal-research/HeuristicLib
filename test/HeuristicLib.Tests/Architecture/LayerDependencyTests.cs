@@ -45,6 +45,8 @@ public sealed class LayerDependencyTests
             ("Execution.ChildScopePolicy", "Execution/"),
             ("Inspection.AlgorithmObservation`2", "Inspection/Algorithms/"),
             ("Inspection.ObservationSource`1", "Inspection/"),
+            ("Inspection.ObservationPoint`1", "Inspection/"),
+            ("Inspection.IObservationPointExecutor`1", "Inspection/"),
             ("Inspection.Clock", "Inspection/"),
             ("Inspection.Clock`1", "Inspection/"),
             ("Experiments.ExperimentRun`6", "Experiments/"),
@@ -104,6 +106,25 @@ public sealed class LayerDependencyTests
         compilation = compilation.AddSyntaxTrees(probe);
 
         ScanTree(compilation, probe, repositoryRoot).ShouldContain("src/HeuristicLib/Operators/LayerProbe.cs | Operators -> Analysis");
+    }
+
+    [Theory]
+    [InlineData("Inspection", "Inspection")]
+    [InlineData("Encodings/Permutations", "Encodings.Permutations")]
+    [InlineData("Execution/Aspects", "Execution")]
+    public void SemanticCheck_KeepsInspectionEncodingsAndResolutionFreeOfAnalysis(string folder, string concept)
+    {
+        var repositoryRoot = FindRepositoryRoot();
+        var (compilation, _) = CreateMainCompilation(repositoryRoot);
+        var probe = CSharpSyntaxTree.ParseText(
+            $"namespace HEAL.HeuristicLib.{concept}; internal class LayerProbe {{ private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int>? analyzer; }}",
+            ParseOptions,
+            Path.Combine(repositoryRoot, MainRoot, folder, "LayerProbe.cs"),
+            cancellationToken: TestContext.Current.CancellationToken);
+        compilation = compilation.AddSyntaxTrees(probe);
+
+        var kind = folder.Split('/')[0];
+        ScanTree(compilation, probe, repositoryRoot).ShouldContain($"src/HeuristicLib/{folder}/LayerProbe.cs | {kind} -> Analysis");
     }
 
     [Fact]
@@ -330,7 +351,7 @@ public sealed class LayerDependencyTests
             var targetNamespace = (symbol as INamespaceSymbol)?.ToDisplayString() ??
                                   targetType?.ContainingNamespace.ToDisplayString() ?? string.Empty;
 
-            if (sourceKind is "Operators" or "Algorithms" or "Problems" or "Hosting" &&
+            if (sourceKind is "Operators" or "Algorithms" or "Problems" or "Encodings" or "Inspection" or "Execution" or "Hosting" &&
                 targetNamespace.StartsWith("HEAL.HeuristicLib.Analysis", StringComparison.Ordinal))
                 found.Add($"{path} | {sourceKind} -> Analysis");
 
@@ -430,8 +451,16 @@ public sealed class LayerDependencyTests
         if (path.StartsWith(MainRoot + "Problems/", StringComparison.Ordinal) ||
             path.StartsWith(ExperimentalRoot + "Problems/", StringComparison.Ordinal))
             return "Problems";
+        if (path.StartsWith(MainRoot + "Encodings/", StringComparison.Ordinal) ||
+            path.StartsWith(ExperimentalRoot + "Encodings/", StringComparison.Ordinal))
+            return "Encodings";
+        if (path.StartsWith(MainRoot + "Inspection/", StringComparison.Ordinal))
+            return "Inspection";
         if (path.StartsWith(MainRoot + "Execution/Runs/", StringComparison.Ordinal))
             return "Hosting";
+        // Resolution, aspects and composition contracts; hosting is classified above.
+        if (path.StartsWith(MainRoot + "Execution/", StringComparison.Ordinal))
+            return "Execution";
         if (path.StartsWith(MainRoot + "Experiments/", StringComparison.Ordinal) &&
             !root.DescendantNodes().OfType<BaseNamespaceDeclarationSyntax>()
                 .Any(declaration => declaration.Name.ToString() == "HEAL.HeuristicLib.Analysis"))

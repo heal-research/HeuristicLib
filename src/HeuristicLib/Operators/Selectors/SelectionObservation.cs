@@ -50,7 +50,7 @@ public static class SelectionObservations
     extension<TCandidate>(IOperator<Selection, TCandidate> selector)
     {
         /// <summary>The observations of this selector's successful calls.</summary>
-        public ObservationSource<SelectionObservation<TCandidate>> Calls =>
-            new(selector, observe => Aspect.Create(Pointcut.Reference(selector), new SelectionObservationAdvice<TCandidate>(observe)));
+        public ObservationSource<SelectionObservation<TCandidate>> Invocations =>
+            ObservationSource.Create<SelectionObservation<TCandidate>>(selector, observe => Aspect.Create(Pointcut.Reference(selector), new SelectionObservationAdvice<TCandidate>(observe)));
     }
 }

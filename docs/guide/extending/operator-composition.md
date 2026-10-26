@@ -10,20 +10,20 @@ Composition policies describe how child operations are coordinated. `WrappingOpe
 
 The built in composition overview is:
 
-| Composition aspect              | Coordination semantics                                                                                        | Helpers and examples                                                                                        | Applicability                                                |
-| ------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| Weighted alternatives per item  | Chooses a child independently for each item of a call, invokes grouped child batches and restores input order | `ChoosePerItem`                                                                                             | Creators, crossovers, mutators, evaluators and refiners      |
-| Weighted alternatives per call  | Chooses one child for the complete operation call                                                             | `ChoosePerCall`                                                                                             | Every operation-parameterized operator                       |
-| Conditional application         | Chooses between an operation and role specific unchanged behavior                                             | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                  | Mutators, crossovers and refiners                            |
-| Sequential composition          | Passes each stage result to the next stage in order                                                           | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                          |
-| Repeated composition            | Feeds a result back into the same child for a configured number of iterations                                 | `IteratedRefiner`                                                                                           | Refiners                                                     |
-| Objective-aware retention       | Measures a child's result and keeps it only when a criterion counts it as an improvement                      | `ImprovementCheckingRefiner`                                                                                | Refiners                                                     |
-| Transient refinement evaluation | Refines candidates temporarily, measures the refined copies and discards them                                 | `RefinementEvaluator`                                                                                       | Evaluators composed with a refiner                           |
-| Unconditional postprocessing    | Invokes a source operation and always transforms its complete result                                          | `TransformedCreator`, `TransformedCrossover`                                                                | Creators and crossovers with a mutator transformation        |
-| Logical composition             | Combines child conditions with short circuit Boolean logic                                                    | `AnyTerminator`, `AllTerminator`                                                                            | Terminators                                                  |
-| Fallback composition            | Handles part of a request directly and delegates the remainder                                                | `PredefinedCandidatesCreator`                                                                               | Creators                                                     |
-| Specialized coordination        | Applies a policy whose meaning depends on one operator contract                                               | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                                     |
-| Inspection                      | Wraps a selected execution boundary to observe, count or measure calls                                        | `Aspect.Observe`, `Aspect.CountCalls` and `Aspect.MeasureDuration`                                          | Role-specific observations; counting and timing across roles |
+| Composition aspect                   | Coordination semantics                                                                                        | Helpers and examples                                                                                        | Applicability                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| Weighted alternatives per item       | Chooses a child independently for each item of a call, invokes grouped child batches and restores input order | `ChoosePerItem`                                                                                             | Creators, crossovers, mutators, evaluators and refiners      |
+| Weighted alternatives per invocation | Chooses one child for the complete operation invocation                                                       | `ChoosePerInvocation`                                                                                       | Every operation-parameterized operator                       |
+| Conditional application              | Chooses between an operation and role specific unchanged behavior                                             | `mutator.AppliedAtRate(...)`, `crossover.AppliedAtRate(...)`, `refiner.AppliedAtRate(...)`                  | Mutators, crossovers and refiners                            |
+| Sequential composition               | Passes each stage result to the next stage in order                                                           | `PipelineMutator`, `PipelineRefiner`, `PipelineInterceptor`                                                 | Mutators, refiners and interceptors                          |
+| Repeated composition                 | Feeds a result back into the same child for a configured number of iterations                                 | `IteratedRefiner`                                                                                           | Refiners                                                     |
+| Objective-aware retention            | Measures a child's result and keeps it only when a criterion counts it as an improvement                      | `ImprovementCheckingRefiner`                                                                                | Refiners                                                     |
+| Transient refinement evaluation      | Refines candidates temporarily, measures the refined copies and discards them                                 | `RefinementEvaluator`                                                                                       | Evaluators composed with a refiner                           |
+| Unconditional postprocessing         | Invokes a source operation and always transforms its complete result                                          | `TransformedCreator`, `TransformedCrossover`                                                                | Creators and crossovers with a mutator transformation        |
+| Logical composition                  | Combines child conditions with short circuit Boolean logic                                                    | `AnyTerminator`, `AllTerminator`                                                                            | Terminators                                                  |
+| Fallback composition                 | Handles part of a request directly and delegates the remainder                                                | `PredefinedCandidatesCreator`                                                                               | Creators                                                     |
+| Specialized coordination             | Applies a policy whose meaning depends on one operator contract                                               | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                                     |
+| Inspection                           | Wraps a selected execution boundary to observe, count or measure calls                                        | `Aspect.Observe`, `Aspect.CountInvocations` and `Aspect.MeasureDuration`                                    | Role-specific observations; counting and timing across roles |
 
 A missing helper usually means that the role does not provide the inputs needed by that policy or that the intermediate result has no single clear meaning. It does not prohibit authors from implementing a domain specific composition with explicit semantics.
 
@@ -49,9 +49,9 @@ This order restoration requires every selected child to return exactly one resul
 
 Weights are retained exactly as configured. Omitting weights selects uniformly across all children. Positive finite weights participate proportionally; zero, negative finite weights, negative infinity and `NaN` mean never. Positive infinity overrides finite weights, with multiple positive-infinity children selected uniformly. If no child is selectable, selection falls back to uniform across all children. Configured weights are compiled once for repeated sampling rather than normalized or recalculated for every choice.
 
-`ChoosePerCall<Selection, TCandidate>` and `ChoosePerCall<Replacement, TCandidate>` make one weighted choice for each complete selection or replacement call. The selected child receives the complete population inputs and requested count. This preserves the meaning of a selector or replacer policy as a decision over a complete population instead of mixing fragments from several policies.
+`ChoosePerInvocation<Selection, TCandidate>` and `ChoosePerInvocation<Replacement, TCandidate>` make one weighted choice for each complete selection or replacement call. The selected child receives the complete population inputs and requested count. This preserves the meaning of a selector or replacer policy as a decision over a complete population instead of mixing fragments from several policies.
 
-`ChoosePerCall` makes the same whole-call choice for any operator using `IOperator<TOperation, TCandidate>`, including mutation, evaluation and operations defined outside the library. Each call samples one child with the call's random number generator and runs on that child with the same generator, unchanged inputs and the run's search space and problem. Use it when a batch should stay with one policy, such as evaluating a complete batch with either an exact or a surrogate evaluator, and use `ChoosePerItem` when each item should choose independently. Its weights follow the rules above, and building its executor rejects an empty child collection or a weight count that differs from the child count.
+`ChoosePerInvocation` makes the same per-invocation choice for any operator using `IOperator<TOperation, TCandidate>`, including mutation, evaluation and operations defined outside the library. Each call samples one child with the call's random number generator and runs on that child with the same generator, unchanged inputs and the run's search space and problem. Use it when a batch should stay with one policy, such as evaluating a complete batch with either an exact or a surrogate evaluator, and use `ChoosePerItem` when each item should choose independently. Its weights follow the rules above, and building its executor rejects an empty child collection or a weight count that differs from the child count.
 
 ```csharp
 var creator = ChoosePerItem.Create(
@@ -62,11 +62,11 @@ var mutator = ChoosePerItem.Create(
     [smallMutation, largeMutation],
     [0.8, 0.2]);
 
-var selector = ChoosePerCall.Create(
+var selector = ChoosePerInvocation.Create(
     [tournamentSelector, proportionalSelector],
     [0.6, 0.4]);
 
-var evaluator = ChoosePerCall.Create(
+var evaluator = ChoosePerInvocation.Create(
     [exactEvaluator, surrogateEvaluator],
     [0.1, 0.9]);
 ```
@@ -224,11 +224,11 @@ var run = budgeted.CreateRun(problem, random).AddAspect(counting);
 The same budgets apply to any operator, whatever its operation:
 
 ```csharp
-var calls = shared.LimitedToCalls(refiner, 1_000);
+var calls = shared.LimitedToInvocations(refiner, 1_000);
 var timed = shared.LimitedToDuration(evaluator, TimeSpan.FromSeconds(10));
 ```
 
-`LimitedToCalls` counts successful calls, and `LimitedToCandidates` counts the candidates they return for an operation that reports candidate work. Timing also records failed calls. Timing accepts an explicit `TimeProvider`. Both are scoped to the budget's inner algorithm. If that algorithm never resolves the selected operator, nothing is recorded and the budget never stops it.
+`LimitedToInvocations` counts successful calls, and `LimitedToCandidates` counts the candidates they return for an operation that reports candidate work. Timing also records failed calls. Timing accepts an explicit `TimeProvider`. Both are scoped to the budget's inner algorithm. If that algorithm never resolves the selected operator, nothing is recorded and the budget never stops it.
 
 Several observed operators can feed the same termination criterion by sharing one `CountAccumulator`. For example, the same counter can track refiner calls and evaluations.
 
@@ -333,7 +333,7 @@ Terminator checks may update execution data. Each composition invokes its child 
 
 For an empty child collection, `AnyTerminator` returns false and `AllTerminator` returns true.
 
-See [Operators](/guide/fundamentals/operators#terminator-ownership) for ownership and lifecycle semantics.
+See [Termination](/guide/glossary#termination) for algorithm-owned termination and external early stopping.
 
 ## Specialized wrappers
 
@@ -365,7 +365,7 @@ These types should document their own batching, state and cardinality behavior b
 
 ## Observation and inspection boundaries
 
-Inspection uses execution advice installed through aspects. `Aspect.Observe`, `Aspect.CountCalls` and `Aspect.MeasureDuration` select existing configurations and wrap their executors; they do not add observation, counting or timing configurations to the operator graph.
+Inspection uses execution advice installed through aspects. `Aspect.Observe`, `Aspect.CountInvocations` and `Aspect.MeasureDuration` select existing configurations and wrap their executors; they do not add observation, counting or timing configurations to the operator graph.
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 
@@ -399,7 +399,7 @@ Every operation uses `IOperator<TOperation, TCandidate>`. The generic `Named` an
 
 `Retry(3)` includes the first attempt. It catches only a directly thrown `RetryableOperationException`; cancellation, ordinary failures and aggregate exceptions propagate. Every attempt receives the same arguments, child and RNG. Failed attempts retain their random draws, state changes and inspection effects; retry provides no rollback.
 
-A multi-child composite such as a pipeline exposes its own controls. It does not inherit an arbitrary child's strength control. `ChoosePerCall` exposes none, because a different child can run on every call.
+A multi-child composite such as a pipeline exposes its own controls. It does not inherit an arbitrary child's strength control. `ChoosePerInvocation` exposes none, because a different child can run on every call.
 
 ## Randomness and executors
 

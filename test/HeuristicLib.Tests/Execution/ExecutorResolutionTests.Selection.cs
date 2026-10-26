@@ -117,9 +117,9 @@ public partial class ExecutorResolutionTests
         ancestor.Next().ShouldBe(4);
 
         observed.ShouldBe([1, 2]);
-        rebound.Calls.ShouldBe(4);
+        rebound.Invocations.ShouldBe(4);
         rebound.Control.Value.ShouldBe(4);
-        parent.CreateChildScope().Resolve(composite).Calls.ShouldBe(4);
+        parent.CreateChildScope().Resolve(composite).Invocations.ShouldBe(4);
     }
 
     [Fact]

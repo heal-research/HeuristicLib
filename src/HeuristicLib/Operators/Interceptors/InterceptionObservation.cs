@@ -56,8 +56,8 @@ public static class InterceptionObservations
         where TSearchState : class, ISearchState
     {
         /// <summary>The observations of this interceptor's successful calls.</summary>
-        public ObservationSource<InterceptionObservation<TCandidate, TSearchState>> Calls =>
-            new(interceptor, observe => Aspect.Create(Pointcut.Reference(interceptor),
+        public ObservationSource<InterceptionObservation<TCandidate, TSearchState>> Invocations =>
+            ObservationSource.Create<InterceptionObservation<TCandidate, TSearchState>>(interceptor, observe => Aspect.Create(Pointcut.Reference(interceptor),
                 new InterceptionObservationAdvice<TCandidate, TSearchState>(observe)));
     }
 }

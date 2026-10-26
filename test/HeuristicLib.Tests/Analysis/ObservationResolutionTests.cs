@@ -18,7 +18,7 @@ namespace HEAL.HeuristicLib.Tests.Analysis;
 public class ObservationResolutionTests
 {
     [Fact]
-    public async Task AlgorithmObservation_RebindingPreservesIterationsAndPausedInvocationContext()
+    public async Task AlgorithmObservation_NumbersEachCallAndPreservesThePausedInvocationContext()
     {
         var algorithm = new TwoStepAlgorithm();
         var problem = CreateProblem();
@@ -34,7 +34,7 @@ public class ObservationResolutionTests
         var parentFirst = paused.Current;
 
         var child = root.CreateChildScope(Aspect.Observe(algorithm.Iterations, childObservations.Add),
-            Aspect.Observe(algorithm.Evaluator.Calls, observation => childEvaluations.AddRange(observation.Candidates)));
+            Aspect.Observe(algorithm.Evaluator.Invocations, observation => childEvaluations.AddRange(observation.Candidates)));
         var rebound = child.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         rebound.ShouldNotBeSameAs(original);
         var childInitial = CreateState(10);
@@ -46,7 +46,8 @@ public class ObservationResolutionTests
         var parentSecond = paused.Current;
         (await paused.MoveNextAsync()).ShouldBeFalse();
 
-        parentObservations.Select(observation => observation.Iteration).ShouldBe([1L, 2L, 3L, 4L]);
+        // Each call numbers its own iterations, so the paused call continues at 2 after the rebound call.
+        parentObservations.Select(observation => observation.Iteration).ShouldBe([1L, 1L, 2L, 2L]);
         parentObservations.Select(observation => observation.State).ShouldBe([parentFirst, childStates[0], childStates[1], parentSecond]);
         parentObservations.Select(observation => observation.PreviousState).ShouldBe([parentInitial, childInitial, childStates[0], parentFirst]);
         parentObservations.ShouldAllBe(observation => ReferenceEquals(observation.Algorithm, algorithm));
@@ -56,14 +57,14 @@ public class ObservationResolutionTests
         childObservations.ShouldAllBe(observation => ReferenceEquals(observation.Algorithm, algorithm));
         childEvaluations.ShouldBe([11, 12]);
 
-        // A separate root selects a separate execution and observation counter for the same configuration.
+        // A separate root selects a separate execution for the same configuration.
         var independent = ResolutionScope.Create(Aspect.Observe(algorithm.Iterations, parentObservations.Add));
         var independentStates = new List<PopulationState<int>>();
         await foreach (var state in independent.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm)
             .RunStreamingAsync(problem, RandomNumberGenerator.Create(3), ct: TestContext.Current.CancellationToken))
             independentStates.Add(state);
         independentStates.Select(state => state.Population.EvaluatedCandidates.Single().Candidate).ShouldBe([1, 2]);
-        parentObservations.Select(observation => observation.Iteration).ShouldBe([1L, 2L, 3L, 4L, 1L, 2L]);
+        parentObservations.Select(observation => observation.Iteration).ShouldBe([1L, 1L, 2L, 2L, 1L, 2L]);
     }
 
     [Fact]
@@ -74,7 +75,7 @@ public class ObservationResolutionTests
         IReadOnlyList<int> parents = [1, 2];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Mutator.ShouldBeSameAs(source);
                 observation.Parents.ShouldBeSameAs(parents);
@@ -84,7 +85,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source),
-            execution => execution.Mutate(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(parents));
+            executor => executor.Mutate(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(parents));
     }
 
     [Fact]
@@ -96,7 +97,7 @@ public class ObservationResolutionTests
         IReadOnlyList<Parents<int>> parents = [new(1, 2)];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Crossover.ShouldBeSameAs(source);
                 observation.Parents.ShouldBeSameAs(parents);
@@ -106,7 +107,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source),
-            execution => execution.Cross(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(offspring));
+            executor => executor.Cross(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(offspring));
     }
 
     [Fact]
@@ -118,7 +119,7 @@ public class ObservationResolutionTests
         IReadOnlyList<int> candidates = [3];
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Evaluator.ShouldBeSameAs(source);
                 observation.Candidates.ShouldBeSameAs(candidates);
@@ -128,7 +129,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source),
-            execution => execution.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(objectiveVectors));
+            executor => executor.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(objectiveVectors));
     }
 
     [Fact]
@@ -141,7 +142,7 @@ public class ObservationResolutionTests
         var previous = CreateState(1);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Interceptor.ShouldBeSameAs(source);
                 observation.State.ShouldBeSameAs(transformed);
@@ -152,7 +153,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(source),
-            execution => execution.Transform(current, previous, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(transformed));
+            executor => executor.Transform(current, previous, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(transformed));
     }
 
     [Fact]
@@ -163,7 +164,7 @@ public class ObservationResolutionTests
         IOperator<Creation, int> source = new RecordingCreator(events, created);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Creator.ShouldBeSameAs(source);
                 observation.Candidates.ShouldBeSameAs(created);
@@ -173,7 +174,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source),
-            execution => execution.Create(2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(created));
+            executor => executor.Create(2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(created));
     }
 
     [Fact]
@@ -185,7 +186,7 @@ public class ObservationResolutionTests
         IOperator<Selection, int> source = new RecordingSelector(events, selected);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Selector.ShouldBeSameAs(source);
                 observation.Selected.ShouldBeSameAs(selected);
@@ -197,7 +198,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source),
-            execution => execution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
+            executor => executor.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
                 .ShouldBeSameAs(selected));
     }
 
@@ -210,7 +211,7 @@ public class ObservationResolutionTests
         IOperator<Refinement, int> source = new RecordingRefiner(events, refined);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Refiner.ShouldBeSameAs(source);
                 observation.Refined.ShouldBeSameAs(refined);
@@ -220,7 +221,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source),
-            execution => execution.Refine(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(refined));
+            executor => executor.Refine(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(refined));
     }
 
     [Fact]
@@ -233,7 +234,7 @@ public class ObservationResolutionTests
         IOperator<Replacement, int> source = new RecordingReplacer(events, replaced);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Replacer.ShouldBeSameAs(source);
                 observation.Replaced.ShouldBeSameAs(replaced);
@@ -246,7 +247,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source),
-            execution => execution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
+            executor => executor.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
                 .ShouldBeSameAs(replaced));
     }
 
@@ -258,7 +259,7 @@ public class ObservationResolutionTests
         var state = CreateState(1);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Terminator.ShouldBeSameAs(source);
                 observation.State.ShouldBeSameAs(state);
@@ -267,7 +268,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(source),
-            execution => execution.IsTerminalState(state, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeTrue());
+            executor => executor.IsTerminalState(state, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeTrue());
     }
 
     /// <summary>
@@ -281,7 +282,7 @@ public class ObservationResolutionTests
         IOperator<Checksum, int> source = new RecordingChecksum(events, 17);
         var problem = CreateProblem();
         AssertContextualObservations(events,
-            observe => Aspect.Observe(source.Calls, observation =>
+            observe => Aspect.Observe(source.Invocations, observation =>
             {
                 observation.Checksum.ShouldBeSameAs(source);
                 observation.Result.ShouldBe(17);
@@ -290,7 +291,7 @@ public class ObservationResolutionTests
                 observe();
             }),
             scope => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(source),
-            execution => execution.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(17));
+            executor => executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(17));
     }
 
     private static void AssertContextualObservations<TExecutor>(

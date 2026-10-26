@@ -37,7 +37,7 @@ public class ExperimentAnalysisTests
 
         public OrderedEvaluationModule(IOperator<Evaluation, int> evaluator, int marker, List<int> invocationOrder)
         {
-            Advices = [.. Aspect.Observe(evaluator.Calls, _ =>
+            Advices = [.. Aspect.Observe(evaluator.Invocations, _ =>
         {
             invocationOrder.Add(marker);
             Observations++;
@@ -135,7 +135,7 @@ public class ExperimentAnalysisTests
         {
             this.marker = marker;
             this.invocationOrder = invocationOrder;
-            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
+            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
         }
 
         public void Record(EvaluationObservation<int> observation)

@@ -20,7 +20,7 @@ public sealed class OperatorPreparationSpecs
         var twice = new Twice<Mutation, RealVector>(source);
         var childCalls = new CountAccumulator();
         var wrapperCalls = new CountAccumulator();
-        var executor = ResolutionScope.Create(Aspect.CountCalls(source, childCalls), Aspect.CountCalls(twice, wrapperCalls))
+        var executor = ResolutionScope.Create(Aspect.CountInvocations(source, childCalls), Aspect.CountInvocations(twice, wrapperCalls))
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(twice);
         var problem = new TestFunctionProblem(new SphereFunction(1));
         IReadOnlyList<RealVector> parents = [new(1.0)];
@@ -42,10 +42,10 @@ public sealed class OperatorPreparationSpecs
         var problem = new TestFunctionProblem(new SphereFunction(1));
 
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(42);
-        counter.Calls.ShouldBe(2);
+        counter.Invocations.ShouldBe(2);
         ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(43);
-        counter.Calls.ShouldBe(4);
+        counter.Invocations.ShouldBe(4);
     }
 
     [Fact]
@@ -61,10 +61,10 @@ public sealed class OperatorPreparationSpecs
         var executor = (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(forwarded);
 
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(42);
-        counter.Calls.ShouldBe(1);
+        counter.Invocations.ShouldBe(1);
         ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(43);
-        counter.Calls.ShouldBe(2);
+        counter.Invocations.ShouldBe(2);
     }
 
     private interface IValueControl
@@ -162,7 +162,7 @@ public sealed class OperatorPreparationSpecs
 
     private sealed class Counter : OperatorAdvice
     {
-        public int Calls { get; private set; }
+        public int Invocations { get; private set; }
 
         public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
             operation.Wrap(executor, new Counting(this));
@@ -172,7 +172,7 @@ public sealed class OperatorPreparationSpecs
             public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
             {
                 var result = invocation.Proceed();
-                counter.Calls++;
+                counter.Invocations++;
                 return result;
             }
         }

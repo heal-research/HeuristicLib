@@ -46,7 +46,7 @@ public static class RefinementObservations
     extension<TCandidate>(IOperator<Refinement, TCandidate> refiner)
     {
         /// <summary>The observations of this refiner's successful calls.</summary>
-        public ObservationSource<RefinementObservation<TCandidate>> Calls =>
-            new(refiner, observe => Aspect.Create(Pointcut.Reference(refiner), new RefinementObservationAdvice<TCandidate>(observe)));
+        public ObservationSource<RefinementObservation<TCandidate>> Invocations =>
+            ObservationSource.Create<RefinementObservation<TCandidate>>(refiner, observe => Aspect.Create(Pointcut.Reference(refiner), new RefinementObservationAdvice<TCandidate>(observe)));
     }
 }

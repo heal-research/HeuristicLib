@@ -11,9 +11,9 @@ public class RepeatedEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repetitions: 3);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
-        var objectiveVectors = execution.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         objectiveVectors.Single().ShouldBe(new ObjectiveVector(2.0));
     }
@@ -24,9 +24,9 @@ public class RepeatedEvaluatorTests
         var problem = CreateProblem();
         var evaluator = new ProblemEvaluator<int>()
             .AsRepeated(repetitions: 2);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
 
-        var objectiveVectors = execution.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         objectiveVectors.ShouldBe([new ObjectiveVector(3.0), new ObjectiveVector(5.0), new ObjectiveVector(8.0)]);
     }
@@ -44,14 +44,14 @@ public class RepeatedEvaluatorTests
     {
         public sealed class State
         {
-            public int Calls;
+            public int Invocations;
         }
 
         protected override State CreateScopedState() => new();
 
         protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, State state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {
-            var calls = Interlocked.Increment(ref state.Calls);
+            var calls = Interlocked.Increment(ref state.Invocations);
             return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
         }
     }

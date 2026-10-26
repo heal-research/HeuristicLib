@@ -67,7 +67,7 @@ Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOp
 
 Custom advice for one role derives from a role advice base such as `MutatorAdvice<TCandidate>` and wraps typed executors. Advice for every operation derives from `OperatorAdvice` and passes a struct `IInvocationWrapper` to the operation's `Wrap`. See [Write custom advice](/guide/extending/writing-advice) for complete examples.
 
-An operator you write is observed through its operation's `Calls` source, such as `mutator.Calls`, exactly like a built-in one. See [Observability and analysis](/guide/execution/observability-and-analysis).
+An operator you write is observed through its operation's `Invocations` source, such as `mutator.Invocations`, exactly like a built-in one. See [Observability and analysis](/guide/execution/observability-and-analysis).
 
 The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) implements a complete round-robin mutator and follows its cursor through a new inspection context and an independent root execution.
 

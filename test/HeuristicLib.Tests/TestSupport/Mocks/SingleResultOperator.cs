@@ -17,7 +17,7 @@ public sealed class SingleResultOperator
 {
     public int Preparations { get; private set; }
     public int Constructions { get; private set; }
-    public int Calls { get; private set; }
+    public int Invocations { get; private set; }
 
     // One public method implements every operation's CreateExecutor, whose signature does not name the operation.
     public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
@@ -37,7 +37,7 @@ public sealed class SingleResultOperator
 
     private sealed class State
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 
     private sealed class Executor(SingleResultOperator owner, State state)
@@ -50,8 +50,8 @@ public sealed class SingleResultOperator
     {
         private int Next()
         {
-            owner.Calls++;
-            return ++state.Calls;
+            owner.Invocations++;
+            return ++state.Invocations;
         }
 
         public IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [Next()];

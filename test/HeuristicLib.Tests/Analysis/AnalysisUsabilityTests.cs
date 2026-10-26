@@ -14,8 +14,8 @@ public class AnalysisUsabilityTests
     public void SeparateRetentionObjects_CountIndependently()
     {
         var evaluator = new ManualEvaluator();
-        var first = Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
-        var second = Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
+        var first = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
+        var second = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
         var scope = Install(first, second);
 
         foreach (var candidate in Enumerable.Range(1, 5))
@@ -34,8 +34,8 @@ public class AnalysisUsabilityTests
     {
         var evaluator = new ManualEvaluator();
         var shared = TraceRetention.EveryNth(2);
-        var first = Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors[0][0], retention: shared);
-        var second = Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors[0][0], retention: shared);
+        var first = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: shared);
+        var second = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: shared);
         var scope = Install(first, second);
 
         foreach (var candidate in Enumerable.Range(1, 5))
@@ -52,7 +52,7 @@ public class AnalysisUsabilityTests
         var firstEvaluator = new ManualEvaluator();
         var secondEvaluator = new ManualEvaluator();
         var count = 0;
-        var trace = Analyzer.Trace([firstEvaluator.Calls, secondEvaluator.Calls], observation => count += observation.ObjectiveVectors.Count);
+        var trace = Analyzer.Trace([firstEvaluator.Invocations, secondEvaluator.Invocations], observation => count += observation.ObjectiveVectors.Count);
         var scope = Install(trace);
 
         Evaluate(scope, firstEvaluator, 1, 2);
@@ -66,7 +66,7 @@ public class AnalysisUsabilityTests
     {
         var evaluator = new ManualEvaluator();
         var count = 0;
-        var trace = Analyzer.Trace([evaluator.Calls, evaluator.Calls], observation => count += observation.ObjectiveVectors.Count);
+        var trace = Analyzer.Trace([evaluator.Invocations, evaluator.Invocations], observation => count += observation.ObjectiveVectors.Count);
         var scope = Install(trace);
 
         Evaluate(scope, evaluator, 1, 2);
@@ -81,8 +81,8 @@ public class AnalysisUsabilityTests
         IOperator<Mutation, RealVector> mutator = source;
         IOperator<Evaluation, RealVector> evaluator = source;
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var mutations = Analyzer.Trace(mutator.Calls, observation => observation.Offspring.Count);
-        var evaluations = Analyzer.Trace(evaluator.Calls, observation => observation.Candidates.Count);
+        var mutations = Analyzer.Trace(mutator.Invocations, observation => observation.Offspring.Count);
+        var evaluations = Analyzer.Trace(evaluator.Invocations, observation => observation.Candidates.Count);
         var scope = ResolutionScope.Create(mutations, evaluations).For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
         scope.Resolve(mutator).Mutate([new RealVector(2.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -99,7 +99,7 @@ public class AnalysisUsabilityTests
         var activeCalls = 0;
         var overlappingCalls = 0;
         var count = 0;
-        var trace = Analyzer.Trace(evaluator.Calls, observation =>
+        var trace = Analyzer.Trace(evaluator.Invocations, observation =>
         {
             if (Interlocked.Increment(ref activeCalls) > 1)
                 Interlocked.Increment(ref overlappingCalls);
@@ -148,9 +148,9 @@ public class AnalysisUsabilityTests
     public void SharedClock_IsInstalledOncePerScope()
     {
         var evaluator = new ManualEvaluator();
-        var clock = Clock.FromEvaluations(evaluator);
-        var first = Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors.Count, clocks: [clock, clock]);
-        var second = Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors.Count, clocks: [clock]);
+        var clock = Clock.FromCandidates(evaluator);
+        var first = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors.Count, clocks: [clock, clock]);
+        var second = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors.Count, clocks: [clock]);
         var scope = Install(first, second);
 
         Evaluate(scope, evaluator, 1, 2);
@@ -186,7 +186,7 @@ public class AnalysisUsabilityTests
     public void ARetentionReturningAnUnknownDecision_FailsWhereItIsUsed()
     {
         var evaluator = new ManualEvaluator();
-        var trace = Analyzer.Trace(evaluator.Calls, observation => observation.ObjectiveVectors[0][0],
+        var trace = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0],
             retention: new UnknownDecisionRetention());
         var scope = Install(trace);
 
@@ -209,8 +209,8 @@ public class AnalysisUsabilityTests
         {
             Advices =
             [
-                .. Aspect.Observe(first.Calls, observation => FirstCandidates += observation.Candidates.Count),
-                .. Aspect.Observe(second.Calls, observation => SecondCandidates += observation.Candidates.Count)
+                .. Aspect.Observe(first.Invocations, observation => FirstCandidates += observation.Candidates.Count),
+                .. Aspect.Observe(second.Invocations, observation => SecondCandidates += observation.Candidates.Count)
             ];
         }
     }

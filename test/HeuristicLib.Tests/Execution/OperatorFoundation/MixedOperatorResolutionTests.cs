@@ -20,9 +20,9 @@ public sealed class MixedOperatorResolutionTests
     public void TypedAndUntypedResolutionShareTheScopedStateInEitherOrder(bool untypedFirst)
     {
         var source = new DualCrossover();
-        var counter = new CallCounter();
+        var counter = new InvocationCounter();
         var log = new AdviceLog();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, log)));
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountInvocations(counter, log)));
         var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         IOperator<Crossover, RealVector> forwarded = source;
         IOperator<Crossover, RealVector> current = source;
@@ -47,8 +47,8 @@ public sealed class MixedOperatorResolutionTests
         IOperator<Crossover, RealVector> current = source;
         IOperator<Crossover, RealVector> forwarded = new ForwardedCrossover(current);
         var outer = new CurrentForward(forwarded);
-        var counter = new CallCounter();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountCalls(counter, new AdviceLog())));
+        var counter = new InvocationCounter();
+        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountInvocations(counter, new AdviceLog())));
         var parent = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var parentNode = parent.Resolve(outer);
         var descendantNode = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);

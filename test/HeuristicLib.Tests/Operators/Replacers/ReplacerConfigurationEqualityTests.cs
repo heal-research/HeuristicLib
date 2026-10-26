@@ -31,9 +31,9 @@ public class ReplacerConfigurationEqualityTests
     [Fact]
     public void MultiReplacer_UsesOrderedStructuralEquality()
     {
-        var left = ChoosePerCall.Create(new OffsetReplacer(1), new OffsetReplacer(2));
-        var equal = ChoosePerCall.Create(new OffsetReplacer(1), new OffsetReplacer(2));
-        var reordered = ChoosePerCall.Create(new OffsetReplacer(2), new OffsetReplacer(1));
+        var left = ChoosePerInvocation.Create(new OffsetReplacer(1), new OffsetReplacer(2));
+        var equal = ChoosePerInvocation.Create(new OffsetReplacer(1), new OffsetReplacer(2));
+        var reordered = ChoosePerInvocation.Create(new OffsetReplacer(2), new OffsetReplacer(1));
 
         left.ShouldBe(equal);
         left.GetHashCode().ShouldBe(equal.GetHashCode());
@@ -41,10 +41,10 @@ public class ReplacerConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChoosePerCallReplacer_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerInvocationReplacer_WithDifferentWeights_IsNotEqual()
     {
         IOperator<Replacement, int>[] children = [new OffsetReplacer(1), new OffsetReplacer(2)];
-        var left = new ChoosePerCall<Replacement, int>(children) { Weights = [1.0, 2.0] };
+        var left = new ChoosePerInvocation<Replacement, int>(children) { Weights = [1.0, 2.0] };
         var right = left with { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);

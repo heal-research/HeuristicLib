@@ -54,7 +54,7 @@ The arity lives in the authoring bases: the base performs the type check when a 
 
 `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They forward `Fits` and candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and take persistent data from `scope.GetScopedState(this, create)`, which creates it once for the configuration's owner.
 
-Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerCall` chooses one child per call and exposes no controls. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
+Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerInvocation` chooses one child per call and exposes no controls. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
 
 > Watch the last type argument. The stateful bases end in `TState`, so `StatefulMutator<TCandidate, TSearchSpace, TState>` and `StatefulMutator<TCandidate, TSearchSpace, TProblem>` have the same shape. Passing a problem where the state belongs compiles and silently produces a problem-agnostic operator whose state is a problem. `HLib0004` reports this.
 
@@ -87,7 +87,7 @@ private sealed record CountingEvaluator
 {
     public sealed class State
     {
-        public int Calls { get; set; }
+        public int Invocations { get; set; }
     }
 
     protected override State CreateScopedState() => new();
@@ -99,8 +99,8 @@ private sealed record CountingEvaluator
         BoundedRealVectorSearchSpace searchSpace,
         TestFunctionProblem problem)
     {
-        state.Calls++;
-        return candidates.Select(_ => new ObjectiveVector(state.Calls)).ToArray();
+        state.Invocations++;
+        return candidates.Select(_ => new ObjectiveVector(state.Invocations)).ToArray();
     }
 }
 ```
@@ -178,7 +178,7 @@ Like every composite, these name only the candidate. A child slot is `IOperator<
 
 Composition helpers such as choosing one child, applying a transformation and running a pipeline are covered in [Operator composition](/guide/extending/operator-composition).
 
-`ChoosePerItem` routes through `WeightedRouter<TChoice>`. It passes a router over the resolved children to its operation's `Route`, whose routed executor assigns every item of a call with the call's random number generator; algorithm code uses the router directly. Create it with `WeightedRouter.Create(choices)` for uniform routing or `WeightedRouter.Create(choices, weights)`, using `WeightedIndexSampler` semantics; weights are compiled once per router. Its `Route` overloads accept either inputs or an item count, an RNG and a handler that receives one choice and its batch of inputs or item positions. It assigns every input before handling any batch, handles the batches in choice order, skips empty batches and restores results to their original positions. When every input goes to the same choice, that choice receives the original inputs. Each handler must return exactly the batch size; a mismatch throws `InvalidOperationException`. `ChoosePerCall` chooses once for the whole call and samples its child from a `WeightedItemSampler<T>`, using the call's random number generator for the choice and the child.
+`ChoosePerItem` routes through `WeightedRouter<TChoice>`. It passes a router over the resolved children to its operation's `Route`, whose routed executor assigns every item of a call with the call's random number generator; algorithm code uses the router directly. Create it with `WeightedRouter.Create(choices)` for uniform routing or `WeightedRouter.Create(choices, weights)`, using `WeightedIndexSampler` semantics; weights are compiled once per router. Its `Route` overloads accept either inputs or an item count, an RNG and a handler that receives one choice and its batch of inputs or item positions. It assigns every input before handling any batch, handles the batches in choice order, skips empty batches and restores results to their original positions. When every input goes to the same choice, that choice receives the original inputs. Each handler must return exactly the batch size; a mismatch throws `InvalidOperationException`. `ChoosePerInvocation` chooses once for the whole invocation and samples its child from a `WeightedItemSampler<T>`, using the call's random number generator for the choice and the child.
 
 Algorithms use the router to apply parameter-derived behavior in their execution code. GA, NSGA2 and ALPS create `WeightedRouter.AtRate(mutator, mutationRate)` in their executor constructor. The router owns the resolved mutator and a null pass-through choice, so the executor retains only the router for mutation. It routes each offspring to the mutator with the rate's probability, and the algorithm mutates only that batch. Rates at most zero, negative infinity and NaN route every offspring to null; rates at least one and positive infinity route every offspring to the mutator, which receives the original offspring. Neither extreme draws from the RNG. The algorithms use the step's same RNG for routing and mutation, so observers count only offspring routed to the configured mutator. `WeightedRouter.AtRate(rate)` supplies boolean choices for callers that need a decision, and `AppliedAtRate` remains a configuration helper for explicitly configured compositions using the same rate weights.
 
@@ -202,11 +202,11 @@ Resolution extensions cast the resolved executor to the operation's interface. `
 
 ### Make the operation observable
 
-An operation is observable once it declares three parts beside the operation, as each built-in operation does: an observation record, advice that builds the record from the typed call, and a `Calls` source. The record carries the call's inputs and outputs together with its search space and problem, so a trace can rank by that problem's objective:
+An operation is observable once it declares three parts beside the operation, as each built-in operation does: an observation record, advice that builds the record from the typed call, and a `Invocations` source. The record carries the call's inputs and outputs together with its search space and problem, so a trace can rank by that problem's objective:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
 
-`Analyzer.Trace(estimator.Calls, observation => observation.Estimates.Count)` and `Aspect.Observe(estimator.Calls, …)` then work as they do for built-in operations. The advice casts because `OperatorAdvice<TOperation, TCandidate>` receives the executor untyped; a role advice base such as `MutatorAdvice<TCandidate>` removes that cast for its operation.
+`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `Aspect.Observe(estimator.Invocations, …)` then work as they do for built-in operations. The advice casts because `OperatorAdvice<TOperation, TCandidate>` receives the executor untyped; a role advice base such as `MutatorAdvice<TCandidate>` removes that cast for its operation.
 
 ## Scaffolding roles and cross-cutting concerns
 
@@ -229,8 +229,8 @@ An agent will not settle a concern's semantics for you. Implement and review the
 
 The `OperatorAuthoringAnalyzer` Roslyn analyzer assists with common mistakes across operator roles:
 
-- `HLib0002` reports execution graph dependencies exposed through stateful operator state or requested through `GetScopedState`, and a `GetScopedState` request that passes a configuration other than `this`.
-- `HLib0003` reports direct mutation of operator configuration members during operation logic.
+- `HLib0002` reports execution graph dependencies exposed through stateful operator state or requested through `GetScopedState`, a `GetScopedState` request that passes a configuration other than `this`, and direct resolution of another configuration's observation point.
+- `HLib0003` reports direct mutation of configuration members outside construction, in operators, algorithms and consumer-defined roles alike.
 - `HLib0004` reports a framework contract type bound as the stateful state type argument, which is usually a reduced-arity mix-up.
 
 These diagnostics are guardrails, not a proof that every invariant is satisfied. They cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate.

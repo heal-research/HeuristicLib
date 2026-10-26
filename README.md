@@ -131,7 +131,7 @@ var problem = new SymbolicRegressionProblem(
 var algorithm = GeneticAlgorithm.Create(
     new RampedHalfAndHalfTreeCreator(),
     new SubtreeCrossover(),
-    ChoosePerCandidate.Create(
+    ChoosePerItem.Create(
         new NodeReplacementMutator(),
         new LocalPerturbationMutator(),
         new SubtreeMutator()),

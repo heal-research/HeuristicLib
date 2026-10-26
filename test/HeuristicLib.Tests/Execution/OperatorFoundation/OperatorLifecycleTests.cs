@@ -164,7 +164,7 @@ public sealed class OperatorLifecycleTests
             var duration = new DurationAccumulator();
             var source = new ProbeMutation(new Probe { ChildAction = () => clock.Advance(17) });
             var timing = Aspect.Create(Pointcut.Reference(source), new DurationAdvice(duration, clock));
-            var observing = Aspect.Create(Pointcut.Reference(source), new CountCalls(new CallCounter(),
+            var observing = Aspect.Create(Pointcut.Reference(source), new CountInvocations(new InvocationCounter(),
                 new AdviceLog { AfterSuccess = () => clock.Advance(5) }));
             var aspects = timingInside ? new[] { timing, observing } : new[] { observing, timing };
             InvokeOperation(Typed(ResolutionScope.Create(aspects)).Resolve(source));

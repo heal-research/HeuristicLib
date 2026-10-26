@@ -151,6 +151,8 @@ Equal but distinct algorithm configurations retain separate child state. Repeate
 
 For a meta-algorithm with the same activation policies, keep one `ChildScopeSelector` as scoped state, created from its `ChildScopePolicy` through `scope.GetScopedState(this, create)`. Pass that selector to each executor and call `GetScopeFor(child, scope)` when activating a child. Every build in the owning scope, for any run type, shares the selector and its retained child state, while each activation applies its own scope's aspects. Keep invocation progress and the current scope on the executor; scoped state must not capture a requesting scope.
 
+Inner algorithms do not know they run inside a meta-algorithm, so the meta-algorithm reports its own progress. `CycleAlgorithm` publishes the start of each cycle and turn, as [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns) shows. To report a point of your own, declare a named child with `ObservationPoint.Of<TObservation>(this, nameof(Point))`, resolve it through `scope.Resolve(Point)` in `CreateExecutor`, and call its executor's `Report` method at that point. The point is itself an observation source.
+
 ## Preserve run behavior
 
 A meta-algorithm should:

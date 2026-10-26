@@ -55,16 +55,16 @@ public sealed class MutatorParameterSemanticsTests
     {
         var gaussian = new GaussianMutator(mutationRate: 1, mutationStrength: value);
         var polynomial = new PolynomialMutator { Eta = value };
-        var execution = ResolutionScope.Create()
+        var executor = ResolutionScope.Create()
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(gaussian)
             .ShouldBeAssignableTo<IMutationStrengthControl>();
 
-        execution.CurrentMutationStrength = value;
+        executor.CurrentMutationStrength = value;
 
         gaussian.MutationStrength.ShouldBe(value);
         polynomial.Eta.ShouldBe(value);
-        execution.CurrentMutationStrength.ShouldBe(value);
+        executor.CurrentMutationStrength.ShouldBe(value);
         GaussianMutator.Mutate(emptyRealVector, random, emptyRealSearchSpace, mutationRate: 1, mutationStrength: value).ShouldBeSameAs(emptyRealVector);
         PolynomialMutator.Mutate(emptyRealVector, random, emptyRealSearchSpace, eta: value, atLeastOnce: false).ShouldBeSameAs(emptyRealVector);
     }

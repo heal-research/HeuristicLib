@@ -38,9 +38,9 @@ public class AnalysisSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(4));
         var algorithm = CreateAlgorithm(problem);
         var iterations = Clock.FromIterations(algorithm);
-        var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
+        var evaluations = Clock.FromCandidates(algorithm.Evaluator);
         var quality = algorithm.Iterations.TracePopulationQuality(retention: TraceRetention.EveryNth(2), clocks: [iterations, evaluations]);
-        var best = algorithm.Evaluator.Calls.TraceBestSoFar(clocks: [evaluations]);
+        var best = algorithm.Evaluator.Invocations.TraceBestSoFar(clocks: [evaluations]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
             .AddAspect(quality)
             .AddAspect(best);
@@ -76,7 +76,7 @@ public class AnalysisSpecs
         var algorithm = CreateAlgorithm(problem);
         var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42));
         var results = run.AddAspectPerTrial(trial =>
-            trial.Iterations.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
+            trial.Iterations.TracePopulationQuality(clocks: [Clock.FromCandidates(trial.Evaluator)]));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

@@ -28,7 +28,7 @@ public record OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState>
     /// Gets whether the budget counts the observed operator's successful calls or its candidate work.
     /// </summary>
     /// <remarks>Counting candidates fails when the run is built if the operation reports no candidate work.</remarks>
-    public OperatorCountMetric Metric { get; init; } = OperatorCountMetric.Calls;
+    public OperatorCountMetric Metric { get; init; } = OperatorCountMetric.Invocations;
 
     /// <summary>
     /// Gets the counted-operator budget. The expected value is positive.
@@ -101,16 +101,16 @@ public static class OperatorCountBudgetExtensions
         /// The operation is inferred from the operator; for an operator implementing several operations, pass it through a
         /// variable of the operation's operator type.
         /// </remarks>
-        public OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToCalls<TOperation>(
-            IOperator<TOperation, TCandidate> observedOperator, int maximumCalls)
+        public OperatorBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToInvocations<TOperation>(
+            IOperator<TOperation, TCandidate> observedOperator, int maximumInvocations)
             where TOperation : IOperation<TOperation>
         {
             return new()
             {
                 Algorithm = algorithm,
                 ObservedOperator = observedOperator,
-                Metric = OperatorCountMetric.Calls,
-                MaximumCount = maximumCalls
+                Metric = OperatorCountMetric.Invocations,
+                MaximumCount = maximumInvocations
             };
         }
 

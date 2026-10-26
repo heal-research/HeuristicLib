@@ -15,6 +15,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
     public const string StateContractDiagnosticId = "HLib0004";
 
     private const string OperatorMetadataName = "HEAL.HeuristicLib.Operators.IOperator";
+    private const string ConfigurationMetadataName = "HEAL.HeuristicLib.Execution.IConfigurationNode";
     private const string CreateScopedStateMethodName = "CreateScopedState";
     private const string GetScopedStateMethodName = "GetScopedState";
 
@@ -34,10 +35,18 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    private static readonly DiagnosticDescriptor ObservationPointOwnerRule = new(
+        id: StatefulStateDiagnosticId,
+        title: "A configuration must resolve only its own observation points",
+        messageFormat: "Observation point '{0}' is not declared by this configuration. Resolve only this configuration's own observation points.",
+        category: "Architecture",
+        defaultSeverity: DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     private static readonly DiagnosticDescriptor ConfigurationMutationRule = new(
         id: ConfigurationMutationDiagnosticId,
-        title: "Operator configurations must not be mutated during operation logic",
-        messageFormat: "Operator configuration member '{0}' is mutated during operation logic. Store mutable execution data in state or an explicit executor instead.",
+        title: "Configurations must not be mutated after construction",
+        messageFormat: "Configuration member '{0}' is mutated outside construction. Store mutable execution data in scoped state or an executor instead.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -50,7 +59,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ScopedStateOwnerRule, ConfigurationMutationRule, StateContractRule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ScopedStateOwnerRule, ObservationPointOwnerRule, ConfigurationMutationRule, StateContractRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -62,6 +71,8 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
             var forbiddenTypes = GetForbiddenTypes(startContext.Compilation);
             var stateContractTypes = GetStateContractTypes(startContext.Compilation, forbiddenTypes);
             var operatorContract = startContext.Compilation.GetTypeByMetadataName(OperatorMetadataName);
+            var configurationContract = startContext.Compilation.GetTypeByMetadataName(ConfigurationMetadataName);
+            var observationPoint = startContext.Compilation.GetTypeByMetadataName("HEAL.HeuristicLib.Inspection.ObservationPoint`1");
             startContext.RegisterSymbolAction(
                 symbolContext => AnalyzeStatefulOperator(symbolContext, forbiddenTypes, stateContractTypes, operatorContract),
                 SymbolKind.NamedType);
@@ -71,7 +82,11 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
                 SyntaxKind.InvocationExpression);
 
             startContext.RegisterSyntaxNodeAction(
-                syntaxContext => AnalyzeAssignment(syntaxContext, operatorContract),
+                syntaxContext => AnalyzeObservationPointResolution(syntaxContext, configurationContract, observationPoint),
+                SyntaxKind.InvocationExpression);
+
+            startContext.RegisterSyntaxNodeAction(
+                syntaxContext => AnalyzeAssignment(syntaxContext, configurationContract),
                 SyntaxKind.SimpleAssignmentExpression,
                 SyntaxKind.AddAssignmentExpression,
                 SyntaxKind.SubtractAssignmentExpression,
@@ -86,7 +101,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
                 SyntaxKind.CoalesceAssignmentExpression);
 
             startContext.RegisterSyntaxNodeAction(
-                syntaxContext => AnalyzeIncrementOrDecrement(syntaxContext, operatorContract),
+                syntaxContext => AnalyzeIncrementOrDecrement(syntaxContext, configurationContract),
                 SyntaxKind.PreIncrementExpression,
                 SyntaxKind.PreDecrementExpression,
                 SyntaxKind.PostIncrementExpression,
@@ -169,7 +184,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         // A scope forwarding the request passes the configuration it received.
         if (!ExecutionTypes.Is(context.ContainingSymbol?.ContainingType, "ResolutionScope"))
         {
-            AnalyzeScopedStateOwner(context, invocation);
+            AnalyzeRequestOwner(context, invocation, ScopedStateOwnerRule);
         }
 
         if (request.TypeArguments[0] is not INamedTypeSymbol stateType)
@@ -191,8 +206,58 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         ReportForbiddenStateMembers(context.ReportDiagnostic, stateType, forbiddenTypes, invocation.GetLocation());
     }
 
+    private static void AnalyzeObservationPointResolution(SyntaxNodeAnalysisContext context, INamedTypeSymbol? configurationContract, INamedTypeSymbol? observationPoint)
+    {
+        var invocation = (InvocationExpressionSyntax)context.Node;
+        if (configurationContract is null || observationPoint is null
+            || context.ContainingSymbol?.ContainingType is not { } configuration
+            || !IsOrImplements(configuration, configurationContract)
+            || !invocation.Ancestors().OfType<MethodDeclarationSyntax>().Any(static method => method.Identifier.ValueText == "CreateExecutor")
+            || context.SemanticModel.GetOperation(invocation, context.CancellationToken) is not IInvocationOperation operation
+            || operation.TargetMethod.Name is not ("Resolve" or "ResolveOptional" or "TryResolve")
+            || !ExecutionTypes.Is(operation.TargetMethod.ContainingType, "ResolutionScope")
+            || operation.Arguments.FirstOrDefault(static argument => argument.Parameter?.Ordinal == 0) is not { } point)
+        {
+            return;
+        }
+
+        var value = Unwrap(point.Value);
+        if (value.Type is not INamedTypeSymbol pointType
+            || !SymbolEqualityComparer.Default.Equals(pointType.OriginalDefinition, observationPoint))
+        {
+            return;
+        }
+
+        var owner = value switch
+        {
+            IPropertyReferenceOperation property => property.Instance,
+            IFieldReferenceOperation field => field.Instance,
+            IInvocationOperation { TargetMethod.Name: "Of" } factory
+                when factory.TargetMethod.ContainingType.ToDisplayString() == "HEAL.HeuristicLib.Inspection.ObservationPoint" =>
+                factory.Arguments.FirstOrDefault(static argument => argument.Parameter?.Ordinal == 0)?.Value,
+            _ => null
+        };
+        // Locals and helper results need data-flow analysis to establish ownership; do not reject valid aliases.
+        if (owner is null || IsThis(owner))
+        {
+            return;
+        }
+
+        context.ReportDiagnostic(Diagnostic.Create(ObservationPointOwnerRule, point.Syntax.GetLocation(), value.Syntax.ToString()));
+    }
+
+    private static IOperation Unwrap(IOperation operation)
+    {
+        while (operation is IConversionOperation conversion)
+            operation = conversion.Operand;
+        return operation;
+    }
+
+    private static bool IsThis(IOperation operation) =>
+        Unwrap(operation) is IInstanceReferenceOperation { ReferenceKind: InstanceReferenceKind.ContainingTypeInstance };
+
     // A configuration requests only its own state, so the request passes this.
-    private static void AnalyzeScopedStateOwner(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation)
+    private static void AnalyzeRequestOwner(SyntaxNodeAnalysisContext context, InvocationExpressionSyntax invocation, DiagnosticDescriptor rule)
     {
         if (context.SemanticModel.GetOperation(invocation, context.CancellationToken) is not IInvocationOperation operation
             || operation.Arguments.FirstOrDefault(static argument => argument.Parameter?.Ordinal == 0) is not { } configuration)
@@ -212,7 +277,7 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         }
 
         context.ReportDiagnostic(Diagnostic.Create(
-            ScopedStateOwnerRule,
+            rule,
             configuration.Syntax.GetLocation(),
             value.Syntax.ToString()));
     }
@@ -419,15 +484,15 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         return namedType.AllInterfaces.Any(@interface => SymbolEqualityComparer.Default.Equals(@interface, candidate));
     }
 
-    private static void AnalyzeAssignment(SyntaxNodeAnalysisContext context, INamedTypeSymbol? operatorContract)
+    private static void AnalyzeAssignment(SyntaxNodeAnalysisContext context, INamedTypeSymbol? configurationContract)
     {
         if (context.Node is AssignmentExpressionSyntax assignment)
         {
-            AnalyzeMutationTarget(context, assignment.Left, operatorContract);
+            AnalyzeMutationTarget(context, assignment.Left, configurationContract);
         }
     }
 
-    private static void AnalyzeIncrementOrDecrement(SyntaxNodeAnalysisContext context, INamedTypeSymbol? operatorContract)
+    private static void AnalyzeIncrementOrDecrement(SyntaxNodeAnalysisContext context, INamedTypeSymbol? configurationContract)
     {
         var operand = context.Node switch
         {
@@ -438,18 +503,19 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 
         if (operand is not null)
         {
-            AnalyzeMutationTarget(context, operand, operatorContract);
+            AnalyzeMutationTarget(context, operand, configurationContract);
         }
     }
 
-    private static void AnalyzeMutationTarget(SyntaxNodeAnalysisContext context, ExpressionSyntax target, INamedTypeSymbol? operatorContract)
+    // Every configuration is reusable settings: operators, algorithms and consumer-defined roles alike.
+    private static void AnalyzeMutationTarget(SyntaxNodeAnalysisContext context, ExpressionSyntax target, INamedTypeSymbol? configurationContract)
     {
         var enclosingSymbol = context.SemanticModel.GetEnclosingSymbol(target.SpanStart, context.CancellationToken);
         if (enclosingSymbol is not IMethodSymbol method
             || method.MethodKind is MethodKind.Constructor or MethodKind.StaticConstructor or MethodKind.PropertySet or MethodKind.EventAdd or MethodKind.EventRemove
             || method.ContainingType is null
-            || operatorContract is null
-            || !IsOrImplements(method.ContainingType, operatorContract))
+            || configurationContract is null
+            || !IsOrImplements(method.ContainingType, configurationContract))
         {
             return;
         }

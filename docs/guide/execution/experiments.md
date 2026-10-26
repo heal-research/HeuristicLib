@@ -137,7 +137,7 @@ Analyzers can collect progress during each trial rather than only final states. 
 ```csharp
 var run = algorithm.Repeat(2).CreateRun(problem, random);
 var analyses = run.AddAspectPerTrial(trial =>
-    trial.Iterations.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
+    trial.Iterations.TracePopulationQuality(clocks: [Clock.FromCandidates(trial.Evaluator)]));
 await run.CompleteAsync();
 ```
 

@@ -231,7 +231,7 @@ public sealed class OperatorOwnershipTests
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static (WeakReference Source, WeakReference Execution) MakeDiscarded(ResolutionScope root)
+    private static (WeakReference Source, WeakReference Executor) MakeDiscarded(ResolutionScope root)
     {
         IOperator<Mutation, RealVector> source = new CountingMutation();
         var executor = Typed(root.CreateChildScope()).Resolve(source);
@@ -239,7 +239,7 @@ public sealed class OperatorOwnershipTests
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    private static WeakReference MakeFreshExecution(ResolutionScope root, IOperator<Mutation, RealVector> source) =>
+    private static WeakReference MakeFreshExecutor(ResolutionScope root, IOperator<Mutation, RealVector> source) =>
         new(Typed(root.CreateChildScope()).Resolve(source));
 
     [Fact]
@@ -248,15 +248,15 @@ public sealed class OperatorOwnershipTests
         var root = ResolutionScope.Create();
         IOperator<Mutation, RealVector> retainedSource = new CountingMutation();
         var discarded = MakeDiscarded(root);
-        var discardedExecution = MakeFreshExecution(root, retainedSource);
-        for (var attempt = 0; attempt < 5 && (discarded.Source.IsAlive || discarded.Execution.IsAlive || discardedExecution.IsAlive); attempt++)
+        var discardedExecutor = MakeFreshExecutor(root, retainedSource);
+        for (var attempt = 0; attempt < 5 && (discarded.Source.IsAlive || discarded.Executor.IsAlive || discardedExecutor.IsAlive); attempt++)
         {
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
         }
-        Check(!discarded.Source.IsAlive && !discarded.Execution.IsAlive, "live root does not retain discarded child owner or source");
-        Check(!discardedExecution.IsAlive, "live source does not retain discarded fresh execution");
+        Check(!discarded.Source.IsAlive && !discarded.Executor.IsAlive, "live root does not retain discarded child owner or source");
+        Check(!discardedExecutor.IsAlive, "live source does not retain discarded fresh execution");
         GC.KeepAlive(root);
         GC.KeepAlive(retainedSource);
     }

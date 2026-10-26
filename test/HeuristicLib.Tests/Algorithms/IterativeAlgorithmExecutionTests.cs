@@ -50,7 +50,7 @@ public class IterativeAlgorithmExecutionTests
         var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
         states.ShouldBeEmpty();
-        interceptor.Calls.ShouldBe(0);
+        interceptor.Invocations.ShouldBe(0);
     }
 
     [Fact]
@@ -174,12 +174,12 @@ public class IterativeAlgorithmExecutionTests
 
     private sealed class RecordingInterceptor : IInterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
     {
-        public int Calls { get; private set; }
+        public int Invocations { get; private set; }
         public IRandomNumberGenerator? Random { get; private set; }
 
         public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {
-            Calls++;
+            Invocations++;
             Random = random;
             return currentState with { Value = currentState.Value + 1 };
         }

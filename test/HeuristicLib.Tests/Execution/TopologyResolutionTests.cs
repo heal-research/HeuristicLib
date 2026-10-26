@@ -259,7 +259,7 @@ public sealed class TopologyResolutionTests
 
     private sealed class CounterState
     {
-        public int Calls;
+        public int Invocations;
     }
 
     private sealed record CountingLeaf(Action Prepare) : StatefulMutator<RealVector, CounterState>
@@ -271,7 +271,7 @@ public sealed class TopologyResolutionTests
         }
 
         protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, CounterState state, IRandomNumberGenerator random) =>
-            [RealVector.Repeat(++state.Calls, 1)];
+            [RealVector.Repeat(++state.Invocations, 1)];
     }
 
     // Requests the scoped state of its child, whose build has already finished.
@@ -322,7 +322,7 @@ public sealed class TopologyResolutionTests
             public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
                 var result = child.Mutate(parents, random, searchSpace, problem);
-                return [RealVector.Repeat(result[0][0] + 100 * ++state.Calls, 1)];
+                return [RealVector.Repeat(result[0][0] + 100 * ++state.Invocations, 1)];
             }
         }
     }
@@ -361,14 +361,14 @@ public sealed class TopologyResolutionTests
                 var result = parents;
                 foreach (var child in children)
                     result = child.Mutate(result, random, searchSpace, problem);
-                return [RealVector.Repeat(result[0][0] + 100 * ++state.Calls, 1)];
+                return [RealVector.Repeat(result[0][0] + 100 * ++state.Invocations, 1)];
             }
         }
     }
 
     private sealed class WrapCountingAdvice(CountAccumulator counter, Action wrapped) : OperatorAdvice<Mutation, RealVector>
     {
-        private readonly CountingOperatorAdvice<Mutation, RealVector> counting = new(counter, OperatorCountMetric.Calls);
+        private readonly CountingOperatorAdvice<Mutation, RealVector> counting = new(counter, OperatorCountMetric.Invocations);
 
         public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
             IOperator<Mutation, RealVector> source)

@@ -13,12 +13,12 @@ public class AdaptableMutationStrengthTests
     public void GaussianMutator_KeepsConfiguredStrengthOnConfigurationAndCurrentStrengthOnExecution()
     {
         var mutator = new GaussianMutator(1.0, 2.0);
-        var execution = Resolve(mutator);
+        var executor = Resolve(mutator);
 
-        execution.CurrentMutationStrength = 4.0;
+        executor.CurrentMutationStrength = 4.0;
 
         mutator.MutationStrength.ShouldBe(2.0);
-        execution.CurrentMutationStrength.ShouldBe(4.0);
+        executor.CurrentMutationStrength.ShouldBe(4.0);
     }
 
     [Fact]
@@ -58,7 +58,7 @@ public class AdaptableMutationStrengthTests
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 4.0;
         var observedCalls = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountCalls(mutator, observedCalls));
+        var child = parent.CreateChildScope(Aspect.CountInvocations(mutator, observedCalls));
         var typed = child.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         var inner = typed.Resolve(mutator, out IMutationStrengthControl? innerStrength);
         ShouldShareStrength(innerStrength, strength);
@@ -87,7 +87,7 @@ public class AdaptableMutationStrengthTests
         var gaussian = new GaussianMutator(1.0, 3.0);
         var algorithm = CreateAlgorithm(gaussian, problem);
         var calls = new CountAccumulator();
-        var scope = observed ? ResolutionScope.Create(Aspect.CountCalls(gaussian, calls)) : ResolutionScope.Create();
+        var scope = observed ? ResolutionScope.Create(Aspect.CountInvocations(gaussian, calls)) : ResolutionScope.Create();
         var executor = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
         var states = executor.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
 
@@ -105,7 +105,7 @@ public class AdaptableMutationStrengthTests
         var algorithm = CreateAlgorithm(gaussian, problem);
         var calls = new CountAccumulator();
         var root = ResolutionScope.Create();
-        var child = root.CreateChildScope(Aspect.CountCalls(gaussian, calls));
+        var child = root.CreateChildScope(Aspect.CountInvocations(gaussian, calls));
         child.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(gaussian, out IMutationStrengthControl? localStrength);
         localStrength.ShouldNotBeNull();
         localStrength.CurrentMutationStrength = 9.0;
@@ -138,7 +138,7 @@ public class AdaptableMutationStrengthTests
         var calls = new CountAccumulator();
         var mutator = PipelineMutator.Create(gaussian);
         var algorithm = CreateAlgorithm(mutator, problem);
-        var scope = ResolutionScope.Create(Aspect.CountCalls(mutator, calls));
+        var scope = ResolutionScope.Create(Aspect.CountInvocations(mutator, calls));
         var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
         typed.Resolve(mutator, out IMutationStrengthControl? strength);
         strength.ShouldBeNull();
@@ -176,7 +176,7 @@ public class AdaptableMutationStrengthTests
             for (var activation = 0; activation < 2; activation++)
             {
                 var calls = new CountAccumulator();
-                var scope = selector.GetScopeFor(algorithm, root.With(Aspect.CountCalls(mutator, calls)));
+                var scope = selector.GetScopeFor(algorithm, root.With(Aspect.CountInvocations(mutator, calls)));
                 var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
                 _ = typed.Resolve(mutator, out IMutationStrengthControl? strength);
                 _ = typed.Resolve(gaussian, out IMutationStrengthControl? childStrength);

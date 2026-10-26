@@ -14,14 +14,14 @@ public class DynamicAnalysisTests
         var problem = new IntegerDynamicProblem(epochLength: 2);
         var provider = new EpochBestKnown();
         var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(problem, provider);
-        var execution = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
 
-        execution.ShouldNotBeAssignableTo<IDisposable>();
-        execution.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.ShouldNotBeAssignableTo<IDisposable>();
+        executor.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
             .Select(value => value[0]).ShouldBe([1d, 1d]);
-        execution.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
             .Single()[0].ShouldBe(0);
-        execution.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
             .Single()[0].ShouldBe(0);
         provider.Epochs.ShouldBe([0, 1]);
     }
@@ -46,7 +46,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
         var epoch = Clock.FromEpoch(problem);
-        var bestPerEpoch = Analyzer.Trace(algorithm.Evaluator.Calls, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bestPerEpoch = Analyzer.Trace(algorithm.Evaluator.Invocations, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(bestPerEpoch);
 
@@ -65,7 +65,7 @@ public class DynamicAnalysisTests
             [5, 3, 7],
             [10, 1]
         ]);
-        var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
+        var evaluations = Clock.FromCandidates(algorithm.Evaluator);
         var epoch = Clock.FromEpoch(problem);
         var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
 

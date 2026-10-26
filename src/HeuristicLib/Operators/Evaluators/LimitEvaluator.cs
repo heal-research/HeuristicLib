@@ -56,7 +56,7 @@ public sealed record LimitEvaluator<TCandidate>
 
             if (enforceLimitWithinBatch && remainingEvaluations < candidates.Count)
             {
-                var candidatesToEvaluate = candidates.Take(remainingEvaluations).ToList();
+                var candidatesToEvaluate = candidates.Take((int)remainingEvaluations).ToList();
                 var evaluated = childEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
                 counter.IncrementBy(candidatesToEvaluate.Count);
                 var skipped = Enumerable.Repeat(fallback, candidates.Count - candidatesToEvaluate.Count);

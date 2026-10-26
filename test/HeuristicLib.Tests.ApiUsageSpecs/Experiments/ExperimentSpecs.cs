@@ -54,7 +54,7 @@ public class ExperimentSpecs
             .AsGrid()
             .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456));
-        var analyses = run.AddAspectPerTrial(algorithm => algorithm.Evaluator.Calls.TraceBestSoFar());
+        var analyses = run.AddAspectPerTrial(algorithm => algorithm.Evaluator.Invocations.TraceBestSoFar());
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

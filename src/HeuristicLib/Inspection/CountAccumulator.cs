@@ -2,11 +2,11 @@ namespace HEAL.HeuristicLib.Inspection;
 
 public sealed class CountAccumulator
 {
-    private int currentCount;
+    private long currentCount;
 
-    public int CurrentCount => currentCount;
+    public long CurrentCount => Interlocked.Read(ref currentCount);
 
-    public void IncrementBy(int by)
+    public void IncrementBy(long by)
     {
         Interlocked.Add(ref currentCount, by);
     }

@@ -46,7 +46,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
         this.problem = problem;
         this.objectiveValueSelector = objectiveValueSelector ?? (static objectiveVector => objectiveVector[0]);
         PredictionEpochMultiplier = predictionEpochMultiplier;
-        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Calls, ReadBatch))];
+        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Invocations, ReadBatch))];
     }
 
     public int PredictionEpochMultiplier { get; }

@@ -106,7 +106,7 @@ public sealed class CustomAdviceDocumentationSpecs
     }
 
     [Fact]
-    public void TheAdviceObjectOwnsItsCallCounterAcrossRebindingAndRoots()
+    public void TheAdviceObjectOwnsItsInvocationCounterAcrossRebindingAndRoots()
     {
         var mutator = new NoChangeMutator<RealVector>();
         var calls = new List<int>();

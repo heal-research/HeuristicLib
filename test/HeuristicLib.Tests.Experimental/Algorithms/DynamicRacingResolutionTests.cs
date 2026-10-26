@@ -99,8 +99,8 @@ public sealed class DynamicRacingResolutionTests
         };
         var creations = new CountAccumulator();
         var mutations = new CountAccumulator();
-        var parent = ResolutionScope.Create(Aspect.CountCalls(metaCreator, creations),
-            Aspect.CountCalls(metaMutator, mutations));
+        var parent = ResolutionScope.Create(Aspect.CountInvocations(metaCreator, creations),
+            Aspect.CountInvocations(metaMutator, mutations));
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
         _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender);
         await using var paused = Run(parent, racing, problem).GetAsyncEnumerator();
@@ -111,8 +111,8 @@ public sealed class DynamicRacingResolutionTests
 
         var evaluations = new CountAccumulator();
         var interceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountCalls(contender.Evaluator, evaluations),
-            Aspect.CountCalls(interceptor, interceptions));
+        var child = parent.CreateChildScope(Aspect.CountInvocations(contender.Evaluator, evaluations),
+            Aspect.CountInvocations(interceptor, interceptions));
         await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         sources[1].ShouldBeSameAs(contender);
@@ -129,7 +129,7 @@ public sealed class DynamicRacingResolutionTests
         interceptions.CurrentCount.ShouldBe(1);
 
         var independentSourceIndex = sources.Count;
-        var independent = ResolutionScope.Create(Aspect.CountCalls(metaCreator, creations));
+        var independent = ResolutionScope.Create(Aspect.CountInvocations(metaCreator, creations));
         await using var fresh = Run(independent, racing, problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(2);

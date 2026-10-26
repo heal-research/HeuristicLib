@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.Problems.TestFunctions;
 namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 
 /// <summary>
-/// The three move roles follow the same migration shape as the nine core roles, so they get the same binding check:
+/// The three move roles follow the same migration shape as the nine core roles, so they get the same resolution check:
 /// an operator written for a search space and problem resolves over exactly those, and is reported over anything else.
 /// </summary>
 /// <remarks>
@@ -14,7 +14,7 @@ namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 /// it is itself all three move operators, which name only the candidate and the move. That lets a neighborhood be held
 /// without repeating the triple.
 /// </remarks>
-public class MoveRoleBindingTests
+public class MoveRoleResolutionTests
 {
     private static readonly BoundedRealVectorSearchSpace SearchSpace = new(2, -1.0, 1.0);
 
@@ -30,9 +30,9 @@ public class MoveRoleBindingTests
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
         var (creations, applications, evaluations) = (new CountAccumulator(), new CountAccumulator(), new CountAccumulator());
         var scope = ResolutionScope.Create(
-                Aspect.CountCalls(neighborhood.MoveCreator, creations),
-                Aspect.CountCalls(neighborhood.MoveApplier, applications),
-                Aspect.CountCalls(neighborhood.MoveEvaluator, evaluations))
+                Aspect.CountInvocations(neighborhood.MoveCreator, creations),
+                Aspect.CountInvocations(neighborhood.MoveApplier, applications),
+                Aspect.CountInvocations(neighborhood.MoveEvaluator, evaluations))
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var random = RandomNumberGenerator.Create(1);
         var candidate = new RealVector(0.0, 0.0);

@@ -11,10 +11,10 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_MeasuresTheRefinedCandidatesRatherThanTheSuppliedOnes()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new AddOffsetRefiner(10)));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var problem = CreateProblem();
 
-        var objectiveVectors = execution.Evaluate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         objectiveVectors.ShouldBe([new ObjectiveVector(11.0), new ObjectiveVector(12.0)]);
     }
@@ -22,11 +22,11 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_ReturnsOneObjectiveVectorPerSuppliedCandidateInInputOrder()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new AddOffsetRefiner(10)));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var problem = CreateProblem();
         var candidates = new[] { 5, 1, 3 };
 
-        var objectiveVectors = execution.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         objectiveVectors.Count.ShouldBe(candidates.Length);
         objectiveVectors.ShouldBe([new ObjectiveVector(15.0), new ObjectiveVector(11.0), new ObjectiveVector(13.0)]);
@@ -37,11 +37,11 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_LeavesTheSuppliedCandidatesUntouched()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new AddOffsetRefiner(10)));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var problem = CreateProblem();
         var candidates = new[] { 1, 2 };
 
-        execution.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         candidates.ShouldBe([1, 2]);
     }
@@ -51,10 +51,10 @@ public class RefinementEvaluatorTests
     {
         var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var execution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed.AppliedAfterRefinement(new AddOffsetRefiner(10)));
+        var executor = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed.AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var problem = CreateProblem();
 
-        execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         counter.CurrentCount.ShouldBe(3);
     }
@@ -81,10 +81,10 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_WithARefinerThatResizesThePopulation_Throws()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new DropLastRefiner()));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().AppliedAfterRefinement(new DropLastRefiner()));
         var problem = CreateProblem();
 
-        Should.Throw<InvalidOperationException>(() => execution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
     }
 
     [Fact]

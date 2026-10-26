@@ -6,7 +6,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 
-public sealed class CallCounter
+public sealed class InvocationCounter
 {
     public int Value { get; set; }
 }
@@ -39,7 +39,7 @@ public sealed class AdviceLog
     }
 }
 
-public readonly struct CountingWrapper(CallCounter total, AdviceLog log) : IInvocationWrapper
+public readonly struct CountingWrapper(InvocationCounter total, AdviceLog log) : IInvocationWrapper
 {
     public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
     {
@@ -51,7 +51,7 @@ public readonly struct CountingWrapper(CallCounter total, AdviceLog log) : IInvo
 }
 
 // One external general counter, with no enumeration of operations or execution signatures.
-public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvice
+public sealed class CountInvocations(InvocationCounter total, AdviceLog log) : OperatorAdvice
 {
     public override void Check(OperationInfo operation, IOperator source) => log.Check(source);
 
@@ -62,7 +62,7 @@ public sealed class CountCalls(CallCounter total, AdviceLog log) : OperatorAdvic
     }
 }
 
-public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, AdviceLog log)
+public sealed class CountInvocations<TOperation, TCandidate>(InvocationCounter total, AdviceLog log)
     : OperatorAdvice<TOperation, TCandidate> where TOperation : IOperation<TOperation>
 {
     public override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
@@ -76,7 +76,7 @@ public sealed class CountCalls<TOperation, TCandidate>(CallCounter total, Advice
     }
 }
 
-public sealed class WrongViewAdvice(CallCounter total, AdviceLog log) : OperatorAdvice<Mutation, RealVector>
+public sealed class WrongViewAdvice(InvocationCounter total, AdviceLog log) : OperatorAdvice<Mutation, RealVector>
 {
     public bool ReturnWrongView { get; set; } = true;
 

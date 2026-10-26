@@ -14,14 +14,14 @@ public class SelectorCompositionTests
         var problem = CreateProblem();
         var observed = BestSelector.For(problem);
         var selector = observed.AvoidSameMates(maximumAttempts: 3);
-        var execution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        var executor = ResolutionScope.Create(Aspect.CountInvocations(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var population = new[]
         {
             EvaluatedCandidate.From(1, new ObjectiveVector(1.0)),
             EvaluatedCandidate.From(2, new ObjectiveVector(2.0))
         };
 
-        var selected = execution.Select(population, problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var selected = executor.Select(population, problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         selected.ShouldBe(population);
         counter.CurrentCount.ShouldBe(1);
@@ -33,11 +33,11 @@ public class SelectorCompositionTests
         var femaleSelector = new RangeSelector(0);
         var maleSelector = new RangeSelector(2);
         var selector = GenderSpecificSelector.Create(femaleSelector, maleSelector);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var problem = CreateProblem();
         var population = CreatePopulation(1, 2, 3, 4);
 
-        var selected = execution.Select(population, problem.Objective, 4, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var selected = executor.Select(population, problem.Objective, 4, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         selector.FemaleSelector.ShouldBeSameAs(femaleSelector);
         selector.MaleSelector.ShouldBeSameAs(maleSelector);
@@ -48,10 +48,10 @@ public class SelectorCompositionTests
     public void GenderSpecificSelector_UsesFemaleSelectorForUnpairedFinalCandidate()
     {
         var selector = new RangeSelector(0).PairWith(new RangeSelector(2));
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var problem = CreateProblem();
 
-        var selected = execution.Select(CreatePopulation(1, 2, 3, 4), problem.Objective, 3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var selected = executor.Select(CreatePopulation(1, 2, 3, 4), problem.Objective, 3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         selected.Select(candidate => candidate.Candidate).ShouldBe([1, 3, 2]);
     }

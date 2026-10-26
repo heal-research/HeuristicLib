@@ -34,7 +34,7 @@ public sealed class OperationBindingTests
         probe.Work.ShouldBe(expectedWork);
         probe.Successes.ShouldBe(1);
         probe.Cleanups.ShouldBe(1);
-        source.Calls.ShouldBe(1);
+        source.Invocations.ShouldBe(1);
     }
 
     [Theory]
@@ -58,7 +58,7 @@ public sealed class OperationBindingTests
                 error.ShouldBeNull();
             else
                 error.ShouldBeSameAs(failure);
-            source.Calls.ShouldBe(Math.Min(failures + 1, 3));
+            source.Invocations.ShouldBe(Math.Min(failures + 1, 3));
             source.Preparations.ShouldBe(1);
             source.Constructions.ShouldBe(1);
             source.RandomSources[0].ShouldNotBeNull();
@@ -87,7 +87,7 @@ public sealed class OperationBindingTests
         advice.Wraps.ShouldBe(1);
         source.Preparations.ShouldBe(1);
         source.Constructions.ShouldBe(1);
-        source.Calls.ShouldBe(2);
+        source.Invocations.ShouldBe(2);
         source.RandomSources.ShouldAllBe(random => ReferenceEquals(random, source.RandomSources[0]));
     }
 
@@ -134,8 +134,8 @@ public sealed class OperationBindingTests
 
         InvokeOperation(scope, source, operation);
 
-        source.Calls.ShouldBe(0);
-        other.Calls.ShouldBe(1);
+        source.Invocations.ShouldBe(0);
+        other.Invocations.ShouldBe(1);
         other.RandomSources.ShouldBe([recorder.Random.ShouldNotBeNull()]);
     }
 
@@ -174,14 +174,14 @@ public sealed class OperationBindingTests
         var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), factory));
         var first = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
         factory.Wraps.ShouldBe(1);
-        source.Calls.ShouldBe(0);
+        source.Invocations.ShouldBe(0);
         var random = RandomNumberGenerator.Create(1);
         for (var i = 0; i < 3; i++)
             first.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
         factory.Wraps.ShouldBe(1);
 
         var contextCalls = new CountAccumulator();
-        var second = root.With(Aspect.CountCalls(mutation, contextCalls))
+        var second = root.With(Aspect.CountInvocations(mutation, contextCalls))
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
         factory.Wraps.ShouldBe(2);
         second.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
@@ -190,7 +190,7 @@ public sealed class OperationBindingTests
         contextCalls.CurrentCount.ShouldBe(2);
         source.Preparations.ShouldBe(1);
         source.Constructions.ShouldBe(2);
-        source.Calls.ShouldBe(10);
+        source.Invocations.ShouldBe(10);
         factory.Wraps.ShouldBe(2);
     }
 
@@ -214,7 +214,7 @@ public sealed class OperationBindingTests
         probe.Failure.ShouldBeSameAs(failure);
         probe.Successes.ShouldBe(0);
         probe.Cleanups.ShouldBe(1);
-        source.Calls.ShouldBe(1);
+        source.Invocations.ShouldBe(1);
     }
 
     [Theory]
@@ -248,7 +248,7 @@ public sealed class OperationBindingTests
 
         Assert.Throws<NotSupportedException>(() => InvokeOperation(scope, source, operation));
         probe.Successes.ShouldBe(0);
-        source.Calls.ShouldBe(1);
+        source.Invocations.ShouldBe(1);
     }
 
     [Fact]
@@ -444,7 +444,7 @@ public sealed class OperationBindingTests
         public static readonly IReadOnlyList<EvaluatedCandidate<RealVector>> Population = Output.ToEvaluated<RealVector>([4.0, 5.0]);
         public int Preparations { get; private set; }
         public int Constructions { get; private set; }
-        public int Calls { get; private set; }
+        public int Invocations { get; private set; }
         public Exception? Failure { get; init; }
         public int FailuresBeforeSuccess { get; init; } = int.MaxValue;
         public List<IRandomNumberGenerator> RandomSources { get; } = [];
@@ -470,8 +470,8 @@ public sealed class OperationBindingTests
         private void Call(IRandomNumberGenerator random)
         {
             RandomSources.Add(random);
-            Calls++;
-            if (Failure is { } failure && Calls <= FailuresBeforeSuccess)
+            Invocations++;
+            if (Failure is { } failure && Invocations <= FailuresBeforeSuccess)
                 throw failure;
         }
 

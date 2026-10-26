@@ -134,7 +134,7 @@ public interface IConfigurationNode
 }
 ```
 
-`ExecutionSignature` is the triple an execution is built for — its search space, its problem, and the search state it
+`ExecutionSignature` is the triple an executor is built for — its search space, its problem, and the search state it
 produces. It is built where an execution graph is created, by a run or by validation asking what a run would do, and
 passed down unchanged; a configuration reads the parts it is written about and ignores
 the rest, so an ordinary operator never builds one:

@@ -12,7 +12,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// one child run as one call on it, in item order and with the same generator; a child assigned every item receives the
 /// original call. Each child must return one result per item it receives. Only operations marked with
 /// <see cref="IItemOperation{TSelf}"/> support this.
-/// Whole-call choice is <see cref="ChoosePerCall{TOperation, TCandidate}"/>. The choice exposes no controls of its
+/// Per-invocation choice is <see cref="ChoosePerInvocation{TOperation, TCandidate}"/>. The choice exposes no controls of its
 /// children.
 /// </remarks>
 public sealed record ChoosePerItem<TOperation, TCandidate> : MultiOperator<TOperation, TCandidate>

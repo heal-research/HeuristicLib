@@ -12,35 +12,35 @@ public class ImprovementCheckingRefinerTests
     public void Refine_KeepsTheRefinedCandidateWhenItImproves()
     {
         // The problem minimizes the candidate value, so subtracting improves.
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement());
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement());
 
-        Refine(execution, 10, 20).ShouldBe([5, 15]);
+        Refine(executor, 10, 20).ShouldBe([5, 15]);
     }
 
     [Fact]
     public void Refine_KeepsTheOriginalCandidateWhenRefinementMakesItWorse()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(5).CheckedForImprovement());
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(5).CheckedForImprovement());
 
-        Refine(execution, 10, 20).ShouldBe([10, 20]);
+        Refine(executor, 10, 20).ShouldBe([10, 20]);
     }
 
     // A refiner that cannot improve a candidate returns it unchanged, so failure never produces a worse candidate.
     [Fact]
     public void Refine_KeepsTheOriginalCandidateWhenTheRefinerChangesNothing()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(NoChangeRefiner<int>.Instance.CheckedForImprovement());
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(NoChangeRefiner<int>.Instance.CheckedForImprovement());
 
-        Refine(execution, 10, 20).ShouldBe([10, 20]);
+        Refine(executor, 10, 20).ShouldBe([10, 20]);
     }
 
     [Fact]
     public void Refine_DecidesPerCandidateRatherThanPerBatch()
     {
         // Halving improves 10 but worsens -10, because the problem minimizes.
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new HalveRefiner().CheckedForImprovement());
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new HalveRefiner().CheckedForImprovement());
 
-        Refine(execution, 10, -10).ShouldBe([5, -10]);
+        Refine(executor, 10, -10).ShouldBe([5, -10]);
     }
 
     [Fact]
@@ -50,7 +50,7 @@ public class ImprovementCheckingRefinerTests
         var observed = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(observed);
 
-        Refine(ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner)).ShouldBeEmpty();
+        Refine(ResolutionScope.Create(Aspect.CountInvocations(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner)).ShouldBeEmpty();
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -76,11 +76,11 @@ public class ImprovementCheckingRefinerTests
         var sharedEvaluator = observed.Cached();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
         var scope = ResolutionScope.Create(Aspect.CountCandidates(observed, counter));
-        var refinerExecution = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
+        var refinerExecutor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();
 
-        var accepted = refinerExecution.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var accepted = refinerExecutor.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         algorithmEvaluator.Evaluate(accepted, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         accepted.ShouldBe([5]);
@@ -148,9 +148,9 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_WhenTheRefinerChangesTheBatchSize_Throws()
     {
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new DroppingRefiner().CheckedForImprovement());
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new DroppingRefiner().CheckedForImprovement());
 
-        Should.Throw<InvalidOperationException>(() => Refine(execution, 10, 20));
+        Should.Throw<InvalidOperationException>(() => Refine(executor, 10, 20));
     }
 
     [Fact]

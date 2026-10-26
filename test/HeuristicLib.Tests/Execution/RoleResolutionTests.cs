@@ -258,7 +258,7 @@ public sealed class RoleResolutionTests
 
     private sealed class CounterState
     {
-        public int Calls;
+        public int Invocations;
     }
 
     private sealed record BoundMutator(Action Prepare)
@@ -271,7 +271,7 @@ public sealed class RoleResolutionTests
         }
 
         protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, CounterState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-            [RealVector.Repeat(++state.Calls, 1)];
+            [RealVector.Repeat(++state.Invocations, 1)];
     }
 
     private sealed record SearchSpaceMutator(Action Prepare)
@@ -284,7 +284,7 @@ public sealed class RoleResolutionTests
         }
 
         protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, CounterState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
-            [RealVector.Repeat(++state.Calls, 1)];
+            [RealVector.Repeat(++state.Invocations, 1)];
     }
 
     private sealed record CandidateMutator(Action Prepare) : StatefulMutator<RealVector, CounterState>
@@ -296,7 +296,7 @@ public sealed class RoleResolutionTests
         }
 
         protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, CounterState state, IRandomNumberGenerator random) =>
-            [RealVector.Repeat(++state.Calls, 1)];
+            [RealVector.Repeat(++state.Invocations, 1)];
     }
 
     private sealed class ObservingMutatorAdvice(Action<double> report) : MutatorAdvice<RealVector>
@@ -327,7 +327,7 @@ public sealed class RoleResolutionTests
             return new CounterState();
         }
 
-        protected override bool IsTerminalState(CounterState state) => ++state.Calls >= 3;
+        protected override bool IsTerminalState(CounterState state) => ++state.Invocations >= 3;
     }
 
     private sealed record AgnosticAlgorithm(Action Prepare) : Algorithm<AgnosticAlgorithm, RealVector, SingleSolutionState<RealVector>>

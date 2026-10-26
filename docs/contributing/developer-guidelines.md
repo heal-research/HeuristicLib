@@ -129,7 +129,7 @@ Search states are public progress values. Do not use them to carry private count
 
 Every configuration's `CreateExecutor` receives a scope, typed to the run for operators and algorithms; resolve children through it and pass them to the executor. Retain a scope only for child scopes, wrappers or delayed child construction. A meta-algorithm needing retained child state keeps one `ChildScopeSelector` as scoped state; each activation supplies its current scope. Do not add another scope abstraction or call a child's hook directly.
 
-Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
+Algorithms resolve only their configured parameters and their own declared observation points, and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
 Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executors and introduces no configuration children.
 
@@ -154,7 +154,7 @@ A setting has one input path.
 - Required values are constructor parameters without defaults.
 - Optional values are `init` properties with defaults. Do not also put them in the constructor.
 - Every configuration property is `{ get; init; }` so `with` can vary it.
-- Executor children and run data are `{ get; }` because executions are not reconfigured.
+- Executor children and run data are `{ get; }` because executors are not reconfigured.
 
 ### § 4.7 Validate complete configurations when building
 
@@ -186,7 +186,7 @@ Executors keep resolved children and machinery private or protected. Use nested 
 
 ### § 4.12 Keep role authoring hierarchies symmetric
 
-Keep configuration and execution authoring hierarchies symmetric. Every full role base has a matching executor base, and derived configurations and executions use the matching pair. `WrappingOperator` and `MultiOperator` have none: their hooks resolve the children, and the executor they construct holds them. Pass required resolved children and scoped state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
+Keep configuration and executor authoring hierarchies symmetric. Every full role base has a matching executor base, and derived configurations and executors use the matching pair. `WrappingOperator` and `MultiOperator` have none: their hooks resolve the children, and the executor they construct holds them. Pass required resolved children and scoped state through constructors. Rebinding must not reset persistent state or capture children from an earlier context.
 
 ### § 4.13 Give each child slot one public name
 
@@ -201,9 +201,9 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 
 - Use a stateless base for configuration data without mutable run data.
 - Use a stateful base for ordinary run data without execution graph dependencies.
-- Author an execution explicitly for child executors, disposable resources or custom execution structure.
+- Author an executor explicitly for child executors, disposable resources or custom execution structure.
 - Use a single item base for independent per item work.
-- Never put configurations, executions, registries, scopes or child bound delegates in framework managed operator state.
+- Never put configurations, executors, registries, scopes or child bound delegates in framework managed operator state.
 
 Stateless and ordinary stateful leaf bases hide executor construction. Composite authors take persistent scoped state from `scope.GetScopedState(this, create)` and keep it apart from bound children. Executors have no general disposal contract; resources still require an explicit lifecycle owner.
 
@@ -227,7 +227,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 ### § 4.19 Keep role execution contracts role specific
 
-Role executions expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
+Role executors expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
 Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `SearchSpace` and `Problem` are the call's search space and problem without their run types, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument and cannot replace these; typed role advice receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `CountCandidateWork` defaults to throwing, and operations with candidate work implement it, so it does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
 
@@ -390,7 +390,7 @@ Where a parameter carries both, its documentation points at the member that defi
 Reduced arities let authors omit operation inputs they do not use. Keep each role family consistent.
 
 The ladder is also where the search space and problem type arguments legitimately live. They have left the role
-contracts — nominal roles use `I<Role><TCandidate>` and the shared slot uses `IOperator<TOperation, TCandidate>` — but an authoring base that reads a search space or a problem still
+contract `IOperator<TOperation, TCandidate>`, but an authoring base that reads a search space or a problem still
 names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
 candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
 pair costs the author two type arguments and costs every consumer none. And for a stateless operator the
@@ -443,7 +443,7 @@ Generic types and methods that name an operation put it first: `TOperation, TCan
 Expose a direct static implementation when the candidate or genotype does not already own the operation.
 
 - Do not add a static method that only forwards to the candidate or genotype.
-- Name the static method for the operation, such as `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`. Let the execution method delegate to it.
+- Name the static method for the operation, such as `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`. Let the executor method delegate to it.
 - Provide one core overload that accepts the direct inputs needed by the operation.
 - Use search space overloads as thin adapters unless the search space is the true dependency.
 - Order adapters before the core overload and delegate inward.
@@ -472,7 +472,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Each operation supplies one invocation over its named method. General wrappers and advice reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work implements both. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a whole-call wrapper uses the invocation's `Random` and `Proceed`. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
+Each operation supplies one invocation over its named method. General wrappers and advice reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work implements both. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family
@@ -488,7 +488,7 @@ infer the triple. `typed.Resolve(config)` goes through a `ResolutionScope` that 
 everything and relays to the canonical form. One mechanism, two spellings; keep both.
 
 Whatever the declaration count, the call site stays minimal: `typed.Resolve(config)` or
-`typed.TryResolve(config, out var execution, out var reason)`, with nothing the caller is forced to supply to make inference work.
+`typed.TryResolve(config, out var executor, out var reason)`, with nothing the caller is forced to supply to make inference work.
 An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
 differently needs a separate argument.
 

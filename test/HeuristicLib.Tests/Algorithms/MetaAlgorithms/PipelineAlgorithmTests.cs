@@ -82,9 +82,9 @@ public class PipelineAlgorithmTests
         var pipeline = algorithm.Then(algorithm);
         var scope = ResolutionScope.Create();
         _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var pipelineExecution = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
+        var pipelineExecutor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
 
-        var states = pipelineExecution.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = pipelineExecutor.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
         algorithm.ExecutionCount.ShouldBe(2);
@@ -108,7 +108,7 @@ public class PipelineAlgorithmTests
 
         public EvaluationCountAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
+            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
         }
 
         public void Record(EvaluationObservation<int> observation) =>

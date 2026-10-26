@@ -97,7 +97,7 @@ public class CycleAlgorithmAnalysisTests
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Calls, Record)];
+            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
         }
 
         public void Record(EvaluationObservation<int> observation) =>

@@ -212,8 +212,8 @@ public sealed class MutatorSelectionTests
 
     private static async Task RunToCompletion(ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm)
     {
-        var execution = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
-        await execution.RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        await executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
             .LastAsync(TestContext.Current.CancellationToken);
     }
 

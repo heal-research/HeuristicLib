@@ -72,12 +72,12 @@ public partial class ExecutorResolutionTests
         rebound.Next().ShouldBe(2);
         rebound.Control.Value.ShouldBe(2);
         ancestor.Control.Value.ShouldBe(2);
-        rebound.Calls.ShouldBe(2);
-        ancestor.Calls.ShouldBe(2);
+        rebound.Invocations.ShouldBe(2);
+        ancestor.Invocations.ShouldBe(2);
         local.Next().ShouldBe(2);
         observed.ShouldBe(3);
         ancestor.Next().ShouldBe(3);
-        rebound.Calls.ShouldBe(3);
+        rebound.Invocations.ShouldBe(3);
         local.Value.ShouldBe(2);
     }
 
@@ -393,7 +393,7 @@ public partial class ExecutorResolutionTests
     private sealed class CompositeExecutor(ICounterExecutor child, ICounterControl control, Count calls) : IExecutor
     {
         public ICounterControl Control { get; } = control;
-        public int Calls => calls.Value;
+        public int Invocations => calls.Value;
         public int Next()
         {
             var result = child.Next();
