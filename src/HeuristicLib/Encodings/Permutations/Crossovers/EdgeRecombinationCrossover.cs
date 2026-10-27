@@ -12,6 +12,9 @@ public record EdgeRecombinationCrossover : SingleCandidateCrossover<Permutation>
     public static Permutation Cross(Permutation parent1, Permutation parent2, IRandomNumberGenerator random)
     {
         var length = parent1.Count;
+        if (length < 2)
+            return parent1;
+
         var result = new int[length];
         var edgeList = new int[length, 4];
         var remainingNumbers = new bool[length];

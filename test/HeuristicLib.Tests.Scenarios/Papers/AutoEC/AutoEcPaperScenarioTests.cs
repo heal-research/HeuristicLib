@@ -1,11 +1,39 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using HEAL.HeuristicLib.Problems.Dynamic;
+using MetaOptimizationGenotype = HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
 
-namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Tests.Scenarios.Papers.AutoEC;
 
 public partial class AutoEcPaperScenarioTests
 {
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public async Task MatrixScaffold_ExportsBatchHistoryAndMatchingCompletedEpochPerformance(int noRacers)
+    {
+        var scenario = new MovingPeaksAutoEcScenario(targetEpochChanges: 3, noRacers: noRacers, epochLength: 50);
+        var result = await RunScenario(scenario);
+        var curve = result.Output.QualityCurve;
+        var epochs = curve.GroupBy(point => point.Timing.Epoch).ToArray();
+
+        result.Input.Problem.Parameters["UpdatePolicy"].ShouldBe(nameof(UpdatePolicy.AfterEachIteration));
+        result.Output.ObservedEpoch.ShouldBe(3);
+        epochs.Select(group => group.Key).ShouldBe([0, 1, 2]);
+        curve.Count.ShouldBeGreaterThan(epochs.Length);
+        curve.ShouldAllBe(point => point.Timing.Valid);
+        curve.Zip(curve.Skip(1)).ShouldAllBe(pair => pair.First.Timing.EpochCount <= pair.Second.Timing.EpochCount);
+        foreach (var epoch in epochs)
+        {
+            // MPB maximizes: the exported best must not deteriorate within an epoch.
+            epoch.Zip(epoch.Skip(1)).ShouldAllBe(pair => pair.First.ObjectiveVector[0] <= pair.Second.ObjectiveVector[0]);
+            var bbcp = result.Output.BestBeforeChange.Single(point => point.Timing.Epoch == epoch.Key);
+            bbcp.ObjectiveVector.ShouldBe(epoch.Last().ObjectiveVector);
+            epoch.ShouldContain(point => point.Timing == bbcp.Timing && point.Candidate == bbcp.Candidate);
+        }
+        result.Output.BestBeforeChangePerformance.ShouldBe(epochs.Average(group => group.Last().ObjectiveVector[0]), tolerance: 1e-12);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(3)]
@@ -79,6 +107,9 @@ public partial class AutoEcPaperScenarioTests
         var result = await RunScenario(scenario);
 
         AssertScenarioProducesExperimentSignals(result, minQualityEpochs: 2, minBbcpChanges: 1);
+        var solverRoot = Path.Combine(FindRepositoryRoot(), "artifacts", "concorde");
+        result.Input.Problem.Parameters["ExactSolverWorkingDirectoryRoot"].ShouldBe(solverRoot);
+        Directory.Exists(solverRoot).ShouldBeTrue();
         result.Output.QualityCurve
               .Where(point => point.Timing.Valid)
               .ShouldAllBe(point => point.ObjectiveVector[0] >= -1e-12);
@@ -288,8 +319,11 @@ public partial class AutoEcPaperScenarioTests
             noRacers: 1,
             epochLength: 100);
 
-        var gaResult = await RunScenario(ga);
-        var hypermutationResult = await RunScenario(hypermutation);
+        // Pin Gaussian mutation: the complete catalog also contains a repair-only mutator, for which changing
+        // the application rate need not change any candidate and would not exercise the dynamic response.
+        var initialConfiguration = new MetaOptimizationGenotype([0.1], [12, 0, 0]);
+        var gaResult = await RunScenario(ga, initialConfiguration);
+        var hypermutationResult = await RunScenario(hypermutation, initialConfiguration);
 
         var gaCurve = gaResult.Output.QualityCurve.SelectMany(point => point.ObjectiveVector).ToArray();
         var hypermutationCurve = hypermutationResult.Output.QualityCurve

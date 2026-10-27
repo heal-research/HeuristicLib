@@ -1,5 +1,3 @@
-using HEAL.HeuristicLib.Encodings.Composite;
-using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
@@ -7,15 +5,10 @@ using HEAL.HeuristicLib.Problems.Dynamic;
 using MetaOptimizationGenotype =
     HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
-using MetaOptimizationSearchSpace =
-    HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
-        HEAL.HeuristicLib.Encodings.RealVectors.BoundedRealVectorSearchSpace,
-        HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector,
-        HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVectorSearchSpace>;
 using RealVectorUniformDistributedCreator =
     HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
-namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Tests.Scenarios.Papers.AutoEC;
 
 public partial class AutoEcPaperScenarioTests
 {
@@ -50,16 +43,26 @@ public partial class AutoEcPaperScenarioTests
         public override int TargetEpochChanges => targetEpochChanges;
         public override int NoRacers => noRacers;
         protected override int EpochLength => epochLength;
-        public override IReadOnlyList<AutoEcParameterRange> HyperParameterRanges =>
-        [
-            new("mutationRate", "real", 0.05, 0.4),
-            new("populationSize", "integer", 8, 16)
-        ];
+        protected override AutoEcParameterRange MutationRateRange => new("mutationRate", "real", 0.05, 0.4);
+        protected override AutoEcParameterRange PopulationSizeRange => new("populationSize", "integer", 8, 16);
+        protected override IReadOnlyList<AutoEcOperatorChoice<ICrossover<RealVector>>> CrossoverChoices { get; } =
+        CreateCrossoverChoices<RealVector>([
+            new("SimulatedBinaryCrossover+BoundsClamping", new SimulatedBinaryCrossover().TransformWith(new BoundsClampingMutator())),
+            new(nameof(AlphaBetaBlendCrossover), new AlphaBetaBlendCrossover()),
+            new("SinglePointCrossover", new HEAL.HeuristicLib.Encodings.RealVectors.SinglePointCrossover()),
+            new(nameof(SelfAdaptiveSimulatedBinaryCrossover), new SelfAdaptiveSimulatedBinaryCrossover())
+        ]);
+        protected override IReadOnlyList<AutoEcOperatorChoice<IMutator<RealVector>>> MutatorChoices { get; } =
+        CreateMutatorChoices<RealVector>([
+            new("GaussianMutator(strength=0.5)", new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5)),
+            new("PolynomialMutator(eta=20)", new PolynomialMutator()),
+            new(nameof(BoundsClampingMutator), new BoundsClampingMutator())
+        ]);
 
         public override MovingPeaksProblem CreateProblem() =>
             new(movingPeaksParameters,
                 RandomNumberGenerator.Create(ProblemSeed),
-                epochSchedule: new EvaluationCountSchedule(EpochLength), updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
+                epochSchedule: new EvaluationCountSchedule(EpochLength), updatePolicy: UpdatePolicy.AfterEachIteration);
 
         public override IEvaluator<RealVector> CreateEvaluator(
             MovingPeaksProblem problem) =>
@@ -86,7 +89,7 @@ public partial class AutoEcPaperScenarioTests
                         movingPeaksParameters.HeightSeverity.ToString("R"),
                     [nameof(MovingPeaksParameters.WidthSeverity)] =
                         movingPeaksParameters.WidthSeverity.ToString("R"),
-                    ["UpdatePolicy"] = UpdatePolicy.AfterEachBatchEvaluation.ToString(),
+                    ["UpdatePolicy"] = UpdatePolicy.AfterEachIteration.ToString(),
                     ["EpochLength"] = EpochLength.ToString(),
                     ["QualityScale"] = "RelativeToCurrentHighestPeak",
                     ["BestKnownProvider"] = "CurrentHighestPeakHeight"
@@ -98,9 +101,8 @@ public partial class AutoEcPaperScenarioTests
                 {
                     ["Encoding"] = "RealVector",
                     ["Creator"] = nameof(RealVectorUniformDistributedCreator),
-                    ["Crossover"] = nameof(SimulatedBinaryCrossover),
-                    ["Mutator"] = nameof(GaussianMutator),
-                    ["MutationStrength"] = "0.5",
+                    ["Crossover"] = "Raced",
+                    ["Mutator"] = "Raced",
                     ["Selector"] = "TournamentSelector",
                     ["TournamentSize"] = "2",
                     ["Elites"] = "1",
@@ -109,11 +111,6 @@ public partial class AutoEcPaperScenarioTests
                     ["ChangeTriggeredImmigrantRate"] = ChangeTriggeredImmigrantRate.ToString("R")
                 });
 
-        protected override MetaOptimizationSearchSpace CreateHyperParameterSearchSpace() =>
-            new BoundedRealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
-                .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
-                    new IntegerVectorSearchSpace(1, new IntegerVector(8), new IntegerVector(16)));
-
         protected override IAlgorithm<RealVector, PopulationState<RealVector>>
             CreateAlgorithm(
                 MovingPeaksProblem problem,
@@ -121,8 +118,8 @@ public partial class AutoEcPaperScenarioTests
                 MetaOptimizationGenotype hyperParameters)
         {
             var creator = new RealVectorUniformDistributedCreator(problem.SearchSpace);
-            var crossover = new SimulatedBinaryCrossover().TransformWith(new BoundsClampingMutator());
-            var mutator = new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5);
+            var crossover = SelectCrossover(hyperParameters);
+            var mutator = SelectMutator(hyperParameters);
             var selector = TournamentSelector.For(problem, tournamentSize: 2);
             var populationSize = hyperParameters.Part2[0];
             var mutationRate = hyperParameters.Part1[0];

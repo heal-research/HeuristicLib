@@ -1,7 +1,4 @@
-using HEAL.HeuristicLib.Encodings.Composite;
-using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
-using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.Dynamic;
@@ -9,13 +6,8 @@ using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using MetaOptimizationGenotype =
     HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
         HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
-using MetaOptimizationSearchSpace =
-    HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<HEAL.HeuristicLib.Encodings.RealVectors.RealVector,
-        HEAL.HeuristicLib.Encodings.RealVectors.BoundedRealVectorSearchSpace,
-        HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector,
-        HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVectorSearchSpace>;
 
-namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Tests.Scenarios.Papers.AutoEC;
 
 public partial class AutoEcPaperScenarioTests
 {
@@ -34,6 +26,7 @@ public partial class AutoEcPaperScenarioTests
     {
         private const double ActivationProbability = 0.7;
         private const double SwitchProbability = 0.25;
+        private static string ConcordeWorkingDirectoryRoot => Path.Combine(FindRepositoryRoot(), "artifacts", "concorde");
 
         public override string ScenarioName =>
             scenarioName ?? $"activated-tsp-{FormatAlgorithmKind(ChildAlgorithmKind)}-auto-ec-smoke";
@@ -42,11 +35,10 @@ public partial class AutoEcPaperScenarioTests
         public override int TargetEpochChanges => targetEpochChanges;
         public override int NoRacers => noRacers;
         public override double MetaMutationStrength => 0.1;
-        public override IReadOnlyList<AutoEcParameterRange> HyperParameterRanges =>
-        [
-            new("mutationRate", "real", 0.01, 0.2),
-            new("populationSize", "integer", 20, 60)
-        ];
+        protected override AutoEcParameterRange MutationRateRange => new("mutationRate", "real", 0.01, 0.2);
+        protected override AutoEcParameterRange PopulationSizeRange => new("populationSize", "integer", 20, 60);
+        protected override IReadOnlyList<AutoEcOperatorChoice<ICrossover<Permutation>>> CrossoverChoices { get; } = CreatePermutationCrossoverChoices();
+        protected override IReadOnlyList<AutoEcOperatorChoice<IMutator<Permutation>>> MutatorChoices { get; } = CreatePermutationMutatorChoices();
 
         public override ActivatedTravelingSalesmanProblem CreateProblem()
         {
@@ -56,7 +48,7 @@ public partial class AutoEcPaperScenarioTests
                 RandomNumberGenerator.Create(ProblemSeed),
                 activationProb: ActivationProbability,
                 switchProbability: SwitchProbability,
-                epochSchedule: new EvaluationCountSchedule(epochLength), updatePolicy: UpdatePolicy.AfterEachBatchEvaluation);
+                epochSchedule: new EvaluationCountSchedule(epochLength), updatePolicy: UpdatePolicy.AfterEachIteration);
         }
 
         public override AutoEcProblemDescription CreateProblemDescription() =>
@@ -66,11 +58,12 @@ public partial class AutoEcPaperScenarioTests
                     ["SourceFile"] = tspFile,
                     ["ActivationProbability"] = ActivationProbability.ToString("R"),
                     ["SwitchProbability"] = SwitchProbability.ToString("R"),
-                    ["UpdatePolicy"] = UpdatePolicy.AfterEachBatchEvaluation.ToString(),
+                    ["UpdatePolicy"] = UpdatePolicy.AfterEachIteration.ToString(),
                     ["EpochLength"] = epochLength.ToString(),
                     ["QualityScale"] = concordePath is null ? "AbsoluteObjectiveValue" : "RelativeToExactEpochOptimum",
                     ["ExactSolver"] = concordePath is null ? "None" : "Concorde",
                     ["ExactSolverPath"] = concordePath ?? string.Empty,
+                    ["ExactSolverWorkingDirectoryRoot"] = concordePath is null ? string.Empty : ConcordeWorkingDirectoryRoot,
                     ["EvaluatorCache"] = "DynamicCachingEvaluator",
                     ["EvaluatorCacheKey"] = nameof(PermutationCacheKeySelector),
                     ["EvaluatorCacheGraceCount"] = epochLength.ToString()
@@ -82,8 +75,8 @@ public partial class AutoEcPaperScenarioTests
                 {
                     ["Encoding"] = "Permutation",
                     ["Creator"] = nameof(RandomPermutationCreator),
-                    ["Crossover"] = nameof(EdgeRecombinationCrossover),
-                    ["Mutator"] = nameof(InversionMutator),
+                    ["Crossover"] = "Raced",
+                    ["Mutator"] = "Raced",
                     ["Selector"] = "GeneralizedRankSelector",
                     ["RankPressure"] = "4",
                     ["Elites"] = "1",
@@ -112,13 +105,11 @@ public partial class AutoEcPaperScenarioTests
             return evaluator.ScaledToDynamicBestKnown(
                 problem,
                 new ActivatedTravelingSalesmanExactBestKnownProvider(
-                    new ConcordeTravelingSalesmanExactSolver(concordePath)));
+                    new ConcordeTravelingSalesmanExactSolver(concordePath)
+                    {
+                        WorkingDirectoryRoot = ConcordeWorkingDirectoryRoot
+                    }));
         }
-
-        protected override MetaOptimizationSearchSpace CreateHyperParameterSearchSpace() =>
-            new BoundedRealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
-                .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
-                    new IntegerVectorSearchSpace(1, new IntegerVector(20), new IntegerVector(60)));
 
         protected override IAlgorithm<Permutation, PopulationState<Permutation>>
             CreateAlgorithm(
@@ -127,8 +118,8 @@ public partial class AutoEcPaperScenarioTests
                 MetaOptimizationGenotype hyperParameters)
         {
             var creator = new RandomPermutationCreator();
-            var crossover = new EdgeRecombinationCrossover();
-            var mutator = new InversionMutator();
+            var crossover = SelectCrossover(hyperParameters);
+            var mutator = SelectMutator(hyperParameters);
             var selector = GeneralizedRankSelector.For(problem, pressure: 4.0);
             var populationSize = hyperParameters.Part2[0];
             var mutationRate = hyperParameters.Part1[0];

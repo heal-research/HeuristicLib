@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Problems.Dynamic;
 
-namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Tests.Scenarios.Papers.AutoEC;
 
 public partial class AutoEcPaperScenarioTests
 {
@@ -20,12 +20,12 @@ public partial class AutoEcPaperScenarioTests
     private static readonly int[] MatrixScaffoldRacerVariants = [1, 2];
     private static readonly string[] MatrixScaffoldTspFiles =
     [
-        "burma14.tsp", "bayg29.tsp", "att48.tsp"
+        "burma14.tsp", "bayg29.tsp", "att48.tsp", "kroA100.tsp", "kroB150.tsp", "pr299.tsp"
     ];
     private static readonly string[] MatrixScaffoldQapFiles =
     [
         "chr12a.dat", "had12.dat", "nug12.dat", "chr15a.dat", "dre15.dat", "chr18a.dat", "nug20.dat",
-        "tai20a.dat"
+        "tai20a.dat", "nug30.dat", "tai40a.dat", "sko56.dat"
     ];
     private static readonly MovingPeaksScaffoldConfig[] MatrixScaffoldMovingPeaksConfigs =
     [

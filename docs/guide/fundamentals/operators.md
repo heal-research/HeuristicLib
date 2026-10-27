@@ -45,6 +45,42 @@ Change one policy at a time when comparing configurations and repeat each config
 
 Operators can also be useful outside a complete algorithm. Direct calls are helpful in tests and when assembling a custom workflow. Supply the same search space and random source that the run uses, so validity and reproducibility remain explicit.
 
+## Permutation operators
+
+The `HEAL.HeuristicLib.Encodings.Permutations` namespace provides operators for permutations of the values `0` through `Length - 1`. Crossovers and mutators produce immutable candidates and preserve every value exactly once.
+
+`RandomPermutationCreator` samples a random ordering. `PredefinedPermutationCreator` snapshots its input list and cycles through it across batches. Its `WithRandom` property enables uniform sampling with replacement instead. Each independent execution starts its own cursor. The list must be nonempty, and every predefined permutation must belong to the requested search space. Use the generic `SeededWith` composition when predefined candidates should be consumed once before a fallback creator supplies the rest.
+
+| Crossover                      | Behavior                                                                                                                         |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `OrderCrossover`               | Keeps a segment from the first parent and fills gaps in cyclic second-parent order, starting after the segment.                  |
+| `OrderCrossover2`              | Keeps a segment from the first parent and fills gaps from the beginning of the second parent.                                    |
+| `OrderBasedCrossover`          | Reorders selected values in the second parent according to their first-parent order.                                             |
+| `PositionBasedCrossover`       | Keeps selected second-parent positions and fills gaps in first-parent order.                                                     |
+| `PartiallyMatchedCrossover`    | Exchanges mapped values to preserve a first-parent segment. Requires at least four elements.                                     |
+| `CyclicCrossover`              | Alternates parents between position cycles, choosing the starting parent randomly.                                               |
+| `CyclicCrossover2`             | Keeps one randomly selected first-parent cycle and takes other positions from the second parent.                                 |
+| `EdgeRecombinationCrossover`   | Builds a tour using parental adjacency information.                                                                              |
+| `MaximalPreservativeCrossover` | Keeps a cyclic segment, then prefers unused successors from the second parent before the first. Requires at least four elements. |
+| `CosaCrossover`                | Introduces a second-parent successor edge by reversing a cyclic first-parent segment.                                            |
+| `UniformLikeCrossover`         | Chooses unused parental values at each position and repairs gaps with unused values.                                             |
+
+| Mutator                         | Behavior                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| `SwapMutator`                   | Swaps two independently chosen positions; the positions may coincide.         |
+| `Swap3Mutator`                  | Rotates values at three distinct positions. Requires at least three elements. |
+| `InversionMutator`              | Reverses an inclusive segment.                                                |
+| `InsertionMutator`              | Moves one element to another position.                                        |
+| `ScrambleMutator`               | Shuffles an inclusive segment with Fisher–Yates.                              |
+| `TranslocationMutator`          | Moves an inclusive segment without reversing it.                              |
+| `TranslocationInversionMutator` | Moves and reverses an inclusive segment.                                      |
+
+Except for the stated minimum lengths, random crossover and mutation return permutations with fewer than two elements unchanged without drawing randomness. Segment mutations can leave a candidate unchanged. Translocation insertion points refer to the permutation _after_ removing the segment; inserting at the remaining length appends it.
+
+Use `ChooseOneCrossover` and `ChooseOneMutator` to select among explicitly configured operators, optionally with weights. All selected operators must support the permutation length. This executable example combines predefined creation, crossover selection and mutation selection:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Fundamentals/PermutationOperatorsExample.cs#permutation-operators{csharp}
+
 ## Related guides
 
 - [Use operator recommendations](/guide/fundamentals/algorithms#use-operator-recommendations)

@@ -77,7 +77,7 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
 
     private void ReadBatch(EvaluatorObservation<TCandidate, TSearchSpace, TProblem> observation)
     {
-        // The environment only changes when the next batch begins, so it still names the one that scored this batch.
+        // Batch and iteration update policies leave the scoring environment current until this observation finishes.
         var epoch = problem.CurrentEpoch;
         var comparer = problem.Objective.TotalOrderComparer;
         var batchBest = observation.Candidates

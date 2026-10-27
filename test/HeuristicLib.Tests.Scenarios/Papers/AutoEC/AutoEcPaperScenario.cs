@@ -18,7 +18,7 @@ using MetaOptimizationSearchSpace =
 using RealVectorUniformDistributedCreator =
     HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
-namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Tests.Scenarios.Papers.AutoEC;
 
 public partial class AutoEcPaperScenarioTests
 {
@@ -44,7 +44,17 @@ public partial class AutoEcPaperScenarioTests
         public virtual int MinimumModelObservationCount => 10;
         public virtual int ModelObservationInterval => 10;
         public virtual double MetaMutationStrength => 0.15;
-        public abstract IReadOnlyList<AutoEcParameterRange> HyperParameterRanges { get; }
+        protected abstract AutoEcParameterRange MutationRateRange { get; }
+        protected abstract AutoEcParameterRange PopulationSizeRange { get; }
+        protected abstract IReadOnlyList<AutoEcOperatorChoice<ICrossover<TCandidate>>> CrossoverChoices { get; }
+        protected abstract IReadOnlyList<AutoEcOperatorChoice<IMutator<TCandidate>>> MutatorChoices { get; }
+        public IReadOnlyList<AutoEcParameterRange> HyperParameterRanges =>
+        [
+            MutationRateRange,
+            PopulationSizeRange,
+            new("crossover", "categorical", 0, CrossoverChoices.Count - 1, CrossoverChoices.Select(choice => choice.Name).ToArray()),
+            new("mutator", "categorical", 0, MutatorChoices.Count - 1, MutatorChoices.Select(choice => choice.Name).ToArray())
+        ];
         public DynamicRacingQualityTrace<TCandidate> QualityTrace { get; private set; } = new();
 
         public abstract TProblem CreateProblem();
@@ -53,7 +63,17 @@ public partial class AutoEcPaperScenarioTests
 
         public abstract AutoEcBaseAlgorithmDescription CreateBaseAlgorithmDescription();
 
-        protected abstract MetaOptimizationSearchSpace CreateHyperParameterSearchSpace();
+        protected MetaOptimizationSearchSpace CreateHyperParameterSearchSpace() =>
+            new(new BoundedRealVectorSearchSpace(1, new RealVector(MutationRateRange.Minimum), new RealVector(MutationRateRange.Maximum)),
+                new IntegerVectorSearchSpace(3,
+                    new IntegerVector((int)PopulationSizeRange.Minimum, 0, 0),
+                    new IntegerVector((int)PopulationSizeRange.Maximum, CrossoverChoices.Count - 1, MutatorChoices.Count - 1)));
+
+        protected ICrossover<TCandidate> SelectCrossover(MetaOptimizationGenotype hyperParameters) =>
+            CrossoverChoices[hyperParameters.Part2[1]].Operator;
+
+        protected IMutator<TCandidate> SelectMutator(MetaOptimizationGenotype hyperParameters) =>
+            MutatorChoices[hyperParameters.Part2[2]].Operator;
 
         public virtual IEvaluator<TCandidate> CreateEvaluator(TProblem problem) =>
             ProblemEvaluator.For(problem);
@@ -61,12 +81,15 @@ public partial class AutoEcPaperScenarioTests
         public DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>,
             IAlgorithm<TCandidate, PopulationState<TCandidate>>> CreateRacingAlgorithm(
             TProblem problem,
-            IEvaluator<TCandidate> evaluator)
+            IEvaluator<TCandidate> evaluator,
+            MetaOptimizationGenotype? initialConfiguration = null)
         {
             var metaSpace = CreateHyperParameterSearchSpace();
-            var metaCreator = metaSpace.CombineCreators(
+            ICreator<MetaOptimizationGenotype> metaCreator = metaSpace.CombineCreators(
                 new RealVectorUniformDistributedCreator(),
                 new IntegerVectorUniformDistributedCreator());
+            if (initialConfiguration is not null)
+                metaCreator = new PredefinedCandidatesCreator<MetaOptimizationGenotype>([initialConfiguration], metaCreator);
             var metaMutator = metaSpace.CombineMutator(
                 new GaussianMutator(mutationRate: 1.0, mutationStrength: MetaMutationStrength),
                 new UniformOnePositionMutator());
@@ -103,4 +126,6 @@ public partial class AutoEcPaperScenarioTests
             return QualityTrace;
         }
     }
+
+    private sealed record AutoEcOperatorChoice<TOperator>(string Name, TOperator Operator);
 }

@@ -6,8 +6,9 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
+using MetaOptimizationGenotype = HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
 
-namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Tests.Scenarios.Papers.AutoEC;
 
 public partial class AutoEcPaperScenarioTests
 {
@@ -46,13 +47,14 @@ public partial class AutoEcPaperScenarioTests
     }
 
     private static async Task<AutoEcScenarioResult> RunScenario<TCandidate, TSearchSpace, TProblem>(
-        AutoEcPaperScenario<TCandidate, TSearchSpace, TProblem> scenario)
+        AutoEcPaperScenario<TCandidate, TSearchSpace, TProblem> scenario,
+        MetaOptimizationGenotype? initialConfiguration = null)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
     {
         using var problem = scenario.CreateProblem();
         var evaluator = scenario.CreateEvaluator(problem);
-        var racing = scenario.CreateRacingAlgorithm(problem, evaluator);
+        var racing = scenario.CreateRacingAlgorithm(problem, evaluator, initialConfiguration);
         var epoch = Clock.FromEpoch(problem);
         var evaluations = new ProblemEvaluationClock(() => problem.TotalEvaluations);
         var qualityCurve = Analyzer.Trace(evaluator, observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors), Aggregate.Best<TCandidate>(), [epoch, evaluations]);
@@ -73,10 +75,35 @@ public partial class AutoEcPaperScenarioTests
             problem.SearchSpace.Contains(candidate.Candidate));
 
         return CreateScenarioResult(scenario, problem, finalState,
-            qualityCurve.Snapshot().GroupBy(point => point.At(epoch))
-                .Select(group => group.MinBy(point => point.Value.ObjectiveVector, problem.Objective.TotalOrderComparer))
-                .Select(point => new AutoEcQualityCurvePoint(
-                new AutoEcEvaluationTiming(point.At(evaluations), point.At(epoch), true), AutoEcScenarioResultExport.Export(point.Value.ObjectiveVector), FormatCandidate(point.Value.Candidate))).ToArray(), bbcp);
+            ExportQualityCurve(qualityCurve.Snapshot(), epoch, evaluations, problem.Objective), bbcp);
+    }
+
+    private static IReadOnlyList<AutoEcQualityCurvePoint> ExportQualityCurve<TCandidate>(
+        TraceSnapshot<EvaluatedCandidate<TCandidate>> trace,
+        Clock<int> epochClock,
+        Clock<long> evaluationClock,
+        ObjectiveDirections objective)
+    {
+        var result = new List<AutoEcQualityCurvePoint>(trace.Count);
+        EvaluatedCandidate<TCandidate>? best = null;
+        int? bestEpoch = null;
+        foreach (var point in trace)
+        {
+            var epoch = point.At(epochClock);
+            if (best is null || bestEpoch != epoch ||
+                objective.TotalOrderComparer.Compare(point.Value.ObjectiveVector, best.ObjectiveVector) < 0)
+            {
+                best = point.Value;
+                bestEpoch = epoch;
+            }
+
+            // Keep every observed batch boundary, including plateaus. Generation-boundary updates ensure all
+            // candidates in each batch were evaluated in this epoch, even after the evaluation budget fell due.
+            result.Add(new AutoEcQualityCurvePoint(
+                new AutoEcEvaluationTiming(point.At(evaluationClock), epoch, true),
+                AutoEcScenarioResultExport.Export(best.ObjectiveVector), FormatCandidate(best.Candidate)));
+        }
+        return result;
     }
 
     private sealed class ProblemEvaluationClock(Func<long> readEvaluations) : Clock<long>
@@ -111,6 +138,9 @@ public partial class AutoEcPaperScenarioTests
             scenario.CreateBaseAlgorithmDescription(),
             scenario.HyperParameterRanges);
 
+        var bestTimingByEpoch = qualityResult.GroupBy(point => point.Timing.Epoch)
+            .ToDictionary(group => group.Key, group => group.MinBy(
+                point => new ObjectiveVector(point.ObjectiveVector), problem.Objective.TotalOrderComparer)!.Timing);
         var output = new AutoEcScenarioOutput(
             problem.CurrentEpoch,
             problem.TotalEvaluations,
@@ -118,7 +148,7 @@ public partial class AutoEcPaperScenarioTests
             bbcpResult.Performance,
             qualityResult,
             bbcpResult.BestBeforeChange.Select(point => new AutoEcBestBeforeChangePoint(
-                qualityResult.Single(entry => entry.Timing.Epoch == point.Epoch).Timing,
+                bestTimingByEpoch[point.Epoch],
                 AutoEcScenarioResultExport.Export(point.ObjectiveVector),
                 point.ObjectiveValue,
                 FormatCandidate(point.Candidate))).ToArray(),

@@ -4,9 +4,9 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// How much work a dynamic problem lets finish before it applies an environment update an epoch asked for.
 /// </summary>
 /// <remarks>
-/// A due update is postponed past the named unit of work and applied when the next one begins, so an update falling due
-/// after the last unit is never applied. Change during one evaluation is not supported: that objective value would
-/// describe neither environment.
+/// Evaluation and batch policies apply a due update when the next unit begins, leaving the completed results readable
+/// in the environment that scored them. Iteration updates apply after the named algorithm yields its completed state.
+/// Change during one evaluation is not supported: that objective value would describe neither environment.
 /// </remarks>
 public enum UpdatePolicy
 {

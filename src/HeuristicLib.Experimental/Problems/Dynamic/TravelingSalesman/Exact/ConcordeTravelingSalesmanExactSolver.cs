@@ -30,6 +30,12 @@ public sealed class ConcordeTravelingSalesmanExactSolver : ITravelingSalesmanExa
     }
 
     public TimeSpan Timeout { get; }
+    /// <summary>
+    /// Parent directory for isolated solver invocations, including their executable, runtime and input/output files.
+    /// Defaults to the system temporary directory. Failed invocations are retained here when requested.
+    /// </summary>
+    public string WorkingDirectoryRoot { get; init; } = Path.GetTempPath();
+
     public bool PreserveWorkingDirectoryOnFailure { get; init; } = true;
     public bool AcceptSolutionFileOnNonZeroExit { get; init; } = true;
 
@@ -62,7 +68,7 @@ public sealed class ConcordeTravelingSalesmanExactSolver : ITravelingSalesmanExa
                                                              IReadOnlyList<int> cities,
                                                              CancellationToken cancellationToken)
     {
-        var workingDirectory = Path.Combine(Path.GetTempPath(), $"HeuristicLib_Concorde_{Guid.NewGuid():N}");
+        var workingDirectory = Path.Combine(Path.GetFullPath(WorkingDirectoryRoot), $"HeuristicLib_Concorde_{Guid.NewGuid():N}");
         Directory.CreateDirectory(workingDirectory);
         var solved = false;
 

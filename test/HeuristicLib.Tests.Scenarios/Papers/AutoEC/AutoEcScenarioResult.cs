@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.Problems.Dynamic;
 
 using MetaOptimizationGenotype = HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<HEAL.HeuristicLib.Encodings.RealVectors.RealVector, HEAL.HeuristicLib.Encodings.IntegerVectors.IntegerVector>;
 
-namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
+namespace HEAL.HeuristicLib.Tests.Scenarios.Papers.AutoEC;
 
 public sealed record AutoEcScenarioResult(
     string SchemaVersion,
@@ -64,7 +64,8 @@ public sealed record AutoEcParameterRange(
     string Name,
     string Kind,
     double Minimum,
-    double Maximum);
+    double Maximum,
+    IReadOnlyList<string>? Choices = null);
 
 public sealed record AutoEcScenarioOutput(
     int ObservedEpoch,

@@ -1,4 +1,6 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Algorithms.AutoEC;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Inspection;
@@ -17,6 +19,49 @@ namespace HEAL.HeuristicLib.Tests.Algorithms;
 
 public sealed class DynamicRacingFactoryTests
 {
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public async Task IterationUpdates_FinishEveryBatchOfTheGenerationBeforeChangingEpoch(int burnInEpochs)
+    {
+        using var problem = new EpochProblem(epochLength: 4, updatePolicy: UpdatePolicy.AfterEachIteration);
+        var contender = new LifetimeProbeAlgorithm
+        {
+            BatchesPerMove = 3,
+            Started = static () => { },
+            Disposed = static () => { }
+        };
+        var trace = new DynamicRacingQualityTrace<int>();
+        var bbcp = new BestBeforeChangePerformanceAnalyzer<int, UnrestrictedSearchSpace<int>, EpochProblem>(problem, [contender.Evaluator]);
+        var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm>(
+            new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+            new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
+            _ => contender, algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = burnInEpochs,
+            EarlyTerminationStrength = 0,
+            HallOfFameStrength = 0,
+            QualityTraceSinkFactory = () => trace
+        };
+        await using var stream = Run(ResolutionScope.Create(bbcp), racing, problem)
+            .GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        problem.TotalEvaluations.ShouldBe(6);
+        problem.CurrentEpoch.ShouldBe(1);
+        problem.ScoredEpochs.ShouldBe(Enumerable.Repeat(0, 6));
+        trace.Points.Select(point => point.Epoch).ShouldBe(problem.ScoredEpochs);
+        bbcp.BestBeforeChange.Select(point => point.Epoch).ShouldBe([0]);
+
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        problem.TotalEvaluations.ShouldBe(9);
+        problem.CurrentEpoch.ShouldBe(2);
+        problem.ScoredEpochs.ShouldBe(Enumerable.Repeat(0, 6).Concat(Enumerable.Repeat(1, 3)));
+        trace.Points.Select(point => point.Epoch).ShouldBe(problem.ScoredEpochs);
+        bbcp.BestBeforeChange.Select(point => point.Epoch).ShouldBe([0, 1]);
+    }
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(0, 3)]
@@ -208,13 +253,14 @@ public sealed class DynamicRacingFactoryTests
     {
         public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator<int>();
         public Action BeforeMove { get; init; } = static () => { };
+        public int BatchesPerMove { get; init; } = 1;
         public required Action Started { get; init; }
         public required Action Disposed { get; init; }
 
         public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-            scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), BeforeMove, Started, Disposed);
+            scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator), BeforeMove, Started, Disposed, BatchesPerMove);
 
-        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator, Action beforeMove, Action started, Action disposed)
+        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator, Action beforeMove, Action started, Action disposed, int batchesPerMove)
             : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
@@ -229,7 +275,9 @@ public sealed class DynamicRacingFactoryTests
                         ct.ThrowIfCancellationRequested();
                         beforeMove();
                         int[] candidates = [0];
-                        var qualities = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
+                        IReadOnlyList<ObjectiveVector> qualities = [];
+                        for (var batch = 0; batch < batchesPerMove; batch++)
+                            qualities = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
                         yield return Population.From(candidates.ToEvaluated(qualities)).ToPopulationState();
                         await Task.CompletedTask;
                     }
@@ -242,11 +290,17 @@ public sealed class DynamicRacingFactoryTests
         }
     }
 
-    private sealed class EpochProblem(ObjectiveDirections? objective = null, int epochLength = 3) : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
+    private sealed class EpochProblem(ObjectiveDirections? objective = null, int epochLength = 3, UpdatePolicy updatePolicy = UpdatePolicy.AfterEachBatchEvaluation) : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
         objective ?? SingleObjective.Minimize, UnrestrictedSearchSpace<int>.Instance, RandomNumberGenerator.Create(0),
-        new EvaluationCountSchedule(epochLength), UpdatePolicy.AfterEachBatchEvaluation)
+        new EvaluationCountSchedule(epochLength), updatePolicy)
     {
-        protected override ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random, int epoch) => new(candidate);
+        public List<int> ScoredEpochs { get; } = [];
+
+        protected override ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random, int epoch)
+        {
+            ScoredEpochs.Add(epoch);
+            return new(candidate);
+        }
         protected override void Update() { }
     }
 
