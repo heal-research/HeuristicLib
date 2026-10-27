@@ -50,6 +50,8 @@ The [backlog review](developer-backlog-review.md) records evidence, original ite
 
 ### Runs, execution and experiments
 
+- **Explicit resources and executor private state.** Refined option 1.2 was selected on 2026-10-27 in the [operator state lifetime plan](operator-state-lifetimes.md). Configurations carry resource handles, executors own private state and runs supply or create selected resources. Accepted boundaries are executor and run lifetimes, Cycle executor reuse by child configuration reference and handle identity in configuration equality. Automatic disposal is excluded, and resources needing deterministic cleanup must be supplied and remain caller owned. Operator authors own concurrent access correctness, with caching as the documentation example. Strict shared concurrent budgets, serialization, checkpoints and nested resource lifetimes are deferred until after the simplified system works. The plan owns the migration sequence and focused proofs for cache validity, synchronization and the cleanup restriction. Current scoped state remains implemented until that work is completed.
+
 - **Run lifecycle, results and naming.** Decide whether final/search states plus run metadata suffice or a completion-result object should carry typed stop reasons and lifecycle information. Preserve the distinctions between pause/resume, terminal completion, early stopping, cancellation and failure; algorithm runs can resume, while experiment runs have terminal scheduling behavior. Review run/resume/continue names after settling those semantics. Separate setup/running types are an option for misuse prevention, not a prerequisite: compare them with existing runtime guards while preserving direct fluent setup, valid resumption and rejection of late analyzer attachment. This combines the former result and naming entries and remains separate from the termination overhaul.
 
 - **Execution policy and batching ownership.** Define how a run requests sequential or concurrent execution while operator batches declare capabilities and trials retain separate scheduling. `SingleCandidateMutator` and `SingleSolutionProblem` currently own concurrency settings; scalar problem batching belongs within this investigation. Decide effective limits, per-batch versus shared run budgets and how policy reaches executors through explicit resolution/state ownership while preserving deterministic RNG. Compare keeping scalar adaptation in the problem with moving it to evaluation; scalar contracts, separate evaluators and conditional type checks are alternatives to assess, not accepted machinery. Coordinate cancellation transport while retaining its independently scoped long-running-operation requirement.
@@ -171,6 +173,24 @@ These entries are retained for later selection. Regrouping them does not accept 
 - revisit the call context every operation's invocation repeats. Each operation's private invocation struct implements `Random`, `SearchSpace` and `Problem` as three one-line properties, because general invocation wrappers see only the invocation and a struct has no base class. The sixth review of the [operator role parameterization plan](operator-role-parameterization-rework.md) kept them: passing the three to `IInvocationWrapper.Invoke` beside the invocation repeats them in every wrapper signature, a struct bundling them is the context carrier that developer guidelines § 4.19 excludes, and a class invocation with a base allocates on every call, against the zero-allocation requirement. A benchmark of a class invocation through the § 8 harness would show what dropping that requirement costs. This is conditional evidence gathering: the accepted decision keeps struct invocations and explicit call context. A class-invocation measurement would not itself approve relaxing the allocation requirement or introducing a context carrier.
 
 ## Discussed, tried, and rejected
+
+### Live resource instances in reusable configurations
+
+Considered as option 1.1 in the [operator state lifetime review](operator-state-lifetimes.md#review-findings) and not selected on 2026-10-27. Repeating or copying a configuration would also share its live cache or counter. Independent trials would require application code to reconstruct resources and configuration graphs per trial, and grids could silently reuse cached results across settings.
+
+The selected direction keeps explicit handles in configurations and live instances in run preparation. Reconsider live instances as ordinary configuration properties only if reusable configurations producing independent executions is deliberately abandoned. This decision concerns the proposed resource mechanism, not a claim that all existing problem or strategy references are pure values.
+
+### Runtime objects replacing configurations and executors
+
+Considered as option 2 in the [operator state lifetime review](operator-state-lifetimes.md#review-findings) and not selected for this change on 2026-10-27. Direct authoring would be simpler, but fresh turns, parameter grids, deferred observation and automatic advice weaving still need construction and identity mechanisms. Binding to concrete run types also remains necessary.
+
+Move private state into executors while retaining the configuration/executor distinction. Reconsider merging those types only for a broader product decision that explicitly changes experiment construction, observation attachment and reusable configuration semantics.
+
+### Generic private state sharing through composition declarations or wrappers
+
+Considered during the [operator state lifetime discussion](operator-state-lifetimes.md#earlier-alternatives) and not selected on 2026-10-27. An enclosing `SharedOperators` declaration or an operator `.Shared()` wrapper would still require selection of a lifetime owner for arbitrary private state and reconstruction around context specific children and advice.
+
+The selected direction exposes coherent resources through handles and leaves other data private to executors. Reconsider generic private state sharing only if a concrete required workflow cannot be expressed through an explicit resource and the additional ownership machinery is justified. Do not reintroduce this mechanism as a resource registry keyed by configuration.
 
 ### Published callbacks obtained from the resolution scope
 

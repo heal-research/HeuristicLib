@@ -692,6 +692,24 @@ A former name for executor. Use executor or a role-specific form such as mutatio
 
 See also: Executor.
 
+### Resource
+
+Status: `Provisional`
+
+A resource is an explicit runtime dependency whose data may be shared by several executors, such as an evaluation store or a counting accumulator. Its sharing contract identifies which data belongs together and what concurrent use permits. Sharing a resource does not imply sharing the executors, their children or their advice.
+
+See also: Executor, Resource handle, Run.
+
+### Resource handle
+
+Status: `Provisional`
+
+A resource handle describes resource creation and explicitly identifies a sharing relationship. It contains settings rather than the live resource. Reusing a handle expresses intended sharing, while creating another handle expresses a separate relationship even when its settings match.
+
+This is proposed terminology for the selected resource design, not an API available in the current implementation. The existing scoped state entries below continue to describe current behavior.
+
+See also: Configuration, Resource, Run, Scoped state.
+
 ### Scoped state
 
 Status: `Canonical`

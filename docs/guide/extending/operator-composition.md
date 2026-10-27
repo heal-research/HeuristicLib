@@ -244,6 +244,10 @@ var cached = algorithm with
 };
 ```
 
+Sharing a cache does not serialize calls to the evaluator. Operator authors are responsible for correct access to shared mutable data when calls can overlap, whether through one executor or several. The current `CachingEvaluator` uses `Microsoft.Extensions.Caching.Memory.MemoryCache`, whose [storage supports concurrent access](https://learn.microsoft.com/en-us/dotnet/core/extensions/caching#in-memory-caching). Its lookup, evaluation and publication are separate operations, so concurrent misses may evaluate the same key more than once. Cached results must be valid for every participant, and the key selector and child evaluator must also support their actual concurrent use.
+
+When writing an operator with shared data, use concurrency safe resource operations or synchronize the complete invariant you need to preserve. Every participant must use the same synchronization object. A separate lock on each executor cannot protect data shared between executors. Prefer keeping synchronization inside the shared resource. A cache with epoch metadata, for example, must coordinate invalidation and result publication with that epoch. Choose a simple lock, a read/write lock or concurrent storage according to those requirements. Avoid holding a shared lock across expensive child evaluation when validity can instead be checked before publication. Safe storage alone does not guarantee one evaluation per key or a strict shared evaluation budget.
+
 Select the outer cache configuration to count evaluation requests and its child evaluator to count actual problem evaluations:
 
 ```csharp
