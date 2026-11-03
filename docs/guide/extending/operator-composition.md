@@ -172,9 +172,9 @@ A refinement that has to pass through a worse candidate to reach a better one is
 
 ### Evaluation accounting for refinement
 
-Improvement checking evaluates twice, and the algorithm then evaluates the returned candidate itself, so the naive configuration costs three problem evaluations per refined candidate where an unchecked refiner costs one. That cost is deliberately visible rather than hidden, and it is controlled by one thing: whether the refiner and the algorithm hold the **same evaluator object**.
+Improvement checking evaluates twice and the algorithm evaluates the returned candidate again. Without caching this costs three problem evaluations per refined candidate. Use the same evaluator configuration to select all those calls for observation. Use an explicit resource handle to share cache entries or evaluation allowance across the independently constructed executors.
 
-Resolution uses configuration reference identity to select prepared scoped state. Reusing the same evaluator object through the same resolution scope preserves that state, including its counters and caches. Executors are ephemeral bindings and may be rebuilt around that state for each context. Two separately constructed but structurally identical configurations have independent prepared state.
+Configuration reference identity selects observation targets. Resource handle reference identity selects shared data within a run. Reusing an evaluator configuration alone does not share its private fields or cache. Record copies retain handles unless explicitly replaced.
 
 The snippets in this section use these namespaces:
 
@@ -189,37 +189,39 @@ Counting and timing are aspects. They select the configured evaluator by referen
 
 ```csharp
 var evaluator = algorithm.Evaluator;
-var counting = Aspect.CountCandidates(evaluator, out var counter);
+var counter = new CountAccumulatorHandle();
+var counting = Aspect.CountCandidates(evaluator, counter);
 var unshared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement()
 };
-var run = unshared.CreateRun(problem, random).AddAspect(counting);
+var run = unshared.CreateRun(problem, random, setup: setup => setup.AddAspect(counting));
 ```
 
 The improvement check uses its own evaluator configuration here, so the counter measures only the algorithm's evaluations. Share the selected evaluator to include comparison work:
 
 ```csharp
 var evaluator = algorithm.Evaluator;
-var counting = Aspect.CountCandidates(evaluator, out var counter);
+var counter = new CountAccumulatorHandle();
+var counting = Aspect.CountCandidates(evaluator, counter);
 var shared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(evaluator)
 };
-var run = shared.CreateRun(problem, random).AddAspect(counting);
+var run = shared.CreateRun(problem, random, setup: setup => setup.AddAspect(counting));
 ```
 
 Each refined candidate causes two comparison evaluations and the algorithm's subsequent evaluation. All three reach the selected evaluator and increment the same counter.
 
-An external terminator can read that accumulator:
+An external terminator can obtain the same run accumulator through its handle. Read the measured count with `run.Resource(counter).CurrentCount`:
 
 ```csharp
 var budgeted = shared.TerminatedBy(
     AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
-var run = budgeted.CreateRun(problem, random).AddAspect(counting);
+var run = budgeted.CreateRun(problem, random, setup: setup => setup.AddAspect(counting));
 ```
 
-`shared.LimitedToCandidates(evaluator, 100_000)` owns its accumulator and adds counting advice only to the child scope resolving the budgeted algorithm. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
+`shared.LimitedToCandidates(evaluator, 100_000)` owns its accumulator and adds counting advice only to the resolution context for the budgeted algorithm. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
 
 The same budgets apply to any operator, whatever its operation:
 
@@ -230,12 +232,29 @@ var timed = shared.LimitedToDuration(evaluator, TimeSpan.FromSeconds(10));
 
 `LimitedToInvocations` counts successful calls, and `LimitedToCandidates` counts the candidates they return for an operation that reports candidate work. Timing also records failed calls. Timing accepts an explicit `TimeProvider`. Both are scoped to the budget's inner algorithm. If that algorithm never resolves the selected operator, nothing is recorded and the budget never stops it.
 
-Several observed operators can feed the same termination criterion by sharing one `CountAccumulator`. For example, the same counter can track refiner calls and evaluations.
-
-Sharing a `CachingEvaluator` pays for two evaluations rather than three, because the algorithm's own evaluation of the returned candidate is already in the cache:
+Pass an operator list to combine work from several configurations in one budget:
 
 ```csharp
-var evaluator = new CachingEvaluator<...>(new ProblemEvaluator<...>(), keySelector);
+var combined = algorithm.LimitedToInvocations(
+    [algorithm.Mutator, algorithm.Crossover], 1_000);
+var timed = algorithm.LimitedToDuration(
+    [algorithm.Mutator, algorithm.Crossover], TimeSpan.FromSeconds(10));
+
+var constructed = new OperatorCountBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
+    algorithm, [algorithm.Mutator, algorithm.Crossover], 1_000);
+```
+
+`OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>` likewise accepts the algorithm, operator list and duration in its constructor. The typed single operation forms of both budget families take the algorithm, observed operator and limit in their constructors too. Optional `Metric` and `TimeProvider` settings use init properties. `LimitedToCandidates` accepts the same lists, or set `Metric = OperatorCountMetric.Candidates` on the count budget constructor result. Every selected operation must report candidate work.
+
+A list selects every operation of each configuration by reference. Repeating a reference does not count it twice. The single operator overload retains its inferred operation, so it can select one operation of a configuration implementing several. Each budget executor owns one accumulator for all selected calls. Repeated runs remain independent. Duration is the sum of invocation durations, including overlapping and nested time, rather than wall clock time for the algorithm.
+
+For explicit runtime accounting, several observed operators can also feed the same termination criterion through a supplied `CountAccumulator`. Reusing such a live accumulator deliberately combines consumption across its callers.
+
+Sharing an evaluation cache through a handle avoids the final repeated problem evaluation:
+
+```csharp
+var cacheHandle = new EvaluationCacheHandle<RealVector>();
+var evaluator = new ProblemEvaluator<RealVector>().Cached(cacheHandle);
 
 var cached = algorithm with
 {
@@ -244,7 +263,7 @@ var cached = algorithm with
 };
 ```
 
-Sharing a cache does not serialize calls to the evaluator. Operator authors are responsible for correct access to shared mutable data when calls can overlap, whether through one executor or several. The current `CachingEvaluator` uses `Microsoft.Extensions.Caching.Memory.MemoryCache`, whose [storage supports concurrent access](https://learn.microsoft.com/en-us/dotnet/core/extensions/caching#in-memory-caching). Its lookup, evaluation and publication are separate operations, so concurrent misses may evaluate the same key more than once. Cached results must be valid for every participant, and the key selector and child evaluator must also support their actual concurrent use.
+`EvaluationCache<TKey>` uses MemoryCache for concurrent storage, key equality and eviction, with an optional entry count limit. Lookup, evaluation and publication are separate operations, so concurrent misses may evaluate the same key more than once. Share only when keys and evaluation semantics agree across every participant. Child evaluators, key selectors and other dependencies must support the concurrency the author permits. A cache cannot make incompatible problems, parameter settings or stochastic results interchangeable.
 
 When writing an operator with shared data, use concurrency safe resource operations or synchronize the complete invariant you need to preserve. Every participant must use the same synchronization object. A separate lock on each executor cannot protect data shared between executors. Prefer keeping synchronization inside the shared resource. A cache with epoch metadata, for example, must coordinate invalidation and result publication with that epoch. Choose a simple lock, a read/write lock or concurrent storage according to those requirements. Avoid holding a shared lock across expensive child evaluation when validity can instead be checked before publication. Safe storage alone does not guarantee one evaluation per key or a strict shared evaluation budget.
 
@@ -252,19 +271,19 @@ Select the outer cache configuration to count evaluation requests and its child 
 
 ```csharp
 var problemEvaluator = new ProblemEvaluator<RealVector>();
-var cache = new CachingEvaluator<RealVector>(problemEvaluator);
+var cache = problemEvaluator.Cached(new EvaluationCacheHandle<RealVector>());
 var requests = Aspect.CountCandidates(cache, out var requestCount);
 var solves = Aspect.CountCandidates(problemEvaluator, out var solveCount);
 
 var cached = algorithm with { Evaluator = cache };
-var run = cached.CreateRun(problem, random)
+var run = cached.CreateRun(problem, random, setup: setup => setup
     .AddAspect(requests)
-    .AddAspect(solves);
+    .AddAspect(solves));
 ```
 
 After the run, `requestCount` includes cache hits and `solveCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
 
-`LimitEvaluator` follows the same rule, and there the choice decides when a run stops rather than what a number reads:
+`LimitEvaluator` has private accounting by default. Set its `Counter` to a `CountAccumulatorHandle` when the refiner and algorithm need one shared allowance. Its separate check, evaluation and increment do not promise a strict limit under concurrent use. Cache and limit ordering determines whether hits consume allowance:
 
 ```csharp
 new CachingEvaluator<...>(problemEvaluator, keySelector).LimitEvaluations(100_000) // cache hits consume budget
@@ -282,7 +301,7 @@ var attributed = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(refinementEvaluator)
 };
-var run = attributed.CreateRun(problem, random).AddAspect(refinementCounting);
+var run = attributed.CreateRun(problem, random, setup: setup => setup.AddAspect(refinementCounting));
 ```
 
 `refinementCount` measures the improvement check's comparison evaluations. The algorithm's own evaluator is a different configuration, so its calls do not contribute to that count.
@@ -409,7 +428,7 @@ A multi-child composite such as a pipeline exposes its own controls. It does not
 
 Every operation call receives an explicit random number generator, and compositions invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. The built in terminators and interceptors draw nothing, so `AnyTerminator`, `AllTerminator` and `PipelineInterceptor` are deterministic with respect to child ordering unless a child draws or depends on some other explicit input or external resource.
 
-Child configurations are resolved when each composition executor is built. Reusing the same child configuration elsewhere through the same resolution scope preserves its prepared scoped state. The resulting child executor objects may differ because each binding applies the requesting context's aspects.
+Child configurations resolve when each composition executor is built. Each construction has independent private fields and current contextual advice. Explicit resource handles can share selected data without sharing children or advice.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 
@@ -419,7 +438,7 @@ Use `WrappingOperator<TOperation, TCandidate>` for one child and `MultiOperator<
 
 Derive from `Operator<TOperation, TCandidate>` when a composition coordinates different operations or declares children with specific domain responsibilities. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
 
-The authored executor holds resolved child bindings and the prepared scoped state needed for its context. Persistent mutable state is prepared once and survives rebuilding those bindings. The reusable configuration owns parameters and child configurations.
+The authored executor holds resolved children, private mutable fields and explicit resource references. The configuration owns parameters, child configurations and optional resource handles.
 
 ### A complete stateful composition
 
@@ -431,20 +450,38 @@ Use these imports in a C# project with implicit system usings enabled:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-type{csharp}
 
-The constructor retains child configurations through the multi base, which snapshots their collection. `CreateExecutor` validates that collection, resolves the current children through the typed scope it receives and builds an executor around the cursor from `scope.GetScopedState`. The scope creates that `State` on the first build and returns the same object to every later build of the composition, so each executor continues the same sequence. Creating `State` directly inside `CreateExecutor` would reset the cursor whenever another observation context binds the composition.
+The multi base snapshots the configured child collection. `CreateExecutor` validates it, resolves current children through the typed scope and constructs an executor with its own cursor field. Every separate construction starts at the first child.
 
-The executor retains the resolved children of its context; it keeps only the cursor in shared state. `offspring` is local to one invocation. This example expects sequential calls: sharing the state does not serialize concurrent mutation operations.
+The executor retains its contextual children and cursor. `offspring` is local to one invocation. This example expects sequential calls on one executor. Authors must coordinate any concurrent calls that mutate the same fields.
 
-#### Add inspection without restarting the sequence
+#### Construct another observation context
 
 Two distinct no-change mutators make the selection order visible through counters without changing candidate values:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-usage{csharp}
 
-`firstCalls.CurrentCount` is zero and `secondCalls.CurrentCount` is one. The observed binding resumes at the second child; the existing binding retains its unobserved children. Both bindings advance the same cursor because `With` shares prepared state.
+`firstCalls.CurrentCount` is one and `secondCalls.CurrentCount` is zero. The observed executor starts at the first child. The original executor continues to its second child with its original unobserved children.
 
 An independent root prepares a fresh cursor, even when it resolves the same configuration object:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-independent{csharp}
 
-`independentFirstCalls.CurrentCount` is one. A child scope instead follows ancestor reuse: it does not reset state already owned by its parent. See [Execution resolution](/contributing/architecture/execution-resolution#state-and-construction) for those selection rules.
+`independentFirstCalls.CurrentCount` is one. A new context constructed with `With` also creates fresh private fields. See [Execution resolution](/contributing/architecture/execution-resolution#resources-and-construction).
+
+### Author a concurrent cache wrapper
+
+This executable example uses `EvaluationCache<int>` as the shared resource. MemoryCache provides concurrent storage and eviction, with an optional entry count limit. The wrapper keeps its child executor private and evaluates outside cache storage operations. This protocol allows duplicate evaluations on overlapping misses. It assumes immutable keys and deterministic evaluation with compatible semantics for all participants. Cache admission is not guaranteed at capacity, and eviction order is not part of the evaluator contract.
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-imports{csharp}
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-authoring{csharp}
+
+The following usage constructs two executors with one handle. Separate RNGs belong to the separate calls. Counting advice deliberately shares its own accumulator without a resource handle.
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-usage{csharp}
+
+Resource table synchronization only protects publication of one resource per handle. The operator author remains responsible for concurrent resource operations, child calls and key selection. A lock on each executor does not coordinate a shared resource. Keep synchronization with shared data, or ensure every participant uses the same synchronization object.
+
+The experimental dynamic cache additionally coordinates entries, epoch and consecutive hit accounting under one shared lock. It rechecks the epoch before publication and never publishes results from an earlier epoch. It rejects participants using different source problem instances or grace counts. Once the hit threshold is reached, it requests at most one update per observed epoch. A miss resets the hit streak but does not queue another request while an update is pending. Key and evaluation compatibility still belongs to the author.
+
+Automatic creation supports resources requiring no deterministic cleanup. `EvaluationCache<TKey>` uses MemoryCache with statistics and linked entry tracking disabled and without expiration tokens or callbacks. This restricted use does not require deterministic cleanup. For a resource that does require cleanup, use a `SuppliedResourceHandle<TResource>` and bind it through the run or scope builder. The caller owns cleanup after every borrowing run has finished. No executor or run disposes supplied resources.

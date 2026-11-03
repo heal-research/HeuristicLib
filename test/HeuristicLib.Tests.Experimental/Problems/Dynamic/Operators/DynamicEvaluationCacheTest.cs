@@ -27,11 +27,12 @@ file sealed class DummyDynamicProblem : DynamicProblem<DummyDynamicProblem, Dumm
     public bool ScoreEpoch { get; init; }
 
     /// <summary>How many candidates this problem was asked to score.</summary>
-    public long Evaluations { get; private set; }
+    private long evaluations;
+    public long Evaluations => Interlocked.Read(ref evaluations);
 
     protected override ObjectiveVector Evaluate(DummyGenotype solution, IRandomNumberGenerator random, int epoch)
     {
-        Evaluations++;
+        Interlocked.Increment(ref evaluations);
         return ScoreEpoch ? epoch : solution.Value;
     }
 
@@ -77,6 +78,113 @@ file sealed record DummyGenotypeValueCacheKeySelector : ICacheKeySelector<DummyG
 
 public class DynamicEvaluationCacheTests
 {
+    [Fact]
+    public async Task SharedCacheRequestsOnlyOneDeferredUpdatePerEpoch()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000, UpdatePolicy.AfterEachIteration);
+        var handle = new DynamicEvaluationCacheHandle<int>();
+        var source = new CountingEvaluator().Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { Cache = handle, GraceCount = 1 };
+        var scope = ResolutionScope.Create();
+        var first = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var second = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        first.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(index => Task.Run(() =>
+            (index % 2 == 0 ? first : second).Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem),
+            TestContext.Current.CancellationToken)));
+        // A miss resets the hit streak but must not rearm an already pending request.
+        second.Evaluate([new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        first.Evaluate([new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+
+        problem.CurrentEpoch.ShouldBe(0);
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(1);
+
+        first.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        second.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        first.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        problem.ApplyPendingUpdates();
+        problem.CurrentEpoch.ShouldBe(2);
+        problem.Evaluations.ShouldBe(3L);
+    }
+
+    [Fact]
+    public async Task SharedConcurrentMissesDoNotPublishResultsAfterAnEpochChange()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000) { ScoreEpoch = true };
+        using var scored = new CountdownEvent(2);
+        using var release = new ManualResetEventSlim();
+        var calls = 0;
+        var evaluator = new CallbackEvaluator(() =>
+        {
+            if (Interlocked.Increment(ref calls) > 2)
+                return;
+            scored.Signal();
+            release.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+        });
+        var handle = new DynamicEvaluationCacheHandle<int>();
+        var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { Cache = handle };
+        var supplied = new DynamicEvaluationCache<int>();
+        var builder = new ResolutionScopeBuilder().AddResource(handle, supplied);
+        var first = builder.Build().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var second = builder.Build().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var tasks = new[] { first, second }.Select(executor => Task.Run(() =>
+            executor.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem), TestContext.Current.CancellationToken)).ToArray();
+        try
+        {
+            scored.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
+            problem.UpdateOnce();
+        }
+        finally
+        {
+            release.Set();
+        }
+        (await Task.WhenAll(tasks)).Select(result => result[0][0]).ShouldBe([0.0, 0.0]);
+        first.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem)[0][0].ShouldBe(1.0);
+        second.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem)[0][0].ShouldBe(1.0);
+        calls.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task SharedConcurrentHitsHaveCoherentGraceAccounting()
+    {
+        using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000) { ScoreEpoch = true };
+        var evaluator = new CountingEvaluator();
+        var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with
+        {
+            Cache = new DynamicEvaluationCacheHandle<int>(),
+            GraceCount = 20
+        };
+        var scope = ResolutionScope.Create();
+        var first = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var second = scope.With().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        first.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(i => Task.Run(() =>
+            (i % 2 == 0 ? first : second).Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem), TestContext.Current.CancellationToken)));
+        evaluator.Invocations.ShouldBe(1);
+        first.Evaluate([new DummyGenotype(2)], TestRandoms.NoRandom, problem.SearchSpace, problem);
+        problem.CurrentEpoch.ShouldBe(1);
+        second.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem)[0][0].ShouldBe(1.0);
+        evaluator.Invocations.ShouldBe(3);
+    }
+
+    [Fact]
+    public void SharedDynamicCacheRejectsDifferentSourceOrGraceAndDuplicateCreationSettings()
+    {
+        using var firstProblem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        using var secondProblem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
+        var source = new CountingEvaluator().Cached(firstProblem, DummyGenotypeValueCacheKeySelector.Instance) with
+        {
+            Cache = new DynamicEvaluationCacheHandle<int>(),
+            GraceCount = 10
+        };
+        var scope = ResolutionScope.Create();
+        scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        Should.Throw<InvalidOperationException>(() => scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source with { SourceProblem = secondProblem }));
+        Should.Throw<InvalidOperationException>(() => scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source with { GraceCount = 11 }));
+        Should.Throw<InvalidOperationException>(() => scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source with { SizeLimit = 1 }));
+    }
+
     [Fact]
     public void Cache_DeferredUpdateClearsOldEntriesAndSkipsAdmissionWithoutReplaying()
     {
@@ -459,15 +567,15 @@ public class DynamicEvaluationCacheTests
     }
 
     [Fact]
-    public void CacheRebinding_SharesEntriesAndKeepsChildObservationContexts()
+    public void CacheRebinding_ExplicitHandleSharesEntriesAndKeepsChildObservationContexts()
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
         var evaluator = new CountingEvaluator();
-        var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
+        var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { Cache = new DynamicEvaluationCacheHandle<int>() };
         var root = ResolutionScope.Create();
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(evaluator, calls));
+        var child = root.With(Aspect.CountInvocations(evaluator, calls));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         inner.ShouldNotBeSameAs(outer);
 
@@ -491,7 +599,7 @@ public class DynamicEvaluationCacheTests
     }
 
     [Fact]
-    public void RelativeQualityRebinding_SharesTheBestKnownReferencePerEpoch()
+    public void RelativeQualityRebinding_KeepsAPrivateBestKnownReferencePerEpoch()
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
         var evaluator = new CountingEvaluator();
@@ -501,24 +609,24 @@ public class DynamicEvaluationCacheTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(evaluator, calls));
+        var child = root.With(Aspect.CountInvocations(evaluator, calls));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
 
         outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        references.ShouldBe(1);
+        references.ShouldBe(2);
         ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source)
             .Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        references.ShouldBe(2);
+        references.ShouldBe(3);
         problem.UpdateOnce();
         inner.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
-        references.ShouldBe(3);
+        references.ShouldBe(5);
         calls.CurrentCount.ShouldBe(2);
     }
 
     [Fact]
-    public void ReevaluationRebinding_SharesPendingRequestsAndIsolatesIndependentRoots()
+    public void ReevaluationRebinding_EachExecutorConsumesTheEpochIndependently()
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000);
         var evaluator = new CountingEvaluator();
@@ -527,22 +635,22 @@ public class DynamicEvaluationCacheTests
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var independent = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(evaluator, calls));
+        var child = root.With(Aspect.CountInvocations(evaluator, calls));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var state = Population.From([EvaluatedCandidate.From(new DummyGenotype(1), new ObjectiveVector(99))]).ToPopulationState();
         inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);
 
         problem.UpdateOnce();
         inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
-        outer.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);
+        outer.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldNotBeSameAs(state);
         independent.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
-        evaluator.Invocations.ShouldBe(2);
+        evaluator.Invocations.ShouldBe(3);
         calls.CurrentCount.ShouldBe(1);
         problem.UpdateOnce();
         outer.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem);
-        inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);
-        evaluator.Invocations.ShouldBe(3);
-        calls.CurrentCount.ShouldBe(1);
+        inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldNotBeSameAs(state);
+        evaluator.Invocations.ShouldBe(5);
+        calls.CurrentCount.ShouldBe(2);
     }
 
     [Theory]

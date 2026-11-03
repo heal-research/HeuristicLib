@@ -23,9 +23,9 @@ public class AnalysisSpecs
         var combined = Analyzer.Trace([firstAlgorithm.Iterations, secondAlgorithm.Iterations],
             observation => best.Update(observation.State.Population.Select(candidate => candidate.ObjectiveVector), observation.Problem.Objective));
 
-        await firstAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(combined)
+        await firstAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(combined))
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        await secondAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(43)).AddAspect(combined)
+        await secondAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(43), setup: setup => setup.AddAspect(combined))
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         combined.SampleCount.ShouldBe(8);
@@ -41,9 +41,9 @@ public class AnalysisSpecs
         var evaluations = Clock.FromCandidates(algorithm.Evaluator);
         var quality = algorithm.Iterations.TracePopulationQuality(retention: TraceRetention.EveryNth(2), clocks: [iterations, evaluations]);
         var best = algorithm.Evaluator.Invocations.TraceBestSoFar(clocks: [evaluations]);
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup
             .AddAspect(quality)
-            .AddAspect(best);
+            .AddAspect(best));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -62,7 +62,7 @@ public class AnalysisSpecs
         var quality = Analyzer.Trace(algorithm.Iterations,
             static observation => observation.State.Population.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective));
 
-        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(size).AddAspect(quality)
+        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(size).AddAspect(quality))
             .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         size.Latest!.Value.Value.ShouldBe(16);
@@ -74,9 +74,10 @@ public class AnalysisSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(4));
         var algorithm = CreateAlgorithm(problem);
-        var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42));
-        var results = run.AddAspectPerTrial(trial =>
-            trial.Iterations.TracePopulationQuality(clocks: [Clock.FromCandidates(trial.Evaluator)]));
+        ImmutableArray<TrialAspect<ExperimentCase<GeneticAlgorithm<RealVector>, int>, TraceAnalyzer<BestMedianWorst>>> results = default;
+        var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42), setup =>
+            results = setup.AddAspectPerTrial(trial =>
+                trial.Iterations.TracePopulationQuality(clocks: [Clock.FromCandidates(trial.Evaluator)])));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

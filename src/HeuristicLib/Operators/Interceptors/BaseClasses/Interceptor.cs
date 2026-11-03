@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 /// <remarks>
 /// Derive directly from this base when the interceptor needs direct control over its execution structure.
 /// Use <see cref="StatelessInterceptor{TCandidate,TSearchSpace,TProblem,TSearchState}"/> when no mutable execution data is needed.
-/// Use <see cref="StatefulInterceptor{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// <para>
 /// The type arguments are the search space, problem and search state this interceptor is written for. The base bridges
 /// to whatever a run requests, and a request the interceptor was not written for is reported when the execution graph

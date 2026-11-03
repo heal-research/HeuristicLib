@@ -8,12 +8,48 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+/// <remarks>
+/// Sums invocation durations for every operation of the selected configuration references inside the child algorithm.
+/// Repeated references count once. Nested and concurrent calls contribute their full durations, including failed calls.
+/// Each executor owns one combined accumulator, checked after each produced state.
+/// </remarks>
+public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
+    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
+    where TSearchState : class, ISearchState
+{
+    public IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
+    public ValueArray<IOperator> ObservedOperators { get; init; }
+    public TimeSpan MaximumDuration { get; init; }
+    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+
+    public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IReadOnlyList<IOperator> observedOperators, TimeSpan maximumDuration)
+    {
+        Algorithm = algorithm;
+        ObservedOperators = observedOperators.ToValueArray();
+        MaximumDuration = maximumDuration;
+    }
+
+    public override bool Fits(ExecutionSignature execution) =>
+        base.Fits(execution) && execution.Fits(Algorithm) && ObservedOperators.All(source => source.Fits(execution));
+
+    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        var accumulator = new DurationAccumulator();
+        var selection = ObservedOperators.Aggregate(Pointcut.OfType<IOperator>().Not(),
+            (pointcut, source) => pointcut | Pointcut.Reference(source));
+        var aspect = Aspect.Create(selection, new DurationMeasuringOperatorAdvice(accumulator, TimeProvider));
+        var algorithm = scope.With(aspect).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumDuration);
+    }
+}
+
 public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>
     : Algorithm<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TCandidate, TSearchState>
     where TOperation : IOperation<TOperation>
     where TSearchState : class, ISearchState
 {
-    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
+    public IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
 
     /// <summary>
     /// Gets the operator whose call duration, including failed calls, is measured against the budget.
@@ -22,7 +58,7 @@ public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchSta
     /// Measurement applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
     /// algorithm does not reference the observed operator, nothing is measured and the budget never stops.
     /// </remarks>
-    public required IOperator<TOperation, TCandidate> ObservedOperator { get; init; }
+    public IOperator<TOperation, TCandidate> ObservedOperator { get; init; }
 
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
@@ -32,27 +68,23 @@ public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchSta
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
+    public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
+    {
+        Algorithm = algorithm;
+        ObservedOperator = observedOperator;
+        MaximumDuration = maximumDuration;
+    }
+
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
-    /// <remarks>The accumulator and its timing aspect are the budget's scoped state, so usage survives every rebuild in its owner.</remarks>
+    /// <remarks>Each executor has its own accumulator and contextual timing advice.</remarks>
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var budget = scope.GetScopedState(this, () => new Budget(ObservedOperator, TimeProvider));
-        var algorithm = scope.With(budget.Measuring).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
-        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, budget.Duration, MaximumDuration);
-    }
-
-    private sealed class Budget
-    {
-        public Budget(IOperator<TOperation, TCandidate> observedOperator, TimeProvider timeProvider)
-        {
-            Measuring = Aspect.Create(Pointcut.Reference(observedOperator), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(Duration, timeProvider));
-        }
-
-        public DurationAccumulator Duration { get; } = new();
-
-        public Aspect Measuring { get; }
+        var accumulator = new DurationAccumulator();
+        var aspect = Aspect.Create(Pointcut.Reference(ObservedOperator), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(accumulator, TimeProvider));
+        var algorithm = scope.With(aspect).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumDuration);
     }
 }
 
@@ -92,6 +124,15 @@ public static class OperatorDurationBudgetExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
+        /// <remarks>Measures all operations of each selected configuration. Repeated references count once.</remarks>
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
+            IReadOnlyList<IOperator> observedOperators, TimeSpan maximumDuration) =>
+            new(algorithm, observedOperators, maximumDuration) { TimeProvider = TimeProvider.System };
+
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
+            IReadOnlyList<IOperator> observedOperators, TimeSpan maximumDuration, TimeProvider timeProvider) =>
+            new(algorithm, observedOperators, maximumDuration) { TimeProvider = timeProvider };
+
         /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time.</summary>
         /// <remarks>
         /// The operation is inferred from the operator; for an operator implementing several operations, pass it through a
@@ -101,7 +142,7 @@ public static class OperatorDurationBudgetExtensions
             IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
             where TOperation : IOperation<TOperation>
         {
-            return algorithm.LimitedToDuration(observedOperator, maximumDuration, TimeProvider.System);
+            return new(algorithm, observedOperator, maximumDuration) { TimeProvider = TimeProvider.System };
         }
 
         /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time.</summary>
@@ -113,13 +154,7 @@ public static class OperatorDurationBudgetExtensions
             IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration, TimeProvider timeProvider)
             where TOperation : IOperation<TOperation>
         {
-            return new()
-            {
-                Algorithm = algorithm,
-                ObservedOperator = observedOperator,
-                MaximumDuration = maximumDuration,
-                TimeProvider = timeProvider
-            };
+            return new(algorithm, observedOperator, maximumDuration) { TimeProvider = timeProvider };
         }
     }
 }

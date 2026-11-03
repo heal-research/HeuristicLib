@@ -14,8 +14,8 @@ public class AlgorithmRunTests
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var aspect = new CheckCountingAspect();
-        var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
-            .AddAspect(aspect);
+        var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup: setup => setup
+            .AddAspect(aspect));
         var cancellationToken = TestContext.Current.CancellationToken;
 
         algorithm.ExecutionCount.ShouldBe(0);
@@ -30,7 +30,6 @@ public class AlgorithmRunTests
             (await enumerator.MoveNextAsync()).ShouldBeTrue();
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Paused);
-        Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
         _ = await run.Stream(cancellationToken: cancellationToken).ToListAsync(cancellationToken);
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
@@ -78,7 +77,6 @@ public class AlgorithmRunTests
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: cancellationToken));
-        Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
         run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
     }
 
@@ -88,8 +86,8 @@ public class AlgorithmRunTests
     public void AdviceFailure_IsTerminal(bool canceled)
     {
         Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException();
-        var run = new SequenceAlgorithm().CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42))
-            .AddAspect(new FailingModule(failure));
+        var run = new SequenceAlgorithm().CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup: setup => setup
+            .AddAspect(new FailingModule(failure)));
         var expectedState = canceled ? RunLifecycleState.Canceled : RunLifecycleState.Failed;
 
         var thrown = Record.Exception(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
@@ -97,7 +95,6 @@ public class AlgorithmRunTests
         thrown.ShouldBeSameAs(failure);
         run.LifecycleState.ShouldBe(expectedState);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
-        Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
         run.LifecycleState.ShouldBe(expectedState);
     }
 
@@ -107,7 +104,7 @@ public class AlgorithmRunTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42));
 
-        run.LifecycleState.ShouldBe(RunLifecycleState.Preparing);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Ready);
         _ = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
 
@@ -186,7 +183,6 @@ public class AlgorithmRunTests
         disposalCount.ShouldBe(1);
         run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: cancellationToken));
-        Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
         await run.CancelAsync();
         disposalCount.ShouldBe(1);
         run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
@@ -223,22 +219,44 @@ public class AlgorithmRunTests
         disposalCount.ShouldBe(1);
         run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: cancellationToken));
-        Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
         await run.CancelAsync();
         disposalCount.ShouldBe(1);
         run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
     }
 
     [Fact]
-    public void AlgorithmRun_RejectsAttachmentsAfterExecutionStarts()
+    public void CapturedSetupCannotAttachAdviceToAnExistingRun()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var algorithm = new AdditiveStepAlgorithm(1);
+        AlgorithmRunSetup<int, PopulationState<int>> captured = null!;
+        var calls = 0;
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup =>
+        {
+            calls++;
+            captured = setup;
+        });
+        var late = new CheckCountingAspect();
+        captured.AddAspect(late);
 
-        _ = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Ready);
+        calls.ShouldBe(1);
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        var exception = Should.Throw<InvalidOperationException>(() => run.AddAspect(new BlindAnalyzer()));
-        exception.Message.ShouldContain("its current lifecycle state is Running");
+        late.CheckCount.ShouldBe(0);
+        calls.ShouldBe(1);
+    }
+
+    [Fact]
+    public void SetupFailureReturnsNoRunAndBuildsNoExecutor()
+    {
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        var failure = new InvalidOperationException("setup");
+        var thrown = Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(
+            MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), _ => throw failure));
+
+        thrown.ShouldBeSameAs(failure);
+        algorithm.ExecutionCount.ShouldBe(0);
     }
 
     [Fact]
@@ -248,9 +266,9 @@ public class AlgorithmRunTests
         var algorithm = new AdditiveStepAlgorithm(1);
         var observed = new List<string>();
 
-        _ = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42))
+        _ = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup
                      .AddAspect(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")))
-                     .AddAspect(new WrappingAnalyzer(algorithm.Evaluator, () => observed.Add("second")))
+                     .AddAspect(new WrappingAnalyzer(algorithm.Evaluator, () => observed.Add("second"))))
                      .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // Both bind as modules, so the one attached first sits innermost and observes first. Recorded as
@@ -262,10 +280,9 @@ public class AlgorithmRunTests
     public void TheSameAspectAddedTwice_ChecksItsAdviceOnce()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42));
         var aspect = new CheckCountingAspect();
-
-        run.AddAspect(aspect).AddAspect(aspect);
+        var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42),
+            setup => setup.AddAspect(aspect).AddAspect(aspect));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -282,8 +299,9 @@ public class AlgorithmRunTests
 
     private sealed class ThrowingAlgorithmAdvice(Exception failure) : AlgorithmAdvice<int, PopulationState<int>>
     {
-        public override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> Wrap<TSearchSpace, TProblem>(
-            IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> executor, IAlgorithm<int, PopulationState<int>> source) =>
+        public override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
+            Wrap<TSearchSpace, TProblem>(IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> executor,
+                IAlgorithm<int, PopulationState<int>> source) =>
             throw failure;
     }
 
@@ -292,7 +310,8 @@ public class AlgorithmRunTests
         public override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
             IOperator<Evaluation, int> source) => check();
 
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
+            OperationInfo operation,
             IOperator<Evaluation, int> source) => executor;
     }
 
@@ -304,8 +323,6 @@ public class AlgorithmRunTests
             Advices = [(Pointcut.OfType<IOperator<Evaluation, int>>(), new CheckingEvaluatorAdvice(() => CheckCount++))];
         }
     }
-
-    private sealed class BlindAnalyzer : Aspect;
 
     private sealed class ObservingAnalyzer : Aspect
     {

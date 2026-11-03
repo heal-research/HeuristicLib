@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 /// <remarks>
 /// Derive directly from this base when the mutator needs direct control over its execution structure.
 /// Use <see cref="StatelessMutator{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
-/// Use <see cref="StatefulMutator{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// <para>
 /// The type arguments are the search space and problem this mutator is written for. The base bridges to whatever a
 /// run requests, and a request the mutator was not written for is reported when the execution graph is built. A

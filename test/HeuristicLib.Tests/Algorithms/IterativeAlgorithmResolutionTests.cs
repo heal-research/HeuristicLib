@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
@@ -24,15 +25,15 @@ public sealed class IterativeAlgorithmResolutionTests
         var first = Resolve(parent, source);
         events.ShouldBe(["prepare algorithm", "prepare interceptor", "bind algorithm"]);
 
-        var second = Resolve(parent.CreateChildScope(), source);
+        var second = Resolve(parent.With(), source);
         first.ShouldNotBeSameAs(second);
-        events.ShouldBe(["prepare algorithm", "prepare interceptor", "bind algorithm", "bind algorithm"]);
+        events.ShouldBe(["prepare algorithm", "prepare interceptor", "bind algorithm", "prepare algorithm", "prepare interceptor", "bind algorithm"]);
         (await Next(first)).Value.ShouldBe(101);
-        (await Next(second)).Value.ShouldBe(202);
+        (await Next(second)).Value.ShouldBe(101);
 
         (await Next(Resolve(ResolutionScope.Create(), source))).Value.ShouldBe(101);
-        events.Count(value => value == "prepare algorithm").ShouldBe(2);
-        events.Count(value => value == "prepare interceptor").ShouldBe(2);
+        events.Count(value => value == "prepare algorithm").ShouldBe(3);
+        events.Count(value => value == "prepare interceptor").ShouldBe(3);
     }
 
     [Theory]
@@ -49,20 +50,20 @@ public sealed class IterativeAlgorithmResolutionTests
         var outer = Resolve(parent, source);
         (await Next(outer)).Value.ShouldBe(101);
 
-        var child = parent.CreateChildScope(Aspect.CountInvocations(interceptor, observedCalls));
+        var child = parent.With(Aspect.CountInvocations(interceptor, observedCalls));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
+        (await Next(inner)).Value.ShouldBe(101);
+        (await Next(outer)).Value.ShouldBe(202);
         (await Next(inner)).Value.ShouldBe(202);
-        (await Next(outer)).Value.ShouldBe(303);
-        (await Next(inner)).Value.ShouldBe(404);
-        observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(1);
-        interceptorPreparations.ShouldBe(1);
-
-        (await Next(Resolve(ResolutionScope.Create(), source))).Value.ShouldBe(101);
         observedCalls.CurrentCount.ShouldBe(2);
         preparations.ShouldBe(2);
         interceptorPreparations.ShouldBe(2);
+
+        (await Next(Resolve(ResolutionScope.Create(), source))).Value.ShouldBe(101);
+        observedCalls.CurrentCount.ShouldBe(2);
+        preparations.ShouldBe(3);
+        interceptorPreparations.ShouldBe(3);
     }
 
     [Theory]
@@ -81,22 +82,22 @@ public sealed class IterativeAlgorithmResolutionTests
         paused.Current.Value.ShouldBe(101);
         paused.Current.PreviousValue.ShouldBeNull();
 
-        var child = parent.CreateChildScope(Aspect.CountInvocations(interceptor, observedCalls));
+        var child = parent.With(Aspect.CountInvocations(interceptor, observedCalls));
         var inner = Resolve(child, source);
         var innerRandom = new RecordingRandom();
         await using var observed = inner.RunStreamingAsync(Problem, innerRandom, ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
-        observed.Current.Value.ShouldBe(202);
+        observed.Current.Value.ShouldBe(101);
 
         (await paused.MoveNextAsync()).ShouldBeTrue();
-        paused.Current.Value.ShouldBe(303);
+        paused.Current.Value.ShouldBe(202);
         paused.Current.PreviousValue.ShouldBe(101);
         observedCalls.CurrentCount.ShouldBe(1);
         outerRandom.ForkKeys.ShouldBe([0UL, 1UL]);
 
         (await observed.MoveNextAsync()).ShouldBeTrue();
-        observed.Current.Value.ShouldBe(404);
-        observed.Current.PreviousValue.ShouldBe(202);
+        observed.Current.Value.ShouldBe(202);
+        observed.Current.PreviousValue.ShouldBe(101);
         observedCalls.CurrentCount.ShouldBe(2);
         innerRandom.ForkKeys.ShouldBe([0UL, 1UL]);
         (await paused.MoveNextAsync()).ShouldBeFalse();
@@ -168,15 +169,15 @@ public sealed class IterativeAlgorithmResolutionTests
     }
 
     [Fact]
-    public async Task BoundAlgorithm_AcceptsASupportedConcreteProblemAndKeepsItsScopedState()
+    public async Task BoundAlgorithm_AcceptsConcreteProblemsWithIndependentPrivateFields()
     {
         var preparations = 0;
         var source = new WideProblemAlgorithm(() => preparations++);
         var scope = ResolutionScope.Create();
 
         (await Next(Resolve(scope, source))).Value.ShouldBe(1);
-        (await Next(Resolve(scope, source))).Value.ShouldBe(2);
-        preparations.ShouldBe(1);
+        (await Next(Resolve(scope, source))).Value.ShouldBe(1);
+        preparations.ShouldBe(2);
     }
 
     private static IAlgorithm<int, ProbeState> CreateAlgorithm(bool bound, Action prepare, Action? bind = null, IOperator<Interception<ProbeState>, int>? interceptor = null) =>
@@ -198,25 +199,17 @@ public sealed class IterativeAlgorithmResolutionTests
 
     private sealed record OtherState : ISearchState;
 
-    private sealed class CounterState
-    {
-        public int Invocations { get; set; }
-    }
-
     private sealed record AgnosticAlgorithm(Action Prepare, Action Bind) : IterativeAlgorithm<AgnosticAlgorithm, int, ProbeState>
     {
         protected override IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, ProbeState> scope)
         {
-            var state = scope.GetScopedState(this, () =>
-            {
-                Prepare();
-                return new CounterState();
-            });
+            Prepare();
             var interceptor = scope.ResolveOptional(Interceptor);
             Bind();
-            return new CounterExecutor<TSearchSpace, TProblem>(interceptor, state);
+            return new CounterExecutor<TSearchSpace, TProblem>(interceptor);
         }
+
     }
 
     private sealed record BoundAlgorithm(Action Prepare, Action Bind) : IterativeAlgorithm<BoundAlgorithm, int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
@@ -224,49 +217,56 @@ public sealed class IterativeAlgorithmResolutionTests
         protected override IterativeAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> CreateExecutor(
             ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> scope)
         {
-            var state = scope.GetScopedState(this, () =>
-            {
-                Prepare();
-                return new CounterState();
-            });
+            Prepare();
             var interceptor = scope.ResolveOptional(Interceptor);
             Bind();
-            return new CounterExecutor<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(interceptor, state);
+            return new CounterExecutor<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(interceptor);
         }
+
     }
 
     private sealed record WideProblemAlgorithm(Action Prepare) : IterativeAlgorithm<WideProblemAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>
     {
         protected override IterativeAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> CreateExecutor(
-            ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> scope) =>
-            new CounterExecutor<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(scope.ResolveOptional(Interceptor), scope.GetScopedState(this, () =>
-            {
-                Prepare();
-                return new CounterState();
-            }));
+            ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> scope)
+        {
+            var interceptor = scope.ResolveOptional(Interceptor);
+            Prepare();
+            return new CounterExecutor<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(interceptor);
+        }
+
     }
 
-    private sealed class CounterExecutor<TSearchSpace, TProblem>(IInterceptionExecutor<int, TSearchSpace, TProblem, ProbeState>? interceptor, CounterState state)
+    private sealed class CounterExecutor<TSearchSpace, TProblem>(IInterceptionExecutor<int, TSearchSpace, TProblem, ProbeState>? interceptor)
         : IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState>(interceptor)
         where TSearchSpace : class, ISearchSpace<int>
         where TProblem : class, IProblem<int, TSearchSpace>
     {
+        private int invocations;
+
         protected override ProbeState ExecuteStep(ProbeState? previousState, TProblem problem, IRandomNumberGenerator random) =>
-            new(++state.Invocations, previousState?.Value);
+            new(++invocations, previousState?.Value);
 
         protected override bool HasCompleted(int yieldedStateCount, ProbeState? previousState, TProblem problem) => yieldedStateCount == 2;
     }
 
-    private sealed record AdvancingInterceptor(Action Prepare) : StatefulInterceptor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState, CounterState>
+    private sealed record AdvancingInterceptor(Action Prepare) : Interceptor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
     {
-        protected override CounterState CreateScopedState()
+
+        protected override IInterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> CreateExecutor(ResolutionScope scope)
         {
             Prepare();
-            return new CounterState();
+            return new Executor();
         }
 
-        protected override ProbeState Transform(ProbeState currentState, ProbeState? previousState, CounterState operatorState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
-            currentState with { Value = currentState.Value + 100 * ++operatorState.Invocations };
+        private sealed class Executor
+            : InterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
+        {
+            private int invocations;
+
+            public override ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+            currentState with { Value = currentState.Value + 100 * ++invocations };
+        }
     }
 
     private sealed class RecordingRandom : IRandomNumberGenerator

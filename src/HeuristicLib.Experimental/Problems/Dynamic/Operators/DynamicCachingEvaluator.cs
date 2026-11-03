@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
@@ -21,30 +20,6 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     where TCandidate : notnull
     where TKey : notnull
 {
-    private sealed class State
-    {
-        public MemoryCache Cache { get; }
-        public long HitCount { get; set; }
-        public int Epoch { get; private set; }
-
-        public State(long? sizeLimit, int initialEpoch)
-        {
-            // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
-            // on a live thread after the scoped state is released. Grace accounting uses HitCount instead.
-            Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit });
-            Epoch = initialEpoch;
-        }
-
-        public void SynchronizeEpoch(int epoch)
-        {
-            if (Epoch == epoch)
-                return;
-            Cache.Clear();
-            HitCount = 0;
-            Epoch = epoch;
-        }
-    }
-
     /// <summary>
     /// Gets the dynamic problem whose epoch changes clear this evaluator's cache.
     /// </summary>
@@ -60,6 +35,9 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
+    /// <remarks>Shared cache creation settings belong to the handle. Do not also set SizeLimit.</remarks>
+    public ResourceHandle<DynamicEvaluationCache<TKey>>? Cache { get; init; }
+
     public DynamicCachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> problem, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
@@ -70,6 +48,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <summary>
     /// Gets the number of cached candidate evaluations across consecutive all-hit batches that advances the problem epoch.
     /// A batch containing any cache miss resets the accumulated count. The default effectively disables cache-driven epoch advancement.
+    /// A shared cache requests at most one update per epoch, even when the problem defers applying it.
     /// </summary>
     public long GraceCount { get; init; } = long.MaxValue;
 
@@ -79,119 +58,30 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var state = scope.GetScopedState(this, () => new State(SizeLimit, SourceProblem.CurrentEpoch));
+        if (SizeLimit < 0)
+            throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
+        if (Cache is not null && SizeLimit is not null)
+            throw new InvalidOperationException("A shared cache takes its size limit from its handle. Do not also set SizeLimit.");
+        var cache = Cache is null ? new DynamicEvaluationCache<TKey>(SizeLimit) : scope.Resource(Cache);
+        cache.Bind(SourceProblem, GraceCount);
         var childEvaluator = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, GraceCount, state);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, cache);
     }
 
-    private sealed class Executor<TRunSearchSpace, TRunProblem> : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
+    private sealed class Executor<TRunSearchSpace, TRunProblem>(
+        IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator,
+        IDynamicProblem<TCandidate, TSearchSpace> sourceProblem,
+        ICacheKeySelector<TCandidate, TKey> keySelector,
+        DynamicEvaluationCache<TKey> cache) : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
         where TRunSearchSpace : class, ISearchSpace<TCandidate>
         where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
     {
-        private readonly IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator;
-        private readonly State state;
-        private readonly IDynamicProblem<TCandidate, TSearchSpace> sourceProblem;
-        private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
-        private readonly long graceCount;
-
-        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long graceCount, State state)
-        {
-            this.childEvaluator = childEvaluator;
-            this.state = state;
-            this.sourceProblem = sourceProblem;
-            this.keySelector = keySelector;
-            this.graceCount = graceCount;
-        }
-
         public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
         {
             if (!ReferenceEquals(problem, sourceProblem))
                 throw new InvalidOperationException("Dynamic caching evaluator executions can only evaluate the dynamic problem they were created for.");
-
-            var epoch = sourceProblem.CurrentEpoch;
-            state.SynchronizeEpoch(epoch);
-            var cache = state.Cache;
-            var n = candidates.Count;
-            var results = new ObjectiveVector[n];
-
-            var uncachedCandidates = new List<TCandidate>();
-            var uncachedKeys = new List<TKey>();
-            var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
-
-            for (var i = 0; i < n; i++)
-            {
-                var candidate = candidates[i];
-                var key = keySelector.SelectKey(candidate);
-
-                if (cache.TryGetValue(key, out ObjectiveVector? cached))
-                {
-                    results[i] = cached!;
-                    continue;
-                }
-
-                if (!uncachedMap.TryGetValue(key, out var entry))
-                {
-                    var j = uncachedCandidates.Count;
-                    uncachedCandidates.Add(candidate);
-                    uncachedKeys.Add(key);
-                    uncachedMap.Add(key, (j, [i]));
-                }
-                else
-                {
-                    entry.indices.Add(i);
-                }
-            }
-
-            if (uncachedCandidates.Count > 0)
-            {
-                IReadOnlyList<ObjectiveVector> newObjectiveVectors;
-                try
-                {
-                    newObjectiveVectors = childEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
-                }
-                finally
-                {
-                    state.SynchronizeEpoch(sourceProblem.CurrentEpoch);
-                }
-
-                // Objective vectors carry no epoch; a batch crossing an update cannot be safely admitted.
-                if (state.Epoch == epoch)
-                {
-                    for (var k = 0; k < uncachedKeys.Count; k++)
-                    {
-                        cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
-                    }
-                }
-
-                foreach (var (_, entry) in uncachedMap)
-                {
-                    var objectiveVector = newObjectiveVectors[entry.j];
-                    foreach (var i in entry.indices)
-                    {
-                        results[i] = objectiveVector;
-                    }
-                }
-            }
-
-            if (n == 0)
-            {
-                return results;
-            }
-
-            if (uncachedCandidates.Count == 0)
-            {
-                state.HitCount += n;
-                if (state.HitCount >= graceCount)
-                {
-                    ((IUpdateRequestable)sourceProblem).RequestUpdate();
-                }
-            }
-            else
-            {
-                state.HitCount = 0;
-            }
-
-            return results;
+            return cache.Evaluate(candidates, keySelector, sourceProblem,
+                missing => childEvaluator.Evaluate(missing, random, searchSpace, problem));
         }
     }
 }

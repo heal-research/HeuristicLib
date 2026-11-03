@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -16,7 +17,7 @@ public class OperatorInspectionTests
     [Theory]
     [InlineData(OperatorCountMetric.Invocations, 4, 5)]
     [InlineData(OperatorCountMetric.Candidates, 7, 8)]
-    public void CountingMutator_RebindingPreservesChildStateAndTheSuppliedCounter(OperatorCountMetric metric, int sharedCount, int independentCount)
+    public void CountingMutator_NewExecutorsShareOnlyTheSuppliedCounter(OperatorCountMetric metric, int sharedCount, int independentCount)
     {
         var preparations = 0;
         var counter = new CountAccumulator();
@@ -30,26 +31,26 @@ public class OperatorInspectionTests
         var outer = parent.ResolveMutator(source);
         outer.Mutate([0, 0], random, problem.SearchSpace, problem).ShouldBe([1, 1]);
 
-        var child = parent.CreateChildScope(Aspect.CountInvocations(leaf, observedCalls));
+        var child = parent.With(Aspect.CountInvocations(leaf, observedCalls));
         var inner = child.ResolveMutator(source);
         inner.ShouldNotBeSameAs(outer);
+        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
+        outer.Mutate([0, 0, 0], random, problem.SearchSpace, problem).ShouldBe([2, 2, 2]);
         inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
-        outer.Mutate([0, 0, 0], random, problem.SearchSpace, problem).ShouldBe([3, 3, 3]);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([4]);
 
         counter.CurrentCount.ShouldBe(sharedCount);
         observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(1);
+        preparations.ShouldBe(2);
 
         var independent = ResolutionScope.Create(aspect).ResolveMutator(source);
         independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         counter.CurrentCount.ShouldBe(independentCount);
         observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(2);
+        preparations.ShouldBe(3);
     }
 
     [Fact]
-    public void DurationMeasuringMutator_RebindingPreservesChildStateAndTheSuppliedDuration()
+    public void DurationMeasuringMutator_NewExecutorsShareOnlyTheSuppliedDuration()
     {
         var preparations = 0;
         var duration = new DurationAccumulator();
@@ -66,25 +67,25 @@ public class OperatorInspectionTests
         outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
 
-        var child = parent.CreateChildScope(Aspect.CountInvocations(leaf, observedCalls));
+        var child = parent.With(Aspect.CountInvocations(leaf, observedCalls));
         var inner = child.ResolveMutator(source);
         inner.ShouldNotBeSameAs(outer);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
+        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
-        outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([3]);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([4]);
+        outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
+        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
 
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
         observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(1);
+        preparations.ShouldBe(2);
 
         var independent = ResolutionScope.Create(aspect).ResolveMutator(source);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
         independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(15));
         observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(2);
+        preparations.ShouldBe(3);
     }
 
     [Theory]
@@ -996,23 +997,25 @@ public class OperatorInspectionTests
             throw new InvalidOperationException();
     }
 
-    private sealed class MutationState
+    private sealed record AdvancingMutator(Action Prepare) : Mutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public int Invocations { get; set; }
-    }
 
-    private sealed record AdvancingMutator(Action Prepare) : StatefulMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, MutationState>
-    {
-        protected override MutationState CreateScopedState()
+        protected override IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
         {
             Prepare();
-            return new MutationState();
+            return new Executor();
         }
 
-        protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+        private sealed class Executor
+            : MutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
         {
-            var call = ++state.Invocations;
-            return parents.Select(parent => parent + call).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+            {
+                var call = ++invocations;
+                return parents.Select(parent => parent + call).ToArray();
+            }
         }
     }
 

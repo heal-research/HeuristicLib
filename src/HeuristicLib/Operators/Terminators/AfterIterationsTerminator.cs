@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -5,13 +6,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AfterIterationsTerminator<TCandidate>
-    : StatefulTerminator<TCandidate, AfterIterationsTerminator<TCandidate>.State>
+    : Terminator<TCandidate>
 {
-    public sealed class State
-    {
-        public int CurrentCount { get; set; }
-    }
-
     public AfterIterationsTerminator(int maximumIterations)
     {
         MaximumIterations = maximumIterations;
@@ -23,12 +19,13 @@ public sealed record AfterIterationsTerminator<TCandidate>
     /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
     public int MaximumIterations { get; init; }
 
-    protected override State CreateScopedState() => new();
+    protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) => new Executor(MaximumIterations);
 
-    protected override bool IsTerminalState(State state)
+    private sealed class Executor(int maximumIterations) : TerminationExecutor<TCandidate>
     {
-        state.CurrentCount += 1;
-        return state.CurrentCount >= MaximumIterations;
+        private int currentCount;
+
+        public override bool IsTerminalState() => ++currentCount >= maximumIterations;
     }
 }
 

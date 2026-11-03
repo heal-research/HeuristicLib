@@ -23,28 +23,19 @@ public partial class ResolutionScope
         var execution = ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>();
         if (!algorithm.Fits(execution))
             throw SearchConfigurationValidation.Mismatch(algorithm, execution);
-        if (!state.Constructing.Add(algorithm))
-            throw new InvalidOperationException($"Recursive construction of {algorithm.GetType().Name}.");
-        try
-        {
-            var owner = state.GetOrAddOwner(algorithm);
-            var executor = algorithm.CreateExecutor(WithState(owner).For<TCandidate, TSearchSpace, TProblem, TSearchState>());
-            foreach (var (pointcut, advice) in Advices())
-                if (pointcut.Matches(algorithm))
-                    executor = advice switch
-                    {
-                        AlgorithmAdvice<TCandidate, TSearchState> typed => typed.Wrap(executor, algorithm),
-                        // Advice for another search state of a configuration producing several.
-                        IAlgorithmAdvice => executor,
-                        _ => throw new InvalidOperationException($"{advice.GetType().FullName} cannot wrap algorithm {algorithm.GetType().Name}. " +
-                            "Algorithm advice derives from AlgorithmAdvice<TCandidate, TSearchState>.")
-                    };
-            return executor;
-        }
-        finally
-        {
-            state.Constructing.Remove(algorithm);
-        }
+        using var building = construction.Enter(algorithm);
+        var executor = algorithm.CreateExecutor(this.For<TCandidate, TSearchSpace, TProblem, TSearchState>());
+        foreach (var (pointcut, advice) in Advices())
+            if (pointcut.Matches(algorithm))
+                executor = advice switch
+                {
+                    AlgorithmAdvice<TCandidate, TSearchState> typed => typed.Wrap(executor, algorithm),
+                    // Advice for another search state of a configuration producing several.
+                    IAlgorithmAdvice => executor,
+                    _ => throw new InvalidOperationException($"{advice.GetType().FullName} cannot wrap algorithm {algorithm.GetType().Name}. " +
+                        "Algorithm advice derives from AlgorithmAdvice<TCandidate, TSearchState>.")
+                };
+        return executor;
     }
 
     [return: NotNullIfNotNull(nameof(algorithm))]

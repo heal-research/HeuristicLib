@@ -28,10 +28,10 @@ public sealed class PerInvocationChoiceSpecs
         var exploringCalls = new CountAccumulator();
         var choiceCalls = new CountAccumulator();
 
-        var states = algorithm.CreateRun(problem, RandomNumberGenerator.Create(7))
+        var states = algorithm.CreateRun(problem, RandomNumberGenerator.Create(7), setup: setup => setup
             .AddAspect(Aspect.CountInvocations(fineTuning, fineTuningCalls))
             .AddAspect(Aspect.CountInvocations(exploring, exploringCalls))
-            .AddAspect(Aspect.CountInvocations(mutator, choiceCalls))
+            .AddAspect(Aspect.CountInvocations(mutator, choiceCalls)))
             .Stream(cancellationToken: TestContext.Current.CancellationToken)
             .ToList();
 

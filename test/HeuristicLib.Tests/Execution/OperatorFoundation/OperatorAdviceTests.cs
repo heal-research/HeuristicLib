@@ -88,7 +88,7 @@ public sealed class OperatorAdviceTests
             Check(generalLog.Wraps == 5 && typedLog.Wraps == 2 && generalTotal.Value == 5 && typedTotal.Value == 2,
                 "contextual reconstruction wraps the new executor with the same advice objects");
             _ = Invoke(Typed(ResolutionScope.Create(general, typedAdvice)).Resolve(mutation));
-            Check(source.Log.Preparations == 2 && generalTotal.Value == 6,
+            Check(source.Log.Preparations == 6 && generalTotal.Value == 6,
                 "independent roots prepare independent operator state while advice data stays on the advice");
         }
     }
@@ -119,7 +119,7 @@ public sealed class OperatorAdviceTests
                 _ = narrow.Resolve(named).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
             var other = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, OtherState>();
             _ = other.Resolve(named).IsTerminalState(new OtherState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
-            Check(source.Log.Preparations == 1, "three compatible state views prepare the operator once in either resolution order");
+            Check(source.Log.Preparations == 3, "each compatible view constructs an executor");
             Check(generalLog.Wraps == 3 && typedLog.Wraps == 3 && total.Value == 3 && skippedLog.Checks == 0,
                 "state views are wrapped separately without applying another operation's advice");
             var advised = narrow.Resolve(named, out ILiveValue? control);
@@ -197,16 +197,16 @@ public sealed class OperatorAdviceTests
         var log = new AdviceLog();
         var scope = Typed(root.With(Aspect.Create(Pointcut.OfType<IOperator>(), new CountInvocations(count, log))));
         var advised = scope.Resolve(outer, out ILiveValue? control);
-        // Each resolution builds its own executor, so the controls share the live value rather than identity.
+        // Each resolution builds its own executor and its control targets that executor.
         Check(rawControl is not null && control is not null && advised is not ILiveValue,
             "control lookup follows names and non-control inspection wrappers to the source");
         control!.Value = 17;
-        Check(rawControl!.Value == 17, "the advised control and the raw control share the source's state");
+        Check(rawControl!.Value == 3, "separately resolved controls belong to separate executors");
         Check(Invoke(advised) == 17 && count.Value == 3, "calls use the advised chain and count each of three selected configuration boundaries");
-        Check(Invoke(raw) == 17 && count.Value == 3, "earlier raw bindings retain their original observation context");
+        Check(Invoke(raw) == 3 && count.Value == 3, "earlier raw bindings retain their original observation context");
         var rebound = scope.Resolve(outer, out ILiveValue? reboundControl);
-        Check(reboundControl is not null && reboundControl.Value == 17 && Invoke(rebound) == 17 && count.Value == 6,
-            "rebuilding the chain neither resets controls nor loses counting");
+        Check(reboundControl is not null && reboundControl.Value == 3 && Invoke(rebound) == 3 && count.Value == 6,
+            "rebuilding the chain creates private data and retains the supplied counter");
         Check(log.Wraps == 6 && new IOperator[] { source, inner, outer }.All(selected =>
             log.WrappedSources.Count(item => ReferenceEquals(item.Target, selected)) == 2),
             "each resolution wraps every selected configuration with its own source identity");
@@ -218,26 +218,25 @@ public sealed class OperatorAdviceTests
         var childCounter = new InvocationCounter();
         var childLog = new AdviceLog();
         var contextual = Typed(originalScope.With(Aspect.Create(Pointcut.Reference(child), new CountInvocations(childCounter, childLog)))).Resolve(composite);
-        Check(Invoke(original) == 1 && Invoke(contextual) == 2 && Invoke(original) == 3 && childCounter.Value == 1,
+        Check(Invoke(original) == 1 && Invoke(contextual) == 1 && Invoke(original) == 2 && childCounter.Value == 1,
             "newly resolved children acquire requesting advice while original parent nodes keep their old children");
-        Check(Invoke(contextual) == 4 && childCounter.Value == 2 && childLog.Wraps == 1,
-            "prepared child scoped state survives contextual reconstruction");
+        Check(Invoke(contextual) == 2 && childCounter.Value == 2 && childLog.Wraps == 1,
+            "the contextual executor retains its own child fields");
     }
 
     [Fact]
     public void Ownership()
     {
-        foreach (var policy in new[] { ChildScopePolicy.Fresh, ChildScopePolicy.Retained, ChildScopePolicy.Shared })
+        foreach (var policy in new[] { false, true })
         {
             IOperator<Mutation, RealVector> source = new CountingMutation();
             var log = new AdviceLog();
             var total = new InvocationCounter();
             var aspect = Aspect.Create(Pointcut.Reference(source), new CountInvocations(total, log));
             var root = ResolutionScope.Create(aspect);
-            var selector = new ChildScopeSelector(policy);
-            var first = Typed(selector.GetScopeFor(source, root)).Resolve(source);
-            var second = Typed(selector.GetScopeFor(source, root.With())).Resolve(source);
-            Check(Invoke(first) == 1 && Invoke(second) == (policy == ChildScopePolicy.Fresh ? 1 : 2), $"{policy} preserves operator state semantics under advice");
+            var first = Typed(root).Resolve(source);
+            var second = Typed(root.With()).Resolve(source);
+            Check(Invoke(first) == 1 && Invoke(second) == 1, $"{policy} preserves operator state semantics under advice");
             Check(total.Value == 2 && log.Wraps == 2, $"{policy} applies the advice to every activation");
         }
         var references = new AdviceLog();
@@ -264,8 +263,8 @@ public sealed class OperatorAdviceTests
         Reject(() => scope.Resolve(source), "advice wrapping failure");
         Check(child.Log.Preparations == 1 && child.Log.Constructions == 1, "wrapping follows raw construction");
         log.FailWrap = false;
-        Check(Invoke(scope.Resolve(source)) == 3 && log.Checks == 3 && log.Wraps == 2 && count.Value == 1 && child.Log.Preparations == 1,
-            "failed advice is not cached and a retry reuses the prepared child");
+        Check(Invoke(scope.Resolve(source)) == 3 && log.Checks == 3 && log.Wraps == 2 && count.Value == 1 && child.Log.Preparations == 2,
+            "failed advice is not cached and retry constructs a fresh child");
 
         var wrongChild = new SharedOperations(new ProbeLog());
         var wrongSource = new ContextualMutation(wrongChild);
@@ -278,7 +277,7 @@ public sealed class OperatorAdviceTests
         Check(ReferenceEquals(control, sentinel), "advice returning another executor type exposes no controls");
         wrong.ReturnWrongView = false;
         _ = Invoke(wrongScope.Resolve(wrongSource));
-        Check(wrongLog.Wraps == 2 && wrongChild.Log.Preparations == 1, "a rejected advice result is not cached and the prepared child is reused");
+        Check(wrongLog.Wraps == 2 && wrongChild.Log.Preparations == 2, "a rejected advice result is not cached and retry constructs a fresh child");
 
         var termSource = new SharedOperations(new ProbeLog());
         IOperator<Termination, RealVector> term = termSource;
@@ -299,8 +298,8 @@ public sealed class OperatorAdviceTests
         Check(generalTotal.Value == 1 && typedTotal.Value == 1, "a failed second view leaves the first executor usable");
         typedLog.FailCheck = false;
         _ = narrow.Resolve(term).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
-        Check(termSource.Log.Preparations == 1 && generalTotal.Value == 2 && typedTotal.Value == 2,
-            "retry reuses the prepared operator across views");
+        Check(termSource.Log.Preparations == 2 && generalTotal.Value == 2 && typedTotal.Value == 2,
+            "retry constructs private data for the new view");
 
         var unsupported = new UnsupportedAdvice();
         var unsupportedScope = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), unsupported)));
@@ -321,8 +320,8 @@ public sealed class OperatorAdviceTests
         Check(log.Checks == 1 && log.Wraps == 0, "advice checks precede raw construction; wrapping follows it");
         source.Log.FailConstruction = false;
         _ = Invoke(scope.Resolve((IOperator<Mutation, RealVector>)source));
-        Check(log.Wraps == 1 && counter.Value == 1 && source.Log.Preparations == 1,
-            "raw construction failure preserves the prepared operator");
+        Check(log.Wraps == 1 && counter.Value == 1 && source.Log.Preparations == 2,
+            "raw construction failure causes fresh private construction on retry");
 
         var construction = new ConstructionFailureAdvice();
         var constructionSource = new SharedOperations(new ProbeLog());
@@ -334,8 +333,8 @@ public sealed class OperatorAdviceTests
             "a wrapper constructor failure exposes no controls even though the raw node was constructed");
         construction.Fail = false;
         _ = constructionScope.Resolve((IOperator<Mutation, RealVector>)constructionSource, out control);
-        Check(!ReferenceEquals(control, sentinel) && construction.Wraps == 2 && constructionSource.Log.Preparations == 1,
-            "wrapper construction retries over the existing prepared owner");
+        Check(!ReferenceEquals(control, sentinel) && construction.Wraps == 2 && constructionSource.Log.Preparations == 2,
+            "wrapper construction retries with fresh private data");
 
         var invocation = new InvocationLog();
         IOperator<Mutation, RealVector> throwing = new ThrowingMutation(invocation);
@@ -373,7 +372,7 @@ public sealed class OperatorAdviceTests
     private static (WeakReference Source, WeakReference Execution) DiscardFreshState(ResolutionScope root, Aspect aspect)
     {
         IOperator<Mutation, RealVector> source = new CountingMutation();
-        var executor = Typed(root.CreateChildScope(aspect)).Resolve(source);
+        var executor = Typed(root.With(aspect)).Resolve(source);
         return (new WeakReference(source), new WeakReference(executor));
     }
 
@@ -404,9 +403,9 @@ public sealed class OperatorAdviceTests
             GC.WaitForPendingFinalizers();
             GC.Collect();
         }
-        Check(!discardedAdvice.IsAlive, "a live owner does not retain discarded advice");
+        Check(!discardedAdvice.IsAlive, "a live context does not retain discarded advice");
         Check(!discardedFresh.Source.IsAlive && !discardedFresh.Execution.IsAlive,
-            "a long-lived advice/aspect does not retain discarded fresh owners or sources");
+            "a live aspect does not retain discarded executors or sources");
         Check(Invoke(live.Executor) == 1 && live.Total.Value == 1, "a live advised execution retains the counter it still needs");
         Check(!live.Advice.IsAlive, "an advised executor keeps its wrapper data, not the advice object");
         GC.KeepAlive(root);

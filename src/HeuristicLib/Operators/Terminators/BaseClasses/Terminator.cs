@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Terminators;
 /// <remarks>
 /// Derive directly from this base when the terminator needs direct control over its execution structure.
 /// Use <see cref="StatelessTerminator{TCandidate,TSearchSpace,TProblem,TSearchState}"/> when no mutable execution data is needed.
-/// Use <see cref="StatefulTerminator{TCandidate,TSearchSpace,TProblem,TSearchState,TState}"/> when only ordinary execution data is needed.
 /// <para>
 /// The type arguments are the search space, problem and search state this terminator is written for. The base bridges
 /// to whatever a run requests, and a request the terminator was not written for is reported when the execution graph

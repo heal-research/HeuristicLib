@@ -14,7 +14,7 @@ public sealed class ChildResolutionAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Resolve child configurations through the scope",
-        messageFormat: "Do not create a child's executor directly. Resolve the child through the scope to preserve its advice and scoped state.",
+        messageFormat: "Do not create a child's executor directly. Resolve the child through the scope to preserve its contextual advice and construction checks.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);

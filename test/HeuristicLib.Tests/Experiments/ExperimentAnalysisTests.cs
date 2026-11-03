@@ -13,13 +13,18 @@ public class ExperimentAnalysisTests
     {
         var invocationOrder = new List<int>();
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        ImmutableArray<TrialAspect<ExperimentCase<CountingExecutionAlgorithm, int>, OrderedEvaluationModule>> first = default;
+        ImmutableArray<TrialAspect<ExperimentCase<CountingExecutionAlgorithm, int>, OrderedEvaluationAnalyzer>> middle = default;
         var run = algorithm.Repeat(2)
-            .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
-        var first = run.AddAspectPerTrial(alg => new OrderedEvaluationModule(alg.Evaluator, 1, invocationOrder));
-        var middle = run.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
-        _ = run.AddAspectPerTrial(alg => new OrderedEvaluationModule(alg.Evaluator, 3, invocationOrder));
+            .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup =>
+        {
+            first = setup.AddAspectPerTrial(alg => new OrderedEvaluationModule(alg.Evaluator, 1, invocationOrder));
+            middle = setup.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
+            _ = setup.AddAspectPerTrial(alg => new OrderedEvaluationModule(alg.Evaluator, 3, invocationOrder));
+        });
 
         first.Select(entry => entry.Trial.Key).ShouldBe([0, 1]);
+        first[0].Trial.ShouldBeSameAs(run.Trials[0].Case);
         first[0].Aspect.ShouldNotBeSameAs(first[1].Aspect);
         first.ShouldAllBe(entry => entry.Aspect.Observations == 0);
 
@@ -51,9 +56,13 @@ public class ExperimentAnalysisTests
         var invocationOrder = new List<int>();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingExecutionAlgorithm(1, evaluator);
-        var run = algorithm.Repeat(2).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
-        var first = run.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocationOrder));
-        var second = run.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
+        ImmutableArray<TrialAspect<ExperimentCase<CountingExecutionAlgorithm, int>, OrderedEvaluationAnalyzer>> first = default;
+        ImmutableArray<TrialAspect<ExperimentCase<CountingExecutionAlgorithm, int>, OrderedEvaluationAnalyzer>> second = default;
+        var run = algorithm.Repeat(2).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup =>
+        {
+            first = setup.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocationOrder));
+            second = setup.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 2, invocationOrder));
+        });
 
         var stream = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
         first.ShouldAllBe(analysis => analysis.Aspect.Result.Count == 0);
@@ -75,11 +84,12 @@ public class ExperimentAnalysisTests
             ExperimentCase.From(firstAlgorithm, 0, [0]),
             ExperimentCase.From(secondAlgorithm, 1, [1])
         ]);
-        var run = ExperimentTestSupport.CreateRun(experiment);
-
-        Should.Throw<InvalidOperationException>(() => run.AddAspectPerTrial(algorithm => algorithm.Increment == 2
-            ? throw new InvalidOperationException("Analyzer creation failed.")
-            : new OrderedEvaluationAnalyzer(algorithm.Evaluator, 1, invocations)));
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup =>
+        {
+            Should.Throw<InvalidOperationException>(() => setup.AddAspectPerTrial(algorithm => algorithm.Increment == 2
+                ? throw new InvalidOperationException("Analyzer creation failed.")
+                : new OrderedEvaluationAnalyzer(algorithm.Evaluator, 1, invocations)));
+        });
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -93,9 +103,12 @@ public class ExperimentAnalysisTests
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
         var experiment = algorithm.Repeat(2);
         Func<CountingExecutionAlgorithm, OrderedEvaluationAnalyzer> createAnalyzer = alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, invocations);
-        _ = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(1)).AddAspectPerTrial(createAnalyzer);
-        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(2));
-        var analyzers = run.AddAspectPerTrial(createAnalyzer);
+        _ = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(1), setup => setup.AddAspectPerTrial(createAnalyzer));
+        ImmutableArray<TrialAspect<ExperimentCase<CountingExecutionAlgorithm, int>, OrderedEvaluationAnalyzer>> analyzers = default;
+        var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(2), setup =>
+        {
+            analyzers = setup.AddAspectPerTrial(createAnalyzer);
+        });
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -104,12 +117,50 @@ public class ExperimentAnalysisTests
     }
 
     [Fact]
+    public async Task CapturedSetupCannotAttachAdviceToReturnedTrials()
+    {
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        ExperimentRunSetup<int, PopulationState<int>, CountingExecutionAlgorithm, int> captured = null!;
+        var run = algorithm.Repeat(2).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42),
+            setup => captured = setup);
+        var late = captured.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, []));
+
+        algorithm.ExecutionCount.ShouldBe(0);
+        captured.Cases[0].ShouldBeSameAs(run.Trials[0].Case);
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        late.ShouldAllBe(entry => entry.Aspect.Result.Count == 0);
+    }
+
+    [Fact]
+    public void SetupFailureBuildsNoTrialExecutors()
+    {
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        var failure = new InvalidOperationException("setup");
+        var calls = 0;
+        var thrown = Should.Throw<InvalidOperationException>(() => algorithm.Repeat(2).CreateRun(
+            MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup =>
+            {
+                calls++;
+                setup.Cases.Length.ShouldBe(2);
+                throw failure;
+            }));
+
+        thrown.ShouldBeSameAs(failure);
+        calls.ShouldBe(1);
+        algorithm.ExecutionCount.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task TrialAnalyzers_CollectPerTrialAsEachTrialCompletes()
     {
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        ImmutableArray<TrialAspect<ExperimentCase<CountingExecutionAlgorithm, int>, OrderedEvaluationAnalyzer>> analyzers = default;
         var run = algorithm.Repeat(2)
-            .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
-        var analyzers = run.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, []));
+            .CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup =>
+        {
+            analyzers = setup.AddAspectPerTrial(alg => new OrderedEvaluationAnalyzer(alg.Evaluator, 1, []));
+        });
 
         _ = await run.Trials[0].Run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

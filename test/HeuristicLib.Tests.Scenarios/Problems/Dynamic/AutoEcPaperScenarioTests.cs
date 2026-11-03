@@ -108,7 +108,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), setup: setup => setup.AddAspect(qualityCurve).AddAspect(bbcp));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -157,7 +157,7 @@ public class AutoEcPaperScenarioTests
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), setup: setup => setup.AddAspect(qualityCurve).AddAspect(bbcp));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),

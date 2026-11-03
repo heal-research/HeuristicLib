@@ -26,32 +26,28 @@ public record PredefinedCandidatesCreator<TCandidate>
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         var creatorForRemainingCandidates = scope.Resolve(CreatorForRemainingCandidates);
-        var state = scope.GetScopedState(this, static () => new State());
-        return new Executor<TRunSearchSpace, TRunProblem>(creatorForRemainingCandidates, PredefinedCandidates, state);
+        return new Executor<TRunSearchSpace, TRunProblem>(creatorForRemainingCandidates, PredefinedCandidates);
     }
 
-    private sealed class State
-    {
-        public int CurrentCandidateIndex { get; set; }
-    }
-
-    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates, State state)
+    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
         : CreationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
+        private int currentCandidateIndex;
+
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
             var candidates = new TCandidate[count];
-            var countPredefined = Math.Min(predefinedCandidates.Count - state.CurrentCandidateIndex, count);
+            var countPredefined = Math.Min(predefinedCandidates.Count - currentCandidateIndex, count);
             if (countPredefined > 0)
             {
                 for (var i = 0; i < countPredefined; i++)
                 {
-                    candidates[i] = predefinedCandidates[state.CurrentCandidateIndex + i];
+                    candidates[i] = predefinedCandidates[currentCandidateIndex + i];
                 }
 
-                state.CurrentCandidateIndex += countPredefined;
+                currentCandidateIndex += countPredefined;
             }
 
             var countRemaining = count - countPredefined;

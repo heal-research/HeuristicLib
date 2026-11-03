@@ -15,7 +15,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     private readonly Lock sync = new();
-    private RunLifecycleState lifecycleState = RunLifecycleState.Preparing;
+    private RunLifecycleState lifecycleState = RunLifecycleState.Ready;
 
     public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
 
@@ -34,7 +34,8 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
     }
 
-    public ExperimentRun(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
+    public ExperimentRun(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment, TProblem problem, IRandomNumberGenerator random,
+        Action<ExperimentRunSetup<TCandidate, TSearchState, TAlgorithm, TKey>>? setup = null)
     {
         Experiment = experiment;
         Problem = problem;
@@ -45,35 +46,24 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
             throw new InvalidOperationException("An experiment must contain at least one trial.");
 
         var keys = new HashSet<TKey>();
+        foreach (var experimentCase in cases)
+        {
+            if (!keys.Add(experimentCase.Key))
+                throw new InvalidOperationException($"Experiment trial key {experimentCase.Key} is not unique.");
+        }
+
+        var preparation = new ExperimentRunSetup<TCandidate, TSearchState, TAlgorithm, TKey>(cases);
+        setup?.Invoke(preparation);
         var trials = new List<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>>(cases.Length);
         for (var index = 0; index < cases.Length; index++)
         {
             var experimentCase = cases[index];
-            if (!keys.Add(experimentCase.Key))
-                throw new InvalidOperationException($"Experiment trial key {experimentCase.Key} is not unique.");
-
             var trialRandom = experimentCase.RandomForkPath.Aggregate(random, static (current, forkKey) => current.Fork(forkKey));
-            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom);
-            trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase.Key, experimentCase.Algorithm, algorithmRun, experimentCase.RandomForkPath));
+            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom, preparation.BuildScope(index));
+            trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase, algorithmRun));
         }
 
         Trials = trials.ToImmutableArray();
-
-    }
-
-    /// <summary>Creates one aspect for every experiment trial and adds it to the trial's run.</summary>
-    /// <returns>Each trial together with the aspect created for it, in trial order.</returns>
-    public ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> AddAspectPerTrial<TAspect>(
-        Func<TAlgorithm, TAspect> createAspect)
-        where TAspect : Aspect
-    {
-        EnsureNotStarted();
-        ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> aspects =
-            [.. Trials.Select(trial => TrialAspect.From(trial, createAspect(trial.Algorithm)))];
-        foreach (var (trial, aspect) in aspects)
-            trial.Run.AddAspect(aspect);
-
-        return aspects;
     }
 
     public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
@@ -281,25 +271,19 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     {
         lock (sync)
         {
-            EnsurePreparing();
-            if (Trials.Any(trial => trial.Run.LifecycleState != RunLifecycleState.Preparing))
+            EnsureReady();
+            if (Trials.Any(trial => trial.Run.LifecycleState != RunLifecycleState.Ready))
                 throw new InvalidOperationException("An experiment run cannot start after one of its trials has been started directly.");
             lifecycleState = RunLifecycleState.Running;
         }
     }
 
-    private void EnsurePreparing()
+    private void EnsureReady()
     {
-        if (lifecycleState != RunLifecycleState.Preparing)
+        if (lifecycleState != RunLifecycleState.Ready)
         {
-            throw new InvalidOperationException($"An experiment run only accepts aspects and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {lifecycleState}.");
+            throw new InvalidOperationException($"An experiment run can only start while it is {RunLifecycleState.Ready}. Its current lifecycle state is {lifecycleState}.");
         }
-    }
-
-    private void EnsureNotStarted()
-    {
-        lock (sync)
-            EnsurePreparing();
     }
 
     private void TransitionFromRunning(RunLifecycleState next)
@@ -380,21 +364,23 @@ public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchS
 {
     internal int Index { get; }
 
-    public TKey Key { get; }
+    /// <summary>The materialized case used during setup and retained by this trial.</summary>
+    public ExperimentCase<TAlgorithm, TKey> Case { get; }
 
-    public TAlgorithm Algorithm { get; }
+    public TKey Key => Case.Key;
+
+    public TAlgorithm Algorithm => Case.Algorithm;
 
     public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> Run { get; }
 
-    public ImmutableArray<int> RandomForkPath { get; }
+    public ImmutableArray<int> RandomForkPath => Case.RandomForkPath;
 
-    internal ExperimentTrial(int index, TKey key, TAlgorithm algorithm, AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> run, ImmutableArray<int> randomForkPath)
+    internal ExperimentTrial(int index, ExperimentCase<TAlgorithm, TKey> experimentCase,
+        AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> run)
     {
         Index = index;
-        Key = key;
-        Algorithm = algorithm;
+        Case = experimentCase;
         Run = run;
-        RandomForkPath = randomForkPath;
     }
 }
 

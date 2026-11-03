@@ -2,7 +2,7 @@
 
 An analyzer is a stateful `Aspect` that owns collected data and exposes typed reads. Its constructor assigns ordered pointcut/advice pairs to `Advices`. An accumulating analyzer derives from `AccumulatingAnalyzer` to share the synchronization convention; a trace uses `TraceAnalyzer<T>`.
 
-`AlgorithmRun.AddAspect` accepts analyzers and other aspects while its lifecycle is `Preparing`. Starting the run freezes its aspect list and resolves the execution graph. The same advice instance applies once by reference, including when several analyzers share a clock. A run owns neither analyzer disposal nor a result lookup service. Reusing an analyzer across runs intentionally combines its results.
+`AlgorithmRunSetup.AddAspect` accepts analyzers and other aspects inside the `CreateRun` callback. Setup is snapshotted before the run is returned. Starting the run resolves the execution graph. The same advice instance applies once by reference, including when several analyzers share a clock. A run owns neither analyzer disposal nor a result lookup service. Reusing an analyzer across runs intentionally combines its results.
 
 ## Observation boundaries
 
@@ -75,7 +75,7 @@ Analyzers and resolution scopes have no disposal contract. Reusing an analyzer o
 
 A stateful object that collects data is named `...Analyzer`, such as a consumer-authored `CandidateSummaryAnalyzer`. The immutable values it publishes are entries, snapshots or result records, never `...Analyzer`.
 
-Ready-made traces are extension members on the observation sources they read, named `Trace...`, as in `algorithm.Iterations.TracePopulationQuality()` or `algorithm.Evaluator.Invocations.TraceBestSoFar()`, and grouped in a static class ending in `Traces`. Extending the source of an observation type rather than a configuration lets every configuration offering that source use them. A run-level shortcut such as `run.TracePopulationCandidates(out var analyzer)` observes the run's root algorithm unless a nested one is named.
+Ready-made traces are extension members on the observation sources they read, named `Trace...`, as in `algorithm.Iterations.TracePopulationQuality()` or `algorithm.Evaluator.Invocations.TraceBestSoFar()`, and grouped in a static class ending in `Traces`. Extending the source of an observation type rather than a configuration lets every configuration offering that source use them. A setup shortcut such as `setup.TracePopulationCandidates(out analyzer)` observes the setup's root algorithm unless a nested one is named. Declare the analyzer variable outside the callback when it must remain accessible afterward.
 
 The main package ships general-purpose traces. Specialized analysis belongs beside the concept it measures, following the package placement rules in § 9.6 of the [developer guidelines](/contributing/developer-guidelines).
 
@@ -83,7 +83,7 @@ The main package ships general-purpose traces. Specialized analysis belongs besi
 
 `AlgorithmRun`, `ExecutionStream` and `RunLifecycleState` belong to the `HEAL.HeuristicLib.Execution` namespace, with their source files grouped under `Execution/Runs`. Experiment runs remain in `HEAL.HeuristicLib.Experiments` and share `RunLifecycleState`.
 
-An algorithm run moves from `Preparing` to `Running` when its first stream starts. Disposing that stream between yielded root-algorithm states moves it to `Paused`; a later stream continues the same resolved executor and underlying iterator. Natural completion moves it to `Completed`, and a later stream is empty. Setup and execution failures move it to `Failed`.
+An algorithm run is returned in `Ready` and moves to `Running` when its first stream starts. Disposing that stream between yielded root-algorithm states moves it to `Paused`; a later stream continues the same resolved executor and underlying iterator. Natural completion moves it to `Completed`, and a later stream is empty. Executor construction and execution failures move it to `Failed`. A setup callback failure propagates from `CreateRun` before any run is returned.
 
 Each returned execution stream has one consumer, and a run permits only one active stream. Stream cancellation is cooperative at root-algorithm yield boundaries. It pauses the run instead of interrupting a partially executed iteration.
 

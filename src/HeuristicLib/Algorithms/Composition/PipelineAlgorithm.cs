@@ -82,8 +82,7 @@ public class PipelineAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TPr
         {
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
-            var childScope = scope.CreateChildScope();
-            var algorithmExecutor = childScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
             await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algRng, state, ct))
             {

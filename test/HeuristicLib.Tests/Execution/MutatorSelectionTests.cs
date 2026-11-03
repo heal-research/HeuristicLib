@@ -120,7 +120,7 @@ public sealed class MutatorSelectionTests
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountCandidates(source, observed));
+        var child = parent.With(Aspect.CountCandidates(source, observed));
         await using var rebound = Run(child, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await rebound.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -171,7 +171,8 @@ public sealed class MutatorSelectionTests
     private sealed class CountingSelectedMutator(Func<IOperator<Mutation, int>, CountAccumulator> counter) : OperatorAdvice<Mutation, int>
     {
         // Each resolution of a selected mutator records its own counter.
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
+            OperationInfo operation,
             IOperator<Mutation, int> mutator) =>
             new CountingOperatorAdvice<Mutation, int>(counter(mutator), OperatorCountMetric.Candidates)
                 .Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, mutator);

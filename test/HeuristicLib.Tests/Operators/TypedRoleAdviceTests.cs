@@ -12,7 +12,7 @@ public sealed class TypedRoleAdviceTests
     [InlineData("selection")]
     [InlineData("refinement")]
     [InlineData("replacement")]
-    public void TypedAdvice_ChecksBeforeConstructionAndRetriesWithoutResettingTheOwner(string role)
+    public void TypedAdvice_ChecksBeforeConstructionAndRetriesWithFreshPrivateData(string role)
     {
         var source = new SingleResultOperator();
         var advice = new AdviceState { Reject = true };
@@ -24,17 +24,17 @@ public sealed class TypedRoleAdviceTests
 
         advice.Reject = false;
         Invoke(role, root, source).ShouldBe(1);
-        Invoke(role, root.CreateChildScope(), source).ShouldBe(2);
-        Invoke(role, root, source).ShouldBe(3);
-        source.Preparations.ShouldBe(1);
+        Invoke(role, root.With(), source).ShouldBe(1);
+        Invoke(role, root, source).ShouldBe(1);
+        source.Preparations.ShouldBe(3);
         source.Constructions.ShouldBe(3);
         advice.Checks.ShouldBe(4);
         advice.Wraps.ShouldBe(3);
 
-        // A different operation uses the same prepared owner and state; the typed advice does not apply to it.
-        Invoke(role == "creation" ? "replacement" : "creation", root, source).ShouldBe(4);
+        // Another operation constructs independent fields and skips this typed advice.
+        Invoke(role == "creation" ? "replacement" : "creation", root, source).ShouldBe(1);
         advice.Checks.ShouldBe(4);
-        source.Preparations.ShouldBe(1);
+        source.Preparations.ShouldBe(4);
     }
 
     private static readonly DummySearchSpace<int> Space = DummySearchSpace<int>.Instance;
@@ -82,7 +82,8 @@ public sealed class TypedRoleAdviceTests
     private sealed class CreationAdvice(AdviceState state) : CreatorAdvice<int>
     {
         protected override void Check<TSearchSpace, TProblem>(IOperator<Creation, int> creator) => state.Check();
-        protected override ICreationExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(ICreationExecutor<int, TSearchSpace, TProblem> executor, IOperator<Creation, int> creator)
+        protected override ICreationExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
+            ICreationExecutor<int, TSearchSpace, TProblem> executor, IOperator<Creation, int> creator)
         {
             state.Wraps++;
             return executor;
@@ -91,7 +92,8 @@ public sealed class TypedRoleAdviceTests
     private sealed class CrossAdvice(AdviceState state) : CrossoverAdvice<int>
     {
         protected override void Check<TSearchSpace, TProblem>(IOperator<Crossover, int> crossover) => state.Check();
-        protected override ICrossoverExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(ICrossoverExecutor<int, TSearchSpace, TProblem> executor, IOperator<Crossover, int> crossover)
+        protected override ICrossoverExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
+            ICrossoverExecutor<int, TSearchSpace, TProblem> executor, IOperator<Crossover, int> crossover)
         {
             state.Wraps++;
             return executor;
@@ -100,7 +102,8 @@ public sealed class TypedRoleAdviceTests
     private sealed class SelectionAdvice(AdviceState state) : SelectorAdvice<int>
     {
         protected override void Check<TSearchSpace, TProblem>(IOperator<Selection, int> selector) => state.Check();
-        protected override ISelectionExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(ISelectionExecutor<int, TSearchSpace, TProblem> executor, IOperator<Selection, int> selector)
+        protected override ISelectionExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
+            ISelectionExecutor<int, TSearchSpace, TProblem> executor, IOperator<Selection, int> selector)
         {
             state.Wraps++;
             return executor;
@@ -109,7 +112,8 @@ public sealed class TypedRoleAdviceTests
     private sealed class RefinementAdvice(AdviceState state) : RefinerAdvice<int>
     {
         protected override void Check<TSearchSpace, TProblem>(IOperator<Refinement, int> refiner) => state.Check();
-        protected override IRefinementExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(IRefinementExecutor<int, TSearchSpace, TProblem> executor, IOperator<Refinement, int> refiner)
+        protected override IRefinementExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
+            IRefinementExecutor<int, TSearchSpace, TProblem> executor, IOperator<Refinement, int> refiner)
         {
             state.Wraps++;
             return executor;
@@ -118,7 +122,8 @@ public sealed class TypedRoleAdviceTests
     private sealed class ReplacementAdvice(AdviceState state) : ReplacerAdvice<int>
     {
         protected override void Check<TSearchSpace, TProblem>(IOperator<Replacement, int> replacer) => state.Check();
-        protected override IReplacementExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(IReplacementExecutor<int, TSearchSpace, TProblem> executor, IOperator<Replacement, int> replacer)
+        protected override IReplacementExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
+            IReplacementExecutor<int, TSearchSpace, TProblem> executor, IOperator<Replacement, int> replacer)
         {
             state.Wraps++;
             return executor;

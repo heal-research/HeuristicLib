@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
@@ -117,7 +118,7 @@ public class CycleAlgorithmTests
     [Theory]
     [InlineData(true, 2)]
     [InlineData(false, 1)]
-    public void CycleAlgorithm_UsesConfiguredAlgorithmExecutionLifecycleWhileReusingResolvedParentDependencies(bool newExecutionInstancesPerCycle, int expectedAlgorithmExecutions)
+    public void CycleAlgorithm_UsesConfiguredExecutorReuseWithPrivateChildren(bool newExecutionInstancesPerCycle, int expectedAlgorithmExecutions)
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
@@ -125,7 +126,7 @@ public class CycleAlgorithmTests
         var cycle = CycleAlgorithm.Create(algorithm) with
         {
             MaximumCycles = 2,
-            ScopePolicy = newExecutionInstancesPerCycle ? ChildScopePolicy.Fresh : ChildScopePolicy.Shared
+            ReuseExecutors = !newExecutionInstancesPerCycle
         };
         var scope = ResolutionScope.Create();
         _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
@@ -135,25 +136,24 @@ public class CycleAlgorithmTests
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
         algorithm.ExecutionCount.ShouldBe(expectedAlgorithmExecutions);
-        evaluator.ExecutionCount.ShouldBe(1);
+        evaluator.ExecutionCount.ShouldBe(1 + expectedAlgorithmExecutions);
     }
 
     /// <summary>
-    /// The cycle keeps its child-scope selector as scoped state, so builds for different run types in one owning
-    /// state select the same child states.
+    /// Different run types construct independent Cycle executors and independent reuse dictionaries.
     /// </summary>
     [Theory]
-    [InlineData(ChildScopePolicy.Fresh, 4)]
-    [InlineData(ChildScopePolicy.Retained, 1)]
-    [InlineData(ChildScopePolicy.Shared, 1)]
-    public void CycleAlgorithm_BuiltForTwoRunTypesInOneScope_SelectsChildStatesThroughOneSelector(ChildScopePolicy policy, int expectedAlgorithmExecutions)
+    [InlineData(false, 4)]
+    [InlineData(true, 2)]
+
+    public void CycleAlgorithm_BuiltForTwoRunTypes_CreatesIndependentCycleExecutors(bool policy, int expectedAlgorithmExecutions)
     {
         var problem = (FuncProblem<int, DummySearchSpace<int>>)MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
         var cycle = CycleAlgorithm.Create(algorithm) with
         {
             MaximumCycles = 2,
-            ScopePolicy = policy
+            ReuseExecutors = policy
         };
         var scope = ResolutionScope.Create();
         var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
@@ -210,32 +210,29 @@ public class CycleAlgorithmTests
     }
 
     private sealed record YieldedStateStampingInterceptor
-        : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.State>
+        : Interceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
-        protected override State CreateScopedState() => new();
 
-        protected override PopulationState<RealVector> Transform(
-          PopulationState<RealVector> currentState,
-          PopulationState<RealVector>? previousState,
-          State operatorState,
-          IRandomNumberGenerator random,
-          BoundedRealVectorSearchSpace searchSpace,
-          TestFunctionProblem problem)
+        protected override IInterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>> CreateExecutor(ResolutionScope scope) =>
+        new Executor();
+
+        private sealed class Executor
+            : InterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
         {
-            operatorState.YieldedStateCount++;
-            var objectiveVector = new ObjectiveVector(operatorState.YieldedStateCount);
-            var stampedCandidates = currentState.Population.EvaluatedCandidates
-                            .Select(solution => EvaluatedCandidate.From(solution.Candidate, objectiveVector));
+            private int yieldedStateCount;
 
-            return currentState with
+            public override PopulationState<RealVector> Transform(PopulationState<RealVector> currentState, PopulationState<RealVector>? previousState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
             {
-                Population = Population.From(stampedCandidates)
-            };
-        }
+                yieldedStateCount++;
+                var objectiveVector = new ObjectiveVector(yieldedStateCount);
+                var stampedCandidates = currentState.Population.EvaluatedCandidates
+                                .Select(solution => EvaluatedCandidate.From(solution.Candidate, objectiveVector));
 
-        public sealed class State
-        {
-            public int YieldedStateCount { get; set; }
+                return currentState with
+                {
+                    Population = Population.From(stampedCandidates)
+                };
+            }
         }
     }
 }

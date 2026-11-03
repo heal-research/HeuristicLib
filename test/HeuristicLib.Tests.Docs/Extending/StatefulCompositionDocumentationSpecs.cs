@@ -28,29 +28,25 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
             throw new InvalidOperationException("At least one mutator is required.");
         ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
             [.. ChildOperators.Select(child => scope.Resolve(child))];
-        return new Executor<TSearchSpace, TProblem>(children, scope.GetScopedState(this, static () => new State()));
-    }
-
-    private sealed class State
-    {
-        public int NextChild { get; set; }
+        return new Executor<TSearchSpace, TProblem>(children);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children,
-        State state)
+        ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children)
         : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
+        private int nextChild;
+
         public IReadOnlyList<TCandidate> Mutate(
             IReadOnlyList<TCandidate> parents,
             IRandomNumberGenerator random,
             TSearchSpace searchSpace,
             TProblem problem)
         {
-            var offspring = children[state.NextChild].Mutate(parents, random, searchSpace, problem);
-            state.NextChild = (state.NextChild + 1) % children.Length;
+            var offspring = children[nextChild].Mutate(parents, random, searchSpace, problem);
+            nextChild = (nextChild + 1) % children.Length;
             return offspring;
         }
     }
@@ -60,7 +56,7 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
 public sealed class StatefulCompositionDocumentationSpecs
 {
     [Fact]
-    public void AddingInspectionKeepsTheNextChildAndExistingBindings()
+    public void AddingInspectionConstructsAnIndependentCursorAndKeepsExistingBindings()
     {
         #region stateful-composition-usage
         var first = new NoChangeMutator<RealVector>();
@@ -93,12 +89,12 @@ public sealed class StatefulCompositionDocumentationSpecs
             IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(composition);
 
-        observed.Mutate(parents, random, searchSpace, problem); // Second child; the cursor was retained.
-        original.Mutate(parents, random, searchSpace, problem); // First child; unobserved.
+        observed.Mutate(parents, random, searchSpace, problem); // First child with its own cursor.
+        original.Mutate(parents, random, searchSpace, problem); // Second child with the original cursor.
         #endregion stateful-composition-usage
 
-        firstCalls.CurrentCount.ShouldBe(0);
-        secondCalls.CurrentCount.ShouldBe(1);
+        firstCalls.CurrentCount.ShouldBe(1);
+        secondCalls.CurrentCount.ShouldBe(0);
 
         #region stateful-composition-independent
         var independentFirstCalls = new CountAccumulator();
@@ -108,10 +104,10 @@ public sealed class StatefulCompositionDocumentationSpecs
             BoundedRealVectorSearchSpace,
             IProblem<RealVector, BoundedRealVectorSearchSpace>>()
             .Resolve(composition);
-        independent.Mutate(parents, random, searchSpace, problem); // First child; fresh cursor.
+        independent.Mutate(parents, random, searchSpace, problem); // First child with a fresh cursor.
         #endregion stateful-composition-independent
 
         independentFirstCalls.CurrentCount.ShouldBe(1);
-        secondCalls.CurrentCount.ShouldBe(1);
+        secondCalls.CurrentCount.ShouldBe(0);
     }
 }

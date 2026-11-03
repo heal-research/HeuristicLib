@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
@@ -11,14 +12,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// Terminates after a configured number of consecutive produced search states without strict objective improvement.
 /// </summary>
 public sealed record StagnationTerminator<TCandidate>
-    : StatefulTerminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>, StagnationTerminator<TCandidate>.State>
+    : Terminator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>
 {
-    public sealed class State
-    {
-        public ObjectiveVector? BestObjectiveVectorSoFar { get; set; }
-        public int StagnationCounter { get; set; }
-    }
-
     /// <summary>
     /// Gets the number of consecutive produced search states without strict objective improvement that triggers
     /// termination. The expected value is positive.
@@ -26,33 +21,40 @@ public sealed record StagnationTerminator<TCandidate>
     /// <remarks>A zero or negative threshold terminates on the first checked produced search state.</remarks>
     public int StagnationThreshold { get; init; } = 20;
 
-    protected override State CreateScopedState() => new();
+    protected override TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> CreateExecutor(ResolutionScope scope) => new Executor(StagnationThreshold);
 
-    protected override bool IsTerminalState(PopulationState<TCandidate> searchState, State operatorState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+    private sealed class Executor(int threshold)
+        : TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>
     {
-        if (StagnationThreshold <= 0)
-            return true;
+        private ObjectiveVector? bestObjectiveVectorSoFar;
+        private int stagnationCounter;
 
-        operatorState.BestObjectiveVectorSoFar ??= problem.Objective.Worst;
-
-        var comparer = problem.Objective.TotalOrderComparer;
-
-        var currentBestObjectiveVector = searchState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
-        if (comparer.Compare(currentBestObjectiveVector, operatorState.BestObjectiveVectorSoFar) < 0)
+        public override bool IsTerminalState(PopulationState<TCandidate> searchState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         {
-            operatorState.BestObjectiveVectorSoFar = currentBestObjectiveVector;
-            operatorState.StagnationCounter = 0;
-        }
-        else
-        {
-            operatorState.StagnationCounter++;
-            if (operatorState.StagnationCounter >= StagnationThreshold)
-            {
+            if (threshold <= 0)
                 return true;
-            }
-        }
 
-        return false;
+            bestObjectiveVectorSoFar ??= problem.Objective.Worst;
+
+            var comparer = problem.Objective.TotalOrderComparer;
+
+            var currentBestObjectiveVector = searchState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
+            if (comparer.Compare(currentBestObjectiveVector, bestObjectiveVectorSoFar) < 0)
+            {
+                bestObjectiveVectorSoFar = currentBestObjectiveVector;
+                stagnationCounter = 0;
+            }
+            else
+            {
+                stagnationCounter++;
+                if (stagnationCounter >= threshold)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }
 

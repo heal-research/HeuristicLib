@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -18,7 +19,7 @@ public sealed class ConcreteAlgorithmResolutionTests
     [InlineData(nameof(GeneticAlgorithm<int>))]
     [InlineData(nameof(EvolutionStrategy<int>))]
     [InlineData(nameof(NSGA2<int>))]
-    public async Task Rebinding_ObservesContextualChildrenAndPreservesCreatorState(string kind)
+    public async Task NewExecutorsObserveContextualChildrenWithIndependentCreatorState(string kind)
     {
         var creatorPreparations = 0;
         var interceptorPreparations = 0;
@@ -29,24 +30,24 @@ public sealed class ConcreteAlgorithmResolutionTests
 
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountInvocations(creator, observedCreations),
+        var child = parent.With(Aspect.CountInvocations(creator, observedCreations),
             countInterceptions(observedInterceptions));
 
-        (await Next(child, algorithm)).ShouldBe(2);
+        (await Next(child, algorithm)).ShouldBe(1);
         observedCreations.CurrentCount.ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
-        (await Next(parent, algorithm)).ShouldBe(3);
+        (await Next(parent, algorithm)).ShouldBe(1);
         observedCreations.CurrentCount.ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
-        (await Next(child, algorithm)).ShouldBe(4);
+        (await Next(child, algorithm)).ShouldBe(1);
         observedCreations.CurrentCount.ShouldBe(2);
         observedInterceptions.CurrentCount.ShouldBe(2);
-        creatorPreparations.ShouldBe(1);
-        interceptorPreparations.ShouldBe(1);
+        creatorPreparations.ShouldBe(4);
+        interceptorPreparations.ShouldBe(4);
 
         (await Next(ResolutionScope.Create(), algorithm)).ShouldBe(1);
-        creatorPreparations.ShouldBe(2);
-        interceptorPreparations.ShouldBe(2);
+        creatorPreparations.ShouldBe(5);
+        interceptorPreparations.ShouldBe(5);
         observedCreations.CurrentCount.ShouldBe(2);
         observedInterceptions.CurrentCount.ShouldBe(2);
     }
@@ -66,17 +67,17 @@ public sealed class ConcreteAlgorithmResolutionTests
         Candidate(paused.Current).ShouldBe(1);
 
         var observedInterceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(countInterceptions(observedInterceptions));
+        var child = parent.With(countInterceptions(observedInterceptions));
         await using var observed = Run(child, algorithm).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
-        Candidate(observed.Current).ShouldBe(2);
+        Candidate(observed.Current).ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
 
         (await paused.MoveNextAsync()).ShouldBeTrue();
         Candidate(paused.Current).ShouldBe(0);
         observedInterceptions.CurrentCount.ShouldBe(1);
         (await observed.MoveNextAsync()).ShouldBeTrue();
-        Candidate(observed.Current).ShouldBe(1);
+        Candidate(observed.Current).ShouldBe(0);
         observedInterceptions.CurrentCount.ShouldBe(2);
     }
 
@@ -157,21 +158,23 @@ public sealed class ConcreteAlgorithmResolutionTests
 
     private static int Candidate(PopulationState<int> state) => state.Population.EvaluatedCandidates.Single().Candidate;
 
-    private sealed class CounterState
+    private sealed record CounterCreator(Action Prepare) : Creator<int>
     {
-        public int Invocations { get; set; }
-    }
 
-    private sealed record CounterCreator(Action Prepare) : StatefulCreator<int, CounterState>
-    {
-        protected override CounterState CreateScopedState()
+        protected override ICreationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope)
         {
             Prepare();
-            return new CounterState();
+            return new Executor();
         }
 
-        protected override IReadOnlyList<int> Create(int count, CounterState state, IRandomNumberGenerator random) =>
-            Enumerable.Repeat(++state.Invocations, count).ToArray();
+        private sealed class Executor
+            : CreationExecutor<int>
+        {
+            private int invocations;
+
+            public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) =>
+            Enumerable.Repeat(++invocations, count).ToArray();
+        }
     }
 
     private sealed record ImprovingMutator : SingleCandidateMutator<int>
@@ -182,18 +185,12 @@ public sealed class ConcreteAlgorithmResolutionTests
     private sealed record IdentityInterceptor<TSearchState>(Action Prepare) : Operator<Interception<TSearchState>, int>
         where TSearchState : class, ISearchState
     {
-        // Creating the scoped state is the once-per-owner preparation the test counts.
+        // Counts private data construction for each executor.
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TRunSearchState> scope)
         {
-            scope.GetScopedState(this, () =>
-            {
-                Prepare();
-                return new Preparation();
-            });
+            Prepare();
             return new Executor<TSearchSpace, TProblem>();
         }
-
-        private sealed class Preparation;
 
         private sealed class Executor<TSearchSpace, TProblem> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
             where TSearchSpace : class, ISearchSpace<int>
@@ -201,5 +198,6 @@ public sealed class ConcreteAlgorithmResolutionTests
         {
             public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => currentState;
         }
+
     }
 }

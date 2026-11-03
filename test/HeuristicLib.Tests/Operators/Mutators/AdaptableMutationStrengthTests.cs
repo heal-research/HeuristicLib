@@ -48,7 +48,7 @@ public class AdaptableMutationStrengthTests
     }
 
     [Fact]
-    public void GaussianMutator_RebindingPreservesStrengthAndObservesOnlyContextualCalls()
+    public void GaussianMutator_ReconstructionHasIndependentStrengthAndObservesOnlyContextualCalls()
     {
         var mutator = new GaussianMutator(1.0, 2.0);
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
@@ -58,20 +58,20 @@ public class AdaptableMutationStrengthTests
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 4.0;
         var observedCalls = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountInvocations(mutator, observedCalls));
+        var child = parent.With(Aspect.CountInvocations(mutator, observedCalls));
         var typed = child.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         var inner = typed.Resolve(mutator, out IMutationStrengthControl? innerStrength);
-        ShouldShareStrength(innerStrength, strength);
+        ShouldHaveIndependentStrength(innerStrength, strength);
         inner.ShouldNotBeAssignableTo<IMutationStrengthControl>();
         typed.Resolve(mutator, out IMutationStrengthControl? repeatedStrength).ShouldNotBeSameAs(inner);
-        ShouldShareStrength(repeatedStrength, strength);
+        ShouldHaveIndependentStrength(repeatedStrength, strength);
 
-        inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(2.0)]);
+        inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(1.0)]);
         observedCalls.CurrentCount.ShouldBe(1);
         strength.CurrentMutationStrength = 6.0;
         outer.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(3.0)]);
         observedCalls.CurrentCount.ShouldBe(1);
-        inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(3.0)]);
+        inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(1.0)]);
         observedCalls.CurrentCount.ShouldBe(2);
         Resolve(mutator).CurrentMutationStrength.ShouldBe(2.0);
         mutator.MutationStrength.ShouldBe(2.0);
@@ -105,7 +105,7 @@ public class AdaptableMutationStrengthTests
         var algorithm = CreateAlgorithm(gaussian, problem);
         var calls = new CountAccumulator();
         var root = ResolutionScope.Create();
-        var child = root.CreateChildScope(Aspect.CountInvocations(gaussian, calls));
+        var child = root.With(Aspect.CountInvocations(gaussian, calls));
         child.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(gaussian, out IMutationStrengthControl? localStrength);
         localStrength.ShouldNotBeNull();
         localStrength.CurrentMutationStrength = 9.0;
@@ -115,17 +115,17 @@ public class AdaptableMutationStrengthTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         paused.Current.Population.Single().Candidate.ShouldBe(new RealVector(-1.5));
-        ancestorStrength.CurrentMutationStrength.ShouldBe(2.0);
+        ancestorStrength.CurrentMutationStrength.ShouldBe(3.0);
 
         var rebound = child.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
         var observed = rebound.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
-        observed[1].Population.Single().Candidate.ShouldBe(new RealVector(-1.0));
+        observed[1].Population.Single().Candidate.ShouldBe(new RealVector(-1.5));
         calls.CurrentCount.ShouldBe(2);
         localStrength.CurrentMutationStrength.ShouldBe(9.0);
-        ancestorStrength.CurrentMutationStrength.ShouldBe(3.0 / Math.Pow(1.5, 3), 1e-12);
+        ancestorStrength.CurrentMutationStrength.ShouldBe(3.0);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         calls.CurrentCount.ShouldBe(2);
-        ancestorStrength.CurrentMutationStrength.ShouldBe(3.0 / Math.Pow(1.5, 4), 1e-12);
+        ancestorStrength.CurrentMutationStrength.ShouldBe(3.0);
         localStrength.CurrentMutationStrength.ShouldBe(9.0);
     }
 
@@ -152,56 +152,41 @@ public class AdaptableMutationStrengthTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void TransparentWrappers_PreserveEvolutionStrategyOutputsAndStrengthAcrossRetainedContexts(bool ancestorOwnsGaussian)
+    public void TransparentWrappersPreserveAdaptationOnTheExecutorThatIsInvoked(bool preconstructGaussian)
     {
-        var raw = Capture(wrapped: false);
-        var wrapped = Capture(wrapped: true);
+        var raw = Capture(false);
+        var wrapped = Capture(true);
         wrapped.ShouldBe(raw);
-        raw.Select(item => item.Strength).Distinct().Count().ShouldBeGreaterThan(3);
+        raw.ShouldBe([0.0, -1.5, -2.5]);
 
-        List<(double Candidate, double Strength)> Capture(bool wrapped)
+        List<double> Capture(bool wrapped)
         {
             var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
             var problem = CreateProblem(searchSpace);
             var gaussian = new GaussianMutator(1.0, 3.0);
             IOperator<Mutation, RealVector> mutator = wrapped ? gaussian.Retry(3).Named("inner").Named("outer") : gaussian;
-            var algorithm = CreateAlgorithm(mutator, problem);
-            var root = ResolutionScope.Create();
-            if (ancestorOwnsGaussian)
-                _ = root.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>>()
-                    .Resolve(gaussian);
-            var selector = new ChildScopeSelector(ChildScopePolicy.Retained);
-            var result = new List<(double, double)>();
-            IMutationStrengthControl? previous = null;
-            for (var activation = 0; activation < 2; activation++)
-            {
-                var calls = new CountAccumulator();
-                var scope = selector.GetScopeFor(algorithm, root.With(Aspect.CountInvocations(mutator, calls)));
-                var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
-                _ = typed.Resolve(mutator, out IMutationStrengthControl? strength);
-                _ = typed.Resolve(gaussian, out IMutationStrengthControl? childStrength);
-                ShouldShareStrength(strength, childStrength);
-                if (previous is not null)
-                    ShouldShareStrength(strength, previous);
-                previous = strength;
-                foreach (var state in typed.Resolve(algorithm).Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken))
-                    result.Add((state.Population.Single().Candidate[0], strength.CurrentMutationStrength));
-                calls.CurrentCount.ShouldBe(2);
-            }
-            gaussian.MutationStrength.ShouldBe(3.0);
+            var calls = new CountAccumulator();
+            var scope = ResolutionScope.Create(Aspect.CountInvocations(mutator, calls))
+                .For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
+            if (preconstructGaussian)
+                scope.Resolve(gaussian, out IMutationStrengthControl? control);
+            var executor = scope.Resolve(CreateAlgorithm(mutator, problem));
+            var result = executor.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken)
+                .Select(state => state.Population.Single().Candidate[0]).ToList();
+            calls.CurrentCount.ShouldBe(2);
             return result;
         }
     }
 
-    // A stateful leaf builds a new executor for each resolution, so two controls share the strength, not the object.
-    private static void ShouldShareStrength([NotNull] IMutationStrengthControl? control, IMutationStrengthControl? other)
+    private static void ShouldHaveIndependentStrength([NotNull] IMutationStrengthControl? control, IMutationStrengthControl? other)
     {
         control.ShouldNotBeNull();
         other.ShouldNotBeNull();
         var strength = control.CurrentMutationStrength;
+        var previous = other.CurrentMutationStrength;
         other.CurrentMutationStrength = strength + 1.0;
-        control.CurrentMutationStrength.ShouldBe(strength + 1.0);
-        other.CurrentMutationStrength = strength;
+        control.CurrentMutationStrength.ShouldBe(strength);
+        other.CurrentMutationStrength = previous;
     }
 
     private static EvolutionStrategy<RealVector> CreateAlgorithm(IOperator<Mutation, RealVector> mutator, FuncProblem<RealVector, BoundedRealVectorSearchSpace> problem) => new()

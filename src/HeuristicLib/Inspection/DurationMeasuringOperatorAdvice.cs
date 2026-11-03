@@ -3,7 +3,14 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Inspection;
 
+internal sealed class DurationMeasuringOperatorAdvice(DurationAccumulator duration, TimeProvider timeProvider) : OperatorAdvice
+{
+    public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
+        operation.Wrap(executor, new DurationMeasurement(duration, timeProvider));
+}
+
 /// <summary>Measures the time spent in each operation call, including calls that fail.</summary>
+/// <remarks>The supplied runtime accumulator is shared wherever this advice is reused.</remarks>
 public sealed class DurationMeasuringOperatorAdvice<TOperation, TCandidate> : OperatorAdvice<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
 {
@@ -50,5 +57,19 @@ public static class OperatorDurationExtensions
         public static Aspect MeasureDuration<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, DurationAccumulator duration, TimeProvider timeProvider)
             where TOperation : IOperation<TOperation> =>
             Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(duration, timeProvider));
+    }
+}
+
+public static class OperatorDurationAspectExtensions
+{
+    extension<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperation<TOperation>
+    {
+        /// <summary>Creates an aspect that measures invocation duration in the supplied accumulator.</summary>
+        public Aspect MeasureDuration(DurationAccumulator duration) => Aspect.MeasureDuration(source, duration);
+
+        /// <summary>Creates an aspect that measures invocation duration using the supplied clock.</summary>
+        public Aspect MeasureDuration(DurationAccumulator duration, TimeProvider timeProvider) =>
+            Aspect.MeasureDuration(source, duration, timeProvider);
     }
 }

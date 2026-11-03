@@ -4,6 +4,19 @@ HeuristicLib is a .NET library for building, running and studying heuristic opti
 
 Use it when an answer must be found among many possible candidates and checking a candidate is easier than deriving the best answer directly. Typical examples include scheduling, routing, parameter tuning and symbolic regression.
 
+## Choose your path
+
+For ordinary use, configure an algorithm and call `Complete` or `CompleteAsync` with a problem and random source. The library creates the run and constructs its executors automatically. Start with [Build your first optimizer](/guide/getting-started).
+
+| Your goal                                                  | Start here                                                                                                                                                      | Learn when needed                               |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Practitioner: solve a problem with existing components     | [First optimizer](/guide/getting-started) and [Algorithms](/guide/fundamentals/algorithms)                                                                      | Compatible operators and stopping budgets       |
+| Experimenter: compose and compare configurations           | [Operator composition](/guide/extending/operator-composition) and [Experiments](/guide/execution/experiments)                                                   | Repetitions, parameter grids and trial analysis |
+| Integrator: observe or control execution in an application | [Running algorithms](/guide/execution/running-algorithms) and [Observability and analysis](/guide/execution/observability-and-analysis)                         | Streaming, explicit runs and runtime setup      |
+| Component author: add a problem, operator or algorithm     | [Problems](/guide/fundamentals/problems), [Writing operators](/guide/extending/writing-operators) and [Writing algorithms](/guide/extending/writing-algorithms) | The authoring contract for that component       |
+
+Follow the path that fits your task. Custom components use the same execution entry points as predefined ones. Algorithms own orchestration, so composing or replacing an operator does not require writing a search loop.
+
 ## The model in one sentence
 
 An **algorithm** uses **operators** to explore the **search space** of a **problem** and yields **search states** that show its progress.
@@ -29,7 +42,7 @@ An **algorithm** uses **operators** to explore the **search space** of a **probl
   <div class="flow-arrow" aria-hidden="true"><span>combine into</span><strong>↓</strong></div>
   <section class="flow-card flow-card--primary">
     <h3>Algorithm run</h3>
-    <p>Fresh scoped state</p>
+    <p>Independent run resources</p>
   </section>
   <div class="flow-arrow" aria-hidden="true"><span>yields</span><strong>↓</strong></div>
   <section class="flow-card flow-card--output">
@@ -66,7 +79,6 @@ The [getting started guide](/guide/getting-started) builds a complete run. Read 
 
 ## Where to go next
 
-- [Build your first optimizer](/guide/getting-started)
 - [Learn the core concepts](/guide/fundamentals/core-concepts)
-- [Define your own problem](/guide/fundamentals/problems)
-- [Run repeatable experiments](/guide/execution/experiments)
+- [Choose and compose operators](/guide/fundamentals/operators)
+- [Choose between completion, progress and explicit run control](/guide/execution/running-algorithms)

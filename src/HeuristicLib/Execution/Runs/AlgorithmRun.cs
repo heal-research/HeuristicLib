@@ -8,26 +8,18 @@ namespace HEAL.HeuristicLib.Execution;
 public abstract class AlgorithmRun
 {
     private readonly Lock sync = new();
-    // Together these collections form an insertion-ordered set using reference identity.
-    private readonly List<Aspect> aspects = [];
-    private readonly HashSet<Aspect> aspectSet = new(ReferenceEqualityComparer.Instance);
-    private ResolutionScope? scope;
+    private readonly ResolutionScope scope;
 
-    public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Preparing;
+    public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Ready;
 
-    protected AlgorithmRun()
+    protected AlgorithmRun(ResolutionScope scope)
     {
+        this.scope = scope;
     }
 
-    protected void Add(Aspect aspect)
-    {
-        lock (sync)
-        {
-            EnsurePreparing();
-            if (aspectSet.Add(aspect))
-                aspects.Add(aspect);
-        }
-    }
+    /// <summary>Returns this run's resource, creating its default instance lazily when it has not been requested yet.</summary>
+    /// <remarks>Supplied resources remain caller owned. The returned resource defines how concurrent reads and writes are supported.</remarks>
+    public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class => scope.Resource(handle);
 
     protected ResolutionScope? BeginExecutionSegment()
     {
@@ -37,17 +29,10 @@ public abstract class AlgorithmRun
                 return null;
             if (LifecycleState == RunLifecycleState.Running)
                 throw new InvalidOperationException("This run already has an active execution stream.");
-            if (LifecycleState is not (RunLifecycleState.Preparing or RunLifecycleState.Paused))
+            if (LifecycleState is not (RunLifecycleState.Ready or RunLifecycleState.Paused))
                 throw new InvalidOperationException($"A run cannot continue while its lifecycle state is {LifecycleState}.");
 
-            if (LifecycleState == RunLifecycleState.Paused)
-            {
-                LifecycleState = RunLifecycleState.Running;
-                return scope!;
-            }
-
             LifecycleState = RunLifecycleState.Running;
-            scope = ResolutionScope.Create(aspects);
             return scope;
         }
     }
@@ -75,14 +60,6 @@ public abstract class AlgorithmRun
                 LifecycleState = next;
         }
     }
-
-    private void EnsurePreparing()
-    {
-        if (LifecycleState != RunLifecycleState.Preparing)
-        {
-            throw new InvalidOperationException($"A run only accepts configuration and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {LifecycleState}.");
-        }
-    }
 }
 
 public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmRun
@@ -97,19 +74,26 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     public IRandomNumberGenerator Random { get; }
 
-    public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
+    public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random,
+        Action<AlgorithmRunSetup<TCandidate, TSearchState>>? setup = null)
+        : this(algorithm, problem, random, CreateScope(algorithm, setup))
+    {
+    }
+
+    internal AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random, ResolutionScope scope)
+        : base(scope)
     {
         Algorithm = algorithm;
         Problem = problem;
         Random = random;
     }
 
-    /// <summary>Adds an aspect while preparing, preserving order and deduplicating by reference.</summary>
-    /// <remarks>The run only collects aspects; resolution weaves them in when the run starts.</remarks>
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddAspect(Aspect aspect)
+    private static ResolutionScope CreateScope(IAlgorithm<TCandidate, TSearchState> algorithm,
+        Action<AlgorithmRunSetup<TCandidate, TSearchState>>? configure)
     {
-        Add(aspect);
-        return this;
+        var setup = new AlgorithmRunSetup<TCandidate, TSearchState>(algorithm);
+        configure?.Invoke(setup);
+        return setup.BuildScope();
     }
 
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>

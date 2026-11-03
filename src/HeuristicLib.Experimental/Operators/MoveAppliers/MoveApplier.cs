@@ -13,23 +13,7 @@ namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 /// run requests, and a request the move applier was not written for is reported when the execution graph is built.
 /// </para>
 /// </remarks>
-public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TState>
+public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove>
     : Operator<MoveApplication<TMove>, TCandidate, TSearchSpace, TProblem, IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TState : class
-{
-    protected abstract TState CreateScopedState();
-
-    protected abstract TCandidate Apply(TCandidate candidate, TMove move, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-    protected sealed override IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetScopedState(this, CreateScopedState));
-
-    private sealed class Executor(MoveApplier<TCandidate, TSearchSpace, TProblem, TMove, TState> moveApplier, TState state)
-        : IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
-    {
-        public TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            moveApplier.Apply(candidate, move, state, random, searchSpace, problem);
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;

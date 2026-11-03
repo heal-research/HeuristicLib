@@ -9,7 +9,6 @@ namespace HEAL.HeuristicLib.Operators.Replacers;
 /// <remarks>
 /// Derive directly from this base when the replacer needs direct control over its execution structure.
 /// Use <see cref="StatelessReplacer{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
-/// Use <see cref="StatefulReplacer{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// <para>
 /// The type arguments are the search space and problem this replacer is written for. The base bridges to whatever a
 /// run requests, and a request the replacer was not written for is reported when the execution graph is built. A

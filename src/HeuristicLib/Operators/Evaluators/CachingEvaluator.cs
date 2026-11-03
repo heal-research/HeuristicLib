@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -25,6 +24,9 @@ public record CachingEvaluator<TCandidate, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
+    /// <remarks>When supplied, creation settings belong to the handle. Do not also set SizeLimit.</remarks>
+    public ResourceHandle<EvaluationCache<TKey>>? Cache { get; init; }
+
     public CachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
@@ -34,14 +36,16 @@ public record CachingEvaluator<TCandidate, TKey>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
-        // on a live thread after the scoped state is released.
-        var cache = scope.GetScopedState(this, () => new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit }));
+        if (SizeLimit < 0)
+            throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
+        if (Cache is not null && SizeLimit is not null)
+            throw new InvalidOperationException("A shared cache takes its size limit from its handle. Do not also set SizeLimit.");
+        var cache = Cache is null ? new EvaluationCache<TKey>(SizeLimit) : scope.Resource(Cache);
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)
+    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, EvaluationCache<TKey> cache)
         : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -59,9 +63,9 @@ public record CachingEvaluator<TCandidate, TKey>
                 var candidate = candidates[i];
                 var key = keySelector.SelectKey(candidate);
 
-                if (cache.TryGetValue(key, out ObjectiveVector? cached))
+                if (cache.TryGet(key, out var cached))
                 {
-                    results[i] = cached!;
+                    results[i] = cached;
                     continue;
                 }
 
@@ -87,7 +91,7 @@ public record CachingEvaluator<TCandidate, TKey>
 
             for (var k = 0; k < uncachedKeys.Count; k++)
             {
-                cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
+                cache.Set(uncachedKeys[k], newObjectiveVectors[k]);
             }
 
             foreach (var (_, entry) in uncachedMap)
@@ -148,6 +152,12 @@ public static class CachingEvaluatorExtensions
     {
         public CachingEvaluator<TCandidate, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>
             new(evaluator, keySelector) { SizeLimit = sizeLimit };
+
+        public CachingEvaluator<TCandidate, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, ResourceHandle<EvaluationCache<TKey>> cache) where TKey : notnull =>
+            new(evaluator, keySelector) { Cache = cache };
+
+        public CachingEvaluator<TCandidate> Cached(ResourceHandle<EvaluationCache<TCandidate>> cache) =>
+            new(evaluator) { Cache = cache };
 
         public CachingEvaluator<TCandidate> Cached(long? sizeLimit = null) =>
             new(evaluator) { SizeLimit = sizeLimit };

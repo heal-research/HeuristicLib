@@ -19,7 +19,8 @@ public sealed class CountingAlgorithmAdvice<TCandidate, TSearchState> : Algorith
     }
 
     public override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source) =>
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
+        IAlgorithm<TCandidate, TSearchState> source) =>
         new Executor<TSearchSpace, TProblem>(executor, Counter);
 
     private sealed class Executor<TSearchSpace, TProblem>(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm, CountAccumulator counter)

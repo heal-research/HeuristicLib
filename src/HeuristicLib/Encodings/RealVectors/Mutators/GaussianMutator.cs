@@ -36,21 +36,12 @@ public record GaussianMutator
     /// Algorithms project this control during resolution and invoke mutation through the wrapped execution.
     /// </summary>
     protected override IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutor(ResolutionScope scope) =>
-        new Executor(MutationRate, scope.GetScopedState(this, () => new State(MutationStrength)));
+        new Executor(MutationRate, MutationStrength);
 
-    private sealed class State(double mutationStrength)
-    {
-        public double CurrentMutationStrength { get; set; } = mutationStrength;
-    }
-
-    private sealed class Executor(double mutationRate, State state)
+    private sealed class Executor(double mutationRate, double mutationStrength)
         : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>, IMutationStrengthControl
     {
-        public double CurrentMutationStrength
-        {
-            get => state.CurrentMutationStrength;
-            set => state.CurrentMutationStrength = value;
-        }
+        public double CurrentMutationStrength { get; set; } = mutationStrength;
 
         public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
             BatchExecution.Sequential(

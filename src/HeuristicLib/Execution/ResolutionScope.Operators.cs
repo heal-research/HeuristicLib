@@ -23,34 +23,25 @@ public partial class ResolutionScope
             throw ExecutionSignature.Mismatch(source,
                 source is Operator<TOperation, TCandidate> authored ? authored.SupportedExecutionDescription : "its declared signature",
                 ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)));
-        if (!state.Constructing.Add(source))
-            throw new InvalidOperationException($"Recursive construction of {source.GetType().Name} through {typeof(TOperation).Name}.");
-        try
-        {
-            var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
-            var owner = state.GetOrAddOwner(source);
+        using var building = construction.Enter(source);
+        var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
 
-            List<Advice>? applicable = null;
-            foreach (var (pointcut, advice) in Advices())
-                if (pointcut.Matches(source) && CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(advice, operation, source))
-                    (applicable ??= []).Add(advice);
+        List<Advice>? applicable = null;
+        foreach (var (pointcut, advice) in Advices())
+            if (pointcut.Matches(source) && CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(advice, operation, source))
+                (applicable ??= []).Add(advice);
 
-            var executor = source.CreateExecutor(WithState(owner).For<TCandidate, TSearchSpace, TProblem, TSearchState>());
-            operation.RequireExecutor(executor, source);
-            if (applicable is not null)
-                foreach (var advice in applicable)
-                {
-                    executor = advice is OperatorAdvice general
-                        ? general.Wrap(executor, operation, source)
-                        : ((OperatorAdvice<TOperation, TCandidate>)advice).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-                    operation.RequireExecutor(executor, advice);
-                }
-            return executor;
-        }
-        finally
-        {
-            state.Constructing.Remove(source);
-        }
+        var executor = source.CreateExecutor(this.For<TCandidate, TSearchSpace, TProblem, TSearchState>());
+        operation.RequireExecutor(executor, source);
+        if (applicable is not null)
+            foreach (var advice in applicable)
+            {
+                executor = advice is OperatorAdvice general
+                    ? general.Wrap(executor, operation, source)
+                    : ((OperatorAdvice<TOperation, TCandidate>)advice).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
+                operation.RequireExecutor(executor, advice);
+            }
+        return executor;
     }
 
     /// <summary>Resolves an operator like <c>ResolveOperator</c> and returns its executor as the operation's interface.</summary>

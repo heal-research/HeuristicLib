@@ -70,7 +70,7 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
     /// <summary>Builds this algorithm's executor for the types it is written for, resolving children through the scope.</summary>
     /// <remarks>
     /// Resolution calls this for every build. Validate the configuration first and take shared execution data from
-    /// <see cref="ResolutionScope.GetScopedState{TState}"/>, passing this configuration.
+    /// explicit resource handles when sharing is intended. Keep other mutable data in executor fields.
     /// </remarks>
     protected abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }

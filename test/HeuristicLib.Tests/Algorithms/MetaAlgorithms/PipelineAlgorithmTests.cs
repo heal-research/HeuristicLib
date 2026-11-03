@@ -65,7 +65,7 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(analysis));
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
@@ -74,7 +74,7 @@ public class PipelineAlgorithmTests
     }
 
     [Fact]
-    public void PipelineAlgorithm_CreatesEachStageExecutionWhileReusingResolvedParentDependencies()
+    public void PipelineAlgorithm_CreatesEachStageWithPrivateDependencies()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
@@ -88,7 +88,7 @@ public class PipelineAlgorithmTests
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
         algorithm.ExecutionCount.ShouldBe(2);
-        evaluator.ExecutionCount.ShouldBe(1);
+        evaluator.ExecutionCount.ShouldBe(3);
     }
 
     private sealed record ForwardingEvaluator

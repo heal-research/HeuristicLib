@@ -17,7 +17,7 @@ public sealed class MixedOperatorResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void TypedAndUntypedResolutionShareTheScopedStateInEitherOrder(bool untypedFirst)
+    public void TypedAndUntypedResolutionHaveIndependentPrivateFieldsInEitherOrder(bool untypedFirst)
     {
         var source = new DualCrossover();
         var counter = new InvocationCounter();
@@ -29,13 +29,13 @@ public sealed class MixedOperatorResolutionTests
         var first = untypedFirst ? root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(forwarded) : typed.Resolve(current);
         var second = untypedFirst ? typed.Resolve(current) : root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(forwarded);
         Invoke(first).ShouldBe(1);
-        Invoke(second).ShouldBe(2);
-        var child = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        Invoke(second).ShouldBe(1);
+        var child = root.With().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var operation = child.Resolve(current, out ILiveValue? control);
-        control.ShouldNotBeNull().Value.ShouldBe(2);
+        control.ShouldNotBeNull().Value.ShouldBe(0);
         control.Value = 12;
         Invoke(operation).ShouldBe(13);
-        source.Preparations.ShouldBe(1);
+        source.Preparations.ShouldBe(3);
         log.Wraps.ShouldBe(3);
         counter.Value.ShouldBe(3);
     }
@@ -51,18 +51,18 @@ public sealed class MixedOperatorResolutionTests
         var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CountInvocations(counter, new AdviceLog())));
         var parent = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var parentNode = parent.Resolve(outer);
-        var descendantNode = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);
+        var descendantNode = root.With().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);
         Invoke(parentNode).ShouldBe(1);
-        Invoke(descendantNode).ShouldBe(2);
-        source.Preparations.ShouldBe(1);
+        Invoke(descendantNode).ShouldBe(1);
+        source.Preparations.ShouldBe(2);
         counter.Value.ShouldBe(2);
 
         var independent = ResolutionScope.Create();
-        var child = independent.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);
+        var child = independent.With().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);
         var ancestor = independent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);
         Invoke(child).ShouldBe(1);
         Invoke(ancestor).ShouldBe(1);
-        source.Preparations.ShouldBe(3);
+        source.Preparations.ShouldBe(4);
     }
 
     private static double Invoke(ICrossoverExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> operation) =>
@@ -72,33 +72,24 @@ public sealed class MixedOperatorResolutionTests
     {
         public int Preparations { get; private set; }
 
-        // Every build in one owning scope shares the live value.
+        // Each executor owns its live value.
         IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
-            new Executor(scope.GetScopedState(this, () =>
-            {
-                Preparations++;
-                return new State();
-            }));
-
-        private sealed class State
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            public int Value { get; set; }
+            Preparations++;
+            return new Executor();
         }
 
-        private sealed class Executor(State state) : ILiveValue,
+        private sealed class Executor : ILiveValue,
             ICrossoverExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         {
-            public int Value
-            {
-                get => state.Value;
-                set => state.Value = value;
-            }
+            public int Value { get; set; }
 
             public IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random,
                 ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
                 [new RealVector((double)++Value)];
         }
+
     }
 
     private sealed record ForwardedCrossover(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>

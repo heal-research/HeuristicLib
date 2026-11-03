@@ -270,7 +270,7 @@ Status: `Canonical`
 
 An algorithm defines a reusable search process through an algorithm configuration and its run scoped executors.
 
-In a run, an algorithm executor advances search state until the run stops. It holds its resolved child executors, and its configuration's scoped state holds the private data that outlives one executor. One shot algorithms are still algorithms. They produce a search process with a single state.
+In a run, an algorithm executor advances search state until the run stops. It holds its resolved child executors, and its own fields hold private execution data. One shot algorithms are still algorithms. They produce a search process with a single state.
 
 Use algorithm for the reusable configuration unless the text explicitly says algorithm executor.
 
@@ -298,7 +298,7 @@ Status: `Canonical`
 
 An iteration is one step of an algorithm's search process that ends with a yielded search state.
 
-`AlgorithmObservation.Iteration` counts the iterations of one call of the algorithm from 1, as the algorithm sees them, so it restarts when a meta-algorithm calls the algorithm again, whatever its child scope policy. A clock over the iterations keeps counting across calls. Every algorithm streams search states, so every algorithm has iterations; a one shot algorithm has one.
+`AlgorithmObservation.Iteration` counts the iterations of one call of the algorithm from 1, as the algorithm sees them, so it restarts when a meta-algorithm calls the algorithm again, whether its executor is fresh or reused. A clock over the iterations keeps counting across calls. Every algorithm streams search states, so every algorithm has iterations. A one shot algorithm has one.
 
 See also: Algorithm, Clock, Search state, Turn.
 
@@ -322,7 +322,7 @@ The cycle algorithm publishes the start of each turn as a `CycleTurn` through it
 
 Related terms:
 
-- `Activation`: `Avoid` as a name for this concept. Activation describes any meta-algorithm starting an inner algorithm, as child scope policies do.
+- `Activation`: `Avoid` as a name for this concept. Activation describes any meta-algorithm starting an inner algorithm.
 
 See also: Cycle, Iteration, Meta-algorithm.
 
@@ -527,7 +527,7 @@ Status: `Canonical`
 
 A configuration is a reusable object that users set up before execution, such as an algorithm or operator.
 
-A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates executors. It is not required to be a passive data object. Mutable execution data belongs to an executor or to the configuration's scoped state.
+A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates executors. It is not required to be a passive data object. Mutable execution data belongs to executor fields or explicitly shared resources. Configurations may contain resource handles, never the live resources introduced by that mechanism.
 
 Use more specific terms when the context benefits from them:
 
@@ -548,7 +548,7 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IOperator<Mutation, TCandidate>` do not acquire a `Node` suffix.
 
-`IOperator<TOperation, TCandidate>` builds its executor in one hook, `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which resolution calls for every build with a scope typed to the run. The hook resolves children through that scope, takes shared data from `scope.GetScopedState(this, create)` and resolves its own declared observation points like children. Operator authoring bases override the protected run-generic `CreateExecutor` for compositions and `CreateExecutor(ResolutionScope scope)` for fixed-signature leaves. Their child properties are `ChildOperator` and `ChildOperators`.
+`IOperator<TOperation, TCandidate>` builds its executor in one hook, `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which resolution calls for every build with a scope typed to the run. The hook resolves children through that scope, obtains explicitly shared resources through `scope.Resource(handle)` and resolves its own declared observation points like children. Operator authoring bases override the protected run-generic `CreateExecutor` for compositions and `CreateExecutor(ResolutionScope scope)` for fixed-signature leaves. Their child properties are `ChildOperator` and `ChildOperators`.
 
 Algorithms and consumer-defined roles build the same way. An algorithm's `CreateExecutor<TSearchSpace, TProblem>(scope)` receives a scope typed to the run and its search state; an algorithm bound to a search space and problem overrides a `CreateExecutor` typed to them instead. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope scope)`. The hook is runtime machinery, not a configuration value strategy.
 
@@ -600,7 +600,7 @@ Advice wraps the executors built for the configurations a pointcut selects. It c
 
 The single `Advice` concept provides around advice. Its wrapper can run code around an operation, change its arguments or results, or decide whether to invoke it. Advice is not restricted to observation.
 
-`Advice<TConfiguration>` identifies the configuration role it can advise. Operator advice checks a selected operator before its executor is built and wraps each executor built for it: `OperatorAdvice` covers every operation, `OperatorAdvice<TOperation, TCandidate>` one operation, and role bases such as `MutatorAdvice<TCandidate>` receive typed executors. `AlgorithmAdvice<TCandidate, TSearchState>` wraps each executor built for a selected algorithm, and a consumer-defined role's advice derives from `Advice<TConfiguration, TExecutor>`. Data that outlives one executor belongs to the advice object. Resolution compares advice by reference. Observation, counting and duration measurement are predefined advice.
+`Advice<TConfiguration>` identifies the configuration role it can advise. Operator advice checks a selected operator before its executor is built and wraps each executor built for it: `OperatorAdvice` covers every operation, `OperatorAdvice<TOperation, TCandidate>` one operation, and role bases such as `MutatorAdvice<TCandidate>` receive typed executors. `AlgorithmAdvice<TCandidate, TSearchState>` wraps each executor built for a selected algorithm, and a consumer-defined role's advice derives from `Advice<TConfiguration, TExecutor>`. Advice receives concrete runtime dependencies through its constructor. Runtime data held by advice is shared wherever that advice instance is reused. Assemble advice with independent dependencies for independent runs. Advice has no resource lookup or child resolution capability. Resolution compares advice by reference. Observation, counting and duration measurement are predefined advice.
 
 See also: Aspect, Configuration node, Join point, Pointcut.
 
@@ -608,7 +608,7 @@ See also: Aspect, Configuration node, Join point, Pointcut.
 
 Status: `Canonical`
 
-A join point is the executor built for one configuration selected by a pointcut. Advice wraps every contextual executor built for the same configuration and keeps no data per join point; data that outlives one executor belongs to the advice object.
+A join point is the executor built for one configuration selected by a pointcut. Advice wraps every contextual executor built for the same configuration. Wrapping executors own their private fields. Advice may hold explicitly shared runtime data or obtain a resource through a handle for the current run.
 
 A join point does not identify one invocation or one occurrence of a configuration along a caller path.
 
@@ -620,9 +620,9 @@ Status: `Canonical`
 
 An aspect is the ordered list of its pointcut/advice pairs. `Aspect.Create(pointcut, advice)` creates one pair. A derived constructor assigns its pairs to the protected `Advices` and spreads other aspects into them, as in `Advices = [.. Aspect.Observe(evaluator.Invocations, Record)]`.
 
-Runs accept aspects through `AddAspect`. Resolution applies earlier advice closer to the source executor, with a new scope's pairs preceding inherited pairs. Each advice instance applies once at its first position. If the same advice appears with two pointcuts, the first pairing wins. Two traces sharing a clock therefore share its advice without counting twice.
+Run setup accepts aspects through `setup.AddAspect` inside the `CreateRun` callback. Resolution applies earlier advice closer to the source executor, with a new scope's pairs preceding inherited pairs. Each advice instance applies once at its first position. If the same advice appears with two pointcuts, the first pairing wins. Two traces sharing a clock therefore share its advice without counting twice.
 
-An aspect holds its pairs, and its advice holds the data that outlives one executor. Reusing an aspect across independent scopes shares that data but not their scoped state. An analyzer or clock may own collected data that it intentionally shares across runs.
+An aspect holds its pairs. Reusing an aspect shares any runtime data held by its advice while executor fields and default run resources remain independent across runs. An analyzer or clock may own collected data that it intentionally shares across runs.
 
 See also: Advice, Join point, Pointcut, Resolution scope.
 
@@ -636,7 +636,7 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Run analyzers are added while a run is preparing and their advice is applied during resolution, so their observations can span nested algorithms and multiple short-lived executors. A run does not accept more analyzers after it leaves `Preparing`.
+Run analyzers are added through the `CreateRun` setup callback and their advice is applied during resolution, so their observations can span nested algorithms and multiple short-lived executors. The returned run starts in `Ready` and accepts no further attachments. Setup is snapshotted before the run is returned.
 
 See also: Analyzer, Configuration, Executor, Search state.
 
@@ -648,23 +648,23 @@ A search state is the public state value produced by an algorithm while it searc
 
 Search states describe the visible progress of a search process, such as the current evaluated candidate or current population. They may be streamed, inspected, analyzed, or returned as the final state of a run.
 
-Search state is distinct from scoped state. Scoped state is private machinery used to produce progress; search state is the public value that represents that progress.
+Search state is the public value representing search progress. Executor fields and resources are machinery used to produce that progress.
 
 Use search terminology for the state and the search space, but do not use search algorithm as the default term for every HeuristicLib algorithm. Prefer algorithm, optimization algorithm, metaheuristic, or a more specific algorithm family where appropriate.
 
-See also: Candidate, Evaluated candidate, Scoped state, Run, Search space.
+See also: Candidate, Evaluated candidate, Executor, Resource, Run, Search space.
 
 ### Executor
 
 Status: `Canonical`
 
-An executor is a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It holds its resolved child executors and references to scoped state; data it keeps itself lives only as long as the executor.
+An executor is a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It holds resolved children, private fields and any explicitly shared resources. Private data lives with its executor.
 
-Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Resolution may construct another executor around the same shared state when children or advice differ. A stateless configuration can also serve as its own executor.
+Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Executors share resources only through explicit handles or runtime supply. A stateless configuration can also serve as its own executor.
 
 The common interface is `IExecutor`. Operation-specific interfaces include `IMutationExecutor` and `IEvaluationExecutor`; algorithms use `IAlgorithmExecutor`. The term does not give the object scheduling, threading, disposal or run-lifecycle responsibilities.
 
-See also: Configuration, Execution, Execution graph, Scoped state, Operation, Operation invocation, Run.
+See also: Configuration, Execution, Execution graph, Resource, Operation, Operation invocation, Run.
 
 ### Execution
 
@@ -674,7 +674,7 @@ Execution is the activity of performing work. Use the term in execution time, ex
 
 `AlgorithmRun` owns a run's lifecycle. An executor performs the work that participates in that run.
 
-See also: Executor, Execution concurrency, Scoped state, Operation, Operation invocation, Run.
+See also: Executor, Execution concurrency, Resource, Operation, Operation invocation, Run.
 
 ### Execution node
 
@@ -694,51 +694,49 @@ See also: Executor.
 
 ### Resource
 
-Status: `Provisional`
+Status: `Canonical`
 
-A resource is an explicit runtime dependency whose data may be shared by several executors, such as an evaluation store or a counting accumulator. Its sharing contract identifies which data belongs together and what concurrent use permits. Sharing a resource does not imply sharing the executors, their children or their advice.
+A resource is an explicit runtime dependency whose data may be shared by several executors, such as an evaluation cache or counting accumulator. Its contract defines compatible participants and concurrent use. Sharing a resource does not share executors, children or advice.
+
+One run creates one resource per handle by default. A trial is one run. Explicit runtime supply can deliberately share one instance across runs. Automatically created resources need no deterministic cleanup. Supplied resources remain caller owned.
 
 See also: Executor, Resource handle, Run.
 
 ### Resource handle
 
-Status: `Provisional`
+Status: `Canonical`
 
-A resource handle describes resource creation and explicitly identifies a sharing relationship. It contains settings rather than the live resource. Reusing a handle expresses intended sharing, while creating another handle expresses a separate relationship even when its settings match.
+A resource handle describes resource creation and explicitly identifies a sharing relationship. `ResourceHandle<TResource>` contains immutable creation settings rather than a live resource. Handle reference identity determines sharing and participates in configuration equality. Separate handles remain distinct even when their settings match. Record copies retain their handles.
 
-This is proposed terminology for the selected resource design, not an API available in the current implementation. The existing scoped state entries below continue to describe current behavior.
+Resource lookup is flat within a run. `run.Resource(handle)` returns the same resource used by that run's executors and lazily creates its default instance if necessary. A handle does not name a configuration owner or a nested lifetime. Its creation method receives no resolution context or graph dependency. `ResourceHandle<TResource>` is abstract. A `SuppliedResourceHandle<TResource>` requires explicit runtime supply.
 
-See also: Configuration, Resource, Run, Scoped state.
+See also: Configuration, Resource, Run.
+
+### Run resources
+
+Status: `Canonical`
+
+Run resources are the resources associated with one run and shared explicitly through handles. Configurations obtain them through their resolution scope and callers through `run.Resource(handle)`. Advice receives concrete resource instances through its constructor. Supplying an instance under a handle connects these uses without giving advice access to the table. Resources retain their own mutation, concurrency and ownership contracts.
+
+See also: Advice, Resource, Resource handle, Resolution scope, Run.
 
 ### Scoped state
 
-Status: `Canonical`
+Status: `Legacy`
 
-Scoped state is a configuration's private mutable data, such as counters, caches and buffers, that lives as long as the resolution scope owning the configuration. Every executor built for the configuration in that scope shares it. It must not be stored on the reusable configuration.
+A former mechanism that shared private data by configuration ownership and ancestor lookup. Private mutable execution data now belongs to executor fields. Use an explicit resource handle when sharing has domain meaning.
 
-A configuration requests its scoped state from the scope of its build by passing itself, as in `GetScopedState(this, create)`; only a configuration being built can request it. The state is created on the first request, and every later build in the owning scope receives the same object across operations and run types. A child scope starts new scoped state for the configurations it owns, while `With` adds aspects and keeps the scope's state. A configuration has one scoped state object. Scoped state cannot contain graph dependencies such as executors, configurations or scopes.
+`Execution state` is also a legacy name for that former mechanism. Search state remains the public value describing search progress.
 
-Lifetimes, from longest to shortest: a configuration lives as long as its user keeps it. A run owns the root scope. Scoped state lives with the scope that owns its configuration, such as the run's root scope or a child scope a meta-algorithm opens for one activation. An executor lives for one build, with its resolved children. Iterator progress and local timers belong to one invocation.
-
-Name an authored state holder `State`, nested in its configuration, and its local variable or parameter `state` when the context is clear.
-
-Scoped state is distinct from search state. Search states describe visible progress through the search and may be streamed, inspected, analyzed, or returned as the final state of a run.
-
-Related terms:
-
-- `Execution state`: `Legacy`. Use scoped state; the old name suggested that the data lives with one executor.
-
-See also: Configuration, Executor, Resolution scope, Run, Search state.
+See also: Executor, Resource, Search state.
 
 ### Child scope policy
 
-Status: `Canonical`
+Status: `Legacy`
 
-A child scope policy chooses a resolution scope and its state ownership and reuse when a meta-algorithm activates an inner algorithm. `ChildScopePolicy.Fresh` creates new child-local state per activation, `Retained` keeps child-local state per inner algorithm configuration reference within its owning meta-algorithm, and `Shared` uses the meta-algorithm's state.
+A former mechanism for selecting private state lifetimes during child activation. Cycle now constructs fresh executors by default and offers explicit executor reuse. Reuse is keyed by child configuration reference within one Cycle executor and retains children and advice too.
 
-Child-local state reuses scoped state already owned by an ancestor. The meta-algorithm keeps its `ChildScopeSelector` as scoped state, so its builds for every run type select the same retained child state. Retaining state does not retain an earlier observation context. The policy does not change how an inner algorithm numbers its iterations or how a cycle numbers its cycles and turns. Cycle exposes the choice as `ScopePolicy`, defaulting to `Fresh`; other meta-algorithms keep their own policies.
-
-See also: Configuration node, Scoped state, Resolution scope.
+See also: Executor, Resource, Resolution scope.
 
 ### Execution graph
 
@@ -746,7 +744,7 @@ Status: `Canonical`
 
 An execution graph is a graph of executors created from a configuration graph during a run.
 
-A run may contain more than one execution graph over time or through different observation contexts. Distinct bound nodes can share persistent scoped state while retaining their own children and observers.
+A run may contain more than one execution graph over time or through different observation contexts. Distinct executors can explicitly share resources while retaining private fields, children and observers.
 
 See also: Configuration graph, Executor, Run.
 
@@ -756,7 +754,7 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to executors during a run.
 
-The scope combines state ownership with an immutable ordered collection of zero, one or more aspects. It builds a configuration's executor for every request with the requesting aspects and selects its scoped state by configuration reference. The resolver caches no executors. A configuration's scoped state lives in the scope that owns the configuration. Child scopes create local state while reusing what an ancestor owns; `With` changes aspects while sharing state. Both operations accept multiple aspects in supplied order as one layer.
+The scope combines an ordered aspect context with one flat resource table for its run. It constructs executors for each request and caches none. `With` adds aspects using the same resources. A separate root creates independent resources unless instances are explicitly supplied. `ResolutionScopeBuilder` collects bindings and aspects and builds independent scope snapshots. The scope has no resource supply phase. There is no private state ownership or ancestor resource lookup.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for state, construction and observation rules.
 
@@ -770,7 +768,7 @@ A wrapper chain is the ordered set of execution wrappers applied to one selected
 
 Configured wrappers belong to the configuration graph. Advice wraps the raw executor built for a configuration. Earlier advice wraps closer to that source executor; later advice wraps outside it. A new scope's advice precedes inherited advice. Each advice instance applies once at its first position.
 
-Changing the chain rebuilds executors and child bindings without creating their scoped state again.
+Constructing another chain creates its own executor fields and child bindings. Existing chains keep their controls and advice. Explicit resources can be shared between those chains.
 
 See also: Advice, Aspect, Configuration, Executor, Resolution scope.
 
@@ -832,7 +830,7 @@ See also: Executor, Run.
 
 Status: `Canonical`
 
-An analyzer is a stateful aspect that records or derives information from selected execution boundaries. A run accepts it through `AddAspect` alongside other aspects.
+An analyzer is a stateful aspect that records or derives information from selected execution boundaries. Run setup accepts it through `AddAspect` alongside other aspects.
 
 The caller selects its sources, clocks and analysis behavior. A trace owns its function, its retention object and any best-so-far object the function updates; none of them is resolved through a scope. Its constructor assigns observation and clock advice. Reusing an analyzer across runs intentionally combines its results.
 
@@ -1008,7 +1006,7 @@ See also: Algorithm, Experiment, Run.
 
 Status: `Canonical`
 
-A trial analyzer is the analyzer created for one trial's algorithm configuration. `ExperimentRun.AddAspectPerTrial` takes a function of that configuration, creates one aspect for each trial and returns the trials with their aspects in trial order. Each `TrialAspect` exposes `Trial` and the concrete analyzer as `Aspect`. The function can select several observation boundaries and create clocks for its trial.
+A trial analyzer is the analyzer created for one trial's algorithm configuration. `ExperimentRunSetup.AddAspectPerTrial` takes a function of that configuration during the `CreateRun` callback, creates one aspect for each materialized case and returns the cases with their aspects in case order. Each `TrialAspect` exposes the materialized case as `Trial` and the concrete analyzer as `Aspect`. The resulting execution trial retains the same case reference through `Case`. The function can select several observation boundaries and create clocks for its trial.
 
 Related terms:
 

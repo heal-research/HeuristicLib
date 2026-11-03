@@ -4,7 +4,7 @@ internal sealed class TestRun : AlgorithmRun
 {
     public static TestRun Instance { get; } = new();
 
-    private TestRun()
+    private TestRun() : base(ResolutionScope.Create())
     {
     }
 }

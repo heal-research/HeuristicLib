@@ -22,7 +22,7 @@ public class ExperimentRunTests
     {
         var run = CreateRun();
 
-        run.LifecycleState.ShouldBe(RunLifecycleState.Preparing);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Ready);
         _ = run.Stream(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Running);
@@ -51,8 +51,8 @@ public class ExperimentRunTests
 
         _ = run.StartTrials(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.LifecycleState.ShouldNotBe(RunLifecycleState.Preparing);
-        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState != RunLifecycleState.Preparing);
+        run.LifecycleState.ShouldNotBe(RunLifecycleState.Ready);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState != RunLifecycleState.Ready);
         Should.Throw<InvalidOperationException>(() => run.StartTrials(cancellationToken: TestContext.Current.CancellationToken));
     }
 
@@ -63,7 +63,7 @@ public class ExperimentRunTests
 
         _ = run.Trials[0].Run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.LifecycleState.ShouldBe(RunLifecycleState.Preparing);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Ready);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
         _ = run.Trials[1].Run.Stream(cancellationToken: TestContext.Current.CancellationToken);
     }

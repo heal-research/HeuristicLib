@@ -14,25 +14,7 @@ namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 /// run requests, and a request the move evaluator was not written for is reported when the execution graph is built.
 /// </para>
 /// </remarks>
-public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState>
+public abstract record MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove>
     : Operator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TState : class
-{
-    protected abstract TState CreateScopedState();
-
-    protected abstract ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-    protected sealed override IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetScopedState(this, CreateScopedState));
-
-    private sealed class Executor(MoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove, TState> moveEvaluator, TState state)
-        : IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
-    {
-        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            moveEvaluator.Evaluate(oldQuality, candidate, move, state, random, searchSpace, problem);
-
-        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;

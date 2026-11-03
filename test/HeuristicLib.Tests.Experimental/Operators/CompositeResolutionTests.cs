@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
 public class CompositeResolutionTests
 {
     [Fact]
-    public void CompositeCreator_RebindsAdaptedChildrenWithoutResettingTheirCursors()
+    public void CompositeCreator_ConstructsIndependentAdaptedChildCursors()
     {
         var searchSpace = new CompositeSpace(UnrestrictedSearchSpace<string>.Instance, UnrestrictedSearchSpace<string>.Instance);
         var problem = new NoProblem<CompositeCandidate, CompositeSpace>(searchSpace);
@@ -22,12 +22,12 @@ public class CompositeResolutionTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
         var calls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(left, calls));
+        var child = root.With(Aspect.CountInvocations(left, calls));
         var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
 
         outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));
-        inner.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("b", "y"));
-        outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("c", "z"));
+        inner.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));
+        outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("b", "y"));
         calls.CurrentCount.ShouldBe(1);
         var independent = ResolutionScope.Create().Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
         independent.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));

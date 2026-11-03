@@ -57,15 +57,8 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var state = scope.GetScopedState(this, static () => new State());
         var childEvaluator = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy, state);
-    }
-
-    private sealed class State
-    {
-        public ObjectiveVector? BestKnown { get; set; }
-        public int BestKnownEpoch { get; set; } = -1;
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, BestKnownProvider, ZeroBestKnownPolicy);
     }
 
     private sealed class Executor<TRunSearchSpace, TRunProblem> : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
@@ -76,15 +69,15 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         private readonly IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider;
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
         private readonly IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator;
-        private readonly State state;
+        private ObjectiveVector? bestKnown;
+        private int bestKnownEpoch = -1;
 
-        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy, State state)
+        public Executor(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> childEvaluator, TProblem sourceProblem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
         {
             this.sourceProblem = sourceProblem;
             this.bestKnownProvider = bestKnownProvider;
             this.zeroBestKnownPolicy = zeroBestKnownPolicy;
             this.childEvaluator = childEvaluator;
-            this.state = state;
         }
 
         public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
@@ -95,12 +88,12 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             var objectiveVectors = childEvaluator.Evaluate(candidates, random, searchSpace, problem);
             // A deferred batch update is applied inside Evaluate. Read its reference afterwards, while that
             // environment is still current, instead of retaining an event subscription to the problem.
-            if (state.BestKnownEpoch != sourceProblem.CurrentEpoch)
+            if (bestKnownEpoch != sourceProblem.CurrentEpoch)
             {
-                state.BestKnown = bestKnownProvider.GetBestKnown(sourceProblem);
-                state.BestKnownEpoch = sourceProblem.CurrentEpoch;
+                bestKnown = bestKnownProvider.GetBestKnown(sourceProblem);
+                bestKnownEpoch = sourceProblem.CurrentEpoch;
             }
-            var currentBestKnown = state.BestKnown!;
+            var currentBestKnown = bestKnown!;
             return objectiveVectors
                 .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, currentBestKnown, zeroBestKnownPolicy))
                 .ToArray();

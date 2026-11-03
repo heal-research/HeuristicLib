@@ -21,8 +21,10 @@ public sealed record TerminationObservation<TCandidate>(
 
 file sealed class TerminationObservationAdvice<TCandidate>(Action<TerminationObservation<TCandidate>> observe) : TerminatorAdvice<TCandidate>
 {
-    protected override ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem, TSearchState>(
-        ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IOperator<Termination, TCandidate> terminator) =>
+    protected override ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+        Wrap<TSearchSpace, TProblem, TSearchState>(
+            ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
+            IOperator<Termination, TCandidate> terminator) =>
         new Executor<TSearchSpace, TProblem, TSearchState>(executor, terminator, observe);
 
     private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,

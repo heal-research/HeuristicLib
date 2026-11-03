@@ -45,25 +45,6 @@ public abstract record StatelessMutator<TCandidate> : Mutator<TCandidate>,
         IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => Mutate(parents, random);
 }
 
-public abstract record StatefulMutator<TCandidate, TState> : Mutator<TCandidate> where TState : class
-{
-    protected abstract TState CreateScopedState();
-    protected abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, TState state,
-        IRandomNumberGenerator random);
-
-    protected sealed override IMutationExecutor<TCandidate, ISearchSpace<TCandidate>,
-        IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetScopedState(this, CreateScopedState));
-
-    private sealed class Executor(StatefulMutator<TCandidate, TState> source, TState state)
-        : IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
-    {
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
-            ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-            source.Mutate(parents, state, random);
-    }
-}
-
 public abstract record StatelessEvaluator<TCandidate> : LeafOperator<Evaluation, TCandidate,
     ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>,
     IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>>,

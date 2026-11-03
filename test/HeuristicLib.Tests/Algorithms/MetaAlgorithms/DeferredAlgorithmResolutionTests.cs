@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Terminators;
@@ -13,15 +14,15 @@ public sealed class DeferredAlgorithmResolutionTests
     private static readonly IProblem<int, DummySearchSpace<int>> problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
 
     [Theory]
-    [InlineData(ChildScopePolicy.Fresh)]
-    [InlineData(ChildScopePolicy.Retained)]
-    [InlineData(ChildScopePolicy.Shared)]
-    public async Task Cycle_RepeatedChildrenRespectScopePolicyAcrossInvocations(ChildScopePolicy mode)
+    [InlineData(false)]
+    [InlineData(true)]
+
+    public async Task Cycle_RepeatedChildrenRespectReuseExecutorsAcrossInvocations(bool mode)
     {
-        var reset = mode == ChildScopePolicy.Fresh;
+        var reset = mode == false;
         var prepared = new List<ProbeData>();
         var algorithm = new ProbeAlgorithm { Prepared = prepared.Add };
-        var executor = Resolve(ResolutionScope.Create(), algorithm.CycleWith(algorithm, maximumCycles: 2, scopePolicy: mode));
+        var executor = Resolve(ResolutionScope.Create(), algorithm.CycleWith(algorithm, maximumCycles: 2, reuseExecutors: mode));
         var forks = new List<string>();
 
         var first = await Run(executor, new RecordingRandom("first", forks));
@@ -39,7 +40,7 @@ public sealed class DeferredAlgorithmResolutionTests
     }
 
     [Fact]
-    public async Task Cycle_ReuseSharesReferencesAcrossOwnersAndDirectResolution()
+    public async Task Cycle_ReuseIsLocalToOneExecutorAndUsesReferenceIdentity()
     {
         var algorithm = new ProbeAlgorithm();
         var equal = algorithm with { };
@@ -47,7 +48,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var cycle = new CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([algorithm, equal])
         {
             MaximumCycles = 2,
-            ScopePolicy = ChildScopePolicy.Shared
+            ReuseExecutors = true
         };
         var root = ResolutionScope.Create();
         var executor = Resolve(root, cycle);
@@ -57,21 +58,21 @@ public sealed class DeferredAlgorithmResolutionTests
         first[0].Data.ShouldNotBeSameAs(first[1].Data);
 
         var otherOwner = await Run(Resolve(root, cycle with { }));
-        otherOwner[0].Data.ShouldBeSameAs(first[0].Data);
-        otherOwner.Select(state => state.Call).ShouldBe([3, 3, 4, 4]);
+        otherOwner[0].Data.ShouldNotBeSameAs(first[0].Data);
+        otherOwner.Select(state => state.Call).ShouldBe([1, 1, 2, 2]);
         var ancestor = (await Run(Resolve(root, algorithm))).Single();
-        ancestor.Data.ShouldBeSameAs(first[0].Data);
-        ancestor.Call.ShouldBe(5);
+        ancestor.Data.ShouldNotBeSameAs(first[0].Data);
+        ancestor.Call.ShouldBe(1);
         var next = await Run(executor);
-        next.Select(state => state.Call).ShouldBe([6, 5, 7, 6]);
+        next.Select(state => state.Call).ShouldBe([3, 3, 4, 4]);
         next[0].Data.ShouldBeSameAs(first[0].Data);
     }
 
     [Theory]
-    [InlineData(ChildScopePolicy.Fresh)]
-    [InlineData(ChildScopePolicy.Retained)]
-    [InlineData(ChildScopePolicy.Shared)]
-    public async Task CycleSiblingsShareCommonDependencyStateOnlyInSharedMode(ChildScopePolicy mode)
+    [InlineData(false)]
+    [InlineData(true)]
+
+    public async Task CycleSiblingsKeepSeparateChildrenWhenExecutorsAreReused(bool mode)
     {
         var shared = new CountingMutations();
         var first = new ProbeAlgorithm { Mutator = shared };
@@ -79,39 +80,38 @@ public sealed class DeferredAlgorithmResolutionTests
         var cycle = new CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([first, second])
         {
             MaximumCycles = 2,
-            ScopePolicy = mode
+            ReuseExecutors = mode
         };
         var root = ResolutionScope.Create();
         var states = await Run(Resolve(root, cycle));
         states.Select(state => state.Value).ShouldBe(mode switch
         {
-            ChildScopePolicy.Fresh => [1, 1, 1, 1],
-            ChildScopePolicy.Retained => [1, 1, 2, 2],
-            _ => new[] { 1, 2, 3, 4 }
+            false => [1, 1, 1, 1],
+            true => [1, 1, 2, 2]
         });
         states[0].Data.ShouldNotBeSameAs(states[1].Data);
         var direct = root.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(shared);
-        direct.Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(mode == ChildScopePolicy.Shared ? [5] : [1]);
+        direct.Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1]);
     }
 
     [Theory]
-    [InlineData(ChildScopePolicy.Fresh)]
-    [InlineData(ChildScopePolicy.Retained)]
-    [InlineData(ChildScopePolicy.Shared)]
-    public async Task Cycle_ActivationsInheritStateAlreadyOwnedByAnAncestor(ChildScopePolicy mode)
+    [InlineData(false)]
+    [InlineData(true)]
+
+    public async Task Cycle_ActivationsHaveIndependentPrivateDataFromDirectResolution(bool mode)
     {
         var algorithm = new ProbeAlgorithm();
         var root = ResolutionScope.Create();
         var ancestor = (await Run(Resolve(root, algorithm))).Single();
 
-        var states = await Run(Resolve(root, Cycle(algorithm, false) with { ScopePolicy = mode }));
+        var states = await Run(Resolve(root, Cycle(algorithm, false) with { ReuseExecutors = mode }));
 
-        states.Select(state => state.Call).ShouldBe([2, 3, 4, 5]);
-        states.ShouldAllBe(state => ReferenceEquals(state.Data, ancestor.Data));
+        states.Select(state => state.Call).ShouldBe(mode ? [1, 2, 3, 4] : [1, 1, 1, 1]);
+        states.ShouldAllBe(state => !ReferenceEquals(state.Data, ancestor.Data));
     }
 
     [Fact]
-    public async Task Cycle_RetainedStateSurvivesRebindingWithoutSharingWithOtherOwnersOrDirectResolution()
+    public async Task Cycle_ReusedExecutorsRetainTheirOriginalChildrenAndAdvice()
     {
         var mutator = new CountingMutations();
         var first = new ProbeAlgorithm { Mutator = mutator };
@@ -120,7 +120,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var cycle = new CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([first, first, equal])
         {
             MaximumCycles = 2,
-            ScopePolicy = ChildScopePolicy.Retained
+            ReuseExecutors = true
         };
         var root = ResolutionScope.Create();
         var observations = new List<string>();
@@ -132,8 +132,8 @@ public sealed class DeferredAlgorithmResolutionTests
 
         var rebuilt = Resolve(root.With(Aspect.Observe(mutator.Invocations, _ => observations.Add("rebuilt"))), cycle);
         var after = await Run(rebuilt);
-        after.Select(state => state.Call).ShouldBe([5, 6, 3, 7, 8, 4]);
-        after[0].Data.ShouldBeSameAs(before[0].Data);
+        after.Select(state => state.Call).ShouldBe([1, 2, 1, 3, 4, 2]);
+        after[0].Data.ShouldNotBeSameAs(before[0].Data);
         observations.ShouldBe([.. Enumerable.Repeat("original", 6), .. Enumerable.Repeat("rebuilt", 6)]);
 
         var otherOwner = await Run(Resolve(root, cycle with { }));
@@ -148,10 +148,10 @@ public sealed class DeferredAlgorithmResolutionTests
     }
 
     [Fact]
-    public void Cycle_RetainedStateDoesNotRetainTheFirstObserver()
+    public void Cycle_DiscardedExecutorReleasesItsObserver()
     {
         var algorithm = new ProbeAlgorithm { Mutator = new CountingMutations() };
-        var cycle = Cycle(algorithm, false) with { ScopePolicy = ChildScopePolicy.Retained };
+        var cycle = Cycle(algorithm, false) with { ReuseExecutors = true };
         var root = ResolutionScope.Create();
         var retired = RunUnderTemporaryObserver(root, cycle, algorithm.Mutator);
         for (var attempt = 0; attempt < 3 && retired.IsAlive; attempt++)
@@ -193,8 +193,8 @@ public sealed class DeferredAlgorithmResolutionTests
         var ancestor = (await Run(Resolve(root, algorithm))).Single();
         ancestor.Call.ShouldBe(1);
         var inherited = await Run(executor);
-        inherited.Select(state => state.Call).ShouldBe([2, 3]);
-        inherited.ShouldAllBe(state => ReferenceEquals(state.Data, ancestor.Data));
+        inherited.Select(state => state.Call).ShouldBe([1, 1]);
+        inherited.ShouldAllBe(state => !ReferenceEquals(state.Data, ancestor.Data));
     }
 
     [Theory]
@@ -213,7 +213,7 @@ public sealed class DeferredAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var values = new List<int> { paused.Current.Value };
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
+        var child = root.With(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, source));
         observedCalls.CurrentCount.ShouldBe(cycle ? 4 : 2);
@@ -228,7 +228,7 @@ public sealed class DeferredAlgorithmResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task OperatorBudget_RebindingPreservesUsageAcrossActivations(bool measureDuration)
+    public async Task OperatorBudget_PrivateUsageSurvivesPauseButNotSeparateResolution(bool measureDuration)
     {
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
@@ -241,19 +241,21 @@ public sealed class DeferredAlgorithmResolutionTests
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
+        var child = root.With(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, budget));
-        observed.Select(state => state.Call).ShouldBe([2, 3]);
-        observedCalls.CurrentCount.ShouldBe(2);
+        observed.Select(state => state.Call).ShouldBe([1, 2, 3]);
+        observedCalls.CurrentCount.ShouldBe(3);
+        (await paused.MoveNextAsync()).ShouldBeTrue();
+        (await paused.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeFalse();
         (await Run(original)).Count.ShouldBe(1);
-        observedCalls.CurrentCount.ShouldBe(2);
+        observedCalls.CurrentCount.ShouldBe(3);
 
         var independent = await Run(Resolve(ResolutionScope.Create(), budget));
         independent.Select(state => state.Call).ShouldBe([1, 2, 3]);
         independent[0].Data.ShouldNotBeSameAs(observed[0].Data);
-        observedCalls.CurrentCount.ShouldBe(2);
+        observedCalls.CurrentCount.ShouldBe(3);
     }
 
     /// <summary>
@@ -263,7 +265,7 @@ public sealed class DeferredAlgorithmResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task BudgetSharesItsInnerAlgorithmStateAndCountsOnlyCallsThroughTheBudget(bool measureDuration)
+    public async Task BudgetHasPrivateInnerAlgorithmDataAndCountsOnlyCallsThroughTheBudget(bool measureDuration)
     {
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
@@ -274,10 +276,10 @@ public sealed class DeferredAlgorithmResolutionTests
         var limited = Resolve(root, budget);
         var direct = await Run(Resolve(root, algorithm));
         var throughBudget = await Run(limited);
-        throughBudget.Select(state => state.Call).ShouldBe([5, 6]);
-        throughBudget[0].Data.ShouldBeSameAs(direct[0].Data);
+        throughBudget.Select(state => state.Call).ShouldBe([1, 2]);
+        throughBudget[0].Data.ShouldNotBeSameAs(direct[0].Data);
         var laterDirect = await Run(Resolve(root, algorithm));
-        laterDirect.Select(state => state.Call).ShouldBe([7, 8, 9, 10]);
+        laterDirect.Select(state => state.Call).ShouldBe([1, 2, 3, 4]);
     }
 
     [Fact]
@@ -291,14 +293,14 @@ public sealed class DeferredAlgorithmResolutionTests
         var first = await Run(Resolve(root, budget));
         first.Select(state => state.Call).ShouldBe([1, 2]);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
+        var child = root.With(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         var observed = await Run(Resolve(child, budget));
-        observed.Select(state => state.Call).ShouldBe([3]);
-        observed[0].Data.ShouldBeSameAs(first[0].Data);
-        observedCalls.CurrentCount.ShouldBe(1);
-        (await Run(Resolve(root, budget))).Count.ShouldBe(1);
-        observedCalls.CurrentCount.ShouldBe(1);
+        observed.Select(state => state.Call).ShouldBe([1, 2]);
+        observed[0].Data.ShouldNotBeSameAs(first[0].Data);
+        observedCalls.CurrentCount.ShouldBe(2);
+        (await Run(Resolve(root, budget))).Count.ShouldBe(2);
+        observedCalls.CurrentCount.ShouldBe(2);
     }
 
     /// <summary>
@@ -326,22 +328,24 @@ public sealed class DeferredAlgorithmResolutionTests
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = 0;
-        var child = root.CreateChildScope(Aspect.Observe(algorithm.Mutator.Invocations, _ =>
+        var child = root.With(Aspect.Observe(algorithm.Mutator.Invocations, _ =>
         {
             observed++;
             clock.Advance(20);
         }));
 
-        (await Run(Resolve(child, budget))).Count.ShouldBe(2);
+        (await Run(Resolve(child, budget))).Count.ShouldBe(3);
+        (await paused.MoveNextAsync()).ShouldBeTrue();
+        (await paused.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeFalse();
 
-        trace.By(calls).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
-        trace.By(calls).Select(point => point.Value).ShouldBe([1, 1, 2]);
-        observed.ShouldBe(2);
+        trace.By(calls).Select(point => point.Time).ShouldBe([1L, 2L, 3L, 4L, 5L, 6L]);
+        trace.By(calls).Select(point => point.Value).ShouldBe([1, 1, 2, 3, 2, 3]);
+        observed.ShouldBe(3);
     }
 
     [Fact]
-    public async Task StateTermination_RebindingSharesTheLimitAndObservesContextualChecks()
+    public async Task StateTermination_HasIndependentLimitsAndContextualChecks()
     {
         var algorithm = new ProbeAlgorithm { Steps = 4 };
         IOperator<Termination, int> terminator = new AfterIterationsTerminator<int>(2);
@@ -349,12 +353,12 @@ public sealed class DeferredAlgorithmResolutionTests
         var root = ResolutionScope.Create();
         (await Run(Resolve(root, source))).Count.ShouldBe(2);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(terminator, observedCalls));
+        var child = root.With(Aspect.CountInvocations(terminator, observedCalls));
 
-        (await Run(Resolve(child, source))).Count.ShouldBe(1);
-        observedCalls.CurrentCount.ShouldBe(1);
-        (await Run(Resolve(root, source))).Count.ShouldBe(1);
-        observedCalls.CurrentCount.ShouldBe(1);
+        (await Run(Resolve(child, source))).Count.ShouldBe(2);
+        observedCalls.CurrentCount.ShouldBe(2);
+        (await Run(Resolve(root, source))).Count.ShouldBe(2);
+        observedCalls.CurrentCount.ShouldBe(2);
         (await Run(Resolve(ResolutionScope.Create(), source))).Count.ShouldBe(2);
     }
 
@@ -371,7 +375,7 @@ public sealed class DeferredAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         paused.Current.Value.ShouldBe(1);
         var observedCalls = new CountAccumulator();
-        var child = root.CreateChildScope(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
+        var child = root.With(Aspect.CountInvocations(algorithm.Mutator, observedCalls));
 
         (await Run(Resolve(child, budget))).Count.ShouldBe(2);
         observedCalls.CurrentCount.ShouldBe(2);
@@ -384,7 +388,7 @@ public sealed class DeferredAlgorithmResolutionTests
     }
 
     private static CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState> Cycle(ProbeAlgorithm algorithm, bool reset) =>
-        new([algorithm, algorithm]) { MaximumCycles = 2, ScopePolicy = reset ? ChildScopePolicy.Fresh : ChildScopePolicy.Shared };
+        new([algorithm, algorithm]) { MaximumCycles = 2, ReuseExecutors = !reset };
 
     private static IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> Resolve(ResolutionScope scope, IAlgorithm<int, ProbeState> algorithm) =>
         scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>(algorithm);
@@ -415,12 +419,8 @@ public sealed class DeferredAlgorithmResolutionTests
         protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, ProbeState> scope)
         {
-            var data = scope.GetScopedState(this, () =>
-            {
-                var created = new ProbeData();
-                Prepared(created);
-                return created;
-            });
+            var data = new ProbeData();
+            Prepared(data);
             return new Executor<TSearchSpace, TProblem>(data, scope.Resolve(Mutator), Steps);
         }
 
@@ -449,6 +449,7 @@ public sealed class DeferredAlgorithmResolutionTests
                 }
             }
         }
+
     }
 
     private sealed class ManualClock : TimeProvider
@@ -474,10 +475,19 @@ public sealed class DeferredAlgorithmResolutionTests
 
     private sealed class MutationData { public int Invocations; }
 
-    private sealed record CountingMutations : StatefulMutator<int, MutationData>
+    private sealed record CountingMutations : Mutator<int>
     {
-        protected override MutationData CreateScopedState() => new();
-        protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationData state, IRandomNumberGenerator random) => [++state.Invocations];
+
+        protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+        new Executor();
+
+        private sealed class Executor
+            : MutationExecutor<int>
+        {
+            private int invocations;
+
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) => [++invocations];
+        }
     }
 
     private sealed record PassThroughMutator : StatelessMutator<int>

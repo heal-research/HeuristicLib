@@ -77,7 +77,7 @@ public class ObservationModuleTests
         var counter = new CountAccumulator();
         var observed = new List<IOperator<Evaluation, int>>();
         var root = ResolutionScope.Create(Aspect.Observe(evaluator.Invocations, observation => observed.Add(observation.Evaluator)));
-        var budget = root.CreateChildScope(Aspect.CountInvocations(evaluator, counter));
+        var budget = root.With(Aspect.CountInvocations(evaluator, counter));
 
         budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

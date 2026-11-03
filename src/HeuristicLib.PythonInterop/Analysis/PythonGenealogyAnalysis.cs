@@ -146,9 +146,11 @@ public class PythonGenealogyAnalysis
                     var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
                     var gaRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
                                                gaAlgorithm.TerminatedAfterIterations(parameters.Iterations),
-                                               problem, RandomNumberGenerator.Create(parameters.Seed));
-                    foreach (var analyzer in analyzers.GetAll())
-                        gaRun.AddAspect(analyzer);
+                                               problem, RandomNumberGenerator.Create(parameters.Seed), setup =>
+                                               {
+                                                   foreach (var analyzer in analyzers.GetAll())
+                                                       setup.AddAspect(analyzer);
+                                               });
                     gaRun.Complete();
                     return analyzers.ToExperimentResult();
                 }
@@ -167,9 +169,11 @@ public class PythonGenealogyAnalysis
 
                     var esRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
                                                esAlgorithm.TerminatedAfterIterations(parameters.Iterations),
-                                               problem, RandomNumberGenerator.Create(parameters.Seed));
-                    foreach (var analyzer in analyzers.GetAll())
-                        esRun.AddAspect(analyzer);
+                                               problem, RandomNumberGenerator.Create(parameters.Seed), setup =>
+                                               {
+                                                   foreach (var analyzer in analyzers.GetAll())
+                                                       setup.AddAspect(analyzer);
+                                               });
                     esRun.Complete();
                     return analyzers.ToExperimentResult();
                 }
@@ -200,9 +204,11 @@ public class PythonGenealogyAnalysis
                     var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
                     var nsga2Run = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
                                                      nsga2Algorithm.TerminatedAfterIterations(parameters.Iterations),
-                                                     problem, RandomNumberGenerator.Create(parameters.Seed));
-                    foreach (var analyzer in analyzers.GetAll())
-                        nsga2Run.AddAspect(analyzer);
+                                                     problem, RandomNumberGenerator.Create(parameters.Seed), setup =>
+                                               {
+                                                   foreach (var analyzer in analyzers.GetAll())
+                                                       setup.AddAspect(analyzer);
+                                               });
                     _ = nsga2Run.Complete();
                     return analyzers.ToExperimentResult();
                 }

@@ -61,7 +61,7 @@ public class RefinerFailureTests
         var counter = new CountAccumulator();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2) };
 
-        Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(Aspect.CountInvocations(algorithm.Refiner!, counter)).Complete(cancellationToken: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(Aspect.CountInvocations(algorithm.Refiner!, counter))).Complete(cancellationToken: TestContext.Current.CancellationToken));
 
         // The two completed batches are counted; the failing one is not, because the counter increments on success.
         counter.CurrentCount.ShouldBe(2);
@@ -97,7 +97,7 @@ public class RefinerFailureTests
     private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
         protected override IRefinementExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
-            new Executor(scope.GetScopedState(this, static () => new Counter()), SuccessfulBatches);
+            new Executor(new Counter(), SuccessfulBatches);
 
         private sealed class Counter
         {

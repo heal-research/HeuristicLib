@@ -24,24 +24,19 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int ExecutionCount { get; private set; }
 
-    // Counts the scoped states it creates, one per owning scope.
+    // Counts private data construction for each executor.
     protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
     {
-        scope.GetScopedState(this, () =>
-        {
-            ExecutionCount++;
-            return new Preparation();
-        });
+        ExecutionCount++;
         return new Executor();
     }
-
-    private sealed class Preparation;
 
     private sealed class Executor : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
             problem.Evaluate(candidates, random).ToArray();
     }
+
 }
 
 public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluation, int> Evaluator)
@@ -49,19 +44,13 @@ public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluat
 {
     public int ExecutionCount { get; private set; }
 
-    // Counts the scoped states it creates, one per owning scope.
+    // Counts private data construction for each executor.
     protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
     {
-        scope.GetScopedState(this, () =>
-        {
-            ExecutionCount++;
-            return new Preparation();
-        });
+        ExecutionCount++;
         return new Executor<TSearchSpace, TProblem>(Increment, scope.Resolve(Evaluator));
     }
-
-    private sealed class Preparation;
 
     private sealed class Executor<TSearchSpace, TProblem>(int increment, IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator)
         : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
@@ -80,4 +69,5 @@ public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluat
             await Task.CompletedTask;
         }
     }
+
 }

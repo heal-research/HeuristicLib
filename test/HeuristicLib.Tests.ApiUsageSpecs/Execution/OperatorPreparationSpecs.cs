@@ -11,7 +11,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
-public sealed class OperatorPreparationSpecs
+public sealed partial class OperatorPreparationSpecs
 {
     [Fact]
     public void AnExternalInvocationWrapperSupportsABuiltInOperationWithoutChangingIt()

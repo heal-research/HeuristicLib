@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -10,9 +11,9 @@ namespace HEAL.HeuristicLib.Tests.Scenarios.Core.Algorithms.MetaAlgorithms;
 public class CycleAlgorithmAnalysisScenarios
 {
     [Fact]
-    public void CycleAlgorithm_WithFreshScopes_PreservesAnalyzerStateAcrossCycles()
+    public void CycleAlgorithm_WithFreshExecutors_PreservesAnalyzerStateAcrossCycles()
     {
-        var result = RunCycleAlgorithm(ChildScopePolicy.Fresh);
+        var result = RunCycleAlgorithm(false);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
@@ -21,9 +22,9 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     [Fact]
-    public void CycleAlgorithm_WithSharedState_SharesSiblingDependenciesAndPreservesAnalyzerState()
+    public void CycleAlgorithm_WithSharedResource_SharesAccountingAndPreservesAnalyzerState()
     {
-        var result = RunCycleAlgorithm(ChildScopePolicy.Shared);
+        var result = RunCycleAlgorithm(true, shareResource: true);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
@@ -32,9 +33,9 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     [Fact]
-    public void CycleAlgorithm_WithRetainedState_IsolatesSiblingDependenciesAndPreservesAnalyzerState()
+    public void CycleAlgorithm_WithReusedExecutors_IsolatesSiblingDependenciesAndPreservesAnalyzerState()
     {
-        var result = RunCycleAlgorithm(ChildScopePolicy.Retained);
+        var result = RunCycleAlgorithm(true);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
@@ -42,15 +43,15 @@ public class CycleAlgorithmAnalysisScenarios
         result.FinalState.Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
     }
 
-    private static CycleRunResult RunCycleAlgorithm(ChildScopePolicy mode)
+    private static CycleRunResult RunCycleAlgorithm(bool mode, bool shareResource = false)
     {
-        var evaluator = new IncrementingEvaluator();
+        var evaluator = new IncrementingEvaluator { Counter = shareResource ? new CountAccumulatorHandle() : null };
         var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
         var algorithm1 = new SingleStepAlgorithm(1, evaluator, interceptor);
         var algorithm2 = new SingleStepAlgorithm(2, evaluator, interceptor);
         var cycleAlgorithm = algorithm1.CycleWith(algorithm2, maximumCycles: 3) with
         {
-            ScopePolicy = mode
+            ReuseExecutors = mode
         };
 
         var evaluationTrace1 = new EvaluationTraceAnalysis(evaluator);
@@ -61,7 +62,7 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(evaluationTrace1).AddAspect(evaluationTrace2).AddAspect(interceptionTrace);
+        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(evaluationTrace1).AddAspect(evaluationTrace2).AddAspect(interceptionTrace));
         var finalState = run.Complete();
 
         return new CycleRunResult(
@@ -84,18 +85,26 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed record IncrementingEvaluator
-        : StatefulEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, IncrementingEvaluator.State>
+        : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public sealed class State
+        public ResourceHandle<CountAccumulator>? Counter { get; init; }
+
+        protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
         {
-            public int Value { get; set; }
+            var counter = Counter is null ? new CountAccumulator() : scope.Resource(Counter);
+            return new Executor(counter);
         }
 
-        protected override State CreateScopedState() => new();
-
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, State state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+        private sealed class Executor(CountAccumulator counter)
+            : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
         {
-            return candidates.Select(candidate => new ObjectiveVector(++state.Value)).ToArray();
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
+                DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+                candidates.Select(_ =>
+                {
+                    counter.IncrementBy(1);
+                    return new ObjectiveVector(counter.CurrentCount);
+                }).ToArray();
         }
     }
 

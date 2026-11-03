@@ -50,11 +50,11 @@ public class ChildResolutionCodeFixTests
         var fixedSource = await ApplyFixAsync(Preamble + """
             file sealed class DeferredExecutor(IConfigurationNode<ICustomExecutor> child, ResolutionScope scope) : ICustomExecutor
             {
-                public ICustomExecutor Activate() => child.CreateExecutor(scope.CreateChildScope());
+                public ICustomExecutor Activate() => child.CreateExecutor(scope.With());
             }
             """);
 
-        fixedSource.Replace(" ", "").ShouldContain("scope.CreateChildScope().Resolve(child)");
+        fixedSource.Replace(" ", "").ShouldContain("scope.With().Resolve(child)");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 

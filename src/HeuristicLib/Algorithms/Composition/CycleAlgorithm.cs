@@ -22,8 +22,12 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     /// <remarks>A nonpositive limit runs no cycles.</remarks>
     public int? MaximumCycles { get; init; }
 
-    /// <summary>Chooses fresh, retained child-local or shared state for inner algorithm activations.</summary>
-    public ChildScopePolicy ScopePolicy { get; init; } = ChildScopePolicy.Fresh;
+    /// <remarks>
+    /// The default constructs fresh executors for each turn. When enabled, retains one executor per child configuration
+    /// reference, including its children and advice, in this Cycle executor. Exhausted executor fields such as iteration
+    /// and elapsed time terminator data stay exhausted. Invocation local values restart when the child is called again.
+    /// </remarks>
+    public bool ReuseExecutors { get; init; }
 
     /// <summary>The observations of the start of each cycle.</summary>
     public ObservationPoint<CycleStart<TCandidate, TSearchState>> Cycles =>
@@ -42,8 +46,7 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     }
 
     /// <remarks>
-    /// The scope selector is the Cycle's scoped state, so retained child state survives every rebuild in its owner. The
-    /// executor publishes the start of each cycle and turn to the observers of <c>Cycles</c> and <c>Turns</c>.
+    /// The executor publishes the start of each cycle and turn to the observers of <c>Cycles</c> and <c>Turns</c>.
     /// </remarks>
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -51,7 +54,7 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         var cycles = scope.Resolve(Cycles);
         var turns = scope.Resolve(Turns);
         return new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
-            scope, Algorithms, MaximumCycles, scope.GetScopedState(this, () => new ChildScopeSelector(ScopePolicy)), cycles, turns);
+            scope, Algorithms, MaximumCycles, ReuseExecutors, cycles, turns);
     }
 }
 
@@ -73,23 +76,23 @@ public static class CycleAlgorithmExtensions
         where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
         where TSearchState : class, ISearchState
     {
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null, bool reuseExecutors = false) =>
+            new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles, ReuseExecutors = reuseExecutors };
 
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
+        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null, bool reuseExecutors = false) =>
+            new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ReuseExecutors = reuseExecutors };
     }
 
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
         public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
-            IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
+            IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null, bool reuseExecutors = false) =>
+            new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles, ReuseExecutors = reuseExecutors };
 
         public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
-            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
+            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null, bool reuseExecutors = false) =>
+            new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ReuseExecutors = reuseExecutors };
     }
 }
 
@@ -103,18 +106,18 @@ public class CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProbl
     private readonly ResolutionScope scope;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
-    private readonly ChildScopeSelector scopeSelector;
+    private readonly Dictionary<IConfigurationNode, IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>? retained;
     private readonly IObservationPointExecutor<CycleStart<TCandidate, TSearchState>> cycles;
     private readonly IObservationPointExecutor<CycleTurn<TCandidate, TSearchState>> turns;
 
     public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles,
-        ChildScopeSelector scopeSelector, IObservationPointExecutor<CycleStart<TCandidate, TSearchState>> cycles,
+        bool reuseExecutors, IObservationPointExecutor<CycleStart<TCandidate, TSearchState>> cycles,
         IObservationPointExecutor<CycleTurn<TCandidate, TSearchState>> turns)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
-        this.scopeSelector = scopeSelector;
+        retained = reuseExecutors ? new(ReferenceEqualityComparer.Instance) : null;
         this.cycles = cycles;
         this.turns = turns;
     }
@@ -156,6 +159,12 @@ public class CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProbl
         }
     }
 
-    private IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm) =>
-        scopeSelector.GetScopeFor(algorithm, scope).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+    private IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm)
+    {
+        if (retained is not null && retained.TryGetValue(algorithm, out var existing))
+            return existing;
+        var executor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+        retained?.Add(algorithm, executor);
+        return executor;
+    }
 }

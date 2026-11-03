@@ -1,8 +1,16 @@
 # Operator Parameterization and Role Unification
 
+**Behavioral specification first (2026-10-29)**: The developer identified agreement on expected behavior as the missing prerequisite. The [system spec](operator-unification-system-spec.md) separates confirmed expectations, current behavior and open Given, When, Then scenarios. Settle those outcomes before selecting the aspect configuration architecture. Earlier design recommendations remain proposals.
+
+**Lifetime supersession (2026-10-28)**: The accepted [operator state lifetime plan](operator-state-lifetimes.md) supersedes this plan's scoped state, ancestor reuse, child ownership and child scope policy decisions. Those passages record historical designs. Current execution uses private executor fields and explicit run resources. This note does not change the Package 5 review status recorded below.
+
+**Advice supersession and open proposal (2026-10-29)**: The accepted [advice dependency revision](operator-state-lifetimes.md#advice-dependency-and-budget-api-revision-accepted-on-2026-10-29) removes resource lookup from every advice wrapping hook and supersedes the earlier implementation status references to that capability below. The proposed reusable aspect configuration rework and its independent architectural review are recorded in [section 11](#11-aspect-configuration-rework-and-independent-review). Recording that discussion is authorized. Its architectural recommendations remain unaccepted and no implementation is authorized by this record.
+
+**Simplicity checkpoint (2026-10-29)**: The developer reaffirmed simple common operations and complex behavior composed from existing concepts as the governing design goal. [The simplicity checkpoint](#simplicity-review-and-governing-design-goal) supersedes the earlier recommendation to proceed by settling the full proposed framework. General aspect configuration remains open. Transparent application exceptions, a new analyzer lifecycle and a separate configured instrumentation system are not accepted directions.
+
 **Decision status**: The generic consuming contract remains the accepted direction. Standalone prototype checkpoints stopped after checkpoint 3 on 2026-10-16. Continue the remaining questions through actual core migrations, reusing `prototypes/operator-role-integrated` and moving useful checks into regular tests. Execution and resolution design simplification is required during Package 2 closure, before the Package 3 role cutovers; its concrete design was accepted on 2026-10-18 (Package 2a). An invocation foundation step before the role cutovers (Package 2b) and the Package 3 decisions were accepted on 2026-10-19. The fifth review decisions of 2026-10-23, one observation source and operation types without adapters, and its factory review, one `CreateExecutor` hook with execution state through the scope, are accepted.
 
-**Implementation status**: Package 1 supplies the production resolver/advice foundation. Package 2 cuts mutation and evaluation over to `IOperator<TOperation, TCandidate>` across repository consumers, with generic naming/retry, shared counting/timing, adapted observations and real GA/EvolutionStrategy canaries. Package 2a replaces the construction carriers, delegate call wrappers and callback helpers with direct construction and struct invocation wrappers; all solution tests pass. The developer accepted the measured performance on 2026-10-18, completing Packages 2 and 2a. Package 2b is complete: its explicit latency/allocation budgets pass and the developer accepted the small stack-cost increase on 2026-10-20. Package 3 migrates creation, crossover, selection, refinement and replacement across repository consumers, with passing solution tests and performance gates recorded below. Its review decisions through the seventh review, including step 1 of the fifth review and factory review decisions, are implemented, and the developer accepted Package 3 on 2026-10-24 at commit `acd1aa06`. Step 2 of the factory review lands with Package 4, whose design the developer accepted on 2026-10-25; its implementation and review decisions were reviewed and committed at `896ded65`. Package 5's first implementation was validated; review accepted observation points as child nodes on 2026-10-26, replacing the published-callback design. The observation-point revision is implemented and validated; Package 5 awaits the developer's review.
+**Implementation status**: Package 1 supplies the production resolver/advice foundation. Package 2 cuts mutation and evaluation over to `IOperator<TOperation, TCandidate>` across repository consumers, with generic naming/retry, shared counting/timing, adapted observations and real GA/EvolutionStrategy canaries. Package 2a replaces the construction carriers, delegate call wrappers and callback helpers with direct construction and struct invocation wrappers; all solution tests pass. The developer accepted the measured performance on 2026-10-18, completing Packages 2 and 2a. Package 2b is complete: its explicit latency/allocation budgets pass and the developer accepted the small stack-cost increase on 2026-10-20. Package 3 migrates creation, crossover, selection, refinement and replacement across repository consumers, with passing solution tests and performance gates recorded below. Its review decisions through the seventh review, including step 1 of the fifth review and factory review decisions, are implemented, and the developer accepted Package 3 on 2026-10-24 at commit `acd1aa06`. Step 2 of the factory review lands with Package 4, whose design the developer accepted on 2026-10-25; its implementation and review decisions were reviewed and committed at `896ded65`. Package 5's first implementation was validated; review accepted observation points as child nodes on 2026-10-26, replacing the published-callback design. The observation-point revision and subsequent executor lifetime and run setup revisions are implemented and validated. The closure audit below was refreshed on 2026-10-28. Resource based count and duration terminators and lookup only run resources for advice are implemented under the accepted boundary. Public API unification is explicitly deferred for later discussion.
 
 **Target**: .NET 10 and C# 14, using the SDK selected by `global.json`.
 
@@ -1075,6 +1083,34 @@ Remaining limits:
 - The analyzers are guardrails: they do not see mutation through referenced collections, helpers or delegates.
 - The demonstrator's front end and the devcontainer are not validated.
 
+### Closure audit refresh on 2026-10-28
+
+This refresh includes the executor lifetime migration, resource handles, setup callbacks, the dynamic cache request fix and the remaining fixture cleanup. It supersedes the dated source and API totals above. This snapshot also includes handle based count and duration terminators and resource lookup for advice. The responsibility boundary is accepted and implemented. A later discussion may revisit public API unification.
+
+The baseline is `a2643bc1`, exported with `git archive` into `artifacts/rework-closure/baseline`. Baseline assemblies were restored from the existing package cache and built in Release. Current input includes tracked and untracked existing repository files. Physical source lines include blanks and comments, with a final newline adding no extra line. Build output and the ignored audit directory are excluded.
+
+| Scope                         | Baseline files | Current files | Baseline lines | Current lines | Line change |
+| ----------------------------- | -------------: | ------------: | -------------: | ------------: | ----------: |
+| Production C#                 |            759 |           726 |          48618 |         46119 |       -2499 |
+| Tests                         |            285 |           317 |          47504 |         53183 |       +5679 |
+| Analyzers                     |              3 |             4 |            613 |           593 |         -20 |
+| C# samples                    |              1 |             1 |             45 |            46 |          +1 |
+| Published Markdown and README |             42 |            42 |           6327 |          6504 |        +177 |
+
+The metadata inventory counts exported public types, including public nested types whose enclosing types are public. Members are declared public or protected constructors, methods, fields, properties and events. Property and event accessors are counted through their owning member rather than again as methods. Names generated by the compiler are excluded. This reproduces the earlier baseline counts.
+
+| Assembly      | Baseline types | Current types | Baseline members | Current members |
+| ------------- | -------------: | ------------: | ---------------: | --------------: |
+| HeuristicLib  |            944 |           817 |             6866 |            5850 |
+| Experimental  |            353 |           349 |             2605 |            2568 |
+| PythonInterop |             19 |            19 |              138 |             138 |
+
+The operation inventory remains twelve descriptors, thirteen invocation structs, twelve wrapping executors and five routed executors. The nine core descriptor files total 488 lines and the three Experimental files 156. No new operation adapter or descriptor registry was introduced. The accepted Package 5 latency and allocation measurements above remain historical evidence for invocation wrapping. This refresh adds no performance claim for setup, resource lookup or observation point reporting.
+
+Raw evidence is local under ignored `artifacts/rework-closure`: `source-ledger.py` and `source-ledger.json` record every path, physical line count and SHA256, `inventory-tool` reads both builds through `System.Reflection.Metadata`, the two API summary JSON files record counts and the assembly adjacent `.public-api.txt` files record their exported members. `operation-inventory.json` records the descriptor and adapter counts. Reproduction uses the same baseline, current checkout, Release builds and counting rules above.
+
+Python 3.12.10 with pythonnet executed every code cell of all three notebooks in separate processes against the newly published assemblies. The demonstrator worker completed three generations and returned fitted solutions and predictions. Python calls through the GA, ES and NSGA2 configurable genealogy entry points each produced three callbacks, three quality entries, three retained populations and a graph. Logs and the exact smoke scripts are retained in the audit directory. The WebSocket browser interface and devcontainer remain unvalidated. A fresh nonincremental build with repository analyzers attached to Experimental and PythonInterop reports no HLib diagnostics. Ordinary builds still enforce those analyzers only on core. The current Release build and all 3243 tests pass, along with whitespace, style, error severity analyzer checks, documentation build and packaging. Package 5's other recorded limits remain explicit deferred work.
+
 Initial validation passed: Release build, all 3,209 solution tests, whitespace, warning-level style and error-level analyzer verification, changed Markdown formatting, `npm run docs:build` and `dotnet pack --configuration Release --no-restore`. The branch, HEAD and Git index are unchanged. These checks preceded the observation-point revision; its renewed validation is recorded below.
 
 **Observation-point revision validation (2026-10-26)**: Release build, all 3,216 solution tests (none skipped), executable API and documentation examples, documentation build, whitespace verification, warning-level style verification, error-level analyzer verification, changed-Markdown checks, `git diff --check` and Release packaging pass. Format verification was read-only; it reported workspace-loading warnings and exited successfully. Ownership guardrails cover direct access to another configuration's point in a build and permit local aliases and resolution outside builds. Source and exported-surface inventories above are refreshed; point reporting/setup has not been benchmarked, and the earlier operator-wrapper measurements are retained as earlier evidence. Logs and refreshed inventories remain local under ignored `artifacts/operator-role-package5/`. The unused-point cost is explicitly deferred in the backlog. No Git index, branch, HEAD or ref changes were made.
@@ -1127,3 +1163,264 @@ The integrated runner must print the same provenance, fail on a failed assertion
 | Current rules contradict target                                    | Scoped rule reconciliation with implementation, preserving unreopened decisions              | Package 1 onward; final audit in Package 5           |
 
 Use `test/README.md` for ownership of unit tests, API usage specs, published examples and scenarios. Plans may show proposed code; published examples must import their validated source. No package gate may be satisfied merely by retaining the old slice's passing assertion count.
+
+## 11. Aspect configuration rework and independent review
+
+Status on 2026-10-29: proposal under discussion, independently reviewed and recorded at the developer's request. The review considers the direction viable with changes, but not ready for implementation. Agreement to record the review does not accept its design recommendations. This section owns placement, typed construction, identity, alternatives and proposed acceptance evidence. The [aspect lifetime review](operator-state-lifetimes.md#aspect-configuration-lifetime-review-on-2026-10-29) owns the associated lifetime and analyzer ownership recommendations.
+
+### 11.1 Problem, current behavior and settled requirements
+
+The developer wants a reusable configuration graph to express algorithms, operators, aspect placement and intentional resource sharing. The current connection between a handle based terminator and runtime accounting advice repeats resource and aspect setup:
+
+```csharp
+var handle = new CountAccumulatorHandle();
+var limited = algorithm.TerminatedBy(
+    new AfterOperatorCountTerminator<RealVector>(handle, 100));
+var run = limited.CreateRun(problem, random, setup => {
+    var counter = new CountAccumulator();
+    setup.AddResource(handle, counter)
+         .AddAspect(mutator.CountInvocations(counter));
+});
+```
+
+The desired improvement is declarative sharing visible in the configuration, including nested algorithm and operator placement. Removing a setup lambda alone is not the whole requirement.
+
+The following boundaries are already settled:
+
+- Configurations remain reusable descriptions. Private mutable data belongs to executors. Live resources are not stored in reusable algorithm or operator configurations.
+- Handle reference identity declares sharing. One flat resource table serves each run or trial. Defaults are independent between runs, while setup may deliberately supply existing instances.
+- Construction is contextual and normally fresh. Cycle retains complete executors only through its explicit `ReuseExecutors` option.
+- Runtime advice receives concrete dependencies through constructors. `Wrap` receives neither a resource table nor a resolution scope.
+- Ordinary aspects currently hold flat ordered pointcut and runtime advice pairs. Advice is deduplicated by reference at its first occurrence across contexts.
+- Run setup is snapshotted before a run is returned in `Ready`. Executor construction remains lazy. `run.Resource(handle)` exposes the actual resource and may create its default on inspection.
+
+Current counting and duration convenience methods create runtime aspects. Invocation and candidate counting also offer fresh accumulator `out` overloads. Handle based aspect overloads were removed with the rejected resource argument on `Wrap`. Low level count and duration terminators retain handles. Mutable analyzers and clocks remain runtime objects with intentional sharing semantics.
+
+### 11.2 Proposal being reviewed
+
+The proposal separates reusable aspect or advice descriptions from runtime advice and wrapping executors. Descriptions contain pointcuts, immutable settings and resource handles. An explicit aspect application owns one child configuration and an ordered aspect list. Ordinary nodes gain no universal `Aspects` property or inheritance requirement.
+
+Proposed usage, not an existing API:
+
+```csharp
+var configured = algorithm.WithAspects(mutator.CountInvocations(counterHandle));
+var run = configured.CreateRun(problem, random);
+
+var cycle = CycleAlgorithm.Create(
+        algorithmA.WithAspects(aspectA),
+        algorithmB.WithAspects(aspectB))
+    .WithAspects(commonAspect);
+```
+
+Placement limits the resolutions in which pointcuts participate. It creates no resource lifetime. A shared configuration can still be constructed under different aspect contexts. Algorithms, operation parameterized operators and the generic configuration/executor path must all participate, including external operations and roles.
+
+The prior suggestion that an application follows ordinary selectable composition rules is not settled. Neither is the later preference for persistent analysis resources instead of one cached runtime advice object per description per run.
+
+### 11.3 Review findings in priority order
+
+1. **Ordinary wrappers introduce an extra measured boundary.** [Algorithm resolution](../src/HeuristicLib/Execution/ResolutionScope.Algorithms.cs) advises a configuration after its hook returns. An application implemented as an ordinary wrapper would expose both itself and its child to inherited broad pointcuts. Counting, timing or behavior changing advice could apply at both boundaries. [Advice deduplication](../src/HeuristicLib/Execution/ResolutionScope.cs) occurs separately for each resolved configuration and would not remove this effect. The review recommends a transparent aspect application with no additional join point. This requires a narrow resolver rule and explicit acceptance, rather than assuming ordinary composition already provides it.
+
+2. **One wrapper cannot preserve arbitrary child interfaces.** [IConfigurationNode](../src/HeuristicLib/Execution/IConfigurationNode.cs), algorithm contracts and [IOperator](../src/HeuristicLib/Operators/IOperator.cs) have different construction paths. The review recommends three application forms preserving a selected algorithm, operation or generic executor contract. Several operation views of one child need explicit typed applications. A nominal consumer role cannot be preserved by a generic wrapper merely because the executor type matches. This is the same nominal interface limitation that motivated the original operator rework.
+
+3. **Description identity must be distinct from value equality and resource identity.** First occurrence deduplication currently precedes matching. A first occurrence whose pointcut misses suppresses a later matching occurrence of the same advice. Distinct advice sharing one accumulator both execute. [Operator advice ordering tests](../test/HeuristicLib.Tests/Execution/OperatorFoundation/OperatorAdviceTests.cs) require both behaviors. Deduplicating freshly created runtime objects, equal descriptions or shared result handles would change that contract.
+
+4. **Moving trace entries alone does not isolate trials.** [TraceAnalyzer](../src/HeuristicLib/Analysis/Tracing/TraceAnalyzer.cs) also owns retention, clocks and synchronization, while callbacks capture functions and potentially mutable aggregation state. [TraceRetention](../src/HeuristicLib/Analysis/Tracing/TraceRetention.cs) and [BestSoFar](../src/HeuristicLib/Analysis/Tracing/BestSoFar.cs) hold mutable progress. All persistent state needs an explicit runtime owner. Existing clock objects are aspects, and [Moment](../src/HeuristicLib/Analysis/Tracing/Moment.cs) retains them as keys. Putting those complete objects into resources would retain configured observation machinery. The lifetime review records the required split and the still open migration scope.
+
+5. **Binding dependencies before checking applicability reverses failure ordering.** [Operator resolution](../src/HeuristicLib/Execution/ResolutionScope.Operators.cs) checks all matching advice before raw construction. Constructing today's counting advice first would require its counter too early. Resource dependent descriptions need applicability checks that use settings and requested operation or signature metadata without obtaining resources. Algorithm and generic node resolution currently match after raw construction, so a universal preconstruction guarantee would itself be a separate contract change.
+
+6. **A shared result handle does not prove compatible analysis semantics.** Two descriptions may disagree about retention, aggregation or clock axes. The collector must not take its settings from whichever description binds first. Its handle must own immutable creation settings and define compatible writers. Deliberately supplying a collector must not silently reconfigure it.
+
+7. **A description construction hook is a binding mechanism.** The new requirement can justify a narrow mechanism, but naming it configuration does not avoid the cost or reopen every rejected preparation design. Preserve flat aspect lists and direct wrapping. Do not restore cached wrapper factories, configuration keyed private state, advice created children or recursive aspect installation.
+
+### 11.4 Recommended placement and typed design
+
+The review recommends an explicit aspect application in the reusable graph. Resolution owns its context contribution. The application owns one child and an immutable ordered list of aspect descriptions. The child retains its original identity. The application adds no runtime operation of its own and needs no additional execution wrapper merely to hold the context.
+
+| Application form         | Selected contract                      | Required forwarding                                          |
+| ------------------------ | -------------------------------------- | ------------------------------------------------------------ |
+| Algorithm application    | `IAlgorithm<TCandidate, TSearchState>` | Search state compatibility and child `Fits`                  |
+| Operator application     | `IOperator<TOperation, TCandidate>`    | Child `Fits` and candidate contract                          |
+| Generic node application | `IConfigurationNode<TExecutor>`        | Child compatibility metadata and typed executor construction |
+
+[WrappingAlgorithm](../src/HeuristicLib/Algorithms/Composition/WrappingAlgorithm.cs) and [WrappingOperator](../src/HeuristicLib/Operators/Composition/WrappingOperator.cs) provide evidence for the typed forwarding responsibilities, not proof that their ordinary selection semantics suit this application.
+
+An operator supporting mutation and evaluation receives separately selected application views. They may reference the same underlying configuration, descriptions and handles. Each view constructs an independent executor. External operations use `IOperation<TSelf>` without any list of built in operations. Algorithms exposing several search state views have the same selected view limitation.
+
+A consumer slot requiring a nominal interface such as `ICoolingSchedule` cannot automatically accept `IConfigurationNode<ICoolingExecutor>`. The consumer must accept the generic contract or supply a forwarding application implementing its known interface. No dynamic proxy, arbitrary interface preservation or universal burden on ordinary nodes is proposed.
+
+Under the recommended transparent selection rule, pointcuts see the underlying child and descendants. The application itself has no executor join point. Source conveniences on an application would forward to the child's source identity and must not pretend to identify a particular caller path. A reference pointcut targeting the application itself would select no join point. These consequences need explicit acceptance. If they are unacceptable, an explicitly selectable wrapper remains an alternative whose additional measured boundary must be accepted instead.
+
+Placement is a descendant resolution boundary, not a general caller path query. Local advice cannot observe a sibling or an observation point resolved by its parent outside that context. Deferred children must retain the application context. Existing construction recursion detection, executor type validation and control forwarding remain required.
+
+### 11.5 Identity and ordering recommendation
+
+| Identity                          | Purpose                                                         |
+| --------------------------------- | --------------------------------------------------------------- |
+| Configuration reference           | Pointcut selection, observation identity and Cycle reuse        |
+| Structural configuration equality | Comparison of settings and declared sharing relationships       |
+| Resource handle reference         | Shared runtime data within one run                              |
+| Advice description reference      | First occurrence deduplication within one contextual resolution |
+| Existing runtime advice reference | Identity of explicitly attached runtime advice                  |
+
+Use immutable classes with reference identity for advice descriptions when identity affects application. Their settings can be immutable values. Avoid introducing record equality and then adding a token solely to undo it. An application copy retains its description and handle references while becoming a new configuration reference. A newly constructed description is distinct even when its settings match.
+
+The same description contributes once at its first position in the local to ancestor chain, before matching. Different descriptions sharing a result handle remain separate writers and can both account for one invocation. Shared clock consumers must reuse the clock producer description, not independently recreate producers around one handle.
+
+Preserve local layer before ancestor layer, aspect order and pair order. Earlier advice wraps closer to the raw executor and successful callbacks run in application order. A trace includes its clock producers before its observation descriptions. Configured and runtime attachment paths must preserve one understandable ordering contract rather than restoring separate collections with origin priority.
+
+### 11.6 Lazy construction, failures and responsibility boundaries
+
+For operators, the recommended order is:
+
+1. Validate the requested operation and run signature.
+2. Enumerate descriptions in context order and deduplicate before matching.
+3. Evaluate matching and resource independent applicability checks for all applicable descriptions.
+4. Construct and validate the raw executor with contextual child resolution.
+5. Resolve dependencies for applicable descriptions, construct runtime advice and wrap in order, validating the resulting executor interfaces.
+
+This preserves a local construction guarantee. It does not promise that an earlier sibling, terminator or explicit caller inspection has created no resource. A pointcut exception propagates without being converted into a miss. Advice for another supported operation view is skipped as today. Unsupported selected advice remains an explicit diagnostic.
+
+The review recommends preserving algorithm and generic node matching order initially. They currently construct before matching. Moving their matching or adding preconstruction checks requires an explicit decision about failure ordering rather than being described as preservation.
+
+Failed resource creation publishes nothing. A later advice construction or wrapping failure retains resources already published. Direct resolution can retry with fresh executors and advice, without cached failures or retained partial wrapper chains. A failed `AlgorithmRun` remains terminal. [ResourceTests](../test/HeuristicLib.Tests/Execution/ResourceTests.cs) and [OperatorAdviceTests](../test/HeuristicLib.Tests/Execution/OperatorFoundation/OperatorAdviceTests.cs) describe the current retry contracts.
+
+Only the dependency construction step needs resource lookup. Runtime `Wrap` remains unchanged and advice gains no child resolution capability. Handles contain immutable resource creation settings and resources contain no contextual executors, scopes or configured observation chains. Ordinary advice that needs no resources should not acquire mandatory lookup parameters or elaborate preparation helpers.
+
+Resolution owns binding and application context. Inspection owns counting, duration and clock descriptions. Analysis owns analysis descriptions and collectors. Hosting continues to accept setup and expose generic resource lookup, without referencing Analysis or adding a result registry. This follows the [layering guidance](../docs/contributing/architecture/layering.md).
+
+### 11.7 Alternatives and bounded reconsideration
+
+- A setup helper is the smallest response to repeated plumbing alone. It does not satisfy reusable graph placement.
+- A separate root configuration can express top level aspects. It does not express nested Cycle children or operator placement without another mechanism.
+- An ordinary selectable wrapper follows current composition rules with less resolver work. It introduces another join point and may change broad measurements or behavior. The review prefers a transparent application for `WithAspects`, subject to accepting its explicit selection rule.
+- One runtime advice object per description per run can retain private advice state. It still needs contextual wrapping executors and adds another identity keyed cache with publication and retry semantics. Explicit resources already solve the demonstrated persistence, sharing and inspection requirements. The review recommends no such cache.
+- A description could construct a wrapping executor directly after dependency resolution. An intermediate runtime advice object is not semantically required. Reusing current advice classes as short lived construction helpers is the smaller migration, without establishing a mandatory public runtime aspect family.
+
+The [rejected resource lookup on every wrapping hook](developer-backlog.md#resource-lookup-on-every-advice-wrapping-hook) is not reopened. The new requirement narrowly motivates a separate binding design, which remains unaccepted. The [rejected wrapper configurations for advice](developer-backlog.md#advice-expressed-as-wrapper-configurations), [composite aspects](developer-backlog.md#composite-aspects) and [per operator preparation machinery](developer-backlog.md#delegate-call-wrappers-construction-carriers-and-per-operator-advice-preparation) remain constraints. An application changes the context in which its actual child resolves. It does not manufacture wrapper configurations for selected targets or borrow their construction hooks.
+
+### 11.8 Representative proposed usage
+
+These sketches communicate the proposed contracts. They are not implemented or compiled API examples.
+
+```csharp
+var count = new CountAccumulatorHandle();
+var counting = mutator.CountInvocations(count);
+var configured = algorithm
+    .TerminatedBy(new AfterOperatorCountTerminator<RealVector>(count, 100))
+    .WithAspects(counting);
+
+var run = configured.CreateRun(problem, random);
+run.Complete();
+var total = run.Resource(count).CurrentCount;
+```
+
+Deliberate supply retains only the necessary runtime binding:
+
+```csharp
+var supplied = new CountAccumulator();
+var run = configured.CreateRun(
+    problem,
+    random,
+    setup => setup.AddResource(count, supplied));
+```
+
+Multiple operation views are selected explicitly:
+
+```csharp
+IOperator<Mutation, RealVector> mutation = combinedOperator;
+IOperator<Evaluation, RealVector> evaluation = combinedOperator;
+var configuredMutation = mutation.WithAspects(mutationAspect);
+var configuredEvaluation = evaluation.WithAspects(evaluationAspect);
+```
+
+Nested analysis would use explicit result handles:
+
+```csharp
+var configured = CycleAlgorithm.Create(
+        algorithmA.WithAspects(analysisA),
+        algorithmB.WithAspects(analysisB))
+    .WithAspects(commonAspect);
+
+var run = configured.CreateRun(problem, random);
+run.Complete();
+var resultsA = run.Resource(analysisA.Results);
+```
+
+### 11.9 Open decisions and proposed acceptance sequence
+
+The recommendation is conditional on resolving these decisions:
+
+1. Accept transparent application selection and its source forwarding consequences, or choose an explicitly selectable wrapper with an additional join point. The review recommends transparency.
+2. Accept selected typed views and the explicit limitation for nominal consumer slots. The review rejects arbitrary interface preservation.
+3. Accept description reference identity and deduplication before matching. The review recommends retaining existing ordering semantics.
+4. Define the smallest dependency construction contract with resource independent checks. The review recommends preserving current failure order per resolution path and leaving `Wrap` unchanged.
+5. Set the scope of reusable analyzer migration. The review recommends explicit collectors for reusable descriptions while retaining deliberate runtime setup for callback bearing analyzers and sinks. Counting convenience alone does not justify converting every analyzer.
+6. Define shared collector compatibility, clock producer identity and elapsed clock activation. The review recommends collector settings owned by handles and a clock origin independent of resource inspection. First selected execution versus run start remains open.
+
+After architectural acceptance, establish small API usage proofs for all three construction paths before expanding production changes. Focused unit coverage should include broad pointcuts around an application, an external multi operation configuration, a nominal consumer role boundary, first occurrence misses, supplied resources, unsupported metrics before resource binding and failed binding followed by direct retry. Scenario coverage should include nested contexts, a shared mutator, shared clocks, fresh and reused Cycle turns and independent concurrent trials. The lifetime plan records the expected behavior of each scenario.
+
+Use [the test suite guide](../test/README.md) for suite ownership and validation order. Preserve existing controls, signature diagnostics, unmatched selections and pointcut exception behavior. Inspect invocation allocation and deferred construction cost if implementation introduces a demonstrated performance risk. Do not treat a new permanent benchmarking system as part of this proposal.
+
+The review was read only and ran no validation commands. The reported 3254 passing tests, Release build, documentation, formatting and packaging concern the current implementation. The subsequent 13 focused preparation specs concern the small counting `out` overload addition. Neither validates this unimplemented proposal. Recording and formatting these notes does not change that distinction.
+
+### Simplicity review and governing design goal
+
+Status on 2026-10-29: the developer accepted the governing goal and reaffirmed the boundaries below. No concrete aspect configuration API or source implementation is accepted by this checkpoint. Earlier sections retain the reviewed proposal as discussion history. Their recommendation to settle that entire framework before proceeding is superseded.
+
+The design must make common operations simple and allow complex behavior by composing existing concepts. Complex sharing across Cycle turns may require explicit configuration. It must not force ordinary callers to understand that machinery. Prefer a few consistent rules over extra systems, implicit behavior or special cases. A short extension method is useful when it composes the existing model, rather than concealing a second model underneath.
+
+The simplicity review found that the proposal expanded shared accounting into a redesign of aspect attachment, advice construction, analyzer ownership and clocks. The original operator rework aimed to reduce that machinery. The reviewer withdrew transparent application nodes as the preferred starting point and withdrew the recommendation that redesigned trace collectors and shared clocks must be part of the first implementation slice.
+
+#### Reaffirmed requirements and authoring preference
+
+- Preserve the simple `algorithm.LimitedToInvocations(mutator, 100)` usage. It needs no handle when its accounting is private to that budget execution.
+- A mutable counter must not be stored in a reusable configuration. Independently configured participants that deliberately share accounting use a handle. An existing live instance may be supplied during runtime setup.
+- Explicit instrumentation should remain convenient through extension methods. The developer prefers those methods to compose existing mechanisms such as aspects when they express the behavior cleanly. The review's suggested `CountedBy` wrapper is an alternative under discussion, not an accepted second instrumentation system.
+- Keep the number of concepts and exceptions small. Do not introduce a runtime advice cache, transparent selection rules or additional identity machinery merely to support an implementation strategy chosen in advance.
+- Do not remove general aspect placement requirements merely to make a smaller proposal appear complete. Determine which required workflows existing composition can express before selecting any additional mechanism.
+
+#### Clarification of existing counter ownership
+
+The simple budget currently creates an accumulator in its construction hook and passes that instance to its runtime counting advice and budget executor. It is private runtime data for that construction, not a resource table entry and not data on the configuration. Resolving the budget again normally creates a fresh accumulator. Reusing the complete executor retains the accumulator.
+
+Handle based resources have a different ownership rule. The same handle resolves to one resource in a run, including through nested aspect contexts and fresh Cycle turns. A separate run creates an independent default. Supplying the same live instance to several runs deliberately shares it. The type `CountAccumulator` does not itself determine the lifetime. Its owner and the way it is obtained do.
+
+Internal cooperation within one constructed composition does not require a handle for every shared reference. The existing budget passes one private accumulator to the runtime objects it constructs. Handles are needed to declare sharing between separately configured participants, rather than to label every implementation dependency.
+
+Existing composition already expresses two useful placements:
+
+```csharp
+var perTurn = CycleAlgorithm.Create(
+    algorithmA.LimitedToInvocations(mutator, 100),
+    algorithmB);
+
+var wholeCycle = CycleAlgorithm.Create(algorithmA, algorithmB)
+    .LimitedToInvocations(mutator, 100);
+```
+
+With fresh Cycle turns, the inner budget in `perTurn` is constructed afresh for each A turn. In `wholeCycle`, one outer budget construction supplies its accounting advice to child resolutions throughout that Cycle execution. It counts successful invocations of the selected mutator through that context, including inside fresh child executors. No handle is required merely because several child executors contribute to one privately owned budget. These remain the existing limits checked after yielded states, not strict reservations for each invocation.
+
+Runtime analysis has an existing ownership rule too. An analyzer installed once for a run retains its data across fresh child executors. `AddAspectPerTrial` can create independent analyzers for separate trials. This does not imply that every analyzer should become a run resource or that reusable analysis descriptions are already supported. Whether arbitrary analysis must live inside the reusable configuration remains an open requirement, not a settled migration decision.
+
+#### Revised next investigation
+
+Work from representative user flows using the existing rules: a private budget, one enclosing budget across a Cycle, independent configurations sharing an explicit handle, local instrumentation and runtime analysis across fresh turns. Compare how constructors, configuration hooks, aspects and resource lookup can express them. Do not begin by adding a hierarchy for each noun in the earlier proposal.
+
+An optional handle on an existing budget and a small configuration that installs existing advice are candidates to assess. Neither is approved here. Any new mechanism must identify the required workflow that the existing concepts cannot express, show its complete public usage and explain why a smaller composition does not suffice. General aspect descriptions, special attachment boundaries and analyzer conversion must each justify their own need rather than arrive as consequences of the counting example.
+
+### Composition and progressive API complexity, accepted on 2026-11-03
+
+The developer selected two existing strengths to retain and improve:
+
+1. Composition through ordinary algorithm and operator contracts, with scikit-learn as the primary reference for consistent composition.
+2. Convenient direct execution with an explicit run available for additional control, following the Requests relationship between direct request methods and Session.
+
+Algorithms remain the user-facing orchestrators. Authors can implement new control flow as algorithms and use them through the normal execution entry points. A manually assembled execution loop is not the intended ordinary user workflow.
+
+The core stays small and usable through ordinary C# composition. Convenience methods use that core and expose more control when needed. Keep behavior affecting inputs and runtime ownership predictable. A simple facade does not justify unnecessary internal or public machinery.
+
+HeuristicLib already largely supports the selected direction. The immediate improvement is documentation discoverability rather than another API layer. Completion is the ordinary path, streaming exposes progress and an explicit run provides retained control, runtime setup or inspection. Learning paths describe practitioners, experimenters, integrators and component authors by their goals. A user can author a custom component while retaining ordinary execution, or control an explicit run while using predefined components.
+
+The durable principles are recorded in [Design goals](../docs/contributing/design-goals.md#composition-and-progressive-api-complexity). The [guide overview](../docs/guide/index.md#choose-your-path), [getting started guide](../docs/guide/getting-started.md) and [running algorithms guide](../docs/guide/execution/running-algorithms.md#choose-how-much-control-you-need) present these paths. Their documentation update passed all 20 documentation tests, the documentation build and formatting checks.
+
+The comparative research was temporary and has been removed after preserving these decisions. The other libraries examined are not selected architectural models. This acceptance introduces no new execution API, manual orchestration path or aspect configuration framework. Shared accounting, local observation and reusable aspect configuration retain the open decision status in the [system spec](operator-unification-system-spec.md).

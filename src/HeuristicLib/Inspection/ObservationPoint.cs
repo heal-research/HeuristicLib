@@ -66,7 +66,8 @@ public static class ObservationPoint
 file sealed class ObservationPointAdvice<TObservation>(Action<TObservation> observe)
     : Advice<ObservationPoint<TObservation>, IObservationPointExecutor<TObservation>>
 {
-    public override IObservationPointExecutor<TObservation> Wrap(IObservationPointExecutor<TObservation> executor, ObservationPoint<TObservation> source) =>
+    public override IObservationPointExecutor<TObservation> Wrap(IObservationPointExecutor<TObservation> executor,
+        ObservationPoint<TObservation> source) =>
         new Executor(executor, observe);
 
     private sealed class Executor(IObservationPointExecutor<TObservation> child, Action<TObservation> observe)

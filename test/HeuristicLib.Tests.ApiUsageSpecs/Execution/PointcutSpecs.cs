@@ -57,21 +57,21 @@ public class PointcutSpecs
     }
 
     [Fact]
-    public void NamingWrappersShareTheirChildsScopedState()
+    public void NamingWrappersForwardControlsOfTheirOwnChildExecutor()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var exploration = new Named<Mutation, RealVector>(child, "exploration");
         var refinement = new Named<Mutation, RealVector>(child, "refinement");
         var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
-        // Each resolution builds a new executor, and all of them share the child's mutation strength.
+        // Each resolution builds a new executor with its own mutation strength.
         _ = scope.Resolve(exploration, out IMutationStrengthControl? explorationStrength);
         _ = scope.Resolve(refinement, out IMutationStrengthControl? refinementStrength);
         _ = scope.Resolve(child, out IMutationStrengthControl? childStrength);
         explorationStrength.ShouldNotBeNull().CurrentMutationStrength = 0.25;
 
-        refinementStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
-        childStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
+        refinementStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.5);
+        childStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.5);
     }
 
     [Fact]
@@ -148,8 +148,8 @@ public class PointcutSpecs
             ? new MutationCounter(mutations)
             : Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Invocations));
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .AddAspect(counting);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
+            .AddAspect(counting));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         mutations.CurrentCount.ShouldBeGreaterThan(0);

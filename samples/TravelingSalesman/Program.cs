@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 
@@ -10,10 +11,10 @@ var cityCount = problem.SearchSpace.Length;
 
 var algorithm = GeneticAlgorithm.For(problem, populationSize: 100, maximumGenerations: 300);
 
-// A run pairs the configuration with a problem and a random source. Analyzers attach to the run, not to the
-// algorithm, so the same configuration can be run again under different observation.
-var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TracePopulationCandidates(out var quality);
+// A run pairs the configuration with a problem and a random source. Supply analyzers through its setup callback
+// so the same configuration can be run again under different observation.
+var quality = algorithm.Iterations.TracePopulationCandidates();
+var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup => setup.AddAspect(quality));
 
 var finalState = await run.CompleteAsync();
 

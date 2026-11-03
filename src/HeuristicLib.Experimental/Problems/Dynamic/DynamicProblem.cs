@@ -45,7 +45,9 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// <summary>
     /// The environment version currently in effect, which is the number of updates that have been applied.
     /// </summary>
-    public int CurrentEpoch { get; private set; }
+    private int currentEpoch;
+
+    public int CurrentEpoch => Volatile.Read(ref currentEpoch);
 
     protected IRandomNumberGenerator EnvironmentRandom { get; }
 
@@ -170,7 +172,14 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
         }
     }
 
-    void IUpdateRequestable.RequestUpdate() => RequestUpdate();
+    void IUpdateRequestable.RequestUpdate(int expectedEpoch)
+    {
+        lock (epochLock)
+        {
+            if (CurrentEpoch == expectedEpoch)
+                RequestUpdate();
+        }
+    }
 
 
     /// <summary>
@@ -193,7 +202,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
                 {
                     Update();
                     pendingUpdates--;
-                    CurrentEpoch++;
+                    Interlocked.Increment(ref currentEpoch);
                 }
             }
         }
@@ -240,5 +249,5 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
 /// </remarks>
 internal interface IUpdateRequestable
 {
-    void RequestUpdate();
+    void RequestUpdate(int expectedEpoch);
 }

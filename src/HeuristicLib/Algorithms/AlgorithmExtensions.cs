@@ -21,6 +21,14 @@ public static class AlgorithmExtensions
         public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun<TProblem, TSearchSpace>(
             Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, bool validate = true)
             where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+            where TSearchSpace : class, ISearchSpace<TCandidate> =>
+            algorithm.CreateRun(problem, random, null, validate);
+
+        /// <summary>Creates a run after configuring its resources and aspects once.</summary>
+        public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> CreateRun<TProblem, TSearchSpace>(
+            Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random,
+            Action<AlgorithmRunSetup<TCandidate, TSearchState>>? setup, bool validate = true)
+            where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
             where TSearchSpace : class, ISearchSpace<TCandidate>
         {
             if (validate)
@@ -30,7 +38,7 @@ public static class AlgorithmExtensions
                     .ThrowIfInvalid();
             }
 
-            return new(algorithm, (TProblem)problem, random);
+            return new(algorithm, (TProblem)problem, random, setup);
         }
 
         public ExecutionStream<TSearchState> Stream<TProblem, TSearchSpace>(
@@ -69,6 +77,13 @@ public static class AlgorithmExtensions
         /// </param>
         public AlgorithmRun<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateRun<TSearchSpace>(
             IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, bool validate = true)
+            where TSearchSpace : class, ISearchSpace<TCandidate> =>
+            algorithm.CreateRun(problem, random, null, validate);
+
+        /// <summary>Creates a run after configuring its resources and aspects once.</summary>
+        public AlgorithmRun<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateRun<TSearchSpace>(
+            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random,
+            Action<AlgorithmRunSetup<TCandidate, TSearchState>>? setup, bool validate = true)
             where TSearchSpace : class, ISearchSpace<TCandidate>
         {
             if (validate)
@@ -78,7 +93,7 @@ public static class AlgorithmExtensions
                     .ThrowIfInvalid();
             }
 
-            return new(algorithm, problem, random);
+            return new(algorithm, problem, random, setup);
         }
 
         public ExecutionStream<TSearchState> Stream<TSearchSpace>(

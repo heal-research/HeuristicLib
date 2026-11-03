@@ -30,7 +30,7 @@ Run this code from an async method, passing your host application's `cancellatio
 
 The initial population is created and evaluated without mutation. The next two generations each invoke the configured mutator on four offspring, so `messages` contains call numbers one and two, each with an offspring count of four. The no-change mutator keeps the example focused on logging rather than mutation policy.
 
-Add the aspect while the run is preparing. The run collects it; resolution constructs the advised executor when the run starts. The same aspect can be passed to `ResolutionScope.Create`, `With` or `CreateChildScope` for direct execution construction.
+Add the aspect with `setup.AddAspect` inside the `CreateRun` setup callback. The setup is snapshotted before the run is returned. Resolution constructs the advised executor when execution starts. The same aspect can be passed to `ResolutionScope.Create` or `With` for direct execution construction.
 
 To cover every mutator over real vectors, replace `Pointcut.Reference(mutator)` with `Pointcut.OfType<IOperator<Mutation, RealVector>>()`. All selected mutators then share the advice's counter, and each message names the mutator that ran. Reference pointcuts use object identity, so a copy made with `with` is a separate source. See [Observability and analysis](/guide/execution/observability-and-analysis#select-configurations-by-properties-or-names) for property and name matching.
 
@@ -51,3 +51,9 @@ General operator advice applies to every operation. Each also has a typed role a
 Earlier advice wraps closer to the source executor. The logging callback runs after its inner operation returns, so timing placed before this logging advice excludes the callback's work. Reuse one advice instance for one pointcut. If the same instance is paired twice, only its first pairing applies; use a combined pointcut or separate advice instances for separate selections.
 
 See [Execution resolution](/contributing/architecture/execution-resolution#pointcuts-advice-and-join-points) for advice application and [Operator composition](/guide/extending/operator-composition#authoring-a-composition) for configured wrappers with declared children.
+
+## Runtime dependencies
+
+Supply concrete runtime dependencies through the advice constructor and pass them to its wrapping executors. Advice has no resource lookup or child resolution capability. Create resource dependent advice for each run so independent runs receive independent data.
+
+The fluent methods `mutator.CountInvocations(counter)`, `mutator.CountCandidates(counter)` and `mutator.MeasureDuration(duration)` create aspects from concrete accumulators. Both count methods also accept `out var counter` to create and return a fresh accumulator with the aspect. Measurement alone needs no resource binding. When a count or duration terminator must use the same accumulator, supply it under the terminator's handle with `setup.AddResource(handle, accumulator)`. The aspect receives that same instance directly. Callers can inspect it directly or through `run.Resource(handle)`. Reusing an accumulator deliberately combines measurements across its participants. See [shared accounting](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator) for an executable example.

@@ -8,7 +8,6 @@ namespace HEAL.HeuristicLib.Operators.Crossovers;
 /// <remarks>
 /// Derive directly from this base when the crossover needs direct control over its execution structure.
 /// Use <see cref="StatelessCrossover{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
-/// Use <see cref="StatefulCrossover{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// <para>
 /// The type arguments are the search space and problem this crossover is written for. The base bridges to whatever a
 /// run requests, and a request the crossover was not written for is reported when the execution graph is built. A

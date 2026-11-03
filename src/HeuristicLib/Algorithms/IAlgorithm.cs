@@ -20,8 +20,8 @@ public interface IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>
 {
     /// <summary>Builds this algorithm's executor for the run types, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this for every build. Validate the configuration first and take shared execution data, such as
-    /// counters or caches, from <see cref="ResolutionScope.GetScopedState{TState}"/>, passing this configuration.
+    /// Resolution calls this for every construction. Validate configuration first. Obtain shared resources through
+    /// explicit handles when sharing is intended. Keep private mutable data in executor fields.
     /// </remarks>
     IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -39,8 +39,8 @@ public interface IAlgorithmExecutor<TCandidate, in TSearchSpace, in TProblem, TS
 
 /// <summary>Advice that wraps every executor built for the algorithms its pointcut selects, such as observing each yielded state.</summary>
 /// <remarks>
-/// Data that must outlive one executor, such as a counter, belongs to the advice object; it is shared by every algorithm
-/// and resolution the advice is applied to, including fresh activations inside a meta-algorithm.
+/// Advice owned runtime data is shared wherever the advice instance is reused, including fresh activations inside a
+/// meta-algorithm. Supply concrete dependencies through the constructor and assemble separate advice for independent runs.
 /// </remarks>
 public abstract class AlgorithmAdvice<TCandidate, TSearchState> : Advice<IAlgorithm<TCandidate, TSearchState>>, IAlgorithmAdvice
     where TSearchState : class, ISearchState
@@ -49,7 +49,8 @@ public abstract class AlgorithmAdvice<TCandidate, TSearchState> : Advice<IAlgori
     /// <param name="executor">The executor built for this resolution, possibly already wrapped by earlier advice.</param>
     /// <param name="source">The configuration the pointcut selected.</param>
     public abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source)
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
+        IAlgorithm<TCandidate, TSearchState> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 }

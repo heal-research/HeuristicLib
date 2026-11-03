@@ -1,8 +1,8 @@
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
 /// <summary>
-/// Covers the resolution rules: which wrappers apply, in which order they wrap, and when two resolves share one
-/// scoped state. Every resolve builds a new executor. The cell names refer to the combinations of where wrappers
+/// Covers contextual wrapper selection, ordering and independent executor
+/// private data. Every resolve builds a new executor. The cell names refer to the combinations of where wrappers
 /// are declared and where resolves happen.
 /// </summary>
 public class ResolutionScopeTests
@@ -10,31 +10,31 @@ public class ResolutionScopeTests
     // ---------- Sharing across scopes ----------
 
     [Fact]
-    public void UnwrappedChild_ReusesTheScopedStateItsParentOwns()
+    public void UnwrappedChild_ConstructsIndependentPrivateData()
     {
         var parent = ResolutionScope.Create();
         var configuration = new CountingConfiguration("instance");
         var parentExecutor = parent.Resolve(configuration);
 
-        var childExecutor = parent.CreateChildScope().Resolve(configuration);
+        var childExecutor = parent.With().Resolve(configuration);
 
         childExecutor.ShouldNotBeSameAs(parentExecutor);
-        childExecutor.State.ShouldBeSameAs(parentExecutor.State);
-        configuration.CreateCount.ShouldBe(1);
+        childExecutor.State.ShouldNotBeSameAs(parentExecutor.State);
+        configuration.CreateCount.ShouldBe(2);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SiblingScopes_CreateSeparateStatesWhenNoAncestorHasResolvedTheConfiguration(bool wrapInParent)
+    public void SiblingContexts_ConstructIndependentData(bool wrapInParent)
     {
         var configuration = new CountingConfiguration("instance");
         var parent = wrapInParent
             ? ResolutionScope.Create(Wrap(configuration, "parent"))
             : ResolutionScope.Create();
 
-        var first = parent.CreateChildScope().Resolve(configuration);
-        var second = parent.CreateChildScope().Resolve(configuration);
+        var first = parent.With().Resolve(configuration);
+        var second = parent.With().Resolve(configuration);
 
         second.State.ShouldNotBeSameAs(first.State);
         configuration.CreateCount.ShouldBe(2);
@@ -43,23 +43,23 @@ public class ResolutionScopeTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void SiblingScopes_ReuseTheStateOfAnAncestorThatAlreadyResolvedTheConfiguration(bool wrapInAncestor)
+    public void SiblingContexts_StayIndependentAfterRootResolution(bool wrapInAncestor)
     {
         var configuration = new CountingConfiguration("instance");
         var ancestor = wrapInAncestor
             ? ResolutionScope.Create(Wrap(configuration, "ancestor"))
             : ResolutionScope.Create();
         var ancestorExecutor = ancestor.Resolve(configuration);
-        var parent = ancestor.CreateChildScope();
+        var parent = ancestor.With();
 
-        var first = parent.CreateChildScope().Resolve(configuration);
-        var second = parent.CreateChildScope().Resolve(configuration);
+        var first = parent.With().Resolve(configuration);
+        var second = parent.With().Resolve(configuration);
 
         first.Name.ShouldBe(ancestorExecutor.Name);
         second.Name.ShouldBe(ancestorExecutor.Name);
-        first.State.ShouldBeSameAs(ancestorExecutor.State);
-        second.State.ShouldBeSameAs(ancestorExecutor.State);
-        configuration.CreateCount.ShouldBe(1);
+        first.State.ShouldNotBeSameAs(ancestorExecutor.State);
+        second.State.ShouldNotBeSameAs(ancestorExecutor.State);
+        configuration.CreateCount.ShouldBe(3);
     }
 
     [Theory]
@@ -71,15 +71,15 @@ public class ResolutionScopeTests
         var parent = wrapInParent
             ? ResolutionScope.Create(Wrap(original, "parent"))
             : ResolutionScope.Create();
-        var child = parent.CreateChildScope();
+        var child = parent.With();
         var childExecutor = child.Resolve(original);
 
         var parentExecutor = parent.Resolve(original);
 
         parentExecutor.State.ShouldNotBeSameAs(childExecutor.State);
-        child.Resolve(original).State.ShouldBeSameAs(childExecutor.State);
-        parent.Resolve(original).State.ShouldBeSameAs(parentExecutor.State);
-        original.CreateCount.ShouldBe(2);
+        child.Resolve(original).State.ShouldNotBeSameAs(childExecutor.State);
+        parent.Resolve(original).State.ShouldNotBeSameAs(parentExecutor.State);
+        original.CreateCount.ShouldBe(4);
     }
 
     // ---------- Sharing with wrappers ----------
@@ -91,26 +91,26 @@ public class ResolutionScopeTests
         var parent = ResolutionScope.Create(Wrap(original, "parent"));
         var parentExecutor = parent.Resolve(original);
 
-        var childExecutor = parent.CreateChildScope().Resolve(original);
+        var childExecutor = parent.With().Resolve(original);
 
         childExecutor.ShouldNotBeSameAs(parentExecutor);
         childExecutor.Name.ShouldBe("parent(original)");
-        original.CreateCount.ShouldBe(1);
+        original.CreateCount.ShouldBe(2);
     }
 
     [Fact]
-    public void ChildWrappingAnotherConfiguration_RebuildsTheOriginalWithoutCreatingItsStateAgain()
+    public void ChildWrappingAnotherConfiguration_ReconstructsPrivateData()
     {
         var original = new CountingConfiguration("original");
         var other = new CountingConfiguration("other");
         var parent = ResolutionScope.Create(Wrap(original, "parent"));
         var parentExecutor = parent.Resolve(original);
-        var child = parent.CreateChildScope(Wrap(other, "child"));
+        var child = parent.With(Wrap(other, "child"));
 
         child.Resolve(original).ShouldNotBeSameAs(parentExecutor);
         child.Resolve(original).Name.ShouldBe("parent(original)");
         child.Resolve(other).Name.ShouldBe("child(other)");
-        original.CreateCount.ShouldBe(1);
+        original.CreateCount.ShouldBe(3);
         other.CreateCount.ShouldBe(1);
     }
 
@@ -121,7 +121,7 @@ public class ResolutionScopeTests
         var parent = ResolutionScope.Create(Wrap(original, "parent"));
         var parentExecutor = parent.Resolve(original);
 
-        var child = parent.CreateChildScope(Wrap(original, "child"));
+        var child = parent.With(Wrap(original, "child"));
 
         var childExecutor = child.Resolve(original);
         childExecutor.ShouldNotBeSameAs(parentExecutor);
@@ -135,7 +135,7 @@ public class ResolutionScopeTests
         var scope = ResolutionScope.Create(Wrap(original, "only"));
 
         scope.Resolve(original).ShouldNotBeSameAs(scope.Resolve(original));
-        original.CreateCount.ShouldBe(1);
+        original.CreateCount.ShouldBe(2);
     }
 
     // ---------- Composition across scopes ----------
@@ -146,7 +146,7 @@ public class ResolutionScopeTests
         var original = new CountingConfiguration("original");
         var parent = ResolutionScope.Create(Wrap(original, "parent"));
 
-        var child = parent.CreateChildScope(Wrap(original, "child"));
+        var child = parent.With(Wrap(original, "child"));
 
         child.Resolve(original).Name.ShouldBe("parent(child(original))");
     }
@@ -157,7 +157,7 @@ public class ResolutionScopeTests
         var original = new CountingConfiguration("original");
         var parent = ResolutionScope.Create(Wrap(original, "parent"));
 
-        parent.CreateChildScope(Wrap(original, "child")).Resolve(original);
+        parent.With(Wrap(original, "child")).Resolve(original);
 
         parent.Resolve(original).Name.ShouldBe("parent(original)");
     }
@@ -200,7 +200,7 @@ public class ResolutionScopeTests
         var original = new CountingConfiguration("original");
         var root = ResolutionScope.Create(Wrap(original, "shallow"));
 
-        var deep = root.CreateChildScope(Wrap(original, "deep"));
+        var deep = root.With(Wrap(original, "deep"));
 
         deep.Resolve(original).Name.ShouldBe("shallow(deep(original))");
     }
@@ -221,7 +221,7 @@ public class ResolutionScopeTests
         var original = new CountingConfiguration("original");
         var root = ResolutionScope.Create(Wrap(original, "configuration"));
 
-        var child = root.CreateChildScope(Wrap(original, "module"));
+        var child = root.With(Wrap(original, "module"));
 
         child.Resolve(original).Name.ShouldBe("configuration(module(original))");
     }
@@ -257,7 +257,7 @@ public class ResolutionScopeTests
 
         scope.Resolve(original).Name.ShouldBe("wrapper(original)");
         scope.Resolve(original).Name.ShouldBe("wrapper(original)");
-        original.CreateCount.ShouldBe(1);
+        original.CreateCount.ShouldBe(2);
     }
 
     // ---------- Own roles ----------
@@ -323,7 +323,6 @@ public class ResolutionScopeTests
             .Name.ShouldBe("second(installed(first(original)))");
     }
 
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -338,11 +337,11 @@ public class ResolutionScopeTests
         root.Resolve(original);
         var third = Wrap(selected, "third");
         var fourth = Wrap(selected, "fourth");
-        var scope = childState ? root.CreateChildScope(third, fourth) : root.With(third, fourth);
+        var scope = childState ? root.With(third, fourth) : root.With(third, fourth);
 
         scope.Resolve(original)
             .Name.ShouldBe("second(installed(first(fourth(third(original)))))");
-        original.CreateCount.ShouldBe(1);
+        original.CreateCount.ShouldBe(2);
     }
 
     [Fact]
@@ -387,17 +386,17 @@ public class ResolutionScopeTests
         public object? State { get; } = state;
     }
 
-    // Counts the scoped states it creates, one per owning scope.
+    // Counts private data construction for each executor.
     private sealed class CountingConfiguration(string name) : IConfigurationNode<INamedExecutor>
     {
         public int CreateCount { get; private set; }
 
-        public INamedExecutor CreateExecutor(ResolutionScope scope) =>
-            new NamedExecutor(name, scope.GetScopedState(this, () =>
-            {
-                CreateCount++;
-                return new object();
-            }));
+        public INamedExecutor CreateExecutor(ResolutionScope scope)
+        {
+            CreateCount++;
+            return new NamedExecutor(name, new object());
+        }
+
     }
 
     private interface ILabeledRole : IConfigurationNode<INamedExecutor>

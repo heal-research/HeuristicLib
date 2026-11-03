@@ -8,8 +8,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Advice that wraps every operation of the operators its pointcut selects, such as measuring each call's duration.</summary>
 /// <remarks>
 /// Resolution calls <see cref="Check"/> before it builds a selected operator's executor and <see cref="Wrap"/> after.
-/// Data that must outlive one executor, such as a counter, belongs to the advice object; it is shared by every operator
-/// and resolution the advice is applied to.
+/// Advice owned runtime data is shared wherever the advice instance is reused. Supply concrete dependencies through
+/// the advice constructor and assemble separate advice for independent runs.
 /// </remarks>
 public abstract class OperatorAdvice : Advice<IOperator>
 {

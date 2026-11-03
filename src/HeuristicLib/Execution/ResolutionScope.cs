@@ -3,86 +3,59 @@ using System.Diagnostics.CodeAnalysis;
 namespace HEAL.HeuristicLib.Execution;
 
 /// <remarks>
-/// Configurations belong to the state that first resolved them and are reused from ancestors, together with their
-/// scoped state. Each resolution builds fresh executors in the owner's state with the requesting aspects. A scope
-/// applies its own aspects, then those of the scope it was created from, so every scope sees its ancestors' aspects.
-/// The resolver provides no disposal or concurrency guarantees.
-/// <para>
-/// The typed scopes derive from this class only to name a run's types for resolution; outside the library it cannot be
-/// derived from.
-/// </para>
+/// Every resolution constructs an executor with the requesting context's children and advice. Private data belongs
+/// to that executor. Contexts share one flat resource table and apply their own aspects before ancestor aspects.
+/// Resource use is not automatically synchronized and supplied resources remain caller owned.
 /// </remarks>
 public partial class ResolutionScope
 {
-    private readonly State state;
+    private readonly RunResources resources;
+    private readonly ConstructionGuard construction;
     private readonly ResolutionScope? parent;
     private readonly ImmutableArray<Aspect> aspects;
 
-    private ResolutionScope(State state, ResolutionScope? parent, ImmutableArray<Aspect> aspects)
+    private ResolutionScope(RunResources resources, ConstructionGuard construction, ResolutionScope? parent, ImmutableArray<Aspect> aspects)
     {
-        this.state = state;
+        this.resources = resources;
+        this.construction = construction;
         this.parent = parent;
         this.aspects = aspects;
     }
 
     /// <summary>Creates a scope that resolves exactly like <paramref name="scope"/>, for a typed scope over it.</summary>
     private protected ResolutionScope(ResolutionScope scope)
-        : this(scope.state, scope.parent, scope.aspects)
+        : this(scope.resources, scope.construction, scope.parent, scope.aspects)
     {
     }
 
     /// <remarks>Aspects apply in the supplied order. An empty collection creates an unadvised scope.</remarks>
     public static ResolutionScope Create(params IReadOnlyList<Aspect> aspects) =>
-        new(new State(null), null, [.. aspects]);
+        Create(new RunResources([]), aspects);
 
-    /// <remarks>Creates child-local state. The supplied aspects apply before this scope's aspects.</remarks>
-    public ResolutionScope CreateChildScope(params IReadOnlyList<Aspect> aspects) =>
-        new(new State(state), this, [.. aspects]);
+    internal static ResolutionScope Create(RunResources resources, IReadOnlyList<Aspect> aspects) =>
+        new(resources, new ConstructionGuard(), null, [.. aspects]);
 
-    /// <remarks>Shares this scope's state. The supplied aspects apply before this scope's aspects.</remarks>
+    /// <remarks>Lookup is lazy and uses handle identity. It does not serialize access to the resource itself.</remarks>
+    public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class =>
+        resources.Resource(handle);
+
+    /// <remarks>Uses the same run resources. The supplied aspects apply before this scope's aspects.</remarks>
     public ResolutionScope With(params IReadOnlyList<Aspect> aspects) =>
-        new(state, this, [.. aspects]);
-
-    /// <summary>Creates child-local state that a meta-algorithm keeps across activations.</summary>
-    /// <remarks>Each activation applies its own scope's aspects to this state through <see cref="WithState"/>.</remarks>
-    internal State CreateChildState() => new(state);
-
-    /// <summary>Applies this scope's aspects over another state.</summary>
-    internal ResolutionScope WithState(State other) => new(other, parent, aspects);
-
-    /// <summary>Returns the scoped state of a configuration being built, creating it on the first request.</summary>
-    /// <remarks>
-    /// A configuration passes itself from its build, as in <c>scope.GetScopedState(this, create)</c>, and receives its
-    /// own state, such as a counter or a cache. The state belongs to the scope that owns the configuration:
-    /// every later build there receives the same object, across operations and run types, while a fresh child state
-    /// starts with new state. A configuration has one state object, so every request asks for the same type. A
-    /// configuration that is not being built in this scope has no scoped state to request.
-    /// </remarks>
-    public TState GetScopedState<TState>(IConfigurationNode configuration, Func<TState> create) where TState : class =>
-        state.GetScopedState(configuration, create);
+        new(resources, construction, this, [.. aspects]);
 
     /// <summary>Builds a configuration's executor and applies the matching advice for its role.</summary>
     /// <remarks>Matching advice must derive from <see cref="Advice{TConfiguration, TExecutor}"/> for this executor type.</remarks>
     public TExecutor Resolve<TExecutor>(IConfigurationNode<TExecutor> configuration)
         where TExecutor : class, IExecutor
     {
-        if (!state.Constructing.Add(configuration))
-            throw new InvalidOperationException($"Recursive construction of {configuration.GetType().Name}.");
-        try
-        {
-            var owner = state.GetOrAddOwner(configuration);
-            var executor = configuration.CreateExecutor(WithState(owner));
-            foreach (var (pointcut, advice) in Advices())
-                if (pointcut.Matches(configuration))
-                    executor = advice.WrapNode(executor, configuration) as TExecutor
-                        ?? throw new InvalidOperationException($"{advice.GetType().Name} cannot wrap {typeof(TExecutor).Name} of {configuration.GetType().Name}. " +
-                            $"Advice for this role derives from Advice<TConfiguration, {typeof(TExecutor).Name}> for a TConfiguration the configuration implements.");
-            return executor;
-        }
-        finally
-        {
-            state.Constructing.Remove(configuration);
-        }
+        using var building = construction.Enter(configuration);
+        var executor = configuration.CreateExecutor(this);
+        foreach (var (pointcut, advice) in Advices())
+            if (pointcut.Matches(configuration))
+                executor = advice.WrapNode(executor, configuration) as TExecutor
+                    ?? throw new InvalidOperationException($"{advice.GetType().Name} cannot wrap {typeof(TExecutor).Name} of {configuration.GetType().Name}. " +
+                        $"Advice for this role derives from Advice<TConfiguration, {typeof(TExecutor).Name}> for a TConfiguration the configuration implements.");
+        return executor;
     }
 
     [return: NotNullIfNotNull(nameof(configuration))]
@@ -131,44 +104,29 @@ public partial class ResolutionScope
                         yield return pair;
     }
 
-    internal sealed class State(State? parent)
+    private sealed class ConstructionGuard
     {
-        private readonly State? parent = parent;
-        private readonly Dictionary<IConfigurationNode, ConfigurationResolutionEntry> owners = new(ReferenceEqualityComparer.Instance);
-        internal HashSet<IConfigurationNode> Constructing { get; } = parent?.Constructing ?? new(ReferenceEqualityComparer.Instance);
+        private readonly Lock sync = new();
+        private readonly HashSet<IConfigurationNode> constructing = new(ReferenceEqualityComparer.Instance);
 
-        // Finds the state that owns the configuration, or makes this state its owner.
-        internal State GetOrAddOwner(IConfigurationNode configuration)
+        internal IDisposable Enter(IConfigurationNode configuration)
         {
-            if (FindOwner(configuration) is { Owner: var owner })
-                return owner;
-            owners.Add(configuration, new ConfigurationResolutionEntry());
-            return this;
+            sync.Enter();
+            if (!constructing.Add(configuration))
+            {
+                sync.Exit();
+                throw new InvalidOperationException($"Recursive construction of {configuration.GetType().Name}.");
+            }
+            return new Entry(this, configuration);
         }
 
-        private (ConfigurationResolutionEntry Entry, State Owner)? FindOwner(IConfigurationNode configuration)
+        private sealed class Entry(ConstructionGuard guard, IConfigurationNode configuration) : IDisposable
         {
-            for (var current = this; current is not null; current = current.parent)
-                if (current.owners.TryGetValue(configuration, out var found))
-                    return (found, current);
-            return null;
-        }
-
-        // Only a configuration under construction reaches its entry, which its owner holds.
-        internal TState GetScopedState<TState>(IConfigurationNode configuration, Func<TState> create) where TState : class
-        {
-            if (!Constructing.Contains(configuration) || FindOwner(configuration) is not { Entry: var entry })
-                throw new InvalidOperationException(
-                    $"{configuration.GetType().Name} is not being built in this scope. Request scoped state from its own build, passing the configuration itself.");
-            entry.ScopedState ??= create() ?? throw new InvalidOperationException($"The scoped state of {configuration.GetType().Name} must not be null.");
-            return entry.ScopedState as TState ?? throw new InvalidOperationException(
-                $"{configuration.GetType().Name} already has scoped state of type {entry.ScopedState.GetType().Name}, not {typeof(TState).Name}. A configuration has one state object.");
-        }
-
-        private sealed class ConfigurationResolutionEntry
-        {
-            // Created on the configuration's first request and shared by every later build in the owning scope.
-            internal object? ScopedState { get; set; }
+            public void Dispose()
+            {
+                guard.constructing.Remove(configuration);
+                guard.sync.Exit();
+            }
         }
     }
 }

@@ -442,7 +442,7 @@ public class PractitionerUsageSpecs
     public void GeneticAlgorithm_SharedOperatorCounter_CanDriveExternalEarlyStopping()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var counter = new CountAccumulator();
+        var counter = new CountAccumulatorHandle();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
         {
             MaximumGenerations = 5,
@@ -451,15 +451,17 @@ public class PractitionerUsageSpecs
         var observedAlgorithm = baseAlgorithm;
         var algorithm = observedAlgorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
-        var states = algorithm.CreateRun(problem, RandomNumberGenerator.Create(987))
-            .AddAspect(Aspect.CountInvocations(baseAlgorithm.Crossover, counter))
-            .AddAspect(Aspect.CountInvocations(baseAlgorithm.Mutator, counter))
-            .Stream(cancellationToken: TestContext.Current.CancellationToken)
+        var accumulator = new CountAccumulator();
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(987), setup: setup => setup
+            .AddResource(counter, accumulator)
+            .AddAspect(baseAlgorithm.Crossover.CountInvocations(accumulator))
+            .AddAspect(baseAlgorithm.Mutator.CountInvocations(accumulator)));
+        var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
               .ToList();
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
-        counter.CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
+        run.Resource(counter).CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
     [Fact]

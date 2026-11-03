@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -40,19 +41,22 @@ public class RepeatedEvaluatorTests
     }
 
     private sealed record StatefulObjectiveEvaluator
-        : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulObjectiveEvaluator.State>
+        : Evaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public sealed class State
-        {
-            public int Invocations;
-        }
 
-        protected override State CreateScopedState() => new();
+        protected override IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+        new Executor();
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, State state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+        private sealed class Executor
+            : EvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
         {
-            var calls = Interlocked.Increment(ref state.Invocations);
-            return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+            {
+                var calls = Interlocked.Increment(ref invocations);
+                return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
+            }
         }
     }
 }

@@ -62,19 +62,21 @@ Candidate: -0.000003, 0.000010, -0.000004, 0.000008
 
 The Rastrigin function has its global minimum at the zero vector with objective value `0`, so this run finished on the optimum to eight decimal places. It takes well under a second.
 
+`CompleteAsync` creates and completes a run for you. The algorithm owns the search loop and the library constructs its executors automatically. Keep this entry point when changing operators or using your own problem. For progress use `Stream`. For setup, inspection or pause and resume, retain an [explicit run](/guide/execution/running-algorithms#explicit-runs-for-control-and-analysis).
+
 Seed `123` reproduces exactly these numbers. A heuristic search does not guarantee the optimum on every run: Rastrigin has local minima at every integer coordinate, so some seeds finish at `0.995` or `1.99` instead. Reducing the population or the generation count makes that much more likely.
 
 ## What the program assembled
 
-| Part                    | Role in this example                              |
-| ----------------------- | ------------------------------------------------- |
-| `TestFunctionProblem`   | Evaluates each vector with the Rastrigin function |
+| Part                           | Role in this example                              |
+| ------------------------------ | ------------------------------------------------- |
+| `TestFunctionProblem`          | Evaluates each vector with the Rastrigin function |
 | `BoundedRealVectorSearchSpace` | Defines the dimension and valid numeric bounds    |
-| `GeneticAlgorithm`      | Controls the population and generation loop       |
-| Creator                 | Produces the initial candidate vectors            |
-| Crossover and mutator   | Produce variation from selected candidates        |
-| Selector                | Chooses candidates that can reproduce             |
-| Random number generator | Makes the stochastic decisions reproducible       |
+| `GeneticAlgorithm`             | Controls the population and generation loop       |
+| Creator                        | Produces the initial candidate vectors            |
+| Crossover and mutator          | Produce variation from selected candidates        |
+| Selector                       | Chooses candidates that can reproduce             |
+| Random number generator        | Makes the stochastic decisions reproducible       |
 
 `GeneticAlgorithm.Create(...)` infers its candidate, search space and problem types from the operators. Those types still connect compatible components at compile time. A real vector algorithm cannot accidentally receive a permutation search space.
 
@@ -145,6 +147,8 @@ You can pass `sphereProblem` to a compatible algorithm just like the built-in be
 ## Next steps
 
 - [Understand how the components fit together](/guide/fundamentals/core-concepts)
+- [Choose completion, progress or explicit run control](/guide/execution/running-algorithms)
+- [Compose existing operators](/guide/extending/operator-composition)
 - [Model a custom problem](/guide/fundamentals/problems)
 - [Choose search spaces](/guide/fundamentals/search-spaces)
 - [Run repeated experiments](/guide/execution/experiments)

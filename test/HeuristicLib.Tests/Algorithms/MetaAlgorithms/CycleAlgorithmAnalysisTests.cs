@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -22,7 +23,7 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis1).AddAspect(analysis2);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(analysis1).AddAspect(analysis2));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -31,19 +32,21 @@ public class CycleAlgorithmAnalysisTests
     }
 
     private sealed record IncrementingEvaluator
-        : StatefulEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>,
-            IncrementingEvaluator.State>
+        : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public sealed class State
-        {
-            public int Value { get; set; }
-        }
 
-        protected override State CreateScopedState() => new();
+        protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+        new Executor();
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, State state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+        private sealed class Executor
+            : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
         {
-            return candidates.Select(_ => new ObjectiveVector(++state.Value)).ToArray();
+            private int value;
+
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+            {
+                return candidates.Select(_ => new ObjectiveVector(++value)).ToArray();
+            }
         }
     }
 

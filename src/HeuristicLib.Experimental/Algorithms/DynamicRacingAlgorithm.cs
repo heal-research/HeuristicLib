@@ -95,19 +95,9 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         var interceptor = scope.ResolveOptional(Interceptor);
         var creator = scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator);
         var mutator = scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Mutator);
-        var state = scope.GetScopedState(this, static () => new State());
         return new Executor(scope, interceptor, creator, mutator, MetaSpace, EmptyMetaOptProblem, StateMerger, AlgBuilder,
             EvaluatorSelector, NoRacers, HallOfFameStrength, EarlyTerminationStrength, BurnInEpochs, MinimumModelObservationCount,
-            ModelObservationInterval, ObjectiveValueSelector, state);
-    }
-
-    private sealed class State
-    {
-        public Dictionary<string, HallOfFameEntry> HallOfFame { get; } = [];
-        public MetaOptimizationGenotype? Incumbent { get; set; }
-        public TAlgorithm? IncumbentAlgorithm { get; set; }
-        public long CompletedRaces { get; set; }
-        public long CompletedEpochs { get; set; }
+            ModelObservationInterval, ObjectiveValueSelector);
     }
 
     private sealed class Executor(
@@ -126,14 +116,19 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         int burnInEpochs,
         int minimumModelObservationCount,
         int modelObservationInterval,
-        Func<ObjectiveVector, double> objectiveValueSelector,
-        State state)
+        Func<ObjectiveVector, double> objectiveValueSelector)
         : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor)
     {
+        private readonly Dictionary<string, HallOfFameEntry> hallOfFame = [];
+        private MetaOptimizationGenotype? incumbent;
+        private TAlgorithm? incumbentAlgorithm;
+        private long completedRaces;
+        private long completedEpochs;
+
         protected override TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
         {
-            state.Incumbent ??= creator.Create(1, random, metaSpace, emptyMetaOptProblem)[0];
-            if (state.CompletedEpochs < burnInEpochs)
+            incumbent ??= creator.Create(1, random, metaSpace, emptyMetaOptProblem)[0];
+            if (completedEpochs < burnInEpochs)
                 return ExecuteBurnInStep(previousState, problem, random);
 
             var entries = new List<Entry>(noRacers);
@@ -141,10 +136,10 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             TSearchState? nextState = null;
             try
             {
-                entries.Add(CreateEntry(state.Incumbent, state.IncumbentAlgorithm, previousState, problem, random));
+                entries.Add(CreateEntry(incumbent, incumbentAlgorithm, previousState, problem, random));
                 for (var i = 1; i < noRacers; i++)
                 {
-                    var challenger = CreateChallenger(state.Incumbent, random);
+                    var challenger = CreateChallenger(incumbent, random);
                     entries.Add(CreateEntry(challenger, entries[0].Algorithm, previousState, problem, random));
                 }
 
@@ -158,11 +153,11 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 }
 
                 var winner = SelectWinner(entries, problem.Objective);
-                state.Incumbent = entries[winner].Candidate;
-                state.IncumbentAlgorithm = entries[winner].Algorithm;
-                state.CompletedRaces++;
-                state.CompletedEpochs++;
-                RecordSuccess(state.Incumbent);
+                incumbent = entries[winner].Candidate;
+                incumbentAlgorithm = entries[winner].Algorithm;
+                completedRaces++;
+                completedEpochs++;
+                RecordSuccess(incumbent);
 
                 nextState = stateMerger.Merge(entries.Select(x => x.LastState!).ToArray(), problem.Objective);
             }
@@ -196,13 +191,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private TSearchState ExecuteBurnInStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random)
         {
-            using var entry = CreateEntry(state.Incumbent!, state.IncumbentAlgorithm, previousState, problem, random);
+            using var entry = CreateEntry(incumbent!, incumbentAlgorithm, previousState, problem, random);
             var epoch = problem.CurrentEpoch;
             while (problem.CurrentEpoch == epoch)
                 _ = entry.MakeMove(problem, random, CancellationToken.None);
 
-            state.IncumbentAlgorithm = entry.Algorithm;
-            state.CompletedEpochs++;
+            incumbentAlgorithm = entry.Algorithm;
+            completedEpochs++;
             return entry.LastState!;
         }
 
@@ -282,11 +277,11 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private MetaOptimizationGenotype? TryReviveFromHallOfFame(MetaOptimizationGenotype currentIncumbent, IRandomNumberGenerator random)
         {
-            if (state.HallOfFame.Count < 2 || hallOfFameStrength <= 0 || random.NextDouble() >= hallOfFameStrength)
+            if (hallOfFame.Count < 2 || hallOfFameStrength <= 0 || random.NextDouble() >= hallOfFameStrength)
                 return null;
 
             var incumbentKey = CreateKey(currentIncumbent);
-            var candidates = state.HallOfFame.Values.Where(entry => entry.Key != incumbentKey).ToArray();
+            var candidates = hallOfFame.Values.Where(entry => entry.Key != incumbentKey).ToArray();
             if (candidates.Length == 0)
                 return null;
 
@@ -305,14 +300,14 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private void RecordSuccess(MetaOptimizationGenotype candidate)
         {
             var key = CreateKey(candidate);
-            if (state.HallOfFame.TryGetValue(key, out var entry))
+            if (hallOfFame.TryGetValue(key, out var entry))
             {
                 entry.SuccessCount++;
-                entry.LastWinRace = state.CompletedRaces;
+                entry.LastWinRace = completedRaces;
                 return;
             }
 
-            state.HallOfFame.Add(key, new HallOfFameEntry(key, Copy(candidate), state.CompletedRaces));
+            hallOfFame.Add(key, new HallOfFameEntry(key, Copy(candidate), completedRaces));
         }
 
         private static MetaOptimizationGenotype Copy(MetaOptimizationGenotype candidate) =>
@@ -387,7 +382,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
         private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
         {
-            var contenderScope = ParentRegistry.CreateChildScope(
+            var contenderScope = ParentRegistry.With(
                 Aspect.Create(Pointcut.Reference(evaluator), new PerformanceTrackingEvaluatorAdvice(performanceObserver)));
             return contenderScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
         }
@@ -405,8 +400,9 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                 throw ExecutionSignature.Mismatch(this, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
         }
 
-        protected override IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
-            IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> executor, IOperator<Evaluation, TCandidate> evaluator) =>
+        protected override IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
+            Wrap<TRunSearchSpace, TRunProblem>(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> executor,
+                IOperator<Evaluation, TCandidate> evaluator) =>
             new PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(executor, observer);
     }
 

@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
@@ -22,10 +23,10 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 1);
         var callbacks = new List<string>();
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
             .AddAspect(new RecordingModule(algorithm, () => callbacks.Add("first module")))
             .AddAspect(new RecordingAnalyzer(algorithm, () => callbacks.Add("analyzer")))
-            .AddAspect(new RecordingModule(algorithm, () => callbacks.Add("last module")));
+            .AddAspect(new RecordingModule(algorithm, () => callbacks.Add("last module"))));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -39,7 +40,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
         var iterations = Clock.FromIterations(algorithm);
         var quality = algorithm.Iterations.TracePopulationCandidates([iterations]);
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(quality);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup.AddAspect(quality));
 
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
         {
@@ -57,8 +58,9 @@ public class IterationObservationSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 5);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-                           .TracePopulationCandidates(out var qualityAnalyzer);
+        TraceAnalyzer<BestMedianWorstEntry<RealVector>> qualityAnalyzer = null!;
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42),
+            setup => setup.TracePopulationCandidates(out qualityAnalyzer));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -76,8 +78,8 @@ public class IterationObservationSpecs
 
         var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
         var run = algorithm
-            .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-            .AddAspect(qualityAnalyzer);
+            .CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
+            .AddAspect(qualityAnalyzer));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -89,10 +91,10 @@ public class IterationObservationSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var innerAlgorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
-        var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, ScopePolicy = ChildScopePolicy.Shared };
+        var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, ReuseExecutors = true };
 
-        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-                       .TracePopulationCandidates(out var innerQuality, innerAlgorithm);
+        var innerQuality = innerAlgorithm.Iterations.TracePopulationCandidates();
+        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup => setup.AddAspect(innerQuality));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -106,7 +108,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 4);
 
         var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(qualityAnalyzer);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup.AddAspect(qualityAnalyzer));
 
         var streamedStates = new List<PopulationState<RealVector>>();
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))

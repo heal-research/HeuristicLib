@@ -25,8 +25,9 @@ public abstract class InterceptorAdvice<TCandidate, TSearchState> : OperatorAdvi
     { }
 
     /// <summary>Wraps one interception executor built for a selected interceptor.</summary>
-    protected abstract IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IOperator<Interception<TSearchState>, TCandidate> interceptor)
+    protected abstract IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+        Wrap<TSearchSpace, TProblem>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
+            IOperator<Interception<TSearchState>, TCandidate> interceptor)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 }

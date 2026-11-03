@@ -25,8 +25,10 @@ public abstract class TerminatorAdvice<TCandidate> : OperatorAdvice<Termination,
     { }
 
     /// <summary>Wraps one termination executor built for a selected terminator.</summary>
-    protected abstract ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem, TSearchState>(
-        ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IOperator<Termination, TCandidate> terminator)
+    protected abstract ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+        Wrap<TSearchSpace, TProblem, TSearchState>(
+            ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
+            IOperator<Termination, TCandidate> terminator)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState;

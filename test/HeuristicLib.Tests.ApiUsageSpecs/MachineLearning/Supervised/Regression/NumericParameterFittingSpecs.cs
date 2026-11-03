@@ -152,8 +152,8 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
-        sharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(sharedCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
-        notSharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(ownCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
+        sharing.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(sharedCounting)).Complete(cancellationToken: TestContext.Current.CancellationToken);
+        notSharing.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(ownCounting)).Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.
         // The private one saw only the algorithm's, over the very same search.

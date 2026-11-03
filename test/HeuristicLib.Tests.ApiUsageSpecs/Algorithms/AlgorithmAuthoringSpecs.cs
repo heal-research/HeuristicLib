@@ -155,28 +155,23 @@ public class AlgorithmAuthoringSpecs
 
         protected override IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutor(
             ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> scope) =>
-            new Executor(scope.ResolveOptional(Interceptor), scope.Resolve(Creator), scope.Resolve(Evaluator),
-                scope.GetScopedState(this, static () => new State()));
-
-        private sealed class State
-        {
-            public int Steps { get; set; }
-        }
+            new Executor(scope.ResolveOptional(Interceptor), scope.Resolve(Creator), scope.Resolve(Evaluator));
 
         private sealed class Executor(
             IInterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>? interceptor,
             ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> creator,
-            IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator,
-            State state)
+            IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> evaluator)
             : IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(interceptor)
         {
+            private int steps;
+
             protected override SingleSolutionState<RealVector> ExecuteStep(SingleSolutionState<RealVector>? previousState, TestFunctionProblem problem, IRandomNumberGenerator random)
             {
-                state.Steps++;
+                steps++;
 
                 var first = creator.Create(1, random, problem.SearchSpace, problem)[0];
                 var second = creator.Create(1, random, problem.SearchSpace, problem)[0];
-                RealVector candidate = [first[0], second[0], state.Steps];
+                RealVector candidate = [first[0], second[0], steps];
                 var objectiveVector = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
 
                 return SingleSolutionState.From(candidate.ToEvaluated(objectiveVector));
@@ -185,32 +180,27 @@ public class AlgorithmAuthoringSpecs
     }
 
     private sealed record CountingCreator
-        : StatefulCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingCreator.State>
+        : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class State
-        {
-            public int Invocations { get; set; }
-        }
 
-        protected override State CreateScopedState()
-        {
-            return new State();
-        }
+        protected override ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
+        new Executor();
 
-        protected override IReadOnlyList<RealVector> Create(
-            int count,
-            State state,
-            IRandomNumberGenerator random,
-            BoundedRealVectorSearchSpace searchSpace,
-            TestFunctionProblem problem)
+        private sealed class Executor
+            : CreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
-            return Enumerable.Range(0, count)
-                             .Select(_ =>
-                             {
-                                 state.Invocations++;
-                                 return new RealVector(state.Invocations, 0.0, 0.0);
-                             })
-                             .ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            {
+                return Enumerable.Range(0, count)
+                                 .Select(_ =>
+                                 {
+                                     invocations++;
+                                     return new RealVector(invocations, 0.0, 0.0);
+                                 })
+                                 .ToArray();
+            }
         }
     }
 

@@ -1,6 +1,8 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
@@ -16,7 +18,7 @@ public class StateViewResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ABroadTerminator_SharesItsScopedStateAcrossCompatibleStateViews(bool secondViewFirst)
+    public void ABroadTerminator_HasIndependentPrivateFieldsAcrossCompatibleStateViews(bool secondViewFirst)
     {
         var probe = new Probe();
         var terminator = new ThirdCallTerminator(probe);
@@ -37,9 +39,10 @@ public class StateViewResolutionTests
 
         first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
         second.IsTerminalState(new SecondState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
         first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
 
-        probe.Preparations.ShouldBe(1);
+        probe.Preparations.ShouldBe(2);
     }
 
     [Fact]
@@ -71,38 +74,47 @@ public class StateViewResolutionTests
         public int Preparations { get; set; }
     }
 
-    private sealed class CallCount
-    {
-        public int Invocations { get; set; }
-    }
-
     private sealed record FirstState : SearchState;
 
     private sealed record SecondState : SearchState;
 
-    private sealed record ThirdCallTerminator(Probe Probe) : StatefulTerminator<int, CallCount>
+    private sealed record ThirdCallTerminator(Probe Probe) : Terminator<int>
     {
-        protected override CallCount CreateScopedState()
+
+        protected override ITerminationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, ISearchState> CreateExecutor(ResolutionScope scope)
         {
             Probe.Preparations++;
-            return new CallCount();
+            return new Executor();
         }
 
-        protected override bool IsTerminalState(CallCount state) => ++state.Invocations >= 3;
+        private sealed class Executor
+            : TerminationExecutor<int>
+        {
+            private int invocations;
+
+            public override bool IsTerminalState() => ++invocations >= 3;
+        }
     }
 
-    private sealed record CountingInterceptor(Probe Probe) : StatefulInterceptor<int, FirstState, CallCount>
+    private sealed record CountingInterceptor(Probe Probe) : Interceptor<int, FirstState>
     {
-        protected override CallCount CreateScopedState()
+
+        protected override IInterceptionExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, FirstState> CreateExecutor(ResolutionScope scope)
         {
             Probe.Preparations++;
-            return new CallCount();
+            return new Executor();
         }
 
-        protected override FirstState Transform(FirstState currentState, FirstState? previousState, CallCount operatorState, IRandomNumberGenerator random)
+        private sealed class Executor
+            : InterceptionExecutor<int, FirstState>
         {
-            operatorState.Invocations++;
-            return currentState;
+            private int invocations;
+
+            public override FirstState Transform(FirstState currentState, FirstState? previousState, IRandomNumberGenerator random)
+            {
+                invocations++;
+                return currentState;
+            }
         }
     }
 }

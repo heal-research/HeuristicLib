@@ -17,7 +17,7 @@ public class MoveResolutionTests
     [InlineData("creator")]
     [InlineData("applier")]
     [InlineData("evaluator")]
-    public void StatefulMoveRoles_CreateStateOnceAcrossBuildsAndIsolateIndependentRoots(string role)
+    public void StatefulMoveRoles_CreatePrivateDataForEveryExecutor(string role)
     {
         var preparations = new Counter();
         IOperator source = role switch
@@ -29,11 +29,11 @@ public class MoveResolutionTests
         };
         var root = ResolutionScope.Create();
         Next(root).ShouldBe(1);
-        Next(root.CreateChildScope()).ShouldBe(2);
-        Next(root).ShouldBe(3);
-        preparations.Value.ShouldBe(1);
+        Next(root.With()).ShouldBe(1);
+        Next(root).ShouldBe(1);
+        preparations.Value.ShouldBe(3);
         Next(ResolutionScope.Create()).ShouldBe(1);
-        preparations.Value.ShouldBe(2);
+        preparations.Value.ShouldBe(4);
 
         int Next(ResolutionScope scope) => source switch
         {
@@ -67,39 +67,62 @@ public class MoveResolutionTests
         public int Value { get; set; }
     }
 
-    private sealed record CountingCreator(Counter Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
+    private sealed record CountingCreator(Counter Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
-        protected override Counter CreateScopedState()
+
+        protected override IMoveCreationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
         {
             Preparations.Value++;
-            return new Counter();
+            return new Executor();
         }
 
-        protected override IEnumerable<int> Moves(int candidate, Counter state, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem)
+        private sealed class Executor
+            : IMoveCreationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
         {
-            yield return ++state.Value;
+            private int value;
+
+            public IEnumerable<int> Moves(int candidate, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem)
+            {
+                yield return ++value;
+            }
         }
     }
 
-    private sealed record CountingApplier(Counter Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
+    private sealed record CountingApplier(Counter Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
-        protected override Counter CreateScopedState()
+
+        protected override IMoveApplicationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
         {
             Preparations.Value++;
-            return new Counter();
+            return new Executor();
         }
 
-        protected override int Apply(int candidate, int move, Counter state, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => ++state.Value;
+        private sealed class Executor
+            : IMoveApplicationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+        {
+            private int value;
+
+            public int Apply(int candidate, int move, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => ++value;
+        }
     }
 
-    private sealed record CountingEvaluator(Counter Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int, Counter>
+    private sealed record CountingEvaluator(Counter Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
-        protected override Counter CreateScopedState()
+
+        protected override IMoveEvaluationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
         {
             Preparations.Value++;
-            return new Counter();
+            return new Executor();
         }
 
-        protected override ObjectiveVector Evaluate(ObjectiveVector oldQuality, int candidate, int move, Counter state, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => new(++state.Value);
+        private sealed class Executor
+            : IMoveEvaluationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+        {
+            private int value;
+
+            public ObjectiveVector Evaluate(ObjectiveVector oldQuality, int candidate, int move, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => new(++value);
+
+            public ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
+        }
     }
 }

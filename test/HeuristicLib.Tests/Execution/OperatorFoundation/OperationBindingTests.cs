@@ -188,7 +188,7 @@ public sealed class OperationBindingTests
         contextCalls.CurrentCount.ShouldBe(2);
         first.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
         contextCalls.CurrentCount.ShouldBe(2);
-        source.Preparations.ShouldBe(1);
+        source.Preparations.ShouldBe(2);
         source.Constructions.ShouldBe(2);
         source.Invocations.ShouldBe(10);
         factory.Wraps.ShouldBe(2);
@@ -220,7 +220,7 @@ public sealed class OperationBindingTests
     [Theory]
     [InlineData(7, "Termination")]
     [InlineData(8, "Interception")]
-    public void CandidateMetricRejectionPrecedesConstructionAndScopedState(int operation, string name)
+    public void CandidateMetricRejectionPrecedesPrivateDataConstruction(int operation, string name)
     {
         var source = new AllOperations();
         var root = ResolutionScope.Create();
@@ -230,7 +230,7 @@ public sealed class OperationBindingTests
         failure.Message.ShouldContain("candidate budget");
         failure.Message.ShouldContain(nameof(AllOperations));
         source.Constructions.ShouldBe(0);
-        // The rejection precedes the construction hook, so it also precedes the scoped state the hook creates.
+        // Rejection precedes the hook and all private data construction.
         source.Preparations.ShouldBe(0);
         InvokeOperation(root, source, operation);
         source.Constructions.ShouldBe(1);
@@ -450,22 +450,16 @@ public sealed class OperationBindingTests
         public List<IRandomNumberGenerator> RandomSources { get; } = [];
 
         // One public method implements every operation's CreateExecutor, whose signature does not name the operation.
-        // Creating the scoped state counts as the preparation; every build creates its own executor.
+        // Each executor prepares private data during construction.
         public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
             where TSearchState : class, ISearchState
         {
-            scope.GetScopedState(this, () =>
-            {
-                Preparations++;
-                return new Preparation();
-            });
+            Preparations++;
             Constructions++;
             return new Executor(this);
         }
-
-        private sealed class Preparation;
 
         private void Call(IRandomNumberGenerator random)
         {
@@ -497,5 +491,6 @@ public sealed class OperationBindingTests
             public bool IsTerminalState(ISearchState state, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return true; }
             public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) { source.Call(random); return currentState; }
         }
+
     }
 }

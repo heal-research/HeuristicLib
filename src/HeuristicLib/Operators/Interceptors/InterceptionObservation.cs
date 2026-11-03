@@ -28,8 +28,9 @@ file sealed class InterceptionObservationAdvice<TCandidate, TSearchState>(Action
     : InterceptorAdvice<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    protected override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IOperator<Interception<TSearchState>, TCandidate> interceptor) =>
+    protected override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+        Wrap<TSearchSpace, TProblem>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
+            IOperator<Interception<TSearchState>, TCandidate> interceptor) =>
         new Executor<TSearchSpace, TProblem>(executor, interceptor, observe);
 
     private sealed class Executor<TSearchSpace, TProblem>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,

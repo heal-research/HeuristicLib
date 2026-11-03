@@ -32,7 +32,8 @@ file sealed class AlgorithmObservationAdvice<TCandidate, TSearchState>(
     where TSearchState : class, ISearchState
 {
     public override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source) =>
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
+        IAlgorithm<TCandidate, TSearchState> source) =>
         new Executor<TSearchSpace, TProblem>(executor, source, observe);
 
     private sealed class Executor<TSearchSpace, TProblem>(

@@ -1,6 +1,6 @@
 # Observability and analysis
 
-An analyzer collects data from the execution boundaries you select. Create it, attach it to a prepared run, then read its typed properties or take a snapshot.
+An analyzer collects data from the execution boundaries you select. Create it, add it through the run setup callback, then read its typed properties or take a snapshot.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-imports{csharp}
 
@@ -48,7 +48,7 @@ A source resembles a cold `IObservable<T>`: it describes observations without pr
 ```csharp
 var subject = new Subject<CrossoverObservation<RealVector>>();
 var feed = Aspect.Observe(crossover.Invocations, subject.OnNext);
-var run = algorithm.CreateRun(problem, random).AddAspect(feed);
+var run = algorithm.CreateRun(problem, random, setup: setup => setup.AddAspect(feed));
 ```
 
 The callback runs on the thread that invoked the operator, inside the wrapped invocation.
@@ -67,9 +67,9 @@ Names compare exactly and case-sensitively. Several nodes may share a name, and 
 
 ## Ownership and reads
 
-A run accepts analyzers and other aspects through `AddAspect` while its lifecycle is `Preparing`. It collects them in the supplied order; resolution weaves their advice into the execution graph when the run starts. Adding the same aspect again does not apply its advice twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Adding an aspect does not reset its collected data.
+The `CreateRun` setup callback accepts analyzers and other aspects through `setup.AddAspect`. It collects them in the supplied order and snapshots setup before returning the run; resolution weaves their advice into the execution graph when the run starts. Adding the same aspect again does not apply its advice twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Adding an aspect does not reset its collected data.
 
-`LifecycleState` reports whether a run is `Preparing`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. Calling an execution entry point freezes its attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
+`LifecycleState` reports whether a run is `Ready`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. The returned run accepts no further attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 
 `SampleCount` counts recorded entries. `Latest` is the latest recorded entry, or null before any entry is recorded. These properties do not allocate. `Snapshot()` and `By(clock)` allocate stable copies. Taking a snapshot does not stop collection.
 
@@ -135,7 +135,7 @@ This makes dimension priority explicit and affects this trace's comparisons, inc
 
 ## Cycles and turns
 
-An algorithm observation's `Iteration` numbers the iterations of one call, as the algorithm sees them. A meta-algorithm that runs an inner algorithm again calls it again, so the inner iterations number from 1 again, whatever the child scope policy. A clock over the iterations keeps counting across those calls.
+An algorithm observation's `Iteration` numbers the iterations of one call, as the algorithm sees them. A meta-algorithm that runs an inner algorithm again calls it again, so the inner iterations number from 1 again, whether its executor is fresh or reused. A clock over the iterations keeps counting across those calls.
 
 An inner algorithm does not know it runs inside a cycle, so the cycle algorithm reports its own progress. `cycle.Cycles` observes the start of each cycle as a `CycleStart`, and `cycle.Turns` the start of each turn, one run of an inner algorithm, as a `CycleTurn` with the cycle and turn numbers, the inner algorithm, its position and the state it starts from. Both number from 1 in each call of the cycle, and `Clock.FromCycles` and `Clock.FromTurns` count them:
 
@@ -145,7 +145,7 @@ An inner algorithm does not know it runs inside a cycle, so the cycle algorithm 
 
 ## Experiments
 
-An experiment creates fresh analyzers for every trial from a function of the trial's algorithm. `AddAspectPerTrial` returns the typed trial/analyzer pairs; read each analyzer directly. See [Experiments](/guide/execution/experiments).
+An experiment creates fresh analyzers for every trial from a function of the trial's algorithm. `setup.AddAspectPerTrial` returns the typed case/analyzer pairs during experiment creation; read each analyzer directly. See [Experiments](/guide/execution/experiments).
 
 ## Observe an operation of your own
 
@@ -161,11 +161,23 @@ Each named point has its own identity, so several points of one configuration ma
 
 ## Use an aspect directly
 
-`Aspect.Create` pairs a pointcut with advice. Pass it to `ResolutionScope.Create`, `With` or `CreateChildScope`, or add it to a preparing run with `AddAspect`.
+`Aspect.Create` pairs a pointcut with advice. Pass it to `ResolutionScope.Create` or `With`, or call `setup.AddAspect` inside the `CreateRun` setup callback.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-aspects{csharp}
 
 Earlier advice wraps closer to the source executor. Here timing finishes before the observation callback, so the callback runs outside the timed span. Counting updates only after success; timing uses `finally` and records failed invocations too.
+
+The fluent counting and timing methods create aspects. Their concrete accumulators can be inspected directly, so measurement alone needs no `AddResource` call.
+
+### Share accounting with a terminator
+
+A count terminator holds a handle because it is part of a reusable configuration. Supply the same concrete accumulator to that handle and to the counting aspect:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-shared-accounting{csharp}
+
+Here `AddResource` connects the terminator's handle to the accumulator used by `algorithm.Mutator.CountInvocations(counter)`. The run stops after two successful mutation invocations. `run.Resource(handle)` returns that same accumulator. Create a fresh accumulator and aspect for each independent run.
+
+### Select several configurations
 
 To select several configurations, pair a pointcut with role advice:
 

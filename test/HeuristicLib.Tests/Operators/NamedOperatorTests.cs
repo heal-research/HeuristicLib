@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
@@ -8,7 +9,7 @@ namespace HEAL.HeuristicLib.Tests.Operators;
 public sealed class NamedOperatorTests
 {
     [Fact]
-    public void NamedMutators_ShareTheirChildStateWithIndependentNameObservations()
+    public void NamedMutators_HaveIndependentChildrenAndNameObservations()
     {
         var leaf = new AdvancingMutator();
         var exploration = leaf.Named("exploration");
@@ -25,9 +26,9 @@ public sealed class NamedOperatorTests
         var first = typedScope.Resolve(exploration);
         var second = typedScope.Resolve(refinement);
         first.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
-        second.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
-        typedScope.Resolve(leaf).Mutate([0], random, problem.SearchSpace, problem).ShouldBe([3]);
-        first.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([4]);
+        second.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
+        typedScope.Resolve(leaf).Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
+        first.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
 
         explored.CurrentCount.ShouldBe(2);
         childCalls.CurrentCount.ShouldBe(4);
@@ -69,7 +70,7 @@ public sealed class NamedOperatorTests
         // A stateful leaf builds a new executor for each resolution, so the named and the plain mutator share its state.
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         scope.Resolve(mutator.Named("mutator")).Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1]);
-        scope.Resolve(mutator).Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([2]);
+        scope.Resolve(mutator).Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1]);
         scope.Resolve(refiner.Named("refiner")).ShouldBeSameAs(scope.Resolve(refiner));
         scope.Resolve(replacer.Named("replacer")).ShouldBeSameAs(scope.Resolve(replacer));
         scope.Resolve(selector.Named("selector")).ShouldBeSameAs(scope.Resolve(selector));
@@ -105,17 +106,20 @@ public sealed class NamedOperatorTests
         public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) => Enumerable.Range(0, count).ToArray();
     }
 
-    private sealed record AdvancingMutator : StatefulMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, MutationState>
+    private sealed record AdvancingMutator : Mutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        protected override MutationState CreateScopedState() => new();
 
-        protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationState state, IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
-            parents.Select(parent => parent + ++state.Invocations).ToArray();
+        protected override IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+        new Executor();
+
+        private sealed class Executor
+            : MutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        {
+            private int invocations;
+
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+            parents.Select(parent => parent + ++invocations).ToArray();
+        }
     }
 
-    private sealed class MutationState
-    {
-        public int Invocations { get; set; }
-    }
 }

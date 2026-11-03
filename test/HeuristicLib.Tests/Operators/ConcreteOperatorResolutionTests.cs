@@ -67,7 +67,7 @@ public sealed class ConcreteOperatorResolutionTests
         var counters = Enumerable.Range(0, expectedInvocations.Length).Select(_ => new CountAccumulator()).ToArray();
         var parent = ResolutionScope.Create();
         invoke(parent);
-        var child = parent.CreateChildScope(Aspect.CountInvocations(creator, counters[0]),
+        var child = parent.With(Aspect.CountInvocations(creator, counters[0]),
             Aspect.CountInvocations(crossover, counters[1]),
             Aspect.CountInvocations(mutator, counters[2]),
             Aspect.CountInvocations(refiner, counters[3]),

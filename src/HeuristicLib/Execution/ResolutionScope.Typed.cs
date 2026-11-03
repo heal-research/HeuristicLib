@@ -11,8 +11,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// name them again at every call.
 /// </summary>
 /// <remarks>
-/// It resolves exactly like the scope it was created from and adds only the types. <c>With</c> and
-/// <c>CreateChildScope</c> keep them.
+/// It resolves exactly like the scope it was created from and adds only the types. <c>With</c> keeps them.
 /// </remarks>
 public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionScope
     where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -27,9 +26,6 @@ public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionSco
     public new ResolutionScope<TCandidate, TSearchSpace, TProblem> With(params IReadOnlyList<Aspect> aspects) =>
         new(base.With(aspects));
 
-    /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
-    public new ResolutionScope<TCandidate, TSearchSpace, TProblem> CreateChildScope(params IReadOnlyList<Aspect> aspects) =>
-        new(base.CreateChildScope(aspects));
 }
 
 /// <summary>
@@ -55,9 +51,6 @@ public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchS
     public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> With(params IReadOnlyList<Aspect> aspects) =>
         new(base.With(aspects));
 
-    /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
-    public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildScope(params IReadOnlyList<Aspect> aspects) =>
-        new(base.CreateChildScope(aspects));
 }
 
 /// <summary>Creates a typed scope over a resolution scope, naming the triple once per creation method.</summary>

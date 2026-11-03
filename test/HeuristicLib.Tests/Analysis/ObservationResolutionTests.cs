@@ -33,7 +33,7 @@ public class ObservationResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var parentFirst = paused.Current;
 
-        var child = root.CreateChildScope(Aspect.Observe(algorithm.Iterations, childObservations.Add),
+        var child = root.With(Aspect.Observe(algorithm.Iterations, childObservations.Add),
             Aspect.Observe(algorithm.Evaluator.Invocations, observation => childEvaluations.AddRange(observation.Candidates)));
         var rebound = child.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         rebound.ShouldNotBeSameAs(original);
@@ -306,7 +306,7 @@ List<string> events,
         events.ShouldBe(["operation", "parent"]);
         events.Clear();
 
-        var child = root.CreateChildScope(createAspect(() => events.Add("child")));
+        var child = root.With(createAspect(() => events.Add("child")));
         var rebound = resolve(child);
         rebound.ShouldNotBeSameAs(original);
         events.ShouldBeEmpty();

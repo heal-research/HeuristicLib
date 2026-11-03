@@ -486,7 +486,7 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void DurationWrappers_SharingAChildMutator_ReuseItsExecution()
+    public void DurationWrappers_SharingAChildConfiguration_CreateIndependentExecutors()
     {
         var innerOperator = new CountingExecutionMutator();
         var firstWrapper = Aspect.MeasureDuration(innerOperator, new DurationAccumulator());
@@ -502,20 +502,20 @@ public class RoutedOperatorTests
         var first = firstExecutor.Mutate([1], RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
         var second = secondExecutor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        innerOperator.ExecutionsCreated.ShouldBe(1);
+        innerOperator.ExecutionsCreated.ShouldBe(2);
         first.ShouldBe([2]);
-        second.ShouldBe([3]);
+        second.ShouldBe([2]);
     }
 
     [Fact]
-    public void ChoosePerItemMutation_RepeatedChildMutator_ReusesItsExecution()
+    public void ChoosePerItemMutation_RepeatedChildMutator_CreatesIndependentExecutors()
     {
         var innerOperator = new CountingExecutionMutator();
         var chooseOne = ChoosePerItem.Create(innerOperator, innerOperator);
 
         _ = ResolutionScope.Create().ResolveMutator(chooseOne);
 
-        innerOperator.ExecutionsCreated.ShouldBe(1);
+        innerOperator.ExecutionsCreated.ShouldBe(2);
     }
 
     [Fact]
@@ -809,26 +809,21 @@ public class RoutedOperatorTests
     {
         public int ExecutionsCreated { get; private set; }
 
-        // Every build in one owning scope shares the call count.
+        // Each executor owns its call count.
         IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(scope.GetScopedState(this, CreateScopedState));
-
-        private State CreateScopedState()
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;
-            return new State();
+            return new Executor();
         }
 
-        private sealed class State
+        private sealed class Executor : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
         {
-            public int Invocations { get; set; }
-        }
+            private int invocations;
 
-        private sealed class Executor(State state) : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
-        {
             public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
             {
-                var calls = ++state.Invocations;
+                var calls = ++invocations;
                 return parents.Select(parent => parent + calls).ToArray();
             }
         }

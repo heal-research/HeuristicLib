@@ -35,7 +35,7 @@ public partial class ExecutorResolutionTests
 
         scope.Resolve(first).Next();
         scope.Resolve(second).Next();
-        scope.Resolve(first).Next().ShouldBe(2);
+        scope.Resolve(first).Next().ShouldBe(1);
         scope.Resolve(excluded).ShouldBeOfType<Counter>().Next().ShouldBe(1);
 
         observed.ShouldBe(["first:1", "second:1", "first:1"]);
@@ -71,9 +71,9 @@ public partial class ExecutorResolutionTests
         })));
 
         scope.Resolve(source).ShouldBeOfType<Counter>().Next().ShouldBe(1);
-        scope.CreateChildScope().Resolve(source).Next().ShouldBe(2);
+        scope.With().Resolve(source).Next().ShouldBe(1);
         wraps.ShouldBe(0);
-        preparations.ShouldBe(1);
+        preparations.ShouldBe(2);
     }
 
     [Fact]
@@ -101,7 +101,7 @@ public partial class ExecutorResolutionTests
     }
 
     [Fact]
-    public void ChildSelector_ReachesTheDependencyOfAnAncestorComposite_WithoutResettingState()
+    public void ChildSelector_ReachesFreshContextualDependencies()
     {
         IConfigurationNode<ICounterExecutor> leaf = new CounterConfiguration("leaf");
         var composite = new Composite(leaf);
@@ -110,16 +110,16 @@ public partial class ExecutorResolutionTests
         ancestor.Next().ShouldBe(1);
 
         var observed = new List<int>();
-        var child = parent.CreateChildScope(Aspect.Create(AllCounters, new CounterObservationAdvice(observed.Add)));
+        var child = parent.With(Aspect.Create(AllCounters, new CounterObservationAdvice(observed.Add)));
         var rebound = child.Resolve(composite);
+        rebound.Next().ShouldBe(1);
         rebound.Next().ShouldBe(2);
-        rebound.Next().ShouldBe(3);
-        ancestor.Next().ShouldBe(4);
+        ancestor.Next().ShouldBe(2);
 
         observed.ShouldBe([1, 2]);
-        rebound.Invocations.ShouldBe(4);
-        rebound.Control.Value.ShouldBe(4);
-        parent.CreateChildScope().Resolve(composite).Invocations.ShouldBe(4);
+        rebound.Invocations.ShouldBe(2);
+        rebound.Control.Value.ShouldBe(2);
+        parent.With().Resolve(composite).Invocations.ShouldBe(0);
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public partial class ExecutorResolutionTests
         IConfigurationNode<ICounterExecutor> late = new CounterConfiguration("late");
         IConfigurationNode<ICounterExecutor> later = new CounterConfiguration("later");
         retained.ShouldNotBeNull().Resolve(late).Next().ShouldBe(1);
-        retained.CreateChildScope().Resolve(later).Next().ShouldBe(1);
+        retained.With().Resolve(later).Next().ShouldBe(1);
 
         observed.ShouldBe(["late:1", "later:1"]);
     }
@@ -156,7 +156,7 @@ public partial class ExecutorResolutionTests
         parent.Resolve(source).Next().ShouldBe(1);
         var retried = NewContext(parent).Resolve(source);
         retried.ShouldNotBeOfType<Counter>();
-        retried.Next().ShouldBe(2);
-        preparations.ShouldBe(1);
+        retried.Next().ShouldBe(1);
+        preparations.ShouldBe(3);
     }
 }

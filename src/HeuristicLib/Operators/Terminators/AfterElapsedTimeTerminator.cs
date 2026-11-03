@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -5,16 +6,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AfterElapsedTimeTerminator<TCandidate>
-    : StatefulTerminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.State>
+    : Terminator<TCandidate>
 {
     public AfterElapsedTimeTerminator(TimeSpan maximumElapsedTime)
     {
         MaximumElapsedTime = maximumElapsedTime;
-    }
-
-    public sealed class State
-    {
-        public required long StartTimestamp { get; init; }
     }
 
     /// <summary>
@@ -25,11 +21,14 @@ public sealed record AfterElapsedTimeTerminator<TCandidate>
 
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
-    protected override State CreateScopedState() =>
-        new() { StartTimestamp = TimeProvider.GetTimestamp() };
+    protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) => new Executor(MaximumElapsedTime, TimeProvider);
 
-    protected override bool IsTerminalState(State state) =>
-        TimeProvider.GetElapsedTime(state.StartTimestamp) >= MaximumElapsedTime;
+    private sealed class Executor(TimeSpan maximumElapsedTime, TimeProvider timeProvider) : TerminationExecutor<TCandidate>
+    {
+        private readonly long startTimestamp = timeProvider.GetTimestamp();
+
+        public override bool IsTerminalState() => timeProvider.GetElapsedTime(startTimestamp) >= maximumElapsedTime;
+    }
 }
 
 public static class AfterElapsedTimeTerminator

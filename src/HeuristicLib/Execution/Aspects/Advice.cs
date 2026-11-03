@@ -3,8 +3,8 @@ namespace HEAL.HeuristicLib.Execution;
 /// <summary>Wraps the executors built for the configurations its pointcut selects.</summary>
 /// <remarks>
 /// Each advised role has one library advice base whose <c>Wrap</c> receives every executor built for a selected
-/// configuration. Resolution compares advice by reference; data that must outlive one executor belongs to the advice
-/// object.
+/// configuration. Resolution compares advice by reference. Supply concrete runtime dependencies through advice
+/// constructors and pass them to wrapping executors. Resource lookup and child resolution belong to configurations.
 /// </remarks>
 public abstract class Advice
 {
@@ -28,9 +28,9 @@ public abstract class Advice<TConfiguration> : Advice
 
 /// <summary>Advice that wraps the executors of a consumer-defined role, such as a cooling schedule.</summary>
 /// <remarks>
-/// Resolution calls <see cref="Wrap"/> for every executor built for a selected configuration. Data that must outlive
-/// one executor belongs to the advice object; it is shared by every configuration and resolution the advice is applied
-/// to.
+/// Resolution calls <see cref="Wrap"/> for every executor built for a selected configuration. Runtime data held by
+/// the advice is shared wherever that advice instance is reused. Assemble advice with independent dependencies for
+/// independent runs.
 /// </remarks>
 public abstract class Advice<TConfiguration, TExecutor> : Advice<TConfiguration>
     where TConfiguration : class, IConfigurationNode<TExecutor>

@@ -1,41 +1,44 @@
 # Configuration vs executors
 
-Configurations describe reusable settings and child configurations. Resolution creates their scoped state once per owning scope and builds typed executors for the current context on every request. Lookup uses configuration object reference rather than service type or value equality. Executor construction and child resolution are explicit.
+Configurations describe reusable settings, child configurations and optional typed resource handles. Resolution builds typed executors for the requesting context on every request. Private mutable data belongs to executor fields. Sharing is explicit through handle reference identity within one run.
 
-| Concept          | Responsibility                                                     |
-| ---------------- | ------------------------------------------------------------------ |
-| Configuration    | Settings, declared children and a typed `CreateExecutor` hook.     |
-| Scoped state     | Data shared by every build of a configuration in its owning scope. |
-| Executor         | Typed operations and resolved child references.                    |
-| Resolution scope | State selection and applying the requesting aspects.               |
-| Pointcut         | Selecting configurations during resolution.                        |
-| Advice           | Wrapping the executor built for a selected configuration.          |
-| Aspect           | Ordered pointcut/advice pairs added to a scope or run.             |
+| Concept          | Responsibility                                                                   |
+| ---------------- | -------------------------------------------------------------------------------- |
+| Configuration    | Settings, declared children, resource handles and a typed `CreateExecutor` hook. |
+| Executor         | Typed operations, private fields and resolved child references.                  |
+| Resource handle  | Immutable creation settings and explicit sharing identity.                       |
+| Resource         | Runtime data intentionally shared by its participants.                           |
+| Resolution scope | Constructing executors with contextual children, advice and run resources.       |
+| Pointcut         | Selecting configurations during resolution.                                      |
+| Advice           | Wrapping the executor built for a selected configuration.                        |
+| Aspect           | Ordered pointcut and advice pairs added to a scope or run.                       |
 
 ## Authoring execution behavior
 
-Stateless operators use role-specific stateless bases. Operators with ordinary execution data use stateful bases and framework-managed state. Operators needing child executors or custom structure use an authored executor. Algorithms use authored executors because they coordinate operators and execution flow.
+Stateless leaves may use the stateless role bases and return themselves as immutable executors. Mutable operators and compositions author an executor with fields. Algorithms author executors because they coordinate operators and execution flow.
 
-An operation-parameterized operator builds its executor in `IOperator<TOperation, TCandidate>.CreateExecutor`, which resolution calls for every build with a construction scope typed to the requested operation and run types. Resolve every child through that scope and pass the resolved child to the executor. Take persistent counters, caches and helper data from `scope.GetScopedState(this, create)`, which creates them on the first request of the configuration's owner and returns the same object to every later build. Construction must not create that state itself or retain an earlier executor's children.
+An operator builds its executor in `IOperator<TOperation, TCandidate>.CreateExecutor`. Resolution calls this hook with a scope typed to the requested operation and run types. Resolve every child through that scope and pass it to the executor. Initialize private counters, cursors and adaptation values on that executor. Repeated construction of one configuration creates independent private data.
 
-An algorithm builds its executor the same way, in a `CreateExecutor` hook that resolution calls for every build with a scope typed to the run types and its search state. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Both resolve every child through their scope and take persistent data from `scope.GetScopedState(this, create)`. Invocation-local values stay in the operation or iterator. Never store run data on a configuration.
+Algorithms follow the same rule in their typed `CreateExecutor` hook. Consumer defined roles implement `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Invocation local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 
-A stateless leaf may return itself as its executor. A stateful leaf and a composite return fresh nodes around the same scoped state. Therefore the same configuration does not promise the same node reference on every resolve. A parent caller keeps its original children and observations when another context binds the same state.
+Where sharing has domain meaning, expose a `ResourceHandle<TResource>` on the configuration and call `scope.Resource(handle)` during construction. A handle contains immutable creation settings and no live resource, executor or resolution context. The resource contains shared data and no contextual child executor or advice chain. Sharing resources leaves each executor's children and advice independent.
 
 ## Configured wrappers and advice
 
 Configured wrappers are ordinary configurations with declared children. Operator wrappers return `scope.ResolveOperator(ChildOperator)` or wrap the resolved child with `TOperation.Wrap(childOperator, wrapper)`; wrapping algorithms resolve their `ChildAlgorithm` through the scope their `CreateExecutor` receives and build their executor around it.
 
-Advice is separate from the configuration graph. For operation-parameterized operators, `OperatorAdvice` and `OperatorAdvice<TOperation, TCandidate>` check a selected operator before its executor is built and wrap each executor built for it, usually through the operation's `Wrap`. Role advice such as `MutatorAdvice<TCandidate>` receives typed executors, and every operation has the same typed `Check`/`Wrap` pattern; termination and interception advice also receive the run's search state type. Advice introduces no configured children. Observation advice reports successful operator invocations or states yielded by an algorithm; standalone counting and timing advice avoid observation allocations. A configuration declares a point inside its executor, such as the start of a cycle's turn, as an `ObservationPoint<TObservation>` child. Its `CreateExecutor` resolves the point and passes its executor to the parent executor, which calls `Report` at that point. Observation advice wraps the point's executor through ordinary role advice.
+Advice is separate from the configuration graph. For operation-parameterized operators, `OperatorAdvice` and `OperatorAdvice<TOperation, TCandidate>` check a selected operator before its executor is built and wrap each executor built for it, usually through the operation's `Wrap`. Role advice such as `MutatorAdvice<TCandidate>` receives typed executors, and every operation has the same typed `Check`/`Wrap` pattern; termination and interception advice also receive the run's search state type. Supply concrete runtime dependencies through advice constructors and pass them to wrapping executors. Assemble advice with independent dependencies for independent runs. Advice has no resource lookup capability. Advice introduces no configured children. Observation advice reports successful operator invocations or states yielded by an algorithm; standalone counting and timing advice avoid observation allocations. A configuration declares a point inside its executor, such as the start of a cycle's turn, as an `ObservationPoint<TObservation>` child. Its `CreateExecutor` resolves the point and passes its executor to the parent executor, which calls `Report` at that point. Observation advice wraps the point's executor through ordinary role advice.
 
-Use `Aspect.Observe`, `Aspect.CountInvocations`, `Aspect.CountCandidates` or `Aspect.MeasureDuration` from `Inspection` for predefined behavior. Add the result to a run with `AddAspect`, or pass aspects to `ResolutionScope.Create`, `With` or `CreateChildScope`.
+Use `Aspect.Observe`, `Aspect.CountInvocations`, `Aspect.CountCandidates` or `Aspect.MeasureDuration` from `Inspection` for predefined behavior. Add the result through the run setup callback with `setup.AddAspect`, or pass aspects to `ResolutionScope.Create` or `With`.
 
-## State ownership and child activations
+## Resources and child activations
 
-A scope finds the owner of a configuration's scoped state in itself and its ancestors. Parent-first selection lets descendants reuse state. Child-first selection stays local, and siblings cannot see each other's local selections. Children resolve in their parent's owning scope with the requesting aspect chain.
+A run owns one flat resource table. A trial is one run. `With` adds an aspect context using the same table. A separate root created with `ResolutionScope.Create` has an independent table. There is no configuration ownership lookup, resource ancestry or automatic sharing between separate constructions.
 
-`With` changes aspects while sharing state. `CreateChildScope` creates child-local state and inherits aspects. A meta-algorithm keeps one `ChildScopeSelector` for its activation policy as scoped state: Fresh creates a child state, Retained keeps child state by configuration reference, and Shared uses parent state. Retained state keeps scoped state but applies each activation's current aspects.
+Supply existing resources with `algorithm.CreateRun(problem, random, setup => setup.AddResource(handle, resource))` or with `new ResolutionScopeBuilder().AddResource(handle, resource).Build()` for a direct scope. A builder remains reusable. Each build snapshots bindings and aspects, creates independent default resources and retains explicitly supplied instances. A scope accepts no further bindings. `ExperimentRunSetup.AddResourcePerTrial` supplies resources to materialized cases before trial runs are created. Explicitly supplying the same instance to several runs deliberately couples them.
 
-Stateful operations are not inherently thread safe. Concurrent use needs synchronization appropriate to the execution path. Executors have no general disposal contract; resources needing deterministic cleanup require an explicit lifecycle owner.
+Cycle constructs fresh executors by default and passes search state to the next turn. `ReuseExecutors = true` retains one executor per child configuration reference within one Cycle executor. `Cycle(A, A)` then uses one A executor. Reuse retains children and advice too. Pipeline stages and racing contenders construct fresh executors through their current context and use the run's resource table.
+
+Operator authors own concurrent access correctness. Synchronization must protect every participant sharing a resource. Automatically created resources must need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned. Executors and resource tables add no automatic disposal lifecycle.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for ordering, controls, failure retry and lifetime rules, and [operator implementation](/contributing/architecture/operator-implementation) for authoring examples.

@@ -13,6 +13,12 @@ public sealed record LimitEvaluator<TCandidate>
 {
     public int MaxEvaluations { get; init; }
 
+    /// <remarks>
+    /// An explicit handle shares evaluation accounting across executors. Without it each executor has its own counter.
+    /// Checking and incrementing are separate, so concurrent callers may exceed the limit.
+    /// </remarks>
+    public ResourceHandle<CountAccumulator>? Counter { get; init; }
+
     /// <summary>
     /// Gets the objective vector returned for candidates that are not evaluated because the limit has been reached.
     /// A <see langword="null"/> value uses <see cref="ObjectiveDirections.Worst"/> from the problem.
@@ -34,7 +40,7 @@ public sealed record LimitEvaluator<TCandidate>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var counter = scope.GetScopedState(this, static () => new CountAccumulator());
+        var counter = Counter is null ? new CountAccumulator() : scope.Resource(Counter);
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter);
     }

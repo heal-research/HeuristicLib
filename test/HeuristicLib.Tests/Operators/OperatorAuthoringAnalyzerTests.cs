@@ -22,172 +22,6 @@ public class OperatorAuthoringAnalyzerTests
       """;
 
     [Fact]
-    public async Task StatefulMutator_AllowsOrdinaryExecutionData()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record ValidMutator : StatefulMutator<int, ValidMutator.State>
-          {
-              public sealed class State
-              {
-                  public int Invocations { get; set; }
-                  public Dictionary<int, int> Cache { get; } = new();
-              }
-
-              protected override State CreateScopedState() => new();
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  State state,
-                  IRandomNumberGenerator random)
-              {
-                  state.Invocations++;
-                  return parents;
-              }
-          }
-          """);
-
-        diagnostics.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public async Task StatefulMutator_RejectsExecutionMember()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator : StatefulMutator<int, InvalidMutator.State>
-          {
-              public sealed class State
-              {
-                  public IExecutor? ChildExecution { get; set; }
-              }
-
-              protected override State CreateScopedState() => new();
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  State state,
-                  IRandomNumberGenerator random) => parents;
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("ChildExecution");
-    }
-
-    [Fact]
-    public async Task StatefulMutator_RejectsOperatorHiddenInGenericContainer()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator : StatefulMutator<int, InvalidMutator.State>
-          {
-              public sealed class State
-              {
-                  public List<IOperator<Mutation, int>> Children
-                      { get; } = new();
-              }
-
-              protected override State CreateScopedState() => new();
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  State state,
-                  IRandomNumberGenerator random) => parents;
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("Children");
-    }
-
-    [Fact]
-    public async Task StatefulMutator_RejectsExecutionDependencyInNestedStateType()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator : StatefulMutator<int, InvalidMutator.State>
-          {
-              public sealed class State
-              {
-                  public Helper Data { get; } = new();
-              }
-
-              public sealed class Helper
-              {
-                  public ResolutionScope? Registry { get; set; }
-              }
-
-              protected override State CreateScopedState() => new();
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  State state,
-                  IRandomNumberGenerator random) => parents;
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("Data");
-    }
-
-    [Fact]
-    public async Task StatefulMutator_RejectsExecutionDependenciesInArraysAndTuples()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator : StatefulMutator<int, InvalidMutator.State>
-          {
-              public sealed class State
-              {
-                  public IExecutor[] Instances { get; set; } = [];
-                  public (int Count, IExecutor? Instance) Snapshot { get; set; }
-              }
-
-              protected override State CreateScopedState() => new();
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  State state,
-                  IRandomNumberGenerator random) => parents;
-          }
-          """);
-
-        diagnostics.Length.ShouldBe(2);
-        diagnostics.ShouldAllBe(diagnostic => diagnostic.Id == OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostics.Select(static diagnostic => diagnostic.GetMessage()).ShouldContain(message => message.Contains("Instances", StringComparison.Ordinal));
-        diagnostics.Select(static diagnostic => diagnostic.GetMessage()).ShouldContain(message => message.Contains("Snapshot", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public async Task StatefulOperatorRule_UsesAuthoringShapeWithoutKnownBase()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file abstract record CustomStatefulOperator<TState> : IOperator
-              where TState : class
-          {
-              protected abstract TState CreateScopedState();
-
-              public CustomOperatorExecutor CreateExecutor(ResolutionScope scope) => new();
-          }
-
-          file sealed class CustomOperatorExecutor : IOperatorExecutor;
-
-          file sealed record InvalidOperator : CustomStatefulOperator<InvalidOperator.State>
-          {
-              public sealed class State
-              {
-                  public ResolutionScope? Registry { get; set; }
-              }
-
-              protected override State CreateScopedState() => new();
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("Registry");
-    }
-
-    [Fact]
     public async Task StatelessMutator_RejectsMutationOfConfigurationMember()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
@@ -197,34 +31,6 @@ public class OperatorAuthoringAnalyzerTests
 
               public override IReadOnlyList<int> Mutate(
                   IReadOnlyList<int> parents,
-                  IRandomNumberGenerator random)
-              {
-                  calls++;
-                  return parents;
-              }
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.ConfigurationMutationDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("calls");
-    }
-
-    [Fact]
-    public async Task StatefulMutator_RejectsMutationOfConfigurationMember()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator : StatefulMutator<int, InvalidMutator.State>
-          {
-              private int calls;
-
-              public sealed class State;
-
-              protected override State CreateScopedState() => new();
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  State state,
                   IRandomNumberGenerator random)
               {
                   calls++;
@@ -300,242 +106,6 @@ public class OperatorAuthoringAnalyzerTests
     }
 
     [Fact]
-    public async Task StatefulMutator_RejectsProblemBoundAsStateTypeArgument()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record TrapMutator : StatefulMutator<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
-          {
-              protected override IProblem<int, ISearchSpace<int>> CreateScopedState() => null!;
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  IProblem<int, ISearchSpace<int>> state,
-                  IRandomNumberGenerator random,
-                  ISearchSpace<int> searchSpace) => parents;
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StateContractDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("IProblem");
-        diagnostic.GetMessage().ShouldContain("TProblem");
-    }
-
-    [Fact]
-    public async Task StatefulMutator_RejectsSearchSpaceBoundAsStateTypeArgument()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record TrapMutator : StatefulMutator<int, ISearchSpace<int>>
-          {
-              protected override ISearchSpace<int> CreateScopedState() => null!;
-
-              protected override IReadOnlyList<int> Mutate(
-                  IReadOnlyList<int> parents,
-                  ISearchSpace<int> state,
-                  IRandomNumberGenerator random) => parents;
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StateContractDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("ISearchSpace");
-    }
-
-    /// <summary>
-    /// Interceptor and terminator ladders carry a fifth type parameter, so a search state can land in the trailing
-    /// <c>TState</c> slot and still compile.
-    /// </summary>
-    [Fact]
-    public async Task StatefulInterceptor_RejectsSearchStateBoundAsStateTypeArgument()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed class TrapSearchState : ISearchState;
-
-          file sealed record TrapInterceptor : StatefulInterceptor<int, TrapSearchState, TrapSearchState>
-          {
-              protected override TrapSearchState CreateScopedState() => null!;
-
-              protected override TrapSearchState Transform(
-                  TrapSearchState currentState,
-                  TrapSearchState? previousState,
-                  TrapSearchState operatorState,
-                  IRandomNumberGenerator random) => currentState;
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StateContractDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("TrapSearchState");
-        diagnostic.GetMessage().ShouldContain("TSearchState");
-    }
-
-    /// <summary>
-    /// An ordinary dedicated state type must remain valid on the same ladder.
-    /// </summary>
-    [Fact]
-    public async Task StatefulInterceptor_AllowsDedicatedStateType()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed class OrdinarySearchState : ISearchState;
-
-          file sealed record ValidInterceptor : StatefulInterceptor<int, OrdinarySearchState, ValidInterceptor.State>
-          {
-              public sealed class State
-              {
-                  public int Invocations { get; set; }
-              }
-
-              protected override State CreateScopedState() => new();
-
-              protected override OrdinarySearchState Transform(
-                  OrdinarySearchState currentState,
-                  OrdinarySearchState? previousState,
-                  State operatorState,
-                  IRandomNumberGenerator random)
-              {
-                  operatorState.Invocations++;
-                  return currentState;
-              }
-          }
-          """);
-
-        diagnostics.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public async Task ScopedStateRequest_RejectsExecutionMember()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator : Mutator<int>
-          {
-              public sealed class State
-              {
-                  public ResolutionScope? Registry { get; set; }
-              }
-
-              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
-                  new Executor(scope.GetScopedState(this, static () => new State()));
-
-              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
-              {
-                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                      IProblem<int, ISearchSpace<int>> problem) => state.Registry is null ? parents : [];
-              }
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("Registry");
-    }
-
-    [Fact]
-    public async Task ScopedStateRequest_RejectsAnExecutorAsState()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator : Mutator<int>
-          {
-              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
-                  scope.GetScopedState(this, static () => new Executor());
-
-              private sealed class Executor : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
-              {
-                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                      IProblem<int, ISearchSpace<int>> problem) => parents;
-              }
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("IExecutor");
-    }
-
-    [Fact]
-    public async Task ScopedStateRequest_AllowsOrdinaryExecutionData()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record ValidMutator : Mutator<int>
-          {
-              public sealed class State
-              {
-                  public int Invocations { get; set; }
-              }
-
-              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
-                  new Executor(scope.GetScopedState(this, static () => new State()));
-
-              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
-              {
-                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                      IProblem<int, ISearchSpace<int>> problem)
-                  {
-                      state.Invocations++;
-                      return parents;
-                  }
-              }
-          }
-          """);
-
-        diagnostics.ShouldBeEmpty();
-    }
-
-    [Fact]
-    public async Task ScopedStateRequest_RejectsAnotherConfiguration()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record InvalidMutator(IOperator<Mutation, int> Child) : Mutator<int>
-          {
-              public sealed class State
-              {
-                  public int Invocations { get; set; }
-              }
-
-              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
-                  new Executor(scope.GetScopedState(Child, static () => new State()));
-
-              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
-              {
-                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                      IProblem<int, ISearchSpace<int>> problem) => state.Invocations == 0 ? parents : [];
-              }
-          }
-          """);
-
-        var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
-        diagnostic.GetMessage().ShouldContain("'Child'");
-    }
-
-    [Fact]
-    public async Task ScopedStateRequest_AllowsThisAsNamedOrConvertedArgument()
-    {
-        var diagnostics = await AnalyzeAsync(Preamble + """
-          file sealed record ValidMutator : Mutator<int>
-          {
-              public sealed class State
-              {
-                  public int Invocations { get; set; }
-              }
-
-              protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope)
-              {
-                  scope.GetScopedState((IConfigurationNode)this, static () => new State());
-                  return new Executor(scope.GetScopedState(create: static () => new State(), configuration: this));
-              }
-
-              private sealed class Executor(State state) : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
-              {
-                  public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                      IProblem<int, ISearchSpace<int>> problem) => state.Invocations == 0 ? parents : [];
-              }
-          }
-          """);
-
-        diagnostics.ShouldBeEmpty();
-    }
-
-    [Fact]
     public async Task ConfigurationMutationRule_CoversAlgorithms()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
@@ -597,7 +167,7 @@ public class OperatorAuthoringAnalyzerTests
           """);
 
         var diagnostic = diagnostics.ShouldHaveSingleItem();
-        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.StatefulStateDiagnosticId);
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.ResourceGraphDiagnosticId);
         diagnostic.GetMessage().ShouldContain("not declared by this configuration");
     }
 
@@ -645,6 +215,119 @@ public class OperatorAuthoringAnalyzerTests
         diagnostics.ShouldBeEmpty();
     }
 
+    [Fact]
+    public async Task ResourceHandlesRejectExecutionGraphMembers()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed class InvalidResource
+          {
+              public IExecutor Executor { get; init; } = null!;
+          }
+          file sealed class InvalidHandle : ResourceHandle<InvalidResource>
+          {
+              protected override InvalidResource CreateResource() => new();
+          }
+          """);
+        diagnostics.ShouldContain(diagnostic => diagnostic.Id == OperatorAuthoringAnalyzer.ResourceGraphDiagnosticId);
+    }
+
+    [Theory]
+    [InlineData("ResolutionScope")]
+    [InlineData("RunResources")]
+    [InlineData("AlgorithmRun")]
+    public async Task ResourceLookupRejectsAnExecutorAsTheResource(string lookupType)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+          file static class ResourceConsumer
+          {
+              public static IExecutor Lookup({{lookupType}} resources, ResourceHandle<IExecutor> handle) => resources.Resource(handle);
+          }
+          """);
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.ResourceGraphDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("'IExecutor'");
+    }
+
+    [Theory]
+    [InlineData("ResolutionScope")]
+    [InlineData("RunResources")]
+    [InlineData("AlgorithmRun")]
+    public async Task ResourceLookupRejectsExecutionGraphMembers(string lookupType)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+          file sealed class InvalidResource
+          {
+              public IExecutor Executor { get; init; } = null!;
+          }
+          file static class ResourceConsumer
+          {
+              public static InvalidResource Lookup({{lookupType}} resources, ResourceHandle<InvalidResource> handle) => resources.Resource(handle);
+          }
+          """);
+        var diagnostic = diagnostics.ShouldHaveSingleItem();
+        diagnostic.Id.ShouldBe(OperatorAuthoringAnalyzer.ResourceGraphDiagnosticId);
+        diagnostic.GetMessage().ShouldContain("'Executor'");
+        diagnostic.GetMessage().ShouldContain("'IExecutor'");
+    }
+
+    [Theory]
+    [InlineData("ResolutionScope")]
+    [InlineData("RunResources")]
+    [InlineData("AlgorithmRun")]
+    public async Task ResourceLookupAllowsOrdinaryManagedData(string lookupType)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+          file sealed class Tally { public int Count { get; set; } }
+          file static class ResourceConsumer
+          {
+              public static Tally Lookup({{lookupType}} resources, ResourceHandle<Tally> handle) => resources.Resource(handle);
+          }
+          """);
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ResourcesAllowOrdinaryManagedData()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed class Tally { public int Count { get; set; } }
+          file sealed class TallyHandle : ResourceHandle<Tally>
+          {
+              protected override Tally CreateResource() => new();
+          }
+          """);
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("private IExecutor child = null!;")]
+    [InlineData("public List<IConfigurationNode> Children { get; } = new();")]
+    [InlineData("private Holder data = new(); private sealed class Holder { public ResolutionScope Scope { get; init; } = null!; }")]
+    public async Task ResourceGraphRuleFindsPrivateAndTransitiveDependencies(string members)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+          file sealed class InvalidResource { {{members}} }
+          file sealed class InvalidHandle : ResourceHandle<InvalidResource>
+          {
+              protected override InvalidResource CreateResource() => new();
+          }
+          """);
+        diagnostics.ShouldContain(diagnostic => diagnostic.Id == OperatorAuthoringAnalyzer.ResourceGraphDiagnosticId);
+    }
+
+    [Fact]
+    public async Task HandlesCannotRetainAResolutionContext()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed class InvalidHandle : ResourceHandle<object>
+          {
+              private ResolutionScope scope = ResolutionScope.Create();
+              protected override object CreateResource() => new();
+          }
+          """);
+        diagnostics.ShouldContain(diagnostic => diagnostic.Id == OperatorAuthoringAnalyzer.ResourceGraphDiagnosticId);
+    }
+
     private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)
     {
         var platformAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
@@ -654,7 +337,7 @@ public class OperatorAuthoringAnalyzerTests
 
         var projectAssemblies = new[]
         {
-            typeof(StatefulMutator<,>).Assembly.Location,
+            typeof(Mutator<>).Assembly.Location,
             typeof(IOperator<,>).Assembly.Location
         }.Distinct().Select(static path => MetadataReference.CreateFromFile(path));
 
@@ -677,6 +360,6 @@ public class OperatorAuthoringAnalyzerTests
             .WithAnalyzers([new OperatorAuthoringAnalyzer()])
             .GetAnalyzerDiagnosticsAsync();
 
-        return [.. analyzerDiagnostics.Where(static diagnostic => diagnostic.Id is OperatorAuthoringAnalyzer.StatefulStateDiagnosticId or OperatorAuthoringAnalyzer.ConfigurationMutationDiagnosticId or OperatorAuthoringAnalyzer.StateContractDiagnosticId)];
+        return [.. analyzerDiagnostics.Where(static diagnostic => diagnostic.Id is OperatorAuthoringAnalyzer.ResourceGraphDiagnosticId or OperatorAuthoringAnalyzer.ConfigurationMutationDiagnosticId)];
     }
 }

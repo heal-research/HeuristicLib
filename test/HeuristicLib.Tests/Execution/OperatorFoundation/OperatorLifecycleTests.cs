@@ -111,12 +111,12 @@ public sealed class OperatorLifecycleTests
             "invocation wrappers preserve the live state used by the callable operation");
         _ = Typed(scope).Resolve((IOperator<Evaluation, RealVector>)source).Evaluate([Input[0], Input[0]],
             RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem);
-        Check(Typed(scope).Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 14, "an external scalar adapter uses the same wrapper");
+        Check(Typed(scope).Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 3, "an external scalar adapter uses the same wrapper");
         var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
         var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         _ = broad.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
         _ = narrow.Resolve(((IOperator<Termination, RealVector>)source).Named("term")).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
-        Check(advice.Wraps == 5 && source.Log.Preparations == 1, "one advice wraps every operation and state view of one prepared owner");
+        Check(advice.Wraps == 5 && source.Log.Preparations == 5, "one advice wraps each independently constructed operation and state view");
         var interceptor = new IdentityInterceptor(new ProbeLog());
         var interceptScope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(interceptor), advice));
         var state = new ProbeState();

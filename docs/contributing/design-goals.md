@@ -43,6 +43,16 @@ The public model should revolve around a deliberately small vocabulary such as:
 
 Prefer one honest concept over parallel hierarchies when their semantics are truly shared.
 
+### Composition and progressive API complexity
+
+Algorithms and operators should compose through their ordinary contracts. A composed configuration remains usable wherever its supported contract is accepted, including alongside consumer defined components. Algorithms own optimization orchestration, so replacing or composing components does not require callers to assemble a search loop.
+
+Common tasks should have short domain entry points over the same machinery available through explicit APIs. Callers can request a final search state, stream progress or retain a run for additional control. Executor construction and aspect weaving remain automatic. Additional control should reveal only the responsibilities the caller needs, with predictable ownership, failure and resource sharing semantics.
+
+Conveniences should compose a small coherent core. Their brevity does not justify redundant execution paths or unnecessary public machinery. Dependencies that affect behavior remain explicit.
+
+Documentation should introduce the simple path first and link to more control when a task requires it. Learning paths should follow the goals of practitioners, experimenters, integrators and component authors. Custom component authoring and explicit run control are independent choices.
+
 ### Pit of success and strong typing
 
 The library should make correct usage natural and incorrect usage difficult.

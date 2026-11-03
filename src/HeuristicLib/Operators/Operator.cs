@@ -44,7 +44,7 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
     /// <summary>Builds this operator's executor, resolving children through the scope.</summary>
     /// <remarks>
     /// Resolution calls this for every build. Validate the configuration first and take shared execution data from
-    /// <see cref="ResolutionScope.GetScopedState{TState}"/>.
+    /// explicit resource handles when sharing is intended. Keep other mutable data in executor fields.
     /// </remarks>
     protected abstract TExecutor CreateExecutor(ResolutionScope scope);
 #pragma warning restore S4019

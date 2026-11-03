@@ -71,7 +71,7 @@ public sealed class DynamicRacingResolutionTests
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    public async Task Rebinding_PreservesIncumbentAndBurnInProgressAndObservesDeferredContenders(int racers)
+    public async Task NewExecutorStartsIndependentBurnInWhilePausedExecutorKeepsProgress(int racers)
     {
         using var problem = new EpochProblem();
         var metaCreator = new MetaCreator();
@@ -111,20 +111,20 @@ public sealed class DynamicRacingResolutionTests
 
         var evaluations = new CountAccumulator();
         var interceptions = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountInvocations(contender.Evaluator, evaluations),
+        var child = parent.With(Aspect.CountInvocations(contender.Evaluator, evaluations),
             Aspect.CountInvocations(interceptor, interceptions));
         await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
-        sources[1].ShouldBeSameAs(contender);
-        creations.CurrentCount.ShouldBe(1);
-        mutations.CurrentCount.ShouldBe(racers - 1);
+        sources[1].ShouldBeNull();
+        creations.CurrentCount.ShouldBe(2);
+        mutations.CurrentCount.ShouldBe(0);
         evaluations.CurrentCount.ShouldBeGreaterThan(0);
         interceptions.CurrentCount.ShouldBe(1);
         var observedEvaluations = evaluations.CurrentCount;
 
         (await paused.MoveNextAsync()).ShouldBeTrue();
-        creations.CurrentCount.ShouldBe(1);
-        mutations.CurrentCount.ShouldBe(2 * (racers - 1));
+        creations.CurrentCount.ShouldBe(2);
+        mutations.CurrentCount.ShouldBe(racers - 1);
         evaluations.CurrentCount.ShouldBe(observedEvaluations);
         interceptions.CurrentCount.ShouldBe(1);
 
@@ -132,9 +132,9 @@ public sealed class DynamicRacingResolutionTests
         var independent = ResolutionScope.Create(Aspect.CountInvocations(metaCreator, creations));
         await using var fresh = Run(independent, racing, problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
-        creations.CurrentCount.ShouldBe(2);
+        creations.CurrentCount.ShouldBe(3);
         sources[independentSourceIndex].ShouldBeNull();
-        mutations.CurrentCount.ShouldBe(2 * (racers - 1));
+        mutations.CurrentCount.ShouldBe(racers - 1);
     }
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm, EpochProblem problem) =>

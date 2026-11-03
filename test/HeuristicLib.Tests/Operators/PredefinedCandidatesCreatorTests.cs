@@ -24,7 +24,7 @@ public class PredefinedCandidatesCreatorTests
     }
 
     [Fact]
-    public void Rebinding_PreservesCursorAndUsesTheContextualFallback()
+    public void NewExecutorHasIndependentCursorAndContextualFallback()
     {
         var random = RandomNumberGenerator.Create(42);
         IOperator<Creation, int> fallback = new ExpectedRandomCreator(random, 99);
@@ -34,13 +34,13 @@ public class PredefinedCandidatesCreatorTests
         var outer = parent.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
         outer.Create(1, random, problem.SearchSpace, problem).ShouldBe([10]);
         var observedFallbackCalls = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountInvocations(fallback, observedFallbackCalls));
+        var child = parent.With(Aspect.CountInvocations(fallback, observedFallbackCalls));
         var inner = child.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
 
         inner.ShouldNotBeSameAs(outer);
-        inner.Create(3, random, problem.SearchSpace, problem).ShouldBe([20, 30, 99]);
+        inner.Create(4, random, problem.SearchSpace, problem).ShouldBe([10, 20, 30, 99]);
         observedFallbackCalls.CurrentCount.ShouldBe(1);
-        outer.Create(1, random, problem.SearchSpace, problem).ShouldBe([99]);
+        outer.Create(1, random, problem.SearchSpace, problem).ShouldBe([20]);
         observedFallbackCalls.CurrentCount.ShouldBe(1);
         inner.Create(1, random, problem.SearchSpace, problem).ShouldBe([99]);
         observedFallbackCalls.CurrentCount.ShouldBe(2);

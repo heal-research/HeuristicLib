@@ -13,23 +13,7 @@ namespace HEAL.HeuristicLib.Operators.MoveCreators;
 /// run requests, and a request the move creator was not written for is reported when the execution graph is built.
 /// </para>
 /// </remarks>
-public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState>
+public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove>
     : Operator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TState : class
-{
-    protected abstract TState CreateScopedState();
-
-    protected abstract IEnumerable<TMove> Moves(TCandidate candidate, TState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-
-    protected sealed override IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) =>
-        new Executor(this, scope.GetScopedState(this, CreateScopedState));
-
-    private sealed class Executor(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> moveCreator, TState state)
-        : IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
-    {
-        public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            moveCreator.Moves(candidate, state, random, searchSpace, problem);
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;

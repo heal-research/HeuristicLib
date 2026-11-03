@@ -8,13 +8,13 @@ namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
 public class RefinerEvaluatorAccountingTests
 {
-    // One configuration reference shares prepared accounting state across fresh executors.
+    // Sharing follows an explicit handle and participates in configuration equality.
     [Fact]
-    public void EvaluationAccounting_FollowsConfigurationInstanceIdentityRatherThanEquality()
+    public void EvaluationAccountingFollowsHandleIdentity()
     {
         var scope = ResolutionScope.Create();
-        var shared = CreateEvaluator().LimitEvaluations(1);
-        var separateButEqual = CreateEvaluator().LimitEvaluations(1);
+        var shared = CreateEvaluator().LimitEvaluations(1) with { Counter = new CountAccumulatorHandle() };
+        var separateButEqual = shared with { Counter = new CountAccumulatorHandle() };
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
         var problem = CreateProblem();
@@ -24,7 +24,7 @@ public class RefinerEvaluatorAccountingTests
             .Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).ShouldBe([problem.Objective.Worst]);
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual)
             .Evaluate([10], RandomNumberGenerator.Create(3), problem.SearchSpace, problem).ShouldNotBe([problem.Objective.Worst]);
-        separateButEqual.ShouldBe(shared);
+        separateButEqual.ShouldNotBe(shared);
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
     }
 
@@ -33,7 +33,7 @@ public class RefinerEvaluatorAccountingTests
     public void WithASharedBudget_ComparisonEvaluationsConsumeTheAlgorithmsBudget()
     {
         var problem = CreateProblem();
-        var sharedEvaluator = CreateEvaluator().LimitEvaluations(2);
+        var sharedEvaluator = CreateEvaluator().LimitEvaluations(2) with { Counter = new CountAccumulatorHandle() };
         var scope = ResolutionScope.Create();
         var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator));
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);

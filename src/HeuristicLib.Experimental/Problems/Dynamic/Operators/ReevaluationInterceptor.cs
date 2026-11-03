@@ -25,24 +25,19 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
 
     protected override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope scope)
     {
-        var state = scope.GetScopedState(this, () => new State(SourceProblem.CurrentEpoch));
         var evaluator = scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator);
-        return new Executor(evaluator, SourceProblem, state);
+        return new Executor(evaluator, SourceProblem);
     }
 
-    private sealed class State(int initialEpoch)
-    {
-        private int consumedEpoch = initialEpoch;
-
-        public bool ConsumeReevaluationRequest(int epoch) => Interlocked.Exchange(ref consumedEpoch, epoch) != epoch;
-    }
-
-    private sealed class Executor(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem, State state)
+    private sealed class Executor(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem)
         : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     {
+        private int consumedEpoch = sourceProblem.CurrentEpoch;
+
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
         {
-            if (!state.ConsumeReevaluationRequest(sourceProblem.CurrentEpoch))
+            var epoch = sourceProblem.CurrentEpoch;
+            if (Interlocked.Exchange(ref consumedEpoch, epoch) == epoch)
             {
                 return currentState;
             }

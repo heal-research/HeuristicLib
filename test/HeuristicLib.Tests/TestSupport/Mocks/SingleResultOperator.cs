@@ -25,22 +25,12 @@ public sealed class SingleResultOperator
         where TProblem : class, IProblem<int, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        var state = scope.GetScopedState(this, () =>
-        {
-            Preparations++;
-            return new State();
-        });
+        Preparations++;
         Constructions++;
-        return new Executor(this, state);
+        return new Executor(this);
     }
 
-
-    private sealed class State
-    {
-        public int Invocations { get; set; }
-    }
-
-    private sealed class Executor(SingleResultOperator owner, State state)
+    private sealed class Executor(SingleResultOperator owner)
         : ICreationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
         ICrossoverExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
         IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
@@ -48,10 +38,12 @@ public sealed class SingleResultOperator
         IRefinementExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
         IReplacementExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
     {
+        private int invocations;
+
         private int Next()
         {
             owner.Invocations++;
-            return ++state.Invocations;
+            return ++invocations;
         }
 
         public IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [Next()];
@@ -61,4 +53,5 @@ public sealed class SingleResultOperator
         public IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [new(Next(), new ObjectiveVector(0))];
         public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [new(Next(), new ObjectiveVector(0))];
     }
+
 }
