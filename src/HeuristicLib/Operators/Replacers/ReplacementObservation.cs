@@ -53,7 +53,11 @@ public static class ReplacementObservations
     extension<TCandidate>(IOperator<Replacement, TCandidate> replacer)
     {
         /// <summary>The observations of this replacer's successful calls.</summary>
-        public ObservationSource<ReplacementObservation<TCandidate>> Invocations =>
-            ObservationSource.Create<ReplacementObservation<TCandidate>>(replacer, observe => Aspect.Create(Pointcut.Reference(replacer), new ReplacementObservationAdvice<TCandidate>(observe)));
+        public InvocationSource<Replacement, TCandidate, ReplacementObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(replacer, (Action<ReplacementObservation<TCandidate>> observe) => new ReplacementObservationAdvice<TCandidate>(observe));
+
+        /// <summary>Records this replacer's successful calls into the instrument, wherever this configuration is placed.</summary>
+        public Observed<Replacement, TCandidate, ReplacementObservation<TCandidate>> Observed(IObservationInstrument<ReplacementObservation<TCandidate>> instrument) =>
+            new(replacer.Invocations, instrument);
     }
 }

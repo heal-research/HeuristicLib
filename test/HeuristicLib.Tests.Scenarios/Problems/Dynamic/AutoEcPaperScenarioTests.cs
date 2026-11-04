@@ -101,14 +101,14 @@ public class AutoEcPaperScenarioTests
             ModelObservationInterval = 10
         };
         var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(evaluator.Invocations, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
         var bbcp =
             new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
                 ActivatedTravelingSalesmanProblem>(
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), setup: setup => setup.AddAspect(qualityCurve).AddAspect(bbcp));
+        var run = racing.Advised(qualityCurve).Advised(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -116,7 +116,7 @@ public class AutoEcPaperScenarioTests
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityCurve.By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(2);
+        run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(2);
         bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
         double.IsFinite(bbcp.Performance).ShouldBeTrue();
     }
@@ -151,13 +151,13 @@ public class AutoEcPaperScenarioTests
             ModelObservationInterval = 10
         };
         var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(evaluator.Invocations, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
         var bbcp =
             new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                 problem,
                 [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123), setup: setup => setup.AddAspect(qualityCurve).AddAspect(bbcp));
+        var run = racing.Advised(qualityCurve).Advised(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -165,8 +165,8 @@ public class AutoEcPaperScenarioTests
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityCurve.SampleCount.ShouldBeGreaterThanOrEqualTo(3);
-        qualityCurve.By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(3);
+        run.Result(qualityCurve).SampleCount.ShouldBeGreaterThanOrEqualTo(3);
+        run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(3);
         bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
         double.IsFinite(bbcp.Performance).ShouldBeTrue();
     }

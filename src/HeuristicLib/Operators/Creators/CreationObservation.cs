@@ -46,7 +46,11 @@ public static class CreationObservations
     extension<TCandidate>(IOperator<Creation, TCandidate> creator)
     {
         /// <summary>The observations of this creator's successful calls.</summary>
-        public ObservationSource<CreationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create<CreationObservation<TCandidate>>(creator, observe => Aspect.Create(Pointcut.Reference(creator), new CreationObservationAdvice<TCandidate>(observe)));
+        public InvocationSource<Creation, TCandidate, CreationObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(creator, (Action<CreationObservation<TCandidate>> observe) => new CreationObservationAdvice<TCandidate>(observe));
+
+        /// <summary>Records this creator's successful calls into the instrument, wherever this configuration is placed.</summary>
+        public Observed<Creation, TCandidate, CreationObservation<TCandidate>> Observed(IObservationInstrument<CreationObservation<TCandidate>> instrument) =>
+            new(creator.Invocations, instrument);
     }
 }

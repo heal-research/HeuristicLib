@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <remarks>
 /// <para>
 /// A Pareto front, a descent graph and a fitted model are accumulators: every observation changes one object, and
-/// what a reader wants is that object as it stands. Use <see cref="TraceAnalyzer{TResult}"/> instead when the values
+/// what a reader wants is that object as it stands. Use <see cref="TraceAnalyzer{TObservation, TValue}"/> instead when the values
 /// are immutable and the history is the point. Retention and clocks have no meaning here: there is nothing to store
 /// apart from what was computed, and one current state has no moment of its own.
 /// </para>

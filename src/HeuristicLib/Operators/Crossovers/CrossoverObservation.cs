@@ -46,7 +46,11 @@ public static class CrossoverObservations
     extension<TCandidate>(IOperator<Crossover, TCandidate> crossover)
     {
         /// <summary>The observations of this crossover's successful calls.</summary>
-        public ObservationSource<CrossoverObservation<TCandidate>> Invocations =>
-            ObservationSource.Create<CrossoverObservation<TCandidate>>(crossover, observe => Aspect.Create(Pointcut.Reference(crossover), new CrossoverObservationAdvice<TCandidate>(observe)));
+        public InvocationSource<Crossover, TCandidate, CrossoverObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(crossover, (Action<CrossoverObservation<TCandidate>> observe) => new CrossoverObservationAdvice<TCandidate>(observe));
+
+        /// <summary>Records this crossover's successful calls into the instrument, wherever this configuration is placed.</summary>
+        public Observed<Crossover, TCandidate, CrossoverObservation<TCandidate>> Observed(IObservationInstrument<CrossoverObservation<TCandidate>> instrument) =>
+            new(crossover.Invocations, instrument);
     }
 }

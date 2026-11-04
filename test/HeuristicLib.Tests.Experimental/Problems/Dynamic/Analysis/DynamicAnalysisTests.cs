@@ -46,14 +46,14 @@ public class DynamicAnalysisTests
             [4]
         ]);
         var epoch = Clock.FromEpoch(problem);
-        var bestPerEpoch = Analyzer.Trace(algorithm.Evaluator.Invocations, o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bestPerEpoch = algorithm.Evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(bestPerEpoch));
+        var run = algorithm.Advised(bestPerEpoch).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // One entry per firing, each tagged with the environment version its batch was evaluated against.
-        bestPerEpoch.By(epoch).Select(point => (point.Value.Candidate, point.Time))
+        run.Result(bestPerEpoch).By(epoch).Select(point => (point.Value.Candidate, point.Time))
                     .ShouldBe([(3, 0), (1, 1), (4, 2)]);
     }
 
@@ -65,17 +65,17 @@ public class DynamicAnalysisTests
             [5, 3, 7],
             [10, 1]
         ]);
-        var evaluations = Clock.FromCandidates(algorithm.Evaluator);
+        var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var epoch = Clock.FromEpoch(problem);
         var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(work));
+        var run = algorithm.Advised(work).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // Under a batch policy an epoch ending mid-batch leaves the rest of that batch scored by the old environment:
         // 7 runs after the boundary at 3, and 1 after the boundary at 10.
-        EpochWorkTrace.PerEpoch(work, evaluations, epoch, evaluationsPerEpoch: 2)
+        EpochWorkTrace.PerEpoch(run.Result(work), evaluations, epoch, evaluationsPerEpoch: 2)
                       .ShouldBe([new EpochWork(0, 3, 1), new EpochWork(1, 2, 1)]);
     }
 
@@ -176,7 +176,7 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(analysis));
+        var run = algorithm.Advised(analysis).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 

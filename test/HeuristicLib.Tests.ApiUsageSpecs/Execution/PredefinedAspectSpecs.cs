@@ -84,8 +84,11 @@ public sealed class PredefinedAspectSpecs
         foreach (var (source, aspect) in aspects)
             aspect.ShouldHaveSingleItem().Pointcut.Matches(source).ShouldBeTrue();
 
-        Clock.FromIterations(algorithm).ShouldHaveSingleItem().Pointcut.Matches(algorithm).ShouldBeTrue();
-        Clock.FromCandidates(evaluator).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
-        Clock.FromElapsedTime(timeProvider).ShouldBeOfType<ElapsedTimeClock>();
+        // Counters are instruments: each run creates the aspect that places them at their source.
+        var results = ResolutionScope.Create().Results;
+        results.Aspect(algorithm.Iterations.Count()).ShouldHaveSingleItem().Pointcut.Matches(algorithm).ShouldBeTrue();
+        results.Aspect(evaluator.Invocations.CountCandidates()).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
+        results.Aspect(evaluator.Invocations.Duration(timeProvider)).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
+        results.Elapsed.ShouldBe(TimeSpan.Zero);
     }
 }

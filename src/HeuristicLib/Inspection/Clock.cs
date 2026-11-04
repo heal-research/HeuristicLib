@@ -2,52 +2,62 @@ using HEAL.HeuristicLib.Execution;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>
-/// One typed notion of time a trace can record its entries against.
-/// </summary>
+/// <summary>A notion of time a trace records each entry against, such as a count of evaluations or the elapsed time.</summary>
 /// <remarks>
-/// Derive from <see cref="Clock{TTime}"/> to add a clock of your own, such as one over a domain quantity the library
-/// knows nothing about. A clock belongs beside the thing it reads and is offered as an extension on <see cref="Clock"/>
-/// named for the time it reads, such as <c>Clock.FromCandidates</c>. A clock whose time is kept current by advice
-/// assigns it in its constructor; traces apply a clock's advice before their own observations.
+/// A clock is an instrument whose result is read as a time. A trace binds each of its clocks to the run, reads them at
+/// every entry and attaches the clocks' own aspects before its observations, so an entry reads clocks that already
+/// include its call. Mixed lists, such as <c>[evaluations, Clock.Elapsed]</c>, use this type. Derive a clock of your own
+/// from <see cref="Clock{TTime, TResult}"/>.
 /// </remarks>
-public abstract class Clock : Aspect
+public interface IClock
 {
-    private protected Clock() { }
-
-    internal abstract object Read();
-
-    /// <summary>
-    /// Creates a clock measuring wall-clock time since its creation.
-    /// </summary>
-    public static ElapsedTimeClock FromElapsedTime(TimeProvider timeProvider) => new(timeProvider);
+    // Binds the clock to one run: the reader a trace samples at each entry, and the aspect that keeps the clock current.
+    internal (Func<object> Read, Aspect Aspect) Bind(RunResults results);
 }
 
-/// <summary>
-/// A clock whose time has the type <typeparamref name="TTime"/>.
-/// </summary>
+/// <summary>A clock whose time has the type <typeparamref name="TTime"/>, which is what a trace is read back by.</summary>
+public interface IClock<out TTime> : IClock;
+
+/// <summary>An instrument whose result in each run is read as a time of the type <typeparamref name="TTime"/>.</summary>
 /// <remarks>
-/// This is the type a custom clock derives from. The clock object is also the key a trace is read back with, so one
-/// instance means one axis: two clocks of the same kind stay distinguishable.
+/// This is the type a custom clock derives from, such as one over a domain quantity the library knows nothing about. Its
+/// result is created once per run, as for every instrument, and a clock that is kept current by advice places that
+/// advice through <see cref="Instrument{TResult}.CreateAspect"/>. A clock belongs beside the thing it reads. The clock
+/// object is also the key a trace is read back with, so one instance means one axis: two clocks of the same kind stay
+/// distinguishable.
 /// </remarks>
-public abstract class Clock<TTime> : Clock
+public abstract class Clock<TTime, TResult> : Instrument<TResult>, IClock<TTime> where TResult : class
 {
     protected Clock() { }
 
-    /// <summary>
-    /// Reads the time in effect now. Called once per recorded trace entry.
-    /// </summary>
-    protected abstract TTime ReadTime();
+    /// <summary>Reads the time from this run's result. Called once per recorded trace entry.</summary>
+    protected abstract TTime Read(TResult result);
 
-    internal sealed override object Read() => ReadTime()!;
+    (Func<object> Read, Aspect Aspect) IClock.Bind(RunResults results)
+    {
+        var result = results.Result(this);
+        return (() => Read(result)!, results.Aspect(this));
+    }
 }
 
-/// <summary>
-/// Measures wall-clock time since this clock was created.
-/// </summary>
-public sealed class ElapsedTimeClock(TimeProvider timeProvider) : Clock<TimeSpan>
+/// <summary>The clocks the library supplies beside its counters and durations.</summary>
+/// <remarks>
+/// Counters and durations are clocks too, created from the source they measure, such as
+/// <c>evaluator.Invocations.Count()</c> or <c>evaluator.Invocations.Duration()</c>.
+/// </remarks>
+public static class Clock
 {
-    private readonly long startedAt = timeProvider.GetTimestamp();
+    /// <summary>The time the run's root algorithm has spent executing, read from <see cref="RunResults.Elapsed"/>.</summary>
+    /// <remarks>
+    /// Like a stopwatch, it stops while the run is paused and while a consumer handles a streamed state. It needs no
+    /// placement, so attaching it does nothing.
+    /// </remarks>
+    public static IClock<TimeSpan> Elapsed { get; } = new ElapsedClock();
 
-    protected override TimeSpan ReadTime() => timeProvider.GetElapsedTime(startedAt);
+    private sealed class ElapsedClock : Clock<TimeSpan, RunResults>
+    {
+        protected override RunResults CreateResult(RunResults results) => results;
+
+        protected override TimeSpan Read(RunResults result) => result.Elapsed;
+    }
 }

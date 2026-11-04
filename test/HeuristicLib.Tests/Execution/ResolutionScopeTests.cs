@@ -335,24 +335,47 @@ public class ResolutionScopeTests
     }
 
     // A scope fixes how it resolves a configuration when the resolution starts, so the configuration's own construction
-    // can neither share it nor add advice for it.
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void AConfigurationChangingHowItIsResolvedWhileBuilding_IsAnError(bool share)
+    // cannot share it.
+    [Fact]
+    public void AConfigurationSharingItselfWhileBuilding_IsAnError()
+    {
+        var leaf = new CountingConfiguration("leaf");
+        CompositeConfiguration? composite = null;
+        composite = new CompositeConfiguration("composite", leaf, scope => scope.Share(composite!));
+
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve(composite))
+            .Message.ShouldContain("has already resolved it");
+    }
+
+    // Advice a configuration's own construction adds never applies to that configuration, neither to the request that
+    // builds it nor to later requests in the scope, while it reaches what the construction resolves afterwards.
+    [Fact]
+    public void AdviceAConfigurationAddsWhileBuilding_NeverAppliesToItself()
     {
         var leaf = new CountingConfiguration("leaf");
         CompositeConfiguration? composite = null;
         composite = new CompositeConfiguration("composite", leaf, scope =>
-        {
-            if (share)
-                scope.Share(composite!);
-            else
-                scope.AddAspect(Wrap(composite!, "late"));
-        });
+            scope.AddAspect(new NamedAspect(Wrap(composite!, "late"), Wrap(leaf, "advised"))));
+        var scope = ResolutionScope.Create();
 
-        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve(composite))
-            .Message.ShouldContain(share ? "has already resolved it" : "already resolved without it");
+        scope.Resolve(composite).Name.ShouldBe("composite[advised(leaf)]");
+        scope.Resolve(composite).Name.ShouldBe("composite[advised(leaf)]");
+        scope.Resolve(leaf).Name.ShouldBe("advised(leaf)");
+        composite.CreateCount.ShouldBe(1);
+    }
+
+    // Excluding the adder is the only exception: advice that would newly reach another configuration the scope has
+    // resolved is still an error, whatever adds it.
+    [Fact]
+    public void AdviceAConfigurationAddsWhileBuilding_ForAnotherResolvedConfiguration_IsAnError()
+    {
+        var other = new CountingConfiguration("other");
+        var composite = new CompositeConfiguration("composite", new CountingConfiguration("leaf"), scope => scope.AddAspect(Wrap(other, "late")));
+        var scope = ResolutionScope.Create();
+        scope.Resolve(other);
+
+        Should.Throw<InvalidOperationException>(() => scope.Resolve(composite))
+            .Message.ShouldContain("already resolved without it");
     }
 
     // ---------- Explicit sharing ----------

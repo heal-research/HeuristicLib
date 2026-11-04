@@ -46,7 +46,11 @@ public static class RefinementObservations
     extension<TCandidate>(IOperator<Refinement, TCandidate> refiner)
     {
         /// <summary>The observations of this refiner's successful calls.</summary>
-        public ObservationSource<RefinementObservation<TCandidate>> Invocations =>
-            ObservationSource.Create<RefinementObservation<TCandidate>>(refiner, observe => Aspect.Create(Pointcut.Reference(refiner), new RefinementObservationAdvice<TCandidate>(observe)));
+        public InvocationSource<Refinement, TCandidate, RefinementObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(refiner, (Action<RefinementObservation<TCandidate>> observe) => new RefinementObservationAdvice<TCandidate>(observe));
+
+        /// <summary>Records this refiner's successful calls into the instrument, wherever this configuration is placed.</summary>
+        public Observed<Refinement, TCandidate, RefinementObservation<TCandidate>> Observed(IObservationInstrument<RefinementObservation<TCandidate>> instrument) =>
+            new(refiner.Invocations, instrument);
     }
 }

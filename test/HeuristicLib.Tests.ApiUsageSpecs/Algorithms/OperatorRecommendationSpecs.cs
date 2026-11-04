@@ -54,11 +54,11 @@ public class OperatorRecommendationSpecs
 
         var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
         var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup.AddAspect(qualityAnalyzer));
+        var run = algorithm.Advised(qualityAnalyzer).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        qualityAnalyzer.SampleCount.ShouldBe(5);
+        run.Result(qualityAnalyzer).SampleCount.ShouldBe(5);
     }
 
     /// <summary>

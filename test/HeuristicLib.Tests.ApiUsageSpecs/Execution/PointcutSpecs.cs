@@ -148,8 +148,7 @@ public class PointcutSpecs
             ? new MutationCounter(mutations)
             : Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Invocations));
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
-            .AddAspect(counting));
+        var run = algorithm.Advised(counting).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         mutations.CurrentCount.ShouldBeGreaterThan(0);
@@ -239,20 +238,46 @@ public class PointcutSpecs
         var temperatures = Analyzer.Trace([Temperatures(warmup), Temperatures(warmup), Temperatures(main)],
             static temperature => temperature);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(temperatures);
+        scope.AddAspect(scope.Results.Aspect(temperatures));
         var executor = scope.Resolve(plan);
 
         executor.Temperature(step: 0).ShouldBe(100);
-        var first = temperatures.Snapshot();
+        var first = scope.Results.Result(temperatures).Snapshot();
         executor.Temperature(step: 5).ShouldBe(2);
 
         first.Values.ShouldBe([100]);
-        temperatures.Snapshot().Values.ShouldBe([100, 2]);
+        scope.Results.Result(temperatures).Snapshot().Values.ShouldBe([100, 2]);
+    }
+
+    /// <summary>
+    /// A role of your own is observed by attaching an instrument to the scope, as <c>Advised</c> does, or explicitly by
+    /// a wrapper of the role's own that applies the same observation advice and records into the instrument.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void ConsumerDefinedRolesAreObservedThroughAttachmentOrTheirOwnWrapper(bool attached)
+    {
+        ICoolingSchedule warmup = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
+        ICoolingSchedule main = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
+        var temperatures = Analyzer.Trace([Temperatures(warmup), Temperatures(main)], static temperature => temperature);
+        var plan = attached
+            ? new AnnealingPlan(warmup, main, WarmupSteps: 3)
+            : new AnnealingPlan(new ObservedCooling(warmup, temperatures), new ObservedCooling(main, temperatures), WarmupSteps: 3);
+        var scope = ResolutionScope.Create();
+        if (attached)
+            scope.AddAspect(scope.Results.Aspect(temperatures));
+        var executor = scope.Resolve(plan);
+
+        executor.Temperature(step: 0).ShouldBe(100);
+        executor.Temperature(step: 5).ShouldBe(2);
+
+        scope.Results.Result(temperatures).Snapshot().Values.ShouldBe([100, 2]);
     }
 
     // The role's calls receive no problem, so its observations are the plain temperatures each call returned.
     private static ObservationSource<double> Temperatures(ICoolingSchedule schedule) =>
-        ObservationSource.Create<double>(schedule, observe => Aspect.Create(Pointcut.Reference(schedule), new RecordedCoolingAdvice(observe)));
+        ObservationSource.Create(schedule, (Action<double> observe) => new RecordedCoolingAdvice(observe));
 
     private sealed class MutationCounter : Aspect
     {
@@ -313,6 +338,13 @@ public class PointcutSpecs
                 return temperature;
             }
         }
+    }
+
+    // The role's own observation wrapper: it applies the same advice as attaching the instrument, recording into it.
+    private sealed record ObservedCooling(ICoolingSchedule Schedule, IObservationInstrument<double> Instrument) : ICoolingSchedule
+    {
+        public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) =>
+            new RecordedCoolingAdvice(Instrument.CreateRecorder(scope.Results)).Wrap(scope.Resolve(Schedule), Schedule);
     }
 
     private sealed record AnnealingPlan(ICoolingSchedule Warmup, ICoolingSchedule Main, int WarmupSteps)

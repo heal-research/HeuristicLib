@@ -4,24 +4,14 @@ namespace HEAL.HeuristicLib.Execution;
 /// <remarks>Lookup is synchronized. Each returned resource defines its own concurrency and ownership contract.</remarks>
 public sealed class RunResources
 {
-    private readonly Lock sync = new();
-    private readonly Dictionary<object, object> resources;
+    private readonly RunResults table;
 
-    internal RunResources(IEnumerable<KeyValuePair<object, object>> supplied)
+    internal RunResources(RunResults table)
     {
-        resources = new(supplied, ReferenceEqualityComparer.Instance);
+        this.table = table;
     }
 
     /// <summary>Returns the resource for this handle, creating its default instance lazily when needed.</summary>
-    public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class
-    {
-        lock (sync)
-        {
-            if (resources.TryGetValue(handle, out var resource))
-                return (TResource)resource;
-            var created = handle.CreateResource();
-            resources.Add(handle, created);
-            return created;
-        }
-    }
+    public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class =>
+        table.Resource(handle);
 }

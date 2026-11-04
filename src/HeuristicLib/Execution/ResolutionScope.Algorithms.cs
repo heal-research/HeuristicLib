@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Execution;
@@ -10,7 +11,9 @@ public partial class ResolutionScope
     /// <summary>Builds an algorithm's executor for the run's types and applies the matching algorithm advice.</summary>
     /// <remarks>
     /// The algorithm must produce the requested search state and fit the run, which it answers for its children too. A
-    /// mismatch names every configuration responsible, such as an operator written for another search space.
+    /// mismatch names every configuration responsible, such as an operator written for another search space. An algorithm
+    /// resolved at the root scope outside any construction is the run's root: the time spent advancing its executor counts
+    /// toward <see cref="RunResults.Elapsed"/>.
     /// </remarks>
     public IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate> source)
         where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -25,6 +28,7 @@ public partial class ResolutionScope
         if (!algorithm.Fits(execution))
             throw SearchConfigurationValidation.Mismatch(algorithm, execution);
         using var building = node.Tree.Enter(algorithm);
+        var root = node.Parent is null && node.Tree.EnteredOutsideConstruction;
         var owner = Owner(algorithm);
         var existing = Existing(owner, algorithm, static executor => executor is IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
         var applicable = MatchingAdvice(algorithm);
@@ -46,7 +50,7 @@ public partial class ResolutionScope
                     _ => throw new InvalidOperationException($"{advice.GetType().FullName} cannot wrap algorithm {algorithm.GetType().Name}. " +
                         "Algorithm advice derives from AlgorithmAdvice<TCandidate, TSearchState>.")
                 };
-            return executor;
+            return root ? new ElapsedTimeExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(executor, node.Tree.Results) : executor;
         }
         catch
         {
@@ -75,4 +79,45 @@ public partial class ResolutionScope
             .Where(contract => contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IAlgorithm<,>))
             .Select(contract => ExecutionSignature.Name(contract.GetGenericArguments()[1]))
             .DefaultIfEmpty("no search state"));
+}
+
+// Adds the time spent inside each call that advances the root algorithm, including its advice, to the run's elapsed
+// time. Everything else passes through unchanged, so the stream completes, fails and is disposed exactly as the wrapped
+// one is.
+file sealed class ElapsedTimeExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(
+    IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, RunResults results)
+    : IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
+{
+    public IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
+        TSearchState? initialState = null, CancellationToken ct = default) =>
+        new TimedStates(executor.RunStreamingAsync(problem, random, initialState, ct), results);
+
+    private sealed class TimedStates(IAsyncEnumerable<TSearchState> states, RunResults results) : IAsyncEnumerable<TSearchState>
+    {
+        public IAsyncEnumerator<TSearchState> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+            new Enumerator(states.GetAsyncEnumerator(cancellationToken), results);
+    }
+
+    private sealed class Enumerator(IAsyncEnumerator<TSearchState> states, RunResults results) : IAsyncEnumerator<TSearchState>
+    {
+        public TSearchState Current => states.Current;
+
+        public async ValueTask<bool> MoveNextAsync()
+        {
+            results.EnterCall();
+            try
+            {
+                return await states.MoveNextAsync();
+            }
+            finally
+            {
+                results.ExitCall();
+            }
+        }
+
+        public ValueTask DisposeAsync() => states.DisposeAsync();
+    }
 }

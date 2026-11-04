@@ -10,8 +10,8 @@ namespace HEAL.HeuristicLib.Execution;
 /// and in its child scopes. A child scope from <see cref="CreateChildScope"/> keeps the advice and the shared
 /// configurations of its ancestors and builds its own executors for everything else. <see cref="Share"/> lets child
 /// scopes use one executor of a configuration, kept in this scope's table and built in a child scope of its own. All
-/// scopes created from one root share one construction lock, one resource table and one fate: after a construction
-/// failure, every resolution through the tree throws.
+/// scopes created from one root share one construction lock, one run's <see cref="Results"/> and one fate: after a
+/// construction failure, every resolution through the tree throws, while the results stay readable.
 /// </remarks>
 public partial class ResolutionScope
 {
@@ -28,34 +28,50 @@ public partial class ResolutionScope
     {
     }
 
-    /// <summary>Creates the root of a new scope tree, without advice.</summary>
+    /// <summary>Creates the root of a new scope tree, without advice, with the results of a new run.</summary>
     public static ResolutionScope Create() =>
-        Create(new RunResources([]));
+        Create([]);
 
-    internal static ResolutionScope Create(RunResources resources) =>
-        new(new Node(new Tree(resources), null));
+    internal static ResolutionScope Create(IEnumerable<KeyValuePair<object, object>> supplied) =>
+        Create(supplied, TimeProvider.System);
+
+    // The time provider measures the root algorithm's elapsed time; tests pass a controllable one.
+    internal static ResolutionScope Create(IEnumerable<KeyValuePair<object, object>> supplied, TimeProvider timeProvider) =>
+        new(new Node(new Tree(new RunResults(supplied, timeProvider)), null));
+
+    /// <summary>The results of the run this scope tree belongs to, one per instrument.</summary>
+    /// <remarks>
+    /// Configurations look up the results they write into or read, such as the counter a terminator checks. Every scope
+    /// of one tree has the same results.
+    /// </remarks>
+    public RunResults Results => node.Tree.Results;
 
     /// <remarks>Lookup is lazy and uses handle identity. It does not serialize access to the resource itself.</remarks>
     public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class =>
-        node.Tree.Resources.Resource(handle);
+        node.Tree.Results.Resource(handle);
 
     /// <summary>Adds an aspect to this scope, so that its advice applies to every later resolution here and in child scopes.</summary>
     /// <remarks>
     /// The added aspect wraps closer to each executor than the aspects added before it. Adding an aspect this scope
-    /// already has changes nothing. Adding advice that would newly apply to a configuration this scope has resolved or is
-    /// still building is an error, as is adding advice once the scope has child scopes, because the advice around those
-    /// executors could no longer be the same for every request.
+    /// already has changes nothing. An aspect added during a configuration's construction never applies to that
+    /// configuration itself, which is resolved before its construction adds anything, so that the result does not depend
+    /// on the order of resolution. Adding advice that would newly apply to any other configuration this scope has
+    /// resolved or is still building is an error, as is adding advice once the scope has child scopes, because the advice
+    /// around those executors could no longer be the same for every request.
     /// </remarks>
     public void AddAspect(Aspect aspect)
     {
         using var locked = node.Tree.Sync.EnterScope();
-        if (node.Aspects.Contains(aspect, ReferenceEqualityComparer.Instance))
+        if (node.Aspects.Any(added => ReferenceEquals(added.Aspect, aspect)))
             return;
         if (node.HasChildScopes)
             throw new InvalidOperationException($"{aspect.GetType().Name} cannot be added to a resolution scope that already has child scopes. " +
                 "Add aspects before resolving anything that creates child scopes, so that every child sees the same advice.");
+        var adder = node.Tree.Constructing;
         foreach (var configuration in node.Advised)
         {
+            if (ReferenceEquals(configuration, adder))
+                continue;
             var effective = MatchingAdvice(configuration).Select(pair => pair.Advice).ToHashSet(ReferenceEqualityComparer.Instance);
             foreach (var (pointcut, advice) in aspect)
                 if (pointcut.Matches(configuration) && !effective.Contains(advice))
@@ -63,7 +79,7 @@ public partial class ResolutionScope
                         "has already resolved without it. Add the aspect before the configuration is first resolved in this scope, " +
                         "or resolve the configuration in a child scope that starts with the aspect.");
         }
-        node.Aspects.Insert(0, aspect);
+        node.Aspects.Insert(0, (aspect, adder));
     }
 
     /// <summary>Makes child scopes use this scope's executor of each given configuration instead of building their own.</summary>
@@ -212,19 +228,21 @@ public partial class ResolutionScope
 
     // Called while the construction lock is held. Yields the advice that applies to the configuration, closest to its
     // executor first: this scope's before its ancestors', within a scope the later added aspects first, and within an
-    // aspect its pairs in their listed order. Pairs are matched to the configuration first, and each advice instance
-    // applies once, at its closest occurrence. Aspects share advice on purpose: two traces reading one clock must still
-    // count each call once, and keeping the closest occurrence keeps that clock inside both traces' observations,
-    // wherever and in whichever order they were attached.
+    // aspect its pairs in their listed order. An aspect never applies to the configuration whose construction added it.
+    // Pairs are matched to the configuration first, and each advice instance applies once, at its closest occurrence.
+    // Aspects share advice on purpose: two traces reading one clock must still count each call once, and keeping the
+    // closest occurrence keeps that clock inside both traces' observations, wherever and in whichever order they were
+    // attached.
     private List<(Pointcut Pointcut, Advice Advice)> MatchingAdvice(IConfigurationNode configuration)
     {
         var applied = new HashSet<Advice>(ReferenceEqualityComparer.Instance);
         var matching = new List<(Pointcut Pointcut, Advice Advice)>();
         for (var scope = node; scope is not null; scope = scope.Parent)
-            foreach (var aspect in scope.Aspects)
-                foreach (var pair in aspect)
-                    if (pair.Pointcut.Matches(configuration) && applied.Add(pair.Advice))
-                        matching.Add(pair);
+            foreach (var (aspect, adder) in scope.Aspects)
+                if (!ReferenceEquals(adder, configuration))
+                    foreach (var pair in aspect)
+                        if (pair.Pointcut.Matches(configuration) && applied.Add(pair.Advice))
+                            matching.Add(pair);
         return matching;
     }
 
@@ -234,8 +252,8 @@ public partial class ResolutionScope
         public Tree Tree { get; } = tree;
         public Node? Parent { get; } = parent;
 
-        // Closest to the executor first.
-        public List<Aspect> Aspects { get; } = [];
+        // Closest to the executor first, each with the configuration whose construction added it, if any.
+        public List<(Aspect Aspect, IConfigurationNode? Adder)> Aspects { get; } = [];
 
         // The unadvised executors this scope built, by configuration reference.
         public Dictionary<IConfigurationNode, IExecutor> Executors { get; } = new(ReferenceEqualityComparer.Instance);
@@ -250,15 +268,23 @@ public partial class ResolutionScope
         public bool HasChildScopes { get; set; }
     }
 
-    // What all scopes of one root share: the construction lock, the run's resources and whether construction failed.
-    private sealed class Tree(RunResources resources)
+    // What all scopes of one root share: the construction lock, the run's results and whether construction failed.
+    private sealed class Tree(RunResults results)
     {
         private readonly HashSet<IConfigurationNode> constructing = new(ReferenceEqualityComparer.Instance);
+        // The configurations under construction, innermost last. Only the thread holding the lock changes it.
+        private readonly List<IConfigurationNode> constructionStack = [];
         private volatile string? failure;
 
         public Lock Sync { get; } = new();
-        public RunResources Resources { get; } = resources;
+        public RunResults Results { get; } = results;
         public bool Failed => failure is not null;
+
+        // Called while the lock is held: the innermost configuration under construction, or null outside construction.
+        public IConfigurationNode? Constructing => constructionStack.Count == 0 ? null : constructionStack[^1];
+
+        // Called while the lock is held: whether the configuration just entered is the only one under construction.
+        public bool EnteredOutsideConstruction => constructionStack.Count == 1;
 
         public void ThrowIfFailed()
         {
@@ -277,6 +303,7 @@ public partial class ResolutionScope
                 ThrowIfFailed();
                 if (!constructing.Add(configuration))
                     throw new InvalidOperationException($"Recursive construction of {configuration.GetType().Name}.");
+                constructionStack.Add(configuration);
             }
             catch
             {
@@ -291,6 +318,7 @@ public partial class ResolutionScope
             public void Dispose()
             {
                 tree.constructing.Remove(configuration);
+                tree.constructionStack.RemoveAt(tree.constructionStack.Count - 1);
                 tree.Sync.Exit();
             }
         }

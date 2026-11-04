@@ -47,22 +47,25 @@ public class ExperimentSpecs
         ]);
     }
 
+    /// <summary>
+    /// A trace attached to each case's algorithm gives every trial its own result, read from the trial's run.
+    /// </summary>
     [Fact]
-    public async Task TrialAnalyzer_BindsOneAnalyzerToEachConcreteAlgorithm()
+    public async Task TrialTraces_GiveEachConcreteAlgorithmItsOwnResult()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var experiment = CreateSimpleHillClimber(problem)
+        var algorithm = CreateSimpleHillClimber(problem);
+        var best = algorithm.Evaluator.Invocations.TraceBestSoFar();
+        var experiment = algorithm.Advised(best)
             .AsGrid()
-            .VaryBy([4, 8], (algorithm, maximumNeighbors) => algorithm with { MaxNeighbors = maximumNeighbors });
-        ImmutableArray<TrialAspect<ExperimentCase<HillClimber<RealVector>, HillClimber<RealVector>>, TraceAnalyzer<ObjectiveVector>>> analyses = default;
-        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456),
-            setup => analyses = setup.AddAspectPerTrial(algorithm => algorithm.Evaluator.Invocations.TraceBestSoFar()));
+            .VaryBy([4, 8], (_, maximumNeighbors) => (algorithm with { MaxNeighbors = maximumNeighbors }).Advised(best));
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456));
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        analyses.Length.ShouldBe(2);
-        analyses.Select(analysis => analysis.Trial.Key.MaxNeighbors).ShouldBe([4, 8]);
-        analyses.All(analysis => analysis.Aspect.Latest is not null).ShouldBeTrue();
+        run.Trials.Length.ShouldBe(2);
+        run.Trials.ShouldAllBe(trial => trial.Run.Result(best).Latest != null);
+        run.Trials[0].Run.Result(best).ShouldNotBeSameAs(run.Trials[1].Run.Result(best));
     }
 
     [Fact]

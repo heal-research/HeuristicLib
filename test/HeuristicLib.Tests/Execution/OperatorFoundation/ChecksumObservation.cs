@@ -7,8 +7,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 
-// An external operation becomes observable through the same three parts a built-in operation declares: its record,
-// advice and source.
+// An external operation becomes observable through the same parts a built-in operation declares: its record, advice,
+// source and explicit observation wrapper.
 public sealed record ChecksumObservation<TCandidate>(
     IOperator<Checksum, TCandidate> Checksum,
     int Result,
@@ -43,7 +43,10 @@ public static class ChecksumObservations
 {
     extension<TCandidate>(IOperator<Checksum, TCandidate> checksum)
     {
-        public ObservationSource<ChecksumObservation<TCandidate>> Invocations =>
-            ObservationSource.Create<ChecksumObservation<TCandidate>>(checksum, observe => Aspect.Create(Pointcut.Reference(checksum), new ChecksumObservationAdvice<TCandidate>(observe)));
+        public InvocationSource<Checksum, TCandidate, ChecksumObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(checksum, (Action<ChecksumObservation<TCandidate>> observe) => new ChecksumObservationAdvice<TCandidate>(observe));
+
+        public Observed<Checksum, TCandidate, ChecksumObservation<TCandidate>> Observed(IObservationInstrument<ChecksumObservation<TCandidate>> instrument) =>
+            new(checksum.Invocations, instrument);
     }
 }

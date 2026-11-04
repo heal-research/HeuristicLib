@@ -122,8 +122,11 @@ public static class EstimationObservations
 {
     extension<TCandidate>(IOperator<Estimation, TCandidate> estimator)
     {
-        public ObservationSource<EstimationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create<EstimationObservation<TCandidate>>(estimator, observe => Aspect.Create(Pointcut.Reference(estimator), new EstimationObservationAdvice<TCandidate>(observe)));
+        public InvocationSource<Estimation, TCandidate, EstimationObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(estimator, (Action<EstimationObservation<TCandidate>> observe) => new EstimationObservationAdvice<TCandidate>(observe));
+
+        public Observed<Estimation, TCandidate, EstimationObservation<TCandidate>> Observed(IObservationInstrument<EstimationObservation<TCandidate>> instrument) =>
+            new(estimator.Invocations, instrument);
     }
 }
 #endregion operation-observation
@@ -153,9 +156,9 @@ public sealed class OperationDefinitionDocumentationSpecs
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
         var problem = FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
         var estimator = ChoosePerItem.Create<Estimation, RealVector>(new ScaledEstimator(1.0), new ScaledEstimator(10.0));
-        var counts = Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count);
+        var counts = estimator.Invocations.Trace(observation => observation.Estimates.Count);
         var root = ResolutionScope.Create();
-        root.AddAspect(counts);
+        root.AddAspect(root.Results.Aspect(counts));
         var scope = root.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         RealVector[] candidates = [new(1.0), new(2.0), new(3.0)];
 
@@ -164,6 +167,6 @@ public sealed class OperationDefinitionDocumentationSpecs
         estimates.Count.ShouldBe(candidates.Length);
         for (var i = 0; i < candidates.Length; i++)
             estimates[i].ShouldBeOneOf(candidates[i][0], 10.0 * candidates[i][0]);
-        counts.Snapshot().Select(entry => entry.Value).ShouldBe([3]);
+        root.Results.Result(counts).Snapshot().Select(entry => entry.Value).ShouldBe([3]);
     }
 }

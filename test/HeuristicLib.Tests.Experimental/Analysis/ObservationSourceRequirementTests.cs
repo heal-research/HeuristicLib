@@ -36,7 +36,7 @@ public class ObservationSourceRequirementTests
 
         var analysis = algorithm.Iterations.TraceAverageSimilarity(new NoSimilarity());
 
-        analysis.SampleCount.ShouldBe(0);
+        ResolutionScope.Create().Results.Result(analysis).SampleCount.ShouldBe(0);
     }
 
     /// <summary>

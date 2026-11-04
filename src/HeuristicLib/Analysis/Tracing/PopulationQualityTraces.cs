@@ -13,9 +13,9 @@ public static class PopulationQualityTraces
         /// Records the best, median and worst objective vector of the population each iteration yields, ranked by the
         /// run's objective.
         /// </summary>
-        public TraceAnalyzer<BestMedianWorst> TracePopulationQuality(IReadOnlyList<Clock>? clocks = null,
+        public TraceAnalyzer<AlgorithmObservation<TCandidate, TSearchState>, BestMedianWorst> TracePopulationQuality(IReadOnlyList<IClock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null) =>
-            Analyzer.Trace(iterations,
+            iterations.Trace(
                 observation => observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector)
                     .BestMedianWorst(observation.Problem.Objective, objectiveComparer),
                 clocks, retention);
@@ -24,9 +24,9 @@ public static class PopulationQualityTraces
         /// Records the best, median and worst evaluated candidate of the population each iteration yields, ranked by
         /// the run's objective.
         /// </summary>
-        public TraceAnalyzer<BestMedianWorstEntry<TCandidate>> TracePopulationCandidates(IReadOnlyList<Clock>? clocks = null,
+        public TraceAnalyzer<AlgorithmObservation<TCandidate, TSearchState>, BestMedianWorstEntry<TCandidate>> TracePopulationCandidates(IReadOnlyList<IClock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null) =>
-            Analyzer.Trace(iterations,
+            iterations.Trace(
                 observation => observation.State.Population.EvaluatedCandidates.BestMedianWorst(observation.Problem.Objective, objectiveComparer),
                 clocks, retention);
     }

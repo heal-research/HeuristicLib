@@ -27,7 +27,7 @@ public sealed class ObservationPoint<TObservation> : ObservationSource<TObservat
 
     public string Name { get; }
 
-    internal override IConfigurationNode Configuration => this;
+    public override IConfigurationNode Configuration => this;
 
     internal static ObservationPoint<TObservation> Of(IConfigurationNode configuration, string name)
     {

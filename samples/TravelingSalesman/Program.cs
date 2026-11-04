@@ -11,14 +11,14 @@ var cityCount = problem.SearchSpace.Length;
 
 var algorithm = GeneticAlgorithm.For(problem, populationSize: 100, maximumGenerations: 300);
 
-// A run pairs the configuration with a problem and a random source. Supply analyzers through its setup callback
-// so the same configuration can be run again under different observation.
+// A run pairs the configuration with a problem and a random source. Attach analyzers with Advised, so the same
+// configuration can be run again under different observation, and read each run's own result from the run.
 var quality = algorithm.Iterations.TracePopulationCandidates();
-var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup => setup.AddAspect(quality));
+var run = algorithm.Advised(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
 var finalState = await run.CompleteAsync();
 
-var generations = quality.Snapshot().Values;
+var generations = run.Result(quality).Snapshot().Values;
 var bestTour = finalState.Population.EvaluatedCandidates
     .MinBy(candidate => candidate.ObjectiveVector, problem.Objective.TotalOrderComparer)!;
 

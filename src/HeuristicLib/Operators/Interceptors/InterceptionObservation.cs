@@ -57,8 +57,11 @@ public static class InterceptionObservations
         where TSearchState : class, ISearchState
     {
         /// <summary>The observations of this interceptor's successful calls.</summary>
-        public ObservationSource<InterceptionObservation<TCandidate, TSearchState>> Invocations =>
-            ObservationSource.Create<InterceptionObservation<TCandidate, TSearchState>>(interceptor, observe => Aspect.Create(Pointcut.Reference(interceptor),
-                new InterceptionObservationAdvice<TCandidate, TSearchState>(observe)));
+        public InvocationSource<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>> Invocations =>
+            ObservationSource.Create(interceptor, (Action<InterceptionObservation<TCandidate, TSearchState>> observe) => new InterceptionObservationAdvice<TCandidate, TSearchState>(observe));
+
+        /// <summary>Records this interceptor's successful calls into the instrument, wherever this configuration is placed.</summary>
+        public Observed<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>> Observed(IObservationInstrument<InterceptionObservation<TCandidate, TSearchState>> instrument) =>
+            new(interceptor.Invocations, instrument);
     }
 }

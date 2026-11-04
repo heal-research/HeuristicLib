@@ -42,16 +42,16 @@ public static class HyperVolumeTraces
         /// Traces the hypervolume of the Pareto front accumulated over every candidate the evaluator evaluates.
         /// </summary>
         /// <remarks>
-        /// The front is private to the trace, so the recorded entries are plain numbers.
+        /// Each run of the trace keeps its own front, private to the trace, so the recorded entries are plain numbers.
         /// </remarks>
-        public TraceAnalyzer<double> TraceHyperVolume(ObjectiveVector referencePoint,
-            IReadOnlyList<Clock>? clocks = null,
-            TraceRetention? retention = null)
-        {
-            var hyperVolume = new HyperVolumeSoFar<TCandidate>(referencePoint);
-            return Analyzer.Trace(invocations,
-                observation => hyperVolume.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective),
+        public TraceAnalyzer<EvaluationObservation<TCandidate>, double> TraceHyperVolume(ObjectiveVector referencePoint,
+            IReadOnlyList<IClock>? clocks = null,
+            TraceRetention? retention = null) =>
+            invocations.Trace<EvaluationObservation<TCandidate>, double>(() =>
+                {
+                    var hyperVolume = new HyperVolumeSoFar<TCandidate>(referencePoint);
+                    return observation => hyperVolume.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective);
+                },
                 clocks, retention);
-        }
     }
 }

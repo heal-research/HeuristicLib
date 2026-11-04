@@ -11,72 +11,56 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 public sealed partial class OperatorPreparationSpecs
 {
     [Fact]
-    public async Task PerRunAdviceKeepsSharedHandleAccountingIndependent()
+    public async Task EachRunCountsIntoItsOwnResultOfOneCounter()
     {
         var source = new CountingSource();
-        var count = new CountAccumulatorHandle();
-        var problem = new TestFunctionProblem(new SphereFunction(1));
-        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(AfterOperatorCountTerminator.For(problem, count, 2));
         var mutator = (IOperator<Mutation, RealVector>)source;
-        var runs = Enumerable.Range(0, 3).Select(_ => algorithm.CreateRun(problem, RandomNumberGenerator.Create(1), setup =>
-        {
-            var counter = new CountAccumulator();
-            setup.AddResource(count, counter).AddAspect(mutator.CountInvocations(counter));
-        })).ToArray();
+        var counter = mutator.Invocations.Count();
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, 2)).Advised(counter);
+        var runs = Enumerable.Range(0, 3).Select(_ => algorithm.CreateRun(problem, RandomNumberGenerator.Create(1))).ToArray();
 
         await Task.WhenAll(runs.Select(run => run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken)));
 
-        var counts = runs.Select(run => run.Resource(count)).ToArray();
+        var counts = runs.Select(run => run.Result(counter)).ToArray();
         counts.ShouldAllBe(accumulator => accumulator.CurrentCount == 2);
         counts.Distinct(ReferenceEqualityComparer.Instance).Count().ShouldBe(3);
     }
 
     [Fact]
-    public void CandidateAccountingAndTheTerminatorUseTheSuppliedResource()
+    public void CandidateAccountingAndTheTerminatorUseTheRunsCounter()
     {
         var source = new CountingSource();
-        var count = new CountAccumulatorHandle();
-        var supplied = new CountAccumulator();
-        supplied.IncrementBy(3);
+        var candidates = ((IOperator<Mutation, RealVector>)source).Invocations.CountCandidates();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(new AfterOperatorCountTerminator<RealVector>(count, 5));
-        var counting = ((IOperator<Mutation, RealVector>)source).CountCandidates(supplied);
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1),
-            setup => setup.AddResource(count, supplied).AddAspect(counting));
+        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(new AfterOperatorCountTerminator<RealVector>(candidates, 2)).Advised(candidates);
 
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
         run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
-        run.Resource(count).ShouldBeSameAs(supplied);
-        supplied.CurrentCount.ShouldBe(5);
+        run.Result(candidates).CurrentCount.ShouldBe(2);
 
-        var next = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1),
-            setup => setup.AddResource(count, supplied).AddAspect(counting));
-        next.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(1);
-        supplied.CurrentCount.ShouldBe(6);
+        var next = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
+        next.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+        next.Result(candidates).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
-    public void DurationAccountingAndTheTerminatorUseOneResourcePerRun()
+    public void DurationAccountingAndTheTerminatorUseOneResultPerRun()
     {
         var source = new CountingSource();
-        var duration = new DurationAccumulatorHandle();
         var clock = new BudgetClock();
+        var duration = ((IOperator<Mutation, RealVector>)source).Invocations.Duration(clock);
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(
-            AfterOperatorDurationTerminator.For(problem, duration, TimeSpan.FromTicks(2)));
-        var mutator = (IOperator<Mutation, RealVector>)source;
-        void Configure(AlgorithmRunSetup<RealVector, SingleSolutionState<RealVector>> setup)
-        {
-            var elapsed = new DurationAccumulator();
-            setup.AddResource(duration, elapsed).AddAspect(mutator.MeasureDuration(elapsed, clock));
-        }
-        var first = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1), Configure);
-        var second = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1), Configure);
+            AfterOperatorDurationTerminator.For(problem, duration, TimeSpan.FromTicks(2))).Advised(duration);
+        var first = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
+        var second = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
 
         first.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
         second.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
-        first.Resource(duration).CurrentDuration.ShouldBe(TimeSpan.FromTicks(2));
-        second.Resource(duration).CurrentDuration.ShouldBe(TimeSpan.FromTicks(2));
-        first.Resource(duration).ShouldNotBeSameAs(second.Resource(duration));
+        first.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromTicks(2));
+        second.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromTicks(2));
+        first.Result(duration).ShouldNotBeSameAs(second.Result(duration));
     }
 
     [Fact]

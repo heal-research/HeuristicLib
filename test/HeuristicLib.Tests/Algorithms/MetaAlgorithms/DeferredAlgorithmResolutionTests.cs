@@ -356,7 +356,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
         var calls = new MutationCallClock(algorithm.Mutator);
-        var trace = Analyzer.Trace(algorithm.Mutator.Invocations, observation =>
+        var trace = algorithm.Mutator.Invocations.Trace(observation =>
         {
             clock.Advance(10);
             return observation.Offspring[0];
@@ -365,7 +365,7 @@ public sealed class DeferredAlgorithmResolutionTests
             ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
             : algorithm.LimitedToInvocations(algorithm.Mutator, 3);
         var root = ResolutionScope.Create();
-        root.AddAspect(trace);
+        root.AddAspect(root.Results.Aspect(trace));
         await using var paused = Resolve(root.CreateChildScope(), budget).RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -382,8 +382,8 @@ public sealed class DeferredAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeFalse();
 
-        trace.By(calls).Select(point => point.Time).ShouldBe([1L, 2L, 3L, 4L, 5L, 6L]);
-        trace.By(calls).Select(point => point.Value).ShouldBe([1, 1, 2, 3, 2, 3]);
+        root.Results.Result(trace).By(calls).Select(point => point.Time).ShouldBe([1L, 2L, 3L, 4L, 5L, 6L]);
+        root.Results.Result(trace).By(calls).Select(point => point.Value).ShouldBe([1, 1, 2, 3, 2, 3]);
         observed.ShouldBe(3);
     }
 
@@ -513,14 +513,10 @@ public sealed class DeferredAlgorithmResolutionTests
         }
     }
 
-    private sealed class MutationCallClock : Clock<long>
+    private sealed class MutationCallClock(IOperator<Mutation, int> mutator) : Counter
     {
-        private long calls;
-        protected override long ReadTime() => calls;
-        public MutationCallClock(IOperator<Mutation, int> mutator)
-        {
-            Advices = [.. Aspect.Observe(mutator.Invocations, _ => calls++)];
-        }
+        protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
+            Aspect.Observe(mutator.Invocations, _ => result.IncrementBy(1));
     }
 
     private sealed class MutationData { public int Invocations; }

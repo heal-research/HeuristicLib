@@ -68,71 +68,71 @@ public class ObservationPointTests
         var other = new Ticker();
         var copy = ticker with { };
         var scope = ResolutionScope.Create();
-        scope.AddAspect(trace);
+        scope.AddAspect(scope.Results.Aspect(trace));
 
         scope.Resolve(other).Tick();
         scope.Resolve(copy).Tick();
         scope.Resolve(ticker).Tick();
 
-        trace.Snapshot().Values.ShouldBe([1, -1]);
+        scope.Results.Result(trace).Snapshot().Values.ShouldBe([1, -1]);
     }
 
     [Fact]
     public void SharedClock_CountsOnceBeforeEachTrace()
     {
         var ticker = new Ticker();
-        var clock = new ObservationClock<int>(ticker.First);
-        var first = Analyzer.Trace(ticker.First, value => value, clocks: [clock]);
-        var second = Analyzer.Trace(ticker.First, value => value, clocks: [clock]);
+        var clock = new ObservationCounter<int>(ticker.First);
+        var first = ticker.First.Trace(value => value, clocks: [clock]);
+        var second = ticker.First.Trace(value => value, clocks: [clock]);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(first);
-        scope.AddAspect(second);
-        scope.AddAspect(clock);
+        scope.AddAspect(scope.Results.Aspect(first));
+        scope.AddAspect(scope.Results.Aspect(second));
+        scope.AddAspect(scope.Results.Aspect(clock));
         var executor = scope.Resolve(ticker);
 
         executor.Tick();
         executor.Tick();
 
-        first.Snapshot().Select(entry => entry.At(clock)).ShouldBe([1L, 2L]);
-        second.Snapshot().Select(entry => entry.At(clock)).ShouldBe([1L, 2L]);
+        scope.Results.Result(first).Snapshot().Select(entry => entry.At(clock)).ShouldBe([1L, 2L]);
+        scope.Results.Result(second).Snapshot().Select(entry => entry.At(clock)).ShouldBe([1L, 2L]);
     }
 
     [Fact]
     public void Rebinding_AppliesTheRequestingAspectsToTheSamePoints()
     {
         var ticker = new Ticker();
-        var outer = Analyzer.Trace(ticker.First, value => value);
-        var inner = Analyzer.Trace(ticker.First, value => value);
+        var outer = ticker.First.Trace(value => value);
+        var inner = ticker.First.Trace(value => value);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(outer);
+        scope.AddAspect(scope.Results.Aspect(outer));
         var original = scope.Resolve(ticker);
         var reboundScope = scope.CreateChildScope();
-        reboundScope.AddAspect(inner);
+        reboundScope.AddAspect(reboundScope.Results.Aspect(inner));
         var rebound = reboundScope.Resolve(ticker);
 
         original.Tick();
         rebound.Tick();
         original.Tick();
 
-        outer.Snapshot().Values.ShouldBe([1, 1, 2]);
-        inner.Snapshot().Values.ShouldBe([1]);
+        scope.Results.Result(outer).Snapshot().Values.ShouldBe([1, 1, 2]);
+        reboundScope.Results.Result(inner).Snapshot().Values.ShouldBe([1]);
     }
 
     [Fact]
     public void Operator_ResolvesItsOwnPointWithoutAnOperatorWrapper()
     {
         var mutator = new ReportingMutator();
-        var trace = Analyzer.Trace(mutator.Counts, count => count);
+        var trace = mutator.Counts.Trace(count => count);
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var observedScope = ResolutionScope.Create();
-        observedScope.AddAspect(trace);
+        observedScope.AddAspect(observedScope.Results.Aspect(trace));
         var observed = observedScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
         var unobserved = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
         observed.Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1, 2]);
 
         observed.GetType().ShouldBe(unobserved.GetType());
-        trace.Snapshot().Values.ShouldBe([2]);
+        observedScope.Results.Result(trace).Snapshot().Values.ShouldBe([2]);
     }
 
     [Fact]

@@ -47,7 +47,11 @@ public static class EvaluationObservations
     extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
         /// <summary>The observations of this evaluator's successful calls.</summary>
-        public ObservationSource<EvaluationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create<EvaluationObservation<TCandidate>>(evaluator, observe => Aspect.Create(Pointcut.Reference(evaluator), new EvaluationObservationAdvice<TCandidate>(observe)));
+        public InvocationSource<Evaluation, TCandidate, EvaluationObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(evaluator, (Action<EvaluationObservation<TCandidate>> observe) => new EvaluationObservationAdvice<TCandidate>(observe));
+
+        /// <summary>Records this evaluator's successful calls into the instrument, wherever this configuration is placed.</summary>
+        public Observed<Evaluation, TCandidate, EvaluationObservation<TCandidate>> Observed(IObservationInstrument<EvaluationObservation<TCandidate>> instrument) =>
+            new(evaluator.Invocations, instrument);
     }
 }

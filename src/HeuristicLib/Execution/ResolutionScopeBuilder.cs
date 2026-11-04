@@ -32,7 +32,7 @@ public sealed class ResolutionScopeBuilder(params IReadOnlyList<Aspect> aspects)
     /// </remarks>
     public ResolutionScope Build()
     {
-        var scope = ResolutionScope.Create(new RunResources(resources));
+        var scope = ResolutionScope.Create(resources);
         List<Aspect> attached = [.. aspects.Where(new HashSet<Aspect>(ReferenceEqualityComparer.Instance).Add)];
         for (var index = attached.Count - 1; index >= 0; index--)
             scope.AddAspect(attached[index]);

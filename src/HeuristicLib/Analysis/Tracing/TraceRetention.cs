@@ -19,9 +19,9 @@ public enum RetentionDecision
 /// Decides what a trace does with each aggregated observation.
 /// </summary>
 /// <remarks>
-/// A retention is an object rather than a setting. One that counts or remembers owns that state, so two traces
-/// sharing one object share its counting. The factories here return a fresh retention per call, which is what makes
-/// the ordinary inline use independent.
+/// A retention is an immutable policy. What it counts or remembers belongs to the <see cref="RetentionDecider{TValue}"/>
+/// it creates for each trace, so traces sharing one retention, and the runs of one trace analyzer, decide
+/// independently.
 /// </remarks>
 public abstract class TraceRetention
 {
@@ -30,19 +30,30 @@ public abstract class TraceRetention
     public static TraceRetention OnChange(IEqualityComparer? equality = null) => new OnChangeRetention { Equality = equality };
     public static TraceRetention LatestOnly() => new LatestOnlyRetention();
 
-    public abstract RetentionDecision Decide<T>(T value);
+    /// <summary>Creates the decider of one trace, which keeps whatever progress the retention needs.</summary>
+    public abstract RetentionDecider<TValue> CreateDecider<TValue>();
+}
+
+/// <summary>The decisions of one trace, with the progress its retention keeps, such as a count or the previous value.</summary>
+/// <remarks>The trace calls its decider under its own lock, one value at a time.</remarks>
+public abstract class RetentionDecider<TValue>
+{
+    public abstract RetentionDecision Decide(TValue value);
 }
 
 public sealed class EveryObservationRetention : TraceRetention
 {
-    public override RetentionDecision Decide<T>(T value) => RetentionDecision.Append;
+    public override RetentionDecider<TValue> CreateDecider<TValue>() => new Decider<TValue>();
+
+    private sealed class Decider<TValue> : RetentionDecider<TValue>
+    {
+        public override RetentionDecision Decide(TValue value) => RetentionDecision.Append;
+    }
 }
 
 /// <summary>Records observations n, 2n, 3n, and so on. No extra initial or final entry is added.</summary>
 public sealed class EveryNthRetention : TraceRetention
 {
-    private long observed;
-
     public EveryNthRetention(int interval)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(interval);
@@ -51,8 +62,15 @@ public sealed class EveryNthRetention : TraceRetention
 
     public int Interval { get; }
 
-    public override RetentionDecision Decide<T>(T value) =>
-        Interlocked.Increment(ref observed) % Interval == 0 ? RetentionDecision.Append : RetentionDecision.Skip;
+    public override RetentionDecider<TValue> CreateDecider<TValue>() => new Decider<TValue>(Interval);
+
+    private sealed class Decider<TValue>(int interval) : RetentionDecider<TValue>
+    {
+        private long observed;
+
+        public override RetentionDecision Decide(TValue value) =>
+            ++observed % interval == 0 ? RetentionDecision.Append : RetentionDecision.Skip;
+    }
 }
 
 /// <summary>
@@ -60,31 +78,32 @@ public sealed class EveryNthRetention : TraceRetention
 /// </summary>
 /// <remarks>
 /// Sameness is decided by <see cref="EqualityComparer{T}.Default"/> unless <see cref="Equality"/> holds a comparer.
-/// That comparer is untyped because the observed value's type is not known until an observation arrives.
+/// That comparer is untyped because the retention serves traces of every value type.
 /// </remarks>
 public sealed class OnChangeRetention : TraceRetention
 {
-    private readonly Lock sync = new();
-    private object? previous;
-    private Type? previousType;
-
     /// <summary>Decides which observed values count as the same. Null uses the value type's default equality.</summary>
     public IEqualityComparer? Equality { get; init; }
 
-    public override RetentionDecision Decide<T>(T value)
+    public override RetentionDecider<TValue> CreateDecider<TValue>() => new Decider<TValue>(Equality);
+
+    private sealed class Decider<TValue>(IEqualityComparer? equality) : RetentionDecider<TValue>
     {
-        lock (sync)
+        private bool hasPrevious;
+        private TValue? previous;
+
+        public override RetentionDecision Decide(TValue value)
         {
-            if (previousType == typeof(T) && AreSame((T)previous!, value))
+            if (hasPrevious && AreSame(previous!, value))
                 return RetentionDecision.Skip;
             previous = value;
-            previousType = typeof(T);
+            hasPrevious = true;
             return RetentionDecision.Append;
         }
-    }
 
-    private bool AreSame<T>(T left, T right) =>
-        Equality is null ? EqualityComparer<T>.Default.Equals(left, right) : Equality.Equals(left, right);
+        private bool AreSame(TValue left, TValue right) =>
+            equality is null ? EqualityComparer<TValue>.Default.Equals(left, right) : equality.Equals(left, right);
+    }
 }
 
 /// <summary>
@@ -93,5 +112,10 @@ public sealed class OnChangeRetention : TraceRetention
 /// </summary>
 public sealed class LatestOnlyRetention : TraceRetention
 {
-    public override RetentionDecision Decide<T>(T value) => RetentionDecision.ReplaceLatest;
+    public override RetentionDecider<TValue> CreateDecider<TValue>() => new Decider<TValue>();
+
+    private sealed class Decider<TValue> : RetentionDecider<TValue>
+    {
+        public override RetentionDecision Decide(TValue value) => RetentionDecision.ReplaceLatest;
+    }
 }

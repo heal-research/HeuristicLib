@@ -14,37 +14,35 @@ public class AnalysisUsabilityTests
     public void SeparateRetentionObjects_CountIndependently()
     {
         var evaluator = new ManualEvaluator();
-        var first = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
-        var second = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
+        var first = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
+        var second = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
         var scope = Install(first, second);
 
         foreach (var candidate in Enumerable.Range(1, 5))
             Evaluate(scope, evaluator, candidate);
 
-        first.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
-        second.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
+        scope.Results.Result(first).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
+        scope.Results.Result(second).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
     }
 
     /// <summary>
-    /// A retention holds its own counting, so handing one object to two traces couples them. The factories return a
-    /// fresh retention per call, which is why the ordinary inline use is independent.
+    /// A retention is an immutable policy: each trace keeps its own progress, so handing one retention to two traces
+    /// does not couple them.
     /// </summary>
     [Fact]
-    public void OneRetentionObjectSharedByTwoTraces_SharesItsCounting()
+    public void OneRetentionObjectSharedByTwoTraces_CountsIndependently()
     {
         var evaluator = new ManualEvaluator();
         var shared = TraceRetention.EveryNth(2);
-        var first = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: shared);
-        var second = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0], retention: shared);
+        var first = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: shared);
+        var second = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: shared);
         var scope = Install(first, second);
 
         foreach (var candidate in Enumerable.Range(1, 5))
             Evaluate(scope, evaluator, candidate);
 
-        // Every firing asks the one counter twice. The trace added last observes first, so it takes no entry and the
-        // other trace takes every entry.
-        second.Snapshot().ShouldBeEmpty();
-        first.Snapshot().Select(entry => entry.Value).ShouldBe([1, 2, 3, 4, 5]);
+        scope.Results.Result(first).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
+        scope.Results.Result(second).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
     }
 
     [Fact]
@@ -59,7 +57,7 @@ public class AnalysisUsabilityTests
         Evaluate(scope, firstEvaluator, 1, 2);
         Evaluate(scope, secondEvaluator, 3, 4);
 
-        trace.Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
+        scope.Results.Result(trace).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
     }
 
     [Fact]
@@ -72,7 +70,7 @@ public class AnalysisUsabilityTests
 
         Evaluate(scope, evaluator, 1, 2);
 
-        trace.Snapshot().Select(entry => entry.Value).ShouldBe([2]);
+        scope.Results.Result(trace).Snapshot().Select(entry => entry.Value).ShouldBe([2]);
     }
 
     [Fact]
@@ -82,28 +80,30 @@ public class AnalysisUsabilityTests
         IOperator<Mutation, RealVector> mutator = source;
         IOperator<Evaluation, RealVector> evaluator = source;
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var mutations = Analyzer.Trace(mutator.Invocations, observation => observation.Offspring.Count);
-        var evaluations = Analyzer.Trace(evaluator.Invocations, observation => observation.Candidates.Count);
-        var root = ResolutionScope.Create();
-        root.AddAspect(mutations);
-        root.AddAspect(evaluations);
+        var mutations = mutator.Invocations.Trace(observation => observation.Offspring.Count);
+        var evaluations = evaluator.Invocations.Trace(observation => observation.Candidates.Count);
+        var root = Install(mutations, evaluations);
         var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
         scope.Resolve(mutator).Mutate([new RealVector(2.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         scope.Resolve(evaluator).Evaluate([new RealVector(2.0), new RealVector(3.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        mutations.Snapshot().Select(entry => entry.Value).ShouldBe([1]);
-        evaluations.Snapshot().Select(entry => entry.Value).ShouldBe([2]);
+        root.Results.Result(mutations).Snapshot().Select(entry => entry.Value).ShouldBe([1]);
+        root.Results.Result(evaluations).Snapshot().Select(entry => entry.Value).ShouldBe([2]);
     }
 
+    /// <summary>
+    /// The scopes of one run share its trace, so calls from concurrent child scopes, such as parallel contenders, record
+    /// into one trace whose function sees one observation at a time.
+    /// </summary>
     [Fact]
-    public async Task SharedTrace_SerializesItsFunctionAcrossConcurrentScopes()
+    public async Task OneRunsTrace_SerializesItsFunctionAcrossConcurrentScopes()
     {
         var evaluator = new ManualEvaluator();
         var activeCalls = 0;
         var overlappingCalls = 0;
         var count = 0;
-        var trace = Analyzer.Trace(evaluator.Invocations, observation =>
+        var trace = evaluator.Invocations.Trace(observation =>
         {
             if (Interlocked.Increment(ref activeCalls) > 1)
                 Interlocked.Increment(ref overlappingCalls);
@@ -118,10 +118,11 @@ public class AnalysisUsabilityTests
                 Interlocked.Decrement(ref activeCalls);
             }
         });
+        var root = Install(trace);
         using var start = new Barrier(4);
         var workers = Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
         {
-            var scope = Install(trace);
+            var scope = root.CreateChildScope();
             start.SignalAndWait(TestContext.Current.CancellationToken);
             for (var i = 0; i < 8; i++)
                 Evaluate(scope, evaluator, i);
@@ -130,7 +131,7 @@ public class AnalysisUsabilityTests
         await Task.WhenAll(workers);
 
         overlappingCalls.ShouldBe(0);
-        trace.Snapshot().Select(entry => entry.Value).ShouldBe(Enumerable.Range(1, 32));
+        root.Results.Result(trace).Snapshot().Select(entry => entry.Value).ShouldBe(Enumerable.Range(1, 32));
     }
 
     [Fact]
@@ -139,7 +140,8 @@ public class AnalysisUsabilityTests
         var firstEvaluator = new ManualEvaluator();
         var secondEvaluator = new ManualEvaluator();
         var analyzer = new SeparateEvaluatorAnalyzer(firstEvaluator, secondEvaluator);
-        var scope = Install(analyzer);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(analyzer);
 
         Evaluate(scope, firstEvaluator, 1, 2);
         Evaluate(scope, secondEvaluator, 3, 4, 5);
@@ -152,35 +154,38 @@ public class AnalysisUsabilityTests
     public void SharedClock_IsInstalledOncePerScope()
     {
         var evaluator = new ManualEvaluator();
-        var clock = Clock.FromCandidates(evaluator);
-        var first = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors.Count, clocks: [clock, clock]);
-        var second = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors.Count, clocks: [clock]);
+        var clock = evaluator.Invocations.CountCandidates();
+        var first = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors.Count, clocks: [clock, clock]);
+        var second = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors.Count, clocks: [clock]);
         var scope = Install(first, second);
 
         Evaluate(scope, evaluator, 1, 2);
         Evaluate(scope, evaluator, 3, 4, 5);
 
-        first.By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
-        second.By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
+        scope.Results.Result(first).By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
+        scope.Results.Result(second).By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
+        scope.Results.Result(clock).CurrentCount.ShouldBe(5);
     }
 
     [Fact]
     public void RetentionOnChange_HandlesNullAndUsesTypedEquality()
     {
         var retention = TraceRetention.OnChange();
-        retention.Decide<string?>(null).ShouldBe(RetentionDecision.Append);
-        retention.Decide<string?>(null).ShouldBe(RetentionDecision.Skip);
-        retention.Decide("value").ShouldBe(RetentionDecision.Append);
-        retention.Decide("value").ShouldBe(RetentionDecision.Skip);
-        retention.Decide<string?>(null).ShouldBe(RetentionDecision.Append);
-        retention.Decide(0).ShouldBe(RetentionDecision.Append);
-        retention.Decide(0).ShouldBe(RetentionDecision.Skip);
+        var strings = retention.CreateDecider<string?>();
+        strings.Decide(null).ShouldBe(RetentionDecision.Append);
+        strings.Decide(null).ShouldBe(RetentionDecision.Skip);
+        strings.Decide("value").ShouldBe(RetentionDecision.Append);
+        strings.Decide("value").ShouldBe(RetentionDecision.Skip);
+        strings.Decide(null).ShouldBe(RetentionDecision.Append);
+        var numbers = retention.CreateDecider<int>();
+        numbers.Decide(0).ShouldBe(RetentionDecision.Append);
+        numbers.Decide(0).ShouldBe(RetentionDecision.Skip);
     }
 
     [Fact]
     public void RetentionOnChange_CanBeGivenAComparer()
     {
-        var retention = TraceRetention.OnChange(StringComparer.OrdinalIgnoreCase);
+        var retention = TraceRetention.OnChange(StringComparer.OrdinalIgnoreCase).CreateDecider<string>();
         retention.Decide("value").ShouldBe(RetentionDecision.Append);
         retention.Decide("VALUE").ShouldBe(RetentionDecision.Skip);
         retention.Decide("other").ShouldBe(RetentionDecision.Append);
@@ -190,7 +195,7 @@ public class AnalysisUsabilityTests
     public void ARetentionReturningAnUnknownDecision_FailsWhereItIsUsed()
     {
         var evaluator = new ManualEvaluator();
-        var trace = Analyzer.Trace(evaluator.Invocations, observation => observation.ObjectiveVectors[0][0],
+        var trace = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0],
             retention: new UnknownDecisionRetention());
         var scope = Install(trace);
 
@@ -198,11 +203,11 @@ public class AnalysisUsabilityTests
         exception.Message.ShouldContain("unknown decision");
     }
 
-    private static ResolutionScope Install(params Aspect[] analyzers)
+    private static ResolutionScope Install(params Instrument[] instruments)
     {
         var scope = ResolutionScope.Create();
-        foreach (var analyzer in analyzers)
-            scope.AddAspect(analyzer);
+        foreach (var instrument in instruments)
+            scope.AddAspect(scope.Results.Aspect(instrument));
         return scope;
     }
 
@@ -247,6 +252,11 @@ public class AnalysisUsabilityTests
 
     private sealed class UnknownDecisionRetention : TraceRetention
     {
-        public override RetentionDecision Decide<T>(T value) => (RetentionDecision)99;
+        public override RetentionDecider<TValue> CreateDecider<TValue>() => new Decider<TValue>();
+
+        private sealed class Decider<TValue> : RetentionDecider<TValue>
+        {
+            public override RetentionDecision Decide(TValue value) => (RetentionDecision)99;
+        }
     }
 }

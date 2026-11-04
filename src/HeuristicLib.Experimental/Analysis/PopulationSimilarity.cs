@@ -75,11 +75,11 @@ public static class PopulationSimilarityTraces
         /// <summary>
         /// Traces the pairwise similarity of the population each iteration yields, matrix included.
         /// </summary>
-        public TraceAnalyzer<PopulationSimilarity> TracePopulationSimilarity(
+        public TraceAnalyzer<AlgorithmObservation<TCandidate, TSearchState>, PopulationSimilarity> TracePopulationSimilarity(
             ICandidateSimilarityCalculator<TCandidate> candidateSimilarity,
-            IReadOnlyList<Clock>? clocks = null,
+            IReadOnlyList<IClock>? clocks = null,
             TraceRetention? retention = null) =>
-            Analyzer.Trace(iterations,
+            iterations.Trace(
                 observation => observation.State.Population.EvaluatedCandidates.Similarity(candidateSimilarity, observation.Problem.Objective),
                 clocks, retention);
 
@@ -91,11 +91,11 @@ public static class PopulationSimilarityTraces
         /// Prefer this over <c>TracePopulationSimilarity</c> when only the summary is read: a trace keeps every entry,
         /// and a matrix per iteration grows with the square of the population size.
         /// </remarks>
-        public TraceAnalyzer<MinMeanMax> TraceAverageSimilarity(
+        public TraceAnalyzer<AlgorithmObservation<TCandidate, TSearchState>, MinMeanMax> TraceAverageSimilarity(
             ICandidateSimilarityCalculator<TCandidate> candidateSimilarity,
-            IReadOnlyList<Clock>? clocks = null,
+            IReadOnlyList<IClock>? clocks = null,
             TraceRetention? retention = null) =>
-            Analyzer.Trace(iterations,
+            iterations.Trace(
                 observation => observation.State.Population.EvaluatedCandidates.Similarity(candidateSimilarity, observation.Problem.Objective).Average,
                 clocks, retention);
     }

@@ -6,58 +6,71 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
 /// <summary>
-/// Clocks over an operator's invocations or candidate work serve every operation, including ones defined outside the
+/// Counters of an operator's invocations or candidate work serve every operation, including ones defined outside the
 /// library.
 /// </summary>
 public class OperatorCountClockTests
 {
     [Fact]
-    public void FromCandidates_CountsTheCandidateWorkOfAnExternalBatchOperation()
+    public void CountCandidates_CountsTheCandidateWorkOfAnExternalBatchOperation()
     {
         var scorer = new LengthScorer();
         var problem = CreateProblem();
-        var candidates = Clock.FromCandidates(scorer);
-        var invocations = Clock.FromInvocations(scorer);
+        var candidates = scorer.Invocations.CountCandidates();
+        var invocations = scorer.Invocations.Count();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(candidates);
-        scope.AddAspect(invocations);
+        scope.AddAspect(scope.Results.Aspect(candidates));
+        scope.AddAspect(scope.Results.Aspect(invocations));
         var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(scorer);
 
         executor.Score([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Score([4, 5], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        candidates.Read().ShouldBe(5L);
-        invocations.Read().ShouldBe(2L);
+        scope.Results.Result(candidates).CurrentCount.ShouldBe(5L);
+        scope.Results.Result(invocations).CurrentCount.ShouldBe(2L);
     }
 
     [Fact]
-    public void FromCandidates_RejectsAnOperationWithoutCandidateWorkBeforeBuildingIt()
+    public void CountCandidates_RejectsAnOperationWithoutCandidateWorkWhenCreated()
     {
         var checksum = new ConstructionRecordingChecksum();
-        var root = ResolutionScope.Create();
-        root.AddAspect(Clock.FromCandidates(checksum));
-        var scope = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
 
-        var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve(checksum));
+        var exception = Should.Throw<InvalidOperationException>(() => checksum.Invocations.CountCandidates());
+
+        exception.Message.ShouldContain("reports none");
+    }
+
+    /// <summary>
+    /// A candidate counter of another operation, placed explicitly on an operation without candidate work, fails when
+    /// the wrapper is built and before its child is.
+    /// </summary>
+    [Fact]
+    public void CountedWithACandidateCounter_RejectsAnOperationWithoutCandidateWorkBeforeBuildingIt()
+    {
+        var checksum = new ConstructionRecordingChecksum();
+        var candidates = new LengthScorer().Invocations.CountCandidates();
+        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+
+        var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve(checksum.Counted(candidates)));
 
         exception.Message.ShouldContain("reports none");
         checksum.Builds.ShouldBe(0);
     }
 
     [Fact]
-    public void FromInvocations_CountsAnOperationWithoutCandidateWork()
+    public void Count_CountsAnOperationWithoutCandidateWork()
     {
         var checksum = new ConstructionRecordingChecksum();
         var problem = CreateProblem();
-        var invocations = Clock.FromInvocations(checksum);
+        var invocations = checksum.Invocations.Count();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(invocations);
+        scope.AddAspect(scope.Results.Aspect(invocations));
         var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(checksum);
 
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        invocations.Read().ShouldBe(2L);
+        scope.Results.Result(invocations).CurrentCount.ShouldBe(2L);
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
@@ -148,5 +161,37 @@ public static class ScoringResolutionExtensions
     {
         public IScoringExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Scoring, TCandidate> source) =>
             (IScoringExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator(source);
+    }
+}
+
+// The external operation's source, which is what its counters come from, declared like a built-in operation's.
+public sealed record ScoringObservation<TCandidate>(IReadOnlyList<TCandidate> Candidates, IReadOnlyList<double> Scores);
+
+file sealed class ScoringObservationAdvice<TCandidate>(Action<ScoringObservation<TCandidate>> observe) : OperatorAdvice<Scoring, TCandidate>
+{
+    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
+        IOperator<Scoring, TCandidate> source) =>
+        new Executor<TSearchSpace, TProblem>((IScoringExecutor<TCandidate, TSearchSpace, TProblem>)executor, observe);
+
+    private sealed class Executor<TSearchSpace, TProblem>(IScoringExecutor<TCandidate, TSearchSpace, TProblem> executor,
+        Action<ScoringObservation<TCandidate>> observe) : IScoringExecutor<TCandidate, TSearchSpace, TProblem>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        public IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        {
+            var scores = executor.Score(candidates, random, searchSpace, problem);
+            observe(new ScoringObservation<TCandidate>(candidates, scores));
+            return scores;
+        }
+    }
+}
+
+public static class ScoringObservations
+{
+    extension<TCandidate>(IOperator<Scoring, TCandidate> scorer)
+    {
+        public InvocationSource<Scoring, TCandidate, ScoringObservation<TCandidate>> Invocations =>
+            ObservationSource.Create(scorer, (Action<ScoringObservation<TCandidate>> observe) => new ScoringObservationAdvice<TCandidate>(observe));
     }
 }

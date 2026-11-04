@@ -41,21 +41,23 @@ public static class CycleObservations
     extension(Clock)
     {
         /// <summary>
-        /// Creates a clock counting the cycles one chosen cycle has started.
+        /// Creates a counter of the cycles one chosen cycle has started.
         /// </summary>
-        public static ObservationClock<CycleStart<TCandidate, TSearchState>> FromCycles<TAlgorithm, TCandidate, TSearchState>(
+        /// <remarks>The counter keeps its own count, so it keeps counting across calls of the cycle.</remarks>
+        public static Counter FromCycles<TAlgorithm, TCandidate, TSearchState>(
             CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> cycle)
             where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
             where TSearchState : class, ISearchState =>
-            new(cycle.Cycles);
+            new ObservationCounter<CycleStart<TCandidate, TSearchState>>(cycle.Cycles);
 
         /// <summary>
-        /// Creates a clock counting the turns of inner algorithms one chosen cycle has started.
+        /// Creates a counter of the turns of inner algorithms one chosen cycle has started.
         /// </summary>
-        public static ObservationClock<CycleTurn<TCandidate, TSearchState>> FromTurns<TAlgorithm, TCandidate, TSearchState>(
+        /// <remarks>The counter keeps its own count, so it keeps counting across calls of the cycle.</remarks>
+        public static Counter FromTurns<TAlgorithm, TCandidate, TSearchState>(
             CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> cycle)
             where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
             where TSearchState : class, ISearchState =>
-            new(cycle.Turns);
+            new ObservationCounter<CycleTurn<TCandidate, TSearchState>>(cycle.Turns);
     }
 }

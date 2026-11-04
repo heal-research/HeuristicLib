@@ -333,6 +333,14 @@ Tried and removed on 2026-11-04 in step 1 of the [operator state lifetimes plan]
 
 Tried and removed on 2026-11-04 in step 1 of the [operator state lifetimes plan](operator-state-lifetimes.md#step-1-decisions-accepted-on-2026-11-04). `Share` kept the executor the scope had already resolved, so whether a later `Share` took effect depended on the order of resolution. It is an error instead. Reopen only for a meta-algorithm that cannot share before it resolves.
 
+### Bridging run setup to instruments
+
+Discussed and rejected on 2026-11-04 for step 2 of the [operator state lifetimes plan](operator-state-lifetimes.md#step-2-decisions-accepted-on-2026-11-04). Letting run setup attach instruments would have kept callers on run setup one step longer, but every reader changes anyway, from `trace.Snapshot()` to `run.Result(trace).Snapshot()`, and step 3 deletes run setup. New types under temporary names beside the old traces and clocks would have added a second implementation of each concept. Sources, traces, clocks and retention change in place instead.
+
+### Advice that selects the node adding it
+
+Discussed on 2026-11-04 for step 2 of the [operator state lifetimes plan](operator-state-lifetimes.md#step-2-decisions-accepted-on-2026-11-04). `Advised` adds its advice while it is built, after its own resolution started, so advice selecting `Advised` itself, such as a pointcut over every algorithm, was rejected as advice for an already resolved configuration. Keeping that error would make a broad pointcut impossible at the root of a run once run setup is gone. Making `Advised` no pointcut target contradicts spec Q3, which counts it like every other node. Resolving its child in a child scope would make wrapping change sharing. The accepted rule excludes only the adder from its own advice. Reopen if a node must observe its own calls through advice it adds itself.
+
 ### Shared configurable run host
 
 Tried and removed during the layers overhaul in September 2026. `RunHost` wrapped a lifecycle enum and lock, accepted a transition table and exception-message prefix, and exposed its lock back to the runs. The callers still made the actual lifecycle decisions. The extraction introduced a generic state-machine mechanism without taking ownership of execution or scheduling.

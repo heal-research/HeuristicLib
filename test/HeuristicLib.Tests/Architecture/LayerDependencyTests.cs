@@ -44,13 +44,33 @@ public sealed class LayerDependencyTests
             ("Execution.Advice`1", "Execution/Aspects/"),
             ("Execution.ResourceHandle`1", "Execution/Resources/"),
             ("Execution.RunResources", "Execution/Resources/"),
+            ("Execution.Instrument", "Execution/Results/"),
+            ("Execution.Instrument`1", "Execution/Results/"),
+            ("Execution.RunResults", "Execution/Results/"),
             ("Inspection.DurationAccumulatorHandle", "Inspection/"),
             ("Inspection.AlgorithmObservation`2", "Inspection/Algorithms/"),
+            ("Inspection.AlgorithmCallObservation`2", "Inspection/Algorithms/"),
+            ("Inspection.AlgorithmCallEvent", "Inspection/Algorithms/"),
+            ("Inspection.AlgorithmSource`3", "Inspection/Algorithms/"),
+            ("Inspection.AlgorithmCounter", "Inspection/Algorithms/"),
+            ("Inspection.CountedAlgorithm`2", "Inspection/Algorithms/"),
+            ("Inspection.ObservedAlgorithm`3", "Inspection/Algorithms/"),
             ("Inspection.ObservationSource`1", "Inspection/"),
+            ("Inspection.InvocationSource`3", "Inspection/"),
+            ("Inspection.IObservationInstrument`1", "Inspection/"),
             ("Inspection.ObservationPoint`1", "Inspection/"),
             ("Inspection.IObservationPointExecutor`1", "Inspection/"),
+            ("Inspection.IClock", "Inspection/"),
+            ("Inspection.IClock`1", "Inspection/"),
             ("Inspection.Clock", "Inspection/"),
-            ("Inspection.Clock`1", "Inspection/"),
+            ("Inspection.Clock`2", "Inspection/"),
+            ("Inspection.Counter", "Inspection/"),
+            ("Inspection.OperatorCounter", "Inspection/"),
+            ("Inspection.Duration", "Inspection/"),
+            ("Inspection.OperatorDuration", "Inspection/"),
+            ("Inspection.Counted`2", "Inspection/"),
+            ("Inspection.Timed`2", "Inspection/"),
+            ("Inspection.Observed`3", "Inspection/"),
             ("Experiments.ExperimentRun`6", "Experiments/"),
             ("Experiments.ExperimentRunSetup`4", "Experiments/"),
             ("Experiments.TrialAspect", "Experiments/"),
@@ -102,7 +122,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int>? analyzer; }",
+            "namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int, int>? analyzer; }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -120,7 +140,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            $"namespace HEAL.HeuristicLib.{concept}; internal class LayerProbe {{ private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int>? analyzer; }}",
+            $"namespace HEAL.HeuristicLib.{concept}; internal class LayerProbe {{ private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int, int>? analyzer; }}",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, folder, "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -136,7 +156,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "global using HEAL.HeuristicLib.Analysis; namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { object Empty => new HEAL.HeuristicLib.Execution.RunResources([]); }",
+            "global using HEAL.HeuristicLib.Analysis; namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { object Empty => new HEAL.HeuristicLib.Execution.RunResults([], System.TimeProvider.System); }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -153,7 +173,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var hostProbe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private HEAL.HeuristicLib.Algorithms.GeneticAlgorithm<int>? algorithm; object Empty => new RunResources([]); }",
+            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private HEAL.HeuristicLib.Algorithms.GeneticAlgorithm<int>? algorithm; object Empty => new RunResults([], TimeProvider.System); }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -173,8 +193,8 @@ public sealed class LayerDependencyTests
     }
 
     [Theory]
-    [InlineData("new RunResources([])")]
-    [InlineData("ResolutionScope.Create(new RunResources([]))")]
+    [InlineData("new RunResults([], TimeProvider.System)")]
+    [InlineData("ResolutionScope.Create([])")]
     public void SemanticCheckKeepsResourceStorageOutOfContent(string operation)
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -451,7 +471,7 @@ public sealed class LayerDependencyTests
             return false;
         type = Outermost(type);
         return type.ContainingNamespace.ToDisplayString() == "HEAL.HeuristicLib.Execution" &&
-               type.Name is ("ResolutionScope" or "RunResources") &&
+               type.Name is ("ResolutionScope" or "RunResources" or "RunResults") &&
                (symbol.DeclaredAccessibility == Accessibility.Internal || type.DeclaredAccessibility == Accessibility.Internal);
     }
 

@@ -21,6 +21,13 @@ public abstract class AlgorithmRun
     /// <remarks>Supplied resources remain caller owned. The returned resource defines how concurrent reads and writes are supported.</remarks>
     public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class => scope.Resource(handle);
 
+    /// <summary>Returns this run's result of the instrument, creating it when the run has not looked it up yet.</summary>
+    /// <remarks>
+    /// The result can be read before, during and after execution, also after a failure. Each result type states how it
+    /// may be read while the run writes to it, such as a trace through its snapshots.
+    /// </remarks>
+    public TResult Result<TResult>(Instrument<TResult> instrument) where TResult : class => scope.Results.Result(instrument);
+
     protected ResolutionScope? BeginExecutionSegment()
     {
         lock (sync)

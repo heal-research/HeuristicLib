@@ -28,16 +28,16 @@ public static class EpochWorkTrace
         /// Read it with <see cref="EpochWorkTrace.PerEpoch"/>. The two clocks are what carry the information: the
         /// evaluation count says how much work happened, and the environment version says what scored it.
         /// </remarks>
-        public static TraceAnalyzer<int> TraceEpochWork<TCandidate, TSearchSpace>(
+        public static TraceAnalyzer<EvaluationObservation<TCandidate>, int> TraceEpochWork<TCandidate, TSearchSpace>(
             IOperator<Evaluation, TCandidate> at,
-            Clock<long> evaluations,
+            IClock<long> evaluations,
             EpochClock<TCandidate, TSearchSpace> epoch)
             where TSearchSpace : class, ISearchSpace<TCandidate> =>
-            Analyzer.Trace(at.Invocations, observation => observation.ObjectiveVectors.Count, [evaluations, epoch]);
+            at.Invocations.Trace(observation => observation.ObjectiveVectors.Count, [evaluations, epoch]);
     }
 
     /// <summary>
-    /// Reads a trace created by <c>Analyzer.TraceEpochWork</c> as the work each environment received.
+    /// Reads a run's trace of an analyzer created by <c>Analyzer.TraceEpochWork</c> as the work each environment received.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -52,15 +52,15 @@ public static class EpochWorkTrace
     /// is reported like any other, but nothing has closed it, so its counts are only what happened so far.
     /// </para>
     /// </remarks>
-    /// <param name="trace">The trace created by <c>Analyzer.TraceEpochWork</c>.</param>
+    /// <param name="trace">The run's trace of an analyzer created by <c>Analyzer.TraceEpochWork</c>, such as <c>run.Result(analyzer)</c>.</param>
     /// <param name="evaluations">The evaluation clock the trace was created with.</param>
     /// <param name="epoch">The epoch clock the trace was created with.</param>
     /// <param name="evaluationsPerEpoch">
     /// The evaluations one epoch is paced by, from <see cref="EvaluationCountSchedule.EvaluationsPerEpoch"/>.
     /// </param>
     public static IReadOnlyList<EpochWork> PerEpoch<TCandidate, TSearchSpace>(
-        TraceAnalyzer<int> trace,
-        Clock<long> evaluations,
+        Trace<int> trace,
+        IClock<long> evaluations,
         EpochClock<TCandidate, TSearchSpace> epoch,
         int evaluationsPerEpoch)
         where TSearchSpace : class, ISearchSpace<TCandidate>

@@ -1,19 +1,17 @@
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>The observations of one operator's invocations, one algorithm's iterations or an observation point.</summary>
+/// <summary>The observations of one operator's invocations, one algorithm's iterations or calls, or an observation point.</summary>
 /// <remarks>
 /// <para>
-/// A source describes observations; creating one installs nothing. <c>Aspect.Observe</c> and the traces of
-/// <c>Analyzer</c> attach it through an aspect, which resolution weaves into the executors a run builds. An operation
-/// offers its source as <c>Invocations</c>, such as <c>crossover.Invocations</c>, and an algorithm as <c>Iterations</c>; an
-/// operator implementing several operations offers each through a view typed to that operation.
-/// </para>
-/// <para>
-/// A configuration that decides something inside its executor which no invocation or iteration shows publishes it,
-/// such as the cycles and turns of <c>CycleAlgorithm</c>. It declares an <see cref="ObservationPoint{TObservation}"/>
-/// and resolves it like a child. The executor reports observations through the resolved point's <c>Report</c> method.
+/// A source is a configuration and the wrapper that makes each call of that configuration's executor produce an
+/// observation; creating one installs nothing. Both ways of collecting use that one wrapper: attaching an instrument
+/// with <c>Advised</c> places it through advice, and placing it explicitly, such as <c>evaluator.Observed(trace)</c>,
+/// wraps the configuration where it is written. An operation offers its source as <c>Invocations</c>, such as
+/// <c>crossover.Invocations</c>, and an algorithm as <c>Iterations</c> and <c>Calls</c>; an operator implementing several
+/// operations offers each through a view typed to that operation.
 /// </para>
 /// <para>
 /// An observation may be any value. Operator and algorithm observations are records of the call: its inputs and
@@ -28,27 +26,106 @@ public abstract class ObservationSource<TObservation>
 {
     private protected ObservationSource() { }
 
-    // Configurations match by reference, because a configuration with equal settings is observed separately.
-    internal abstract IConfigurationNode Configuration { get; }
+    /// <summary>The observed configuration, matched by reference: a configuration with equal settings is observed separately.</summary>
+    public abstract IConfigurationNode Configuration { get; }
 
+    // Creates an aspect that passes each observation of the configuration to the callback.
     internal abstract Aspect Observe(Action<TObservation> callback);
+}
+
+/// <summary>The observations of one operator's successful calls for one operation, such as <c>mutator.Invocations</c>.</summary>
+/// <remarks>
+/// Besides tracing, the source creates the counters and durations of its operator: <see cref="Count"/>,
+/// <see cref="CountCandidates"/> and <see cref="Duration"/>. Each call creates a new instrument with its own result.
+/// </remarks>
+public sealed class InvocationSource<TOperation, TCandidate, TObservation> : ObservationSource<TObservation>
+    where TOperation : IOperation<TOperation>
+{
+    private readonly Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> advise;
+
+    internal InvocationSource(IOperator<TOperation, TCandidate> source, Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> advise)
+    {
+        Operator = source;
+        this.advise = advise;
+    }
+
+    /// <summary>The observed operator.</summary>
+    public IOperator<TOperation, TCandidate> Operator { get; }
+
+    public override IConfigurationNode Configuration => Operator;
+
+    /// <summary>Creates a counter of the operator's successful calls.</summary>
+    public OperatorCounter Count() => new OperatorCounter<TOperation, TCandidate>(Operator, OperatorCountMetric.Invocations);
+
+    /// <summary>Creates a counter of the candidate work of the operator's successful calls, such as the candidates an evaluator evaluated.</summary>
+    /// <exception cref="InvalidOperationException">The operation reports no candidate work.</exception>
+    public OperatorCounter CountCandidates() =>
+        TOperation.SupportsCandidateWork
+            ? new OperatorCounter<TOperation, TCandidate>(Operator, OperatorCountMetric.Candidates)
+            : throw new InvalidOperationException($"Counting candidates cannot measure candidate work for {Operator.GetType().Name}: " +
+                $"{ExecutionSignature.Name(typeof(TOperation))} reports none.");
+
+    /// <summary>Creates a duration adding up the time spent in the operator's calls, including calls that fail.</summary>
+    /// <param name="timeProvider">Measures each call. When omitted, the system clock does.</param>
+    public OperatorDuration Duration(TimeProvider? timeProvider = null) =>
+        new OperatorDuration<TOperation, TCandidate>(Operator, timeProvider ?? TimeProvider.System);
+
+    // The advice whose wrapper passes each observation to the callback; explicit placement applies it directly.
+    internal OperatorAdvice<TOperation, TCandidate> Advise(Action<TObservation> callback) => advise(callback);
+
+    internal override Aspect Observe(Action<TObservation> callback) =>
+        Aspect.Create(Pointcut.Reference(Operator), advise(callback));
 }
 
 public static class ObservationSource
 {
-    /// <summary>Creates the source of a configuration's observations, as each operation does for its <c>Invocations</c>.</summary>
+    /// <summary>Creates the source of an operator's observations for one operation, as each operation does for its <c>Invocations</c>.</summary>
+    /// <param name="configuration">The observed operator, matched by reference.</param>
+    /// <param name="observe">
+    /// Creates the advice whose wrapper passes each observation of a call to the given callback. Observation through
+    /// <c>Advised</c> and the operation's <c>Observed</c> wrapper both apply it.
+    /// </param>
+    public static InvocationSource<TOperation, TCandidate, TObservation> Create<TOperation, TCandidate, TObservation>(
+        IOperator<TOperation, TCandidate> configuration, Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> observe)
+        where TOperation : IOperation<TOperation> =>
+        new(configuration, observe);
+
+    /// <summary>Creates the source of the observations of a role of your own, such as a cooling schedule.</summary>
     /// <param name="configuration">The observed configuration, matched by reference.</param>
-    /// <param name="observe">Creates an aspect that passes each observation of the configuration to the given callback.</param>
-    public static ObservationSource<TObservation> Create<TObservation>(IConfigurationNode configuration, Func<Action<TObservation>, Aspect> observe) =>
-        new Source<TObservation>(configuration, observe);
+    /// <param name="observe">
+    /// Creates the advice whose wrapper passes each observation of a call to the given callback. An explicit wrapper of
+    /// the role applies the same advice to the executor it wraps, recording into
+    /// <see cref="IObservationInstrument{TObservation}.CreateRecorder"/>.
+    /// </param>
+    public static ObservationSource<TObservation> Create<TConfiguration, TExecutor, TObservation>(
+        TConfiguration configuration, Func<Action<TObservation>, Advice<TConfiguration, TExecutor>> observe)
+        where TConfiguration : class, IConfigurationNode<TExecutor>
+        where TExecutor : class, IExecutor =>
+        new RoleSource<TConfiguration, TExecutor, TObservation>(configuration, observe);
 
-    private sealed class Source<TObservation>(IConfigurationNode configuration, Func<Action<TObservation>, Aspect> observe)
+    private sealed class RoleSource<TConfiguration, TExecutor, TObservation>(
+        TConfiguration configuration, Func<Action<TObservation>, Advice<TConfiguration, TExecutor>> observe)
         : ObservationSource<TObservation>
+        where TConfiguration : class, IConfigurationNode<TExecutor>
+        where TExecutor : class, IExecutor
     {
-        internal override IConfigurationNode Configuration => configuration;
+        public override IConfigurationNode Configuration => configuration;
 
-        internal override Aspect Observe(Action<TObservation> callback) => observe(callback);
+        internal override Aspect Observe(Action<TObservation> callback) =>
+            Aspect.Create(Pointcut.Reference(configuration), observe(callback));
     }
+}
+
+/// <summary>An instrument that records observations, such as a trace; what <c>Observed</c> wrappers record into.</summary>
+/// <remarks>
+/// Implement it on an instrument of your own, together with <see cref="Instrument{TResult}"/>, so that both ways of
+/// collecting reach it: its aspect observes the source through <c>Aspect.Observe</c>, and explicit placement records
+/// through the callback this creates.
+/// </remarks>
+public interface IObservationInstrument<in TObservation>
+{
+    /// <summary>Creates the callback that records one observation into this run's result.</summary>
+    Action<TObservation> CreateRecorder(RunResults results);
 }
 
 public static class ObservationSourceExtensions

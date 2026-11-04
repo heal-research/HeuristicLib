@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -14,12 +15,16 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <see cref="UpdatePolicy.AfterEachEvaluation"/> one batch can span several versions, and this reads the one that
 /// scored its last candidate; the versions of earlier candidates are not recorded.
 /// </remarks>
-public sealed class EpochClock<TCandidate, TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem) : Clock<int>
+public sealed class EpochClock<TCandidate, TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem)
+    : Clock<int, IDynamicProblem<TCandidate, TSearchSpace>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public IDynamicProblem<TCandidate, TSearchSpace> Problem { get; } = problem;
 
-    protected override int ReadTime() => Problem.CurrentEpoch;
+    // The problem keeps the version itself, so every run reads it directly.
+    protected override IDynamicProblem<TCandidate, TSearchSpace> CreateResult(RunResults results) => Problem;
+
+    protected override int Read(IDynamicProblem<TCandidate, TSearchSpace> result) => result.CurrentEpoch;
 }
 
 public static class DynamicClocks

@@ -504,28 +504,29 @@ public class OperatorCountBudgetAlgorithmTests
         results.Count.ShouldBe(2);
     }
 
+    /// <summary>
+    /// One counter counts the evaluator where it is attached and the mutator where it is placed explicitly, and the
+    /// terminator reads that one run result.
+    /// </summary>
     [Fact]
     public void AfterOperatorCountTerminator_CanUseSharedCounterAcrossObservedOperators()
     {
         var problem = CreateProblem();
-        var counter = new CountAccumulatorHandle();
         var baseAlgorithm = CreateAlgorithm(problem);
+        var counter = baseAlgorithm.Evaluator.Invocations.Count();
         var algorithm = baseAlgorithm with
         {
             MaximumGenerations = 5,
-            MutationRate = 1.0
+            MutationRate = 1.0,
+            Mutator = baseAlgorithm.Mutator.Counted(counter)
         };
         var externallyStoppedAlgorithm = algorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 3));
 
-        var accumulator = new CountAccumulator();
-        var run = externallyStoppedAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup
-            .AddResource(counter, accumulator)
-            .AddAspect(algorithm.Evaluator.CountInvocations(accumulator))
-            .AddAspect(algorithm.Mutator.CountInvocations(accumulator)));
+        var run = externallyStoppedAlgorithm.Advised(counter).CreateRun(problem, RandomNumberGenerator.Create(42));
         var results = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
-        run.Resource(counter).CurrentCount.ShouldBe(3);
+        run.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Theory]
@@ -533,7 +534,7 @@ public class OperatorCountBudgetAlgorithmTests
     [InlineData(-1)]
     public void AfterOperatorCountTerminator_IsImmediatelyTerminal_WhenMaximumCountIsNotPositive(int maximumCount)
     {
-        var counter = new CountAccumulatorHandle();
+        var counter = CreateAlgorithm(CreateProblem()).Evaluator.Invocations.Count();
         var terminator = new AfterOperatorCountTerminator<RealVector>(counter, maximumCount);
 
         IsTerminal(terminator, ResolutionScope.Create()).ShouldBeTrue();
@@ -542,23 +543,23 @@ public class OperatorCountBudgetAlgorithmTests
     [Fact]
     public void AfterOperatorDurationTerminator_IsTerminalAtMaximumDuration()
     {
-        var duration = new DurationAccumulatorHandle();
+        var duration = CreateAlgorithm(CreateProblem()).Evaluator.Invocations.Duration();
         var scope = ResolutionScope.Create();
         var terminator = new AfterOperatorDurationTerminator<RealVector>(
             duration,
             maximumDuration: TimeSpan.FromSeconds(2));
 
-        scope.Resource(duration).AddDuration(TimeSpan.FromSeconds(1));
+        scope.Results.Result(duration).AddDuration(TimeSpan.FromSeconds(1));
         IsTerminal(terminator, scope).ShouldBeFalse();
 
-        scope.Resource(duration).AddDuration(TimeSpan.FromSeconds(1));
+        scope.Results.Result(duration).AddDuration(TimeSpan.FromSeconds(1));
         IsTerminal(terminator, scope).ShouldBeTrue();
     }
 
     [Fact]
     public void AfterOperatorDurationTerminator_IsImmediatelyTerminal_WhenMaximumDurationIsNotPositive()
     {
-        var duration = new DurationAccumulatorHandle();
+        var duration = CreateAlgorithm(CreateProblem()).Evaluator.Invocations.Duration();
         var scope = ResolutionScope.Create();
 
         IsTerminal(new AfterOperatorDurationTerminator<RealVector>(duration, TimeSpan.Zero), scope).ShouldBeTrue();
@@ -676,15 +677,16 @@ public class OperatorCountBudgetAlgorithmTests
         var withoutBudget = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
         var withBudget = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
 
-        await algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(withoutBudget))
-                       .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var unbudgeted = algorithm.Advised(withoutBudget).CreateRun(problem, RandomNumberGenerator.Create(42));
+        await unbudgeted.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        await algorithm
+        var budgeted = algorithm
             .LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
-            .CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(withBudget))
-            .CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+            .Advised(withBudget)
+            .CreateRun(problem, RandomNumberGenerator.Create(42));
+        await budgeted.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        withBudget.SampleCount.ShouldBe(withoutBudget.SampleCount);
+        budgeted.Result(withBudget).SampleCount.ShouldBe(unbudgeted.Result(withoutBudget).SampleCount);
     }
 
     private static TestFunctionProblem CreateProblem()
