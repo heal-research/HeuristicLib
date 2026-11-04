@@ -29,10 +29,11 @@ public class MoveRoleResolutionTests
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
         var (creations, applications, evaluations) = (new CountAccumulator(), new CountAccumulator(), new CountAccumulator());
-        var scope = ResolutionScope.Create(
-                Aspect.CountInvocations(neighborhood.MoveCreator, creations),
-                Aspect.CountInvocations(neighborhood.MoveApplier, applications),
-                Aspect.CountInvocations(neighborhood.MoveEvaluator, evaluations))
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.CountInvocations(neighborhood.MoveCreator, creations));
+        root.AddAspect(Aspect.CountInvocations(neighborhood.MoveApplier, applications));
+        root.AddAspect(Aspect.CountInvocations(neighborhood.MoveEvaluator, evaluations));
+        var scope = root
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var random = RandomNumberGenerator.Create(1);
         var candidate = new RealVector(0.0, 0.0);

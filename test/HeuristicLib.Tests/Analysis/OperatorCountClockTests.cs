@@ -18,7 +18,10 @@ public class OperatorCountClockTests
         var problem = CreateProblem();
         var candidates = Clock.FromCandidates(scorer);
         var invocations = Clock.FromInvocations(scorer);
-        var executor = ResolutionScope.Create(candidates, invocations).For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(scorer);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(candidates);
+        scope.AddAspect(invocations);
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(scorer);
 
         executor.Score([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Score([4, 5], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -31,7 +34,9 @@ public class OperatorCountClockTests
     public void FromCandidates_RejectsAnOperationWithoutCandidateWorkBeforeBuildingIt()
     {
         var checksum = new ConstructionRecordingChecksum();
-        var scope = ResolutionScope.Create(Clock.FromCandidates(checksum)).For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+        var root = ResolutionScope.Create();
+        root.AddAspect(Clock.FromCandidates(checksum));
+        var scope = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
 
         var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve(checksum));
 
@@ -45,7 +50,9 @@ public class OperatorCountClockTests
         var checksum = new ConstructionRecordingChecksum();
         var problem = CreateProblem();
         var invocations = Clock.FromInvocations(checksum);
-        var executor = ResolutionScope.Create(invocations).For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(checksum);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(invocations);
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(checksum);
 
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

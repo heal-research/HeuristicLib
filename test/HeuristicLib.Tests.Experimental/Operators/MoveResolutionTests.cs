@@ -17,7 +17,7 @@ public class MoveResolutionTests
     [InlineData("creator")]
     [InlineData("applier")]
     [InlineData("evaluator")]
-    public void StatefulMoveRoles_CreatePrivateDataForEveryExecutor(string role)
+    public void StatefulMoveRoles_CreatePrivateDataOncePerScope(string role)
     {
         var preparations = new Counter();
         IOperator source = role switch
@@ -29,11 +29,11 @@ public class MoveResolutionTests
         };
         var root = ResolutionScope.Create();
         Next(root).ShouldBe(1);
-        Next(root.With()).ShouldBe(1);
-        Next(root).ShouldBe(1);
-        preparations.Value.ShouldBe(3);
+        Next(root.CreateChildScope()).ShouldBe(1);
+        Next(root).ShouldBe(2);
+        preparations.Value.ShouldBe(2);
         Next(ResolutionScope.Create()).ShouldBe(1);
-        preparations.Value.ShouldBe(4);
+        preparations.Value.ShouldBe(3);
 
         int Next(ResolutionScope scope) => source switch
         {
@@ -53,7 +53,8 @@ public class MoveResolutionTests
     {
         IOperator<MoveEvaluation<int>, int> evaluator = new CountingEvaluator(new Counter());
         var candidates = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(evaluator, candidates));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(evaluator, candidates));
         var executor = scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator);
 
         executor.Evaluate(new ObjectiveVector(0), 0, 0, Random, SearchSpace, Problem);

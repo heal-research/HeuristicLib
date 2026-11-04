@@ -50,7 +50,9 @@ public class ImprovementCheckingRefinerTests
         var observed = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(observed);
 
-        Refine(ResolutionScope.Create(Aspect.CountInvocations(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner)).ShouldBeEmpty();
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        Refine(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner)).ShouldBeEmpty();
 
         counter.CurrentCount.ShouldBe(0);
     }
@@ -62,7 +64,9 @@ public class ImprovementCheckingRefinerTests
         var observed = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(observed);
 
-        Refine(ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        Refine(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 
         counter.CurrentCount.ShouldBe(4);
     }
@@ -75,7 +79,8 @@ public class ImprovementCheckingRefinerTests
         var observed = CreateEvaluator();
         var sharedEvaluator = observed.Cached();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Sharing(sharedEvaluator);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(observed, counter));
         var refinerExecutor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();
@@ -96,8 +101,8 @@ public class ImprovementCheckingRefinerTests
         var sharedEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
 
-        var budgetScope = ResolutionScope.Create().With(
-            Aspect.CountCandidates(sharedEvaluator, counter));
+        var budgetScope = ResolutionScope.Create().CreateChildScope();
+        budgetScope.AddAspect(Aspect.CountCandidates(sharedEvaluator, counter));
 
         Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 
@@ -112,8 +117,8 @@ public class ImprovementCheckingRefinerTests
         var algorithmEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement();
 
-        var budgetScope = ResolutionScope.Create().With(
-            Aspect.CountCandidates(algorithmEvaluator, counter));
+        var budgetScope = ResolutionScope.Create().CreateChildScope();
+        budgetScope.AddAspect(Aspect.CountCandidates(algorithmEvaluator, counter));
 
         Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
 

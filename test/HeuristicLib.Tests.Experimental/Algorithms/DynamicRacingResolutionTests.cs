@@ -68,6 +68,46 @@ public sealed class DynamicRacingResolutionTests
         disposed.ShouldBe(started);
     }
 
+    // Every contender resolves its algorithm in a child scope of its own, so contenders racing one algorithm reference get
+    // separate executors.
+    [Fact]
+    public async Task ContendersOfOneAlgorithm_EachBuildTheirOwnExecutor()
+    {
+        using var problem = new EpochProblem(epochLength: 10_000);
+        problem.UpdateOnce();
+        var moves = 0;
+        var built = 0;
+        var started = 0;
+        var contender = new LifetimeProbeAlgorithm
+        {
+            // An epoch change on every second move ends each race step.
+            BeforeMove = () =>
+            {
+                if (++moves % 2 == 0)
+                    problem.UpdateOnce();
+            },
+            Built = () => built++,
+            Started = () => started++,
+            Disposed = static () => { }
+        };
+        var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm>(
+            new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+            new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
+            _ => contender, algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = 0,
+            EarlyTerminationStrength = 0,
+            HallOfFameStrength = 0
+        };
+        await using var stream = Run(ResolutionScope.Create(), racing, problem).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+
+        started.ShouldBe(2);
+        built.ShouldBe(2);
+    }
+
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
@@ -99,8 +139,9 @@ public sealed class DynamicRacingResolutionTests
         };
         var creations = new CountAccumulator();
         var mutations = new CountAccumulator();
-        var parent = ResolutionScope.Create(Aspect.CountInvocations(metaCreator, creations),
-            Aspect.CountInvocations(metaMutator, mutations));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Aspect.CountInvocations(metaCreator, creations));
+        parent.AddAspect(Aspect.CountInvocations(metaMutator, mutations));
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
         _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender);
         await using var paused = Run(parent, racing, problem).GetAsyncEnumerator();
@@ -111,8 +152,9 @@ public sealed class DynamicRacingResolutionTests
 
         var evaluations = new CountAccumulator();
         var interceptions = new CountAccumulator();
-        var child = parent.With(Aspect.CountInvocations(contender.Evaluator, evaluations),
-            Aspect.CountInvocations(interceptor, interceptions));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.CountInvocations(contender.Evaluator, evaluations));
+        child.AddAspect(Aspect.CountInvocations(interceptor, interceptions));
         await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         sources[1].ShouldBeNull();
@@ -129,7 +171,8 @@ public sealed class DynamicRacingResolutionTests
         interceptions.CurrentCount.ShouldBe(1);
 
         var independentSourceIndex = sources.Count;
-        var independent = ResolutionScope.Create(Aspect.CountInvocations(metaCreator, creations));
+        var independent = ResolutionScope.Create();
+        independent.AddAspect(Aspect.CountInvocations(metaCreator, creations));
         await using var fresh = Run(independent, racing, problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(3);
@@ -206,12 +249,16 @@ public sealed class DynamicRacingResolutionTests
     {
         public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator<int>();
         public Action BeforeMove { get; init; } = static () => { };
+        public Action Built { get; init; } = static () => { };
         public required Action Started { get; init; }
         public required Action Disposed { get; init; }
 
         protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
-            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), BeforeMove, Started, Disposed);
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
+        {
+            Built();
+            return new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), BeforeMove, Started, Disposed);
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, Action beforeMove, Action started, Action disposed)
             : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>

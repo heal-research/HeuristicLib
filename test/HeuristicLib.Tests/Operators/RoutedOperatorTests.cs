@@ -492,8 +492,12 @@ public class RoutedOperatorTests
         var firstWrapper = Aspect.MeasureDuration(innerOperator, new DurationAccumulator());
         var secondWrapper = Aspect.MeasureDuration(innerOperator, new DurationAccumulator());
         var scope = ResolutionScope.Create();
-        var firstExecutor = scope.With(firstWrapper).ResolveMutator(innerOperator);
-        var secondExecutor = scope.With(secondWrapper).ResolveMutator(innerOperator);
+        var firstScope = scope.CreateChildScope();
+        firstScope.AddAspect(firstWrapper);
+        var firstExecutor = firstScope.ResolveMutator(innerOperator);
+        var secondScope = scope.CreateChildScope();
+        secondScope.AddAspect(secondWrapper);
+        var secondExecutor = secondScope.ResolveMutator(innerOperator);
         var problem = FuncProblem.Create(
             evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,
@@ -508,14 +512,14 @@ public class RoutedOperatorTests
     }
 
     [Fact]
-    public void ChoosePerItemMutation_RepeatedChildMutator_CreatesIndependentExecutors()
+    public void ChoosePerItemMutation_RepeatedChildMutator_SharesOneExecutor()
     {
         var innerOperator = new CountingExecutionMutator();
         var chooseOne = ChoosePerItem.Create(innerOperator, innerOperator);
 
         _ = ResolutionScope.Create().ResolveMutator(chooseOne);
 
-        innerOperator.ExecutionsCreated.ShouldBe(2);
+        innerOperator.ExecutionsCreated.ShouldBe(1);
     }
 
     [Fact]

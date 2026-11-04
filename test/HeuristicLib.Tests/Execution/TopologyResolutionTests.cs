@@ -25,7 +25,8 @@ public sealed class TopologyResolutionTests
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(1);
 
-        var child = parent.With(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(1);
@@ -39,26 +40,28 @@ public sealed class TopologyResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void CompositeTargetAdviceWrapsEachExecutorWithPrivateFields(bool chooseOne)
+    public void CompositeTargetAdviceWrapsEachRequestAroundTheExecutorOfItsScope(bool chooseOne)
     {
         var preparations = 0;
         var wraps = 0;
         var leaf = new CountingLeaf(() => preparations++);
         IOperator<Mutation, RealVector> source = chooseOne ? new ChoosePerItem<Mutation, RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
         var calls = new CountAccumulator();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new WrapCountingAdvice(calls, () => wraps++)));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Create(Pointcut.Reference(source), new WrapCountingAdvice(calls, () => wraps++)));
         var first = Resolve(root, source);
         var second = Resolve(root, source);
         first.ShouldNotBeSameAs(second);
         Next(first).ShouldBe(1);
-        Next(second).ShouldBe(1);
+        Next(second).ShouldBe(2);
         var reports = new List<double>();
-        var child = root.With(Aspect.Create(Pointcut.Reference(source), new ObservingWrapperAdvice(reports.Add)));
+        var child = root.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new ObservingWrapperAdvice(reports.Add)));
         Next(Resolve(child, source)).ShouldBe(1);
         calls.CurrentCount.ShouldBe(3);
         reports.ShouldBe([1]);
         wraps.ShouldBe(3);
-        preparations.ShouldBe(3);
+        preparations.ShouldBe(2);
     }
 
     [Fact]
@@ -86,7 +89,7 @@ public sealed class TopologyResolutionTests
         var first = Resolve(scope, source);
         events.ShouldBe(["prepare composite", "prepare child", "bind composite"]);
         Next(first).ShouldBe(101);
-        var second = Resolve(scope.With(), source);
+        var second = Resolve(scope.CreateChildScope(), source);
         Next(second).ShouldBe(101);
         first.ShouldNotBeSameAs(second);
         events.ShouldBe(["prepare composite", "prepare child", "bind composite", "prepare composite", "prepare child", "bind composite"]);
@@ -107,7 +110,8 @@ public sealed class TopologyResolutionTests
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(101);
 
-        var child = parent.With(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(101);
@@ -125,25 +129,26 @@ public sealed class TopologyResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ReusedComposite_KeepsItsPinnedChildDespiteAnEarlierChildLocalSelection(bool multi)
+    public void CompositeInAChildScope_UsesTheLeafThatScopeAlreadyBuilt(bool multi)
     {
         var childPreparations = 0;
         var leaf = new CountingLeaf(() => childPreparations++);
         var source = CreateComposite(multi, leaf, static () => { }, static () => { });
         var parent = ResolutionScope.Create();
         var reports = new List<double>();
-        var child = parent.With(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
         var localLeaf = Resolve(child, leaf);
         Next(localLeaf).ShouldBe(1);
 
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(101);
         var inner = Resolve(child, source);
-        Next(inner).ShouldBe(101);
+        Next(inner).ShouldBe(102);
         Next(outer).ShouldBe(202);
-        Next(localLeaf).ShouldBe(2);
-        reports.ShouldBe([1, 1, 2]);
-        childPreparations.ShouldBe(3);
+        Next(localLeaf).ShouldBe(3);
+        reports.ShouldBe([1, 2, 3]);
+        childPreparations.ShouldBe(2);
     }
 
     [Theory]
@@ -168,7 +173,7 @@ public sealed class TopologyResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void StateCreationFailure_IsRetriedAndDoesNotResolveChildren(bool multi)
+    public void StateCreationFailure_EndsTheScopeTreeAndDoesNotResolveChildren(bool multi)
     {
         var preparations = 0;
         var childPreparations = 0;
@@ -178,7 +183,8 @@ public sealed class TopologyResolutionTests
         var parent = ResolutionScope.Create();
 
         Should.Throw<InvalidOperationException>(() => Resolve(parent, source)).ShouldBeSameAs(failure);
-        Should.Throw<InvalidOperationException>(() => Resolve(parent.With(), source)).ShouldBeSameAs(failure);
+        Should.Throw<InvalidOperationException>(() => Resolve(parent.CreateChildScope(), source)).Message.ShouldContain("new scope");
+        Should.Throw<InvalidOperationException>(() => Resolve(ResolutionScope.Create(), source)).ShouldBeSameAs(failure);
         preparations.ShouldBe(2);
         childPreparations.ShouldBe(0);
     }
@@ -186,7 +192,7 @@ public sealed class TopologyResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ConstructionFailureIsRetriedWithFreshPrivateData(bool multi)
+    public void ConstructionFailureIsRetriedInANewScopeWithFreshPrivateData(bool multi)
     {
         var preparations = 0;
         var childPreparations = 0;
@@ -197,8 +203,11 @@ public sealed class TopologyResolutionTests
         var parent = ResolutionScope.Create();
 
         Should.Throw<InvalidOperationException>(() => Resolve(parent, source)).ShouldBeSameAs(failure);
-        Next(Resolve(parent, source)).ShouldBe(101);
-        var child = parent.With(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(static _ => { })));
+        Should.Throw<InvalidOperationException>(() => Resolve(parent, source)).Message.ShouldContain("new scope");
+        var retry = ResolutionScope.Create();
+        Next(Resolve(retry, source)).ShouldBe(101);
+        var child = retry.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(static _ => { })));
         Next(Resolve(child, source)).ShouldBe(101);
         preparations.ShouldBe(3);
         childPreparations.ShouldBe(3);
@@ -214,16 +223,16 @@ public sealed class TopologyResolutionTests
     }
 
     [Fact]
-    public void MultiFactory_PreservesRepeatedReferencesAndConstructsIndependentChildren()
+    public void MultiFactory_RepeatedReferencesShareOneChildExecutor()
     {
         var preparations = 0;
         var leaf = new CountingLeaf(() => preparations++);
         var source = new CountingMulti([leaf, leaf], static () => { }, static () => { });
         var executor = Resolve(ResolutionScope.Create(), source);
 
-        Next(executor).ShouldBe(101);
-        Next(executor).ShouldBe(202);
-        preparations.ShouldBe(2);
+        Next(executor).ShouldBe(102);
+        Next(executor).ShouldBe(204);
+        preparations.ShouldBe(1);
     }
 
     [Fact]

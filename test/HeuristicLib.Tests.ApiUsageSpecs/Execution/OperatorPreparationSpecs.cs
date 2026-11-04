@@ -20,7 +20,10 @@ public sealed partial class OperatorPreparationSpecs
         var twice = new Twice<Mutation, RealVector>(source);
         var childCalls = new CountAccumulator();
         var wrapperCalls = new CountAccumulator();
-        var executor = ResolutionScope.Create(Aspect.CountInvocations(source, childCalls), Aspect.CountInvocations(twice, wrapperCalls))
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(source, childCalls));
+        scope.AddAspect(Aspect.CountInvocations(twice, wrapperCalls));
+        var executor = scope
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(twice);
         var problem = new TestFunctionProblem(new SphereFunction(1));
         IReadOnlyList<RealVector> parents = [new(1.0)];
@@ -36,7 +39,9 @@ public sealed partial class OperatorPreparationSpecs
         var source = new ValueSource(42);
         var twice = new Twice<ReadValue, RealVector>(source);
         var counter = new Counter();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), counter))
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Create(Pointcut.Reference(source), counter));
+        var scope = root
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var executor = (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(twice);
         var problem = new TestFunctionProblem(new SphereFunction(1));
@@ -54,7 +59,9 @@ public sealed partial class OperatorPreparationSpecs
         IOperator<ReadValue, RealVector> source = new ValueSource(42);
         var forwarded = new Forward<ReadValue, RealVector>(source).Retry(2);
         var counter = new Counter();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), counter))
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Create(Pointcut.Reference(source), counter));
+        var scope = root
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var problem = new TestFunctionProblem(new SphereFunction(1));
 

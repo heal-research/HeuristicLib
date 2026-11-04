@@ -174,7 +174,7 @@ public sealed class LayerDependencyTests
 
     [Theory]
     [InlineData("new RunResources([])")]
-    [InlineData("ResolutionScope.Create(new RunResources([]), [])")]
+    [InlineData("ResolutionScope.Create(new RunResources([]))")]
     public void SemanticCheckKeepsResourceStorageOutOfContent(string operation)
     {
         var repositoryRoot = FindRepositoryRoot();

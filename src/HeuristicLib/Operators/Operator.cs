@@ -43,8 +43,9 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
 #pragma warning disable S4019
     /// <summary>Builds this operator's executor, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this for every build. Validate the configuration first and take shared execution data from
-    /// explicit resource handles when sharing is intended. Keep other mutable data in executor fields.
+    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
+    /// executor. Validate the configuration first and take shared execution data from explicit resource handles when
+    /// sharing is intended. Keep other mutable data in executor fields.
     /// </remarks>
     protected abstract TExecutor CreateExecutor(ResolutionScope scope);
 #pragma warning restore S4019

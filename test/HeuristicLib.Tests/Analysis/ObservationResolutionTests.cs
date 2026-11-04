@@ -25,7 +25,8 @@ public class ObservationResolutionTests
         var parentObservations = new List<AlgorithmObservation<int, PopulationState<int>>>();
         var childObservations = new List<AlgorithmObservation<int, PopulationState<int>>>();
         var childEvaluations = new List<int>();
-        var root = ResolutionScope.Create(Aspect.Observe(algorithm.Iterations, parentObservations.Add));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Observe(algorithm.Iterations, parentObservations.Add));
         var original = root.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         var parentInitial = CreateState(1);
         await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), parentInitial,
@@ -33,8 +34,9 @@ public class ObservationResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var parentFirst = paused.Current;
 
-        var child = root.With(Aspect.Observe(algorithm.Iterations, childObservations.Add),
-            Aspect.Observe(algorithm.Evaluator.Invocations, observation => childEvaluations.AddRange(observation.Candidates)));
+        var child = root.CreateChildScope();
+        child.AddAspect(Aspect.Observe(algorithm.Iterations, childObservations.Add));
+        child.AddAspect(Aspect.Observe(algorithm.Evaluator.Invocations, observation => childEvaluations.AddRange(observation.Candidates)));
         var rebound = child.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
         rebound.ShouldNotBeSameAs(original);
         var childInitial = CreateState(10);
@@ -58,7 +60,8 @@ public class ObservationResolutionTests
         childEvaluations.ShouldBe([11, 12]);
 
         // A separate root selects a separate execution for the same configuration.
-        var independent = ResolutionScope.Create(Aspect.Observe(algorithm.Iterations, parentObservations.Add));
+        var independent = ResolutionScope.Create();
+        independent.AddAspect(Aspect.Observe(algorithm.Iterations, parentObservations.Add));
         var independentStates = new List<PopulationState<int>>();
         await foreach (var state in independent.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm)
             .RunStreamingAsync(problem, RandomNumberGenerator.Create(3), ct: TestContext.Current.CancellationToken))
@@ -299,14 +302,16 @@ List<string> events,
         Func<Action, Aspect> createAspect, Func<ResolutionScope, TExecutor> resolve, Action<TExecutor> invoke)
         where TExecutor : class, IExecutor
     {
-        var root = ResolutionScope.Create(createAspect(() => events.Add("parent")));
+        var root = ResolutionScope.Create();
+        root.AddAspect(createAspect(() => events.Add("parent")));
         var original = resolve(root);
         events.ShouldBeEmpty();
         invoke(original);
         events.ShouldBe(["operation", "parent"]);
         events.Clear();
 
-        var child = root.With(createAspect(() => events.Add("child")));
+        var child = root.CreateChildScope();
+        child.AddAspect(createAspect(() => events.Add("child")));
         var rebound = resolve(child);
         rebound.ShouldNotBeSameAs(original);
         events.ShouldBeEmpty();

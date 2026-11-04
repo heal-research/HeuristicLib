@@ -11,7 +11,8 @@ namespace HEAL.HeuristicLib.Execution;
 /// name them again at every call.
 /// </summary>
 /// <remarks>
-/// It resolves exactly like the scope it was created from and adds only the types. <c>With</c> keeps them.
+/// It is a view of the scope it was created from: it resolves, adds aspects and shares exactly like that scope and adds
+/// only the types. <c>CreateChildScope</c> keeps them.
 /// </remarks>
 public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionScope
     where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -22,14 +23,9 @@ public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionSco
     {
     }
 
-    /// <inheritdoc cref="ResolutionScope.With"/>
-    public new ResolutionScope<TCandidate, TSearchSpace, TProblem> With(params IReadOnlyList<Aspect> aspects) =>
-        new(base.With(aspects));
-
-    /// <inheritdoc cref="ResolutionScope.Sharing"/>
-    public new ResolutionScope<TCandidate, TSearchSpace, TProblem> Sharing(params IReadOnlyList<IConfigurationNode> configurations) =>
-        new(base.Sharing(configurations));
-
+    /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
+    public new ResolutionScope<TCandidate, TSearchSpace, TProblem> CreateChildScope() =>
+        new(base.CreateChildScope());
 }
 
 /// <summary>
@@ -51,14 +47,9 @@ public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchS
     {
     }
 
-    /// <inheritdoc cref="ResolutionScope.With"/>
-    public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> With(params IReadOnlyList<Aspect> aspects) =>
-        new(base.With(aspects));
-
-    /// <inheritdoc cref="ResolutionScope.Sharing"/>
-    public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> Sharing(params IReadOnlyList<IConfigurationNode> configurations) =>
-        new(base.Sharing(configurations));
-
+    /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
+    public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildScope() =>
+        new(base.CreateChildScope());
 }
 
 /// <summary>Creates a typed scope over a resolution scope, naming the triple once per creation method.</summary>
@@ -101,9 +92,10 @@ public static class ResolutionScopeExtensions
         where TSearchState : class, ISearchState =>
         scope.ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source);
 
-    /// <summary>Resolves an operator for its operation and this scope's types, reporting a failure as a reason instead of throwing.</summary>
+    /// <summary>Resolves an operator for its operation and this scope's types, reporting a rejection as a reason instead of throwing.</summary>
     /// <remarks>
-    /// The executor variable's type, the operation's executor interface, selects the type the result is returned as, so an
+    /// A rejection before anything is built, such as a signature mismatch or an advice check, becomes a reason and leaves
+    /// the scope usable. A construction failure ends the scope tree and propagates. The executor variable's type, the operation's executor interface, selects the type the result is returned as, so an
     /// operation's <c>TryResolve</c> extension passes its own variables and names no type argument.
     /// </remarks>
     public static bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TExecutor>(

@@ -17,7 +17,10 @@ public class RefinerBatchSemanticsTests
 
         foreach (var (name, topology, advice) in PassThroughTopologies())
         {
-            var refined = ResolutionScope.Create(advice is null ? [] : [advice]).Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+            var refinedScope = ResolutionScope.Create();
+            if (advice is not null)
+                refinedScope.AddAspect(advice);
+            var refined = refinedScope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
             refined.Count.ShouldBe(population.Length, name);
             for (var index = 0; index < population.Length; index++)
@@ -49,7 +52,9 @@ public class RefinerBatchSemanticsTests
     {
         var counter = new CountAccumulator();
         var observed = new DropLastRefiner();
-        var executor = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(observed);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        var executor = scope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(observed);
 
         Refine(executor, 1, 2, 3);
 

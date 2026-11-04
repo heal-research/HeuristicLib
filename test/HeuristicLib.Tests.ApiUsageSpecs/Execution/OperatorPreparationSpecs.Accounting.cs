@@ -100,7 +100,9 @@ public sealed partial class OperatorPreparationSpecs
         var source = new CountingSource();
         var counter = new CountAccumulator();
         var counting = ((IOperator<ReadValue, RealVector>)source).CountCandidates(counter);
-        var scope = ResolutionScope.Create(counting).For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var root = ResolutionScope.Create();
+        root.AddAspect(counting);
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
         Should.Throw<InvalidOperationException>(() => Read(scope, source)).Message.ShouldContain("reports none");
         counter.CurrentCount.ShouldBe(0);

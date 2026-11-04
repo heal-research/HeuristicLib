@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
@@ -29,7 +30,8 @@ public sealed class OperationBindingTests
     {
         var source = new AllOperations();
         var probe = new HookProbe();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
         InvokeOperation(scope, source, operation);
         probe.Work.ShouldBe(expectedWork);
         probe.Successes.ShouldBe(1);
@@ -80,7 +82,8 @@ public sealed class OperationBindingTests
     {
         var source = new AllOperations();
         var advice = new TwiceAdvice();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), advice));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), advice));
 
         InvokeOperation(scope, source, operation);
 
@@ -106,7 +109,8 @@ public sealed class OperationBindingTests
         var source = new AllOperations();
         var fork = RandomNumberGenerator.Create(2);
         var recorder = new InvocationRecorder();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(null, fork, recorder)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(null, fork, recorder)));
 
         InvokeOperation(scope, source, operation);
 
@@ -130,7 +134,8 @@ public sealed class OperationBindingTests
         var other = new AllOperations();
         var recorder = new InvocationRecorder();
         var otherExecutor = ResolveOperation(ResolutionScope.Create(), other, operation);
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(otherExecutor, null, recorder)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(otherExecutor, null, recorder)));
 
         InvokeOperation(scope, source, operation);
 
@@ -154,9 +159,13 @@ public sealed class OperationBindingTests
         var source = new AllOperations();
         var root = ResolutionScope.Create();
         var raw = ResolveOperation(root, source, operation);
-        var forwarding = ResolveOperation(root.With(Aspect.Create(Pointcut.Reference(source), new TwiceAdvice())), source, operation);
+        var forwardingScope = root.CreateChildScope();
+        forwardingScope.AddAspect(Aspect.Create(Pointcut.Reference(source), new TwiceAdvice()));
+        var forwarding = ResolveOperation(forwardingScope, source, operation);
         var supplied = new SuppliedControl();
-        var supplying = ResolveOperation(root.With(Aspect.Create(Pointcut.Reference(source), new ControlSupplyingAdvice(supplied))), source, operation);
+        var supplyingScope = root.CreateChildScope();
+        supplyingScope.AddAspect(Aspect.Create(Pointcut.Reference(source), new ControlSupplyingAdvice(supplied)));
+        var supplying = ResolveOperation(supplyingScope, source, operation);
 
         // Each build creates its own executor, so the advised build forwards the control of its own raw executor.
         forwarding.ShouldNotBeOfType(raw.GetType());
@@ -171,7 +180,8 @@ public sealed class OperationBindingTests
         var source = new AllOperations();
         IOperator<Mutation, RealVector> mutation = source;
         var factory = new TwiceAdvice();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), factory));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Create(Pointcut.Reference(source), factory));
         var first = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
         factory.Wraps.ShouldBe(1);
         source.Invocations.ShouldBe(0);
@@ -181,7 +191,9 @@ public sealed class OperationBindingTests
         factory.Wraps.ShouldBe(1);
 
         var contextCalls = new CountAccumulator();
-        var second = root.With(Aspect.CountInvocations(mutation, contextCalls))
+        var secondScope = root.CreateChildScope();
+        secondScope.AddAspect(Aspect.CountInvocations(mutation, contextCalls));
+        var second = secondScope
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
         factory.Wraps.ShouldBe(2);
         second.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
@@ -209,7 +221,8 @@ public sealed class OperationBindingTests
         var failure = new OperationCanceledException("operation canceled");
         var source = new AllOperations { Failure = failure };
         var probe = new HookProbe();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
         Assert.Throws<OperationCanceledException>(() => InvokeOperation(scope, source, operation)).ShouldBeSameAs(failure);
         probe.Failure.ShouldBeSameAs(failure);
         probe.Successes.ShouldBe(0);
@@ -224,7 +237,8 @@ public sealed class OperationBindingTests
     {
         var source = new AllOperations();
         var root = ResolutionScope.Create();
-        var measured = root.With(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
+        var measured = root.CreateChildScope();
+        measured.AddAspect(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
         var failure = Assert.Throws<InvalidOperationException>(() => InvokeOperation(measured, source, operation));
         failure.Message.ShouldContain(name);
         failure.Message.ShouldContain("candidate budget");
@@ -244,7 +258,8 @@ public sealed class OperationBindingTests
     {
         var source = new AllOperations();
         var probe = new HookProbe();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CandidateWorkAdvice(probe)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CandidateWorkAdvice(probe)));
 
         Assert.Throws<NotSupportedException>(() => InvokeOperation(scope, source, operation));
         probe.Successes.ShouldBe(0);
@@ -256,11 +271,35 @@ public sealed class OperationBindingTests
     {
         var child = new SharedOperations(new ProbeLog());
         var source = new Forward<Checksum, RealVector>(child);
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
         var failure = Assert.Throws<InvalidOperationException>(() =>
             scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source));
         failure.Message.ShouldContain(nameof(Checksum));
         child.Log.Preparations.ShouldBe(0);
+    }
+
+    // A scope keeps one executor per configuration, so the executor must not depend on which operation is requested first.
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void SeparateConstructionHooksPerOperation_AreRejectedWhicheverOperationIsRequestedFirst(bool defaultInterfaceHooks, bool evaluationFirst)
+    {
+        IOperator<Mutation, RealVector> source = defaultInterfaceHooks ? new DefaultInterfaceHooks() : new SeparateHooks();
+        var typed = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        Action mutation = () => typed.Resolve(source);
+        Action evaluation = () => typed.Resolve((IOperator<Evaluation, RealVector>)source);
+
+        Action[] requests = evaluationFirst ? [evaluation, mutation] : [mutation, evaluation];
+        foreach (var request in requests)
+            Should.Throw<InvalidOperationException>(request).Message.ShouldContain("implements CreateExecutor separately");
+
+        // The rejection precedes construction, so the scope stays usable.
+        var single = new SharedOperations(new ProbeLog());
+        typed.Resolve((IOperator<Mutation, RealVector>)single).ShouldNotBeNull();
+        single.Log.Constructions.ShouldBe(1);
     }
 
     private static IExecutor ResolveOperation(ResolutionScope scope, AllOperations source, int operation)
@@ -433,6 +472,26 @@ public sealed class OperationBindingTests
             operation.RequireCandidateWork(source, "candidate budget");
 
         public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) => executor;
+    }
+
+    // Implements CreateExecutor separately for two operations; resolution rejects it before either hook runs.
+    private sealed class SeparateHooks : IOperator<Mutation, RealVector>, IOperator<Evaluation, RealVector>
+    {
+        IExecutor IOperator<Mutation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => throw new UnreachableException();
+
+        IExecutor IOperator<Evaluation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => throw new UnreachableException();
+    }
+
+    // Inherits a separate default CreateExecutor for each operation from two constructions of one generic interface.
+    private sealed class DefaultInterfaceHooks : IDefaultHook<Mutation>, IDefaultHook<Evaluation>;
+
+    private interface IDefaultHook<TOperation> : IOperator<TOperation, RealVector>
+        where TOperation : IOperation<TOperation>
+    {
+        IExecutor IOperator<TOperation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => throw new UnreachableException();
     }
 
     private sealed class AllOperations : IOperator<Creation, RealVector>, IOperator<Crossover, RealVector>,

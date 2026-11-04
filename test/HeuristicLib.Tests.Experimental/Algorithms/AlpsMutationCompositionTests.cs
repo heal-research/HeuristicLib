@@ -47,7 +47,8 @@ public sealed class AlpsMutationCompositionTests
         var algorithm = CreateAlgorithm(0.5) with { MaximumGenerations = 2 };
         var offered = new List<IOperator<Mutation, int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
 
         var states = await States(scope, algorithm);
         offered.ShouldBe([algorithm.Mutator]);
@@ -71,7 +72,8 @@ public sealed class AlpsMutationCompositionTests
         if (noChange)
             algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(algorithm.Mutator, count));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(algorithm.Mutator, count));
 
         await States(scope, algorithm);
 

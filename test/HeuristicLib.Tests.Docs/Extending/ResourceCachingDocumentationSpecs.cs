@@ -72,11 +72,12 @@ public sealed class ResourceCachingDocumentationSpecs
         var space = new UnrestrictedIntegerSpace();
         var problem = FuncProblem.Create((int candidate) => candidate * candidate, space, SingleObjective.Minimize);
         var evaluations = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(evaluator, evaluations))
-            .Sharing(memoized)
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.CountCandidates(evaluator, evaluations));
+        var scope = root
             .For<int, UnrestrictedIntegerSpace, IProblem<int, UnrestrictedIntegerSpace>>();
         var first = scope.Resolve(memoized);
-        var second = scope.With().Resolve(memoized);
+        var second = scope.Resolve(memoized);
         first.Evaluate([1, 2], RandomNumberGenerator.Create(1), space, problem);
         var results = await Task.WhenAll(
             Task.Run(() => first.Evaluate([1, 2, 3], RandomNumberGenerator.Create(2), space, problem)),

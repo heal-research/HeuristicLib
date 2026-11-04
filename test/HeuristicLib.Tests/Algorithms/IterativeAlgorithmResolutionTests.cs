@@ -25,7 +25,7 @@ public sealed class IterativeAlgorithmResolutionTests
         var first = Resolve(parent, source);
         events.ShouldBe(["prepare algorithm", "prepare interceptor", "bind algorithm"]);
 
-        var second = Resolve(parent.With(), source);
+        var second = Resolve(parent.CreateChildScope(), source);
         first.ShouldNotBeSameAs(second);
         events.ShouldBe(["prepare algorithm", "prepare interceptor", "bind algorithm", "prepare algorithm", "prepare interceptor", "bind algorithm"]);
         (await Next(first)).Value.ShouldBe(101);
@@ -50,7 +50,8 @@ public sealed class IterativeAlgorithmResolutionTests
         var outer = Resolve(parent, source);
         (await Next(outer)).Value.ShouldBe(101);
 
-        var child = parent.With(Aspect.CountInvocations(interceptor, observedCalls));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.CountInvocations(interceptor, observedCalls));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         (await Next(inner)).Value.ShouldBe(101);
@@ -82,7 +83,8 @@ public sealed class IterativeAlgorithmResolutionTests
         paused.Current.Value.ShouldBe(101);
         paused.Current.PreviousValue.ShouldBeNull();
 
-        var child = parent.With(Aspect.CountInvocations(interceptor, observedCalls));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.CountInvocations(interceptor, observedCalls));
         var inner = Resolve(child, source);
         var innerRandom = new RecordingRandom();
         await using var observed = inner.RunStreamingAsync(Problem, innerRandom, ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();
@@ -169,15 +171,15 @@ public sealed class IterativeAlgorithmResolutionTests
     }
 
     [Fact]
-    public async Task BoundAlgorithm_AcceptsConcreteProblemsWithIndependentPrivateFields()
+    public async Task BoundAlgorithm_AcceptsConcreteProblemsAndSharesItsPrivateFieldsInAScope()
     {
         var preparations = 0;
         var source = new WideProblemAlgorithm(() => preparations++);
         var scope = ResolutionScope.Create();
 
         (await Next(Resolve(scope, source))).Value.ShouldBe(1);
-        (await Next(Resolve(scope, source))).Value.ShouldBe(1);
-        preparations.ShouldBe(2);
+        (await Next(Resolve(scope, source))).Value.ShouldBe(2);
+        preparations.ShouldBe(1);
     }
 
     private static IAlgorithm<int, ProbeState> CreateAlgorithm(bool bound, Action prepare, Action? bind = null, IOperator<Interception<ProbeState>, int>? interceptor = null) =>

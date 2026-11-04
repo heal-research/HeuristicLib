@@ -34,9 +34,11 @@ public sealed class RetryOperatorTests
         var innerTime = new DurationAccumulator();
         var outerTime = new DurationAccumulator();
         var clock = new TickClock();
-        var scope = ResolutionScope.Create(
-            Aspect.CountInvocations(leaf, innerCalls), Aspect.CountCandidates(retry, outerWork),
-            Aspect.MeasureDuration(leaf, innerTime, clock), Aspect.MeasureDuration(retry, outerTime, clock));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(leaf, innerCalls));
+        scope.AddAspect(Aspect.CountCandidates(retry, outerWork));
+        scope.AddAspect(Aspect.MeasureDuration(leaf, innerTime, clock));
+        scope.AddAspect(Aspect.MeasureDuration(retry, outerTime, clock));
         var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry);
         executor.Mutate(parents, random, Space.Instance, Problem()).ShouldBeSameAs(parents);
         attempts.ShouldBe(failures + 1);
@@ -66,7 +68,9 @@ public sealed class RetryOperatorTests
         var leaf = new CallbackMutator((_, _) => { attempts++; throw failure; });
         var calls = new CountAccumulator();
         var retry = leaf.Retry(3);
-        var executor = ResolutionScope.Create(Aspect.CountInvocations(retry, calls))
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(retry, calls));
+        var executor = scope
             .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry);
         Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()))
             .ShouldBeSameAs(failure);
@@ -108,8 +112,10 @@ public sealed class RetryOperatorTests
         var childCalls = new CountAccumulator();
         var innerCalls = new CountAccumulator();
         var outerCalls = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountInvocations(leaf, childCalls),
-            Aspect.CountInvocations(inner, innerCalls), Aspect.CountInvocations(outer, outerCalls));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(leaf, childCalls));
+        scope.AddAspect(Aspect.CountInvocations(inner, innerCalls));
+        scope.AddAspect(Aspect.CountInvocations(outer, outerCalls));
         scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(outer)
             .Mutate([0], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBe([4]);
         attempts.ShouldBe(4);
@@ -137,7 +143,10 @@ public sealed class RetryOperatorTests
         var source = new CallbackMutator((_, _) => result);
         var calls = new CountAccumulator();
         var time = new DurationAccumulator();
-        var executor = ResolutionScope.Create(Aspect.CountInvocations(source, calls), Aspect.MeasureDuration(source, time))
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(source, calls));
+        scope.AddAspect(Aspect.MeasureDuration(source, time));
+        var executor = scope
             .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
 
         executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBeSameAs(result);
@@ -151,8 +160,10 @@ public sealed class RetryOperatorTests
         var source = leaf.Retry(3).Named("inspected");
         var counter = new CountAccumulator();
         var duration = new DurationAccumulator();
-        var executor = ResolutionScope.Create(
-            Aspect.CountInvocations(leaf, counter), Aspect.MeasureDuration(source, duration))
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(leaf, counter));
+        scope.AddAspect(Aspect.MeasureDuration(source, duration));
+        var executor = scope
             .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
         var random = RandomNumberGenerator.Create(1);
         var problem = Problem();

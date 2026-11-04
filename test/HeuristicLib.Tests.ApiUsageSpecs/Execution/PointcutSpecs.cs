@@ -57,21 +57,21 @@ public class PointcutSpecs
     }
 
     [Fact]
-    public void NamingWrappersForwardControlsOfTheirOwnChildExecutor()
+    public void NamingWrappersInOneScopeForwardControlsOfTheChildExecutorTheyShare()
     {
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var exploration = new Named<Mutation, RealVector>(child, "exploration");
         var refinement = new Named<Mutation, RealVector>(child, "refinement");
         var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
-        // Each resolution builds a new executor with its own mutation strength.
+        // Within one scope both names and the child itself resolve to the child's one executor.
         _ = scope.Resolve(exploration, out IMutationStrengthControl? explorationStrength);
         _ = scope.Resolve(refinement, out IMutationStrengthControl? refinementStrength);
         _ = scope.Resolve(child, out IMutationStrengthControl? childStrength);
         explorationStrength.ShouldNotBeNull().CurrentMutationStrength = 0.25;
 
-        refinementStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.5);
-        childStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.5);
+        refinementStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
+        childStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
     }
 
     [Fact]
@@ -168,7 +168,8 @@ public class PointcutSpecs
         var recording = selectByReference
             ? Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(queriedTemperatures.Add))
             : Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(queriedTemperatures.Add));
-        var scope = ResolutionScope.Create(recording);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(recording);
         var executor = scope.Resolve(plan);
 
         executor.Temperature(step: 0).ShouldBe(100);
@@ -191,7 +192,13 @@ public class PointcutSpecs
         var first = new AspectGroup(recording);
         var second = new AspectGroup(recording);
 
-        var scope = useCompositions ? ResolutionScope.Create(recording, first, second) : ResolutionScope.Create(recording);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(recording);
+        if (useCompositions)
+        {
+            scope.AddAspect(first);
+            scope.AddAspect(second);
+        }
         var executor = scope.Resolve(plan);
         executor.Temperature(step: 0).ShouldBe(100);
         executor.Temperature(step: 5).ShouldBe(2);
@@ -214,7 +221,9 @@ public class PointcutSpecs
             Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(recordWarmup)),
             Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(recordAll)));
 
-        var executor = ResolutionScope.Create(combined).Resolve(plan);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(combined);
+        var executor = scope.Resolve(plan);
         executor.Temperature(step: 0).ShouldBe(100);
         executor.Temperature(step: 5).ShouldBe(2);
 
@@ -229,7 +238,9 @@ public class PointcutSpecs
         var plan = new AnnealingPlan(warmup, main, WarmupSteps: 3);
         var temperatures = Analyzer.Trace([Temperatures(warmup), Temperatures(warmup), Temperatures(main)],
             static temperature => temperature);
-        var executor = ResolutionScope.Create(temperatures).Resolve(plan);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(temperatures);
+        var executor = scope.Resolve(plan);
 
         executor.Temperature(step: 0).ShouldBe(100);
         var first = temperatures.Snapshot();

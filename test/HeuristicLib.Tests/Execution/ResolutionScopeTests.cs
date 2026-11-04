@@ -1,9 +1,9 @@
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
 /// <summary>
-/// Covers contextual wrapper selection, ordering and independent executor
-/// private data. Every resolve builds a new executor. The cell names refer to the combinations of where wrappers
-/// are declared and where resolves happen.
+/// Covers contextual wrapper selection, ordering and executor private data. A scope builds one executor per
+/// configuration and wraps it with fresh advice for every request; child scopes build their own. The cell names refer
+/// to the combinations of where wrappers are declared and where resolves happen.
 /// </summary>
 public class ResolutionScopeTests
 {
@@ -16,7 +16,7 @@ public class ResolutionScopeTests
         var configuration = new CountingConfiguration("instance");
         var parentExecutor = parent.Resolve(configuration);
 
-        var childExecutor = parent.With().Resolve(configuration);
+        var childExecutor = parent.CreateChildScope().Resolve(configuration);
 
         childExecutor.ShouldNotBeSameAs(parentExecutor);
         childExecutor.State.ShouldNotBeSameAs(parentExecutor.State);
@@ -29,12 +29,12 @@ public class ResolutionScopeTests
     public void SiblingContexts_ConstructIndependentData(bool wrapInParent)
     {
         var configuration = new CountingConfiguration("instance");
-        var parent = wrapInParent
-            ? ResolutionScope.Create(Wrap(configuration, "parent"))
-            : ResolutionScope.Create();
+        var parent = ResolutionScope.Create();
+        if (wrapInParent)
+            parent.AddAspect(Wrap(configuration, "parent"));
 
-        var first = parent.With().Resolve(configuration);
-        var second = parent.With().Resolve(configuration);
+        var first = parent.CreateChildScope().Resolve(configuration);
+        var second = parent.CreateChildScope().Resolve(configuration);
 
         second.State.ShouldNotBeSameAs(first.State);
         configuration.CreateCount.ShouldBe(2);
@@ -46,14 +46,14 @@ public class ResolutionScopeTests
     public void SiblingContexts_StayIndependentAfterRootResolution(bool wrapInAncestor)
     {
         var configuration = new CountingConfiguration("instance");
-        var ancestor = wrapInAncestor
-            ? ResolutionScope.Create(Wrap(configuration, "ancestor"))
-            : ResolutionScope.Create();
+        var ancestor = ResolutionScope.Create();
+        if (wrapInAncestor)
+            ancestor.AddAspect(Wrap(configuration, "ancestor"));
         var ancestorExecutor = ancestor.Resolve(configuration);
-        var parent = ancestor.With();
+        var parent = ancestor.CreateChildScope();
 
-        var first = parent.With().Resolve(configuration);
-        var second = parent.With().Resolve(configuration);
+        var first = parent.CreateChildScope().Resolve(configuration);
+        var second = parent.CreateChildScope().Resolve(configuration);
 
         first.Name.ShouldBe(ancestorExecutor.Name);
         second.Name.ShouldBe(ancestorExecutor.Name);
@@ -68,18 +68,18 @@ public class ResolutionScopeTests
     public void AParent_NeverSeesStateItsChildCreated(bool wrapInParent)
     {
         var original = new CountingConfiguration("original");
-        var parent = wrapInParent
-            ? ResolutionScope.Create(Wrap(original, "parent"))
-            : ResolutionScope.Create();
-        var child = parent.With();
+        var parent = ResolutionScope.Create();
+        if (wrapInParent)
+            parent.AddAspect(Wrap(original, "parent"));
+        var child = parent.CreateChildScope();
         var childExecutor = child.Resolve(original);
 
         var parentExecutor = parent.Resolve(original);
 
         parentExecutor.State.ShouldNotBeSameAs(childExecutor.State);
-        child.Resolve(original).State.ShouldNotBeSameAs(childExecutor.State);
-        parent.Resolve(original).State.ShouldNotBeSameAs(parentExecutor.State);
-        original.CreateCount.ShouldBe(4);
+        child.Resolve(original).State.ShouldBeSameAs(childExecutor.State);
+        parent.Resolve(original).State.ShouldBeSameAs(parentExecutor.State);
+        original.CreateCount.ShouldBe(2);
     }
 
     // ---------- Sharing with wrappers ----------
@@ -88,10 +88,11 @@ public class ResolutionScopeTests
     public void ChildAddingNoAdvice_ReconstructsTheParentsAdvisedExecution()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Wrap(original, "parent"));
         var parentExecutor = parent.Resolve(original);
 
-        var childExecutor = parent.With().Resolve(original);
+        var childExecutor = parent.CreateChildScope().Resolve(original);
 
         childExecutor.ShouldNotBeSameAs(parentExecutor);
         childExecutor.Name.ShouldBe("parent(original)");
@@ -103,14 +104,16 @@ public class ResolutionScopeTests
     {
         var original = new CountingConfiguration("original");
         var other = new CountingConfiguration("other");
-        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Wrap(original, "parent"));
         var parentExecutor = parent.Resolve(original);
-        var child = parent.With(Wrap(other, "child"));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Wrap(other, "child"));
 
         child.Resolve(original).ShouldNotBeSameAs(parentExecutor);
         child.Resolve(original).Name.ShouldBe("parent(original)");
         child.Resolve(other).Name.ShouldBe("child(other)");
-        original.CreateCount.ShouldBe(3);
+        original.CreateCount.ShouldBe(2);
         other.CreateCount.ShouldBe(1);
     }
 
@@ -118,10 +121,12 @@ public class ResolutionScopeTests
     public void ChildAddingItsOwnWrapper_BuildsItsOwnExecution()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Wrap(original, "parent"));
         var parentExecutor = parent.Resolve(original);
 
-        var child = parent.With(Wrap(original, "child"));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Wrap(original, "child"));
 
         var childExecutor = child.Resolve(original);
         childExecutor.ShouldNotBeSameAs(parentExecutor);
@@ -132,10 +137,15 @@ public class ResolutionScopeTests
     public void ResolvingTwiceInOneScope_CreatesFreshAdviceOverSharedState()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "only"));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Wrap(original, "only"));
 
-        scope.Resolve(original).ShouldNotBeSameAs(scope.Resolve(original));
-        original.CreateCount.ShouldBe(2);
+        var first = scope.Resolve(original);
+        var second = scope.Resolve(original);
+
+        second.ShouldNotBeSameAs(first);
+        second.State.ShouldBeSameAs(first.State);
+        original.CreateCount.ShouldBe(1);
     }
 
     // ---------- Composition across scopes ----------
@@ -144,9 +154,11 @@ public class ResolutionScopeTests
     public void ChildWrapper_ComposesWithTheParentsRatherThanReplacingIt()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Wrap(original, "parent"));
 
-        var child = parent.With(Wrap(original, "child"));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Wrap(original, "child"));
 
         child.Resolve(original).Name.ShouldBe("parent(child(original))");
     }
@@ -155,9 +167,12 @@ public class ResolutionScopeTests
     public void ChildWrapper_DoesNotAffectTheParentsResolution()
     {
         var original = new CountingConfiguration("original");
-        var parent = ResolutionScope.Create(Wrap(original, "parent"));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Wrap(original, "parent"));
 
-        parent.With(Wrap(original, "child")).Resolve(original);
+        var scope = parent.CreateChildScope();
+        scope.AddAspect(Wrap(original, "child"));
+        scope.Resolve(original);
 
         parent.Resolve(original).Name.ShouldBe("parent(original)");
     }
@@ -167,7 +182,8 @@ public class ResolutionScopeTests
     {
         var wrapped = new CountingConfiguration("wrapped");
         var untouched = new CountingConfiguration("untouched");
-        var scope = ResolutionScope.Create(Wrap(wrapped, "wrapper"));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Wrap(wrapped, "wrapper"));
 
         scope.Resolve(untouched).Name.ShouldBe("untouched");
     }
@@ -175,21 +191,12 @@ public class ResolutionScopeTests
     // ---------- Ordering ----------
 
     [Fact]
-    public void WithinOneScope_TheFirstWrapperDeclaredIsInnermost()
-    {
-        var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "first"),
-            Wrap(original, "second"));
-
-        scope.Resolve(original).Name.ShouldBe("second(first(original))");
-    }
-
-    [Fact]
     public void TheSameWrapperDeclaredTwice_StacksTwice()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "counted"),
-            Wrap(original, "counted"));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Wrap(original, "counted"));
+        scope.AddAspect(Wrap(original, "counted"));
 
         scope.Resolve(original).Name.ShouldBe("counted(counted(original))");
     }
@@ -198,41 +205,246 @@ public class ResolutionScopeTests
     public void ADeeperScopesWrapper_IsInnerThanAShallowerOne()
     {
         var original = new CountingConfiguration("original");
-        var root = ResolutionScope.Create(Wrap(original, "shallow"));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Wrap(original, "shallow"));
 
-        var deep = root.With(Wrap(original, "deep"));
+        var deep = root.CreateChildScope();
+        deep.AddAspect(Wrap(original, "deep"));
 
         deep.Resolve(original).Name.ShouldBe("shallow(deep(original))");
     }
 
     [Fact]
-    public void AnExistingAspect_IsInnerThanARecipeInstalledAfterIt()
+    public void AnAddedAspect_WrapsCloserThanTheAspectsAddedBeforeIt()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "module"),
-            Wrap(original, "configuration"));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Wrap(original, "first"));
+        scope.AddAspect(Wrap(original, "second"));
+        scope.AddAspect(Wrap(original, "third"));
 
-        scope.Resolve(original).Name.ShouldBe("configuration(module(original))");
+        scope.Resolve(original).Name.ShouldBe("first(second(third(original)))");
     }
 
     [Fact]
-    public void AnExistingAspectInADescendant_IsInnerThanAnAncestorRecipe()
+    public void AChildScopesAspects_WrapCloserThanItsParents()
     {
         var original = new CountingConfiguration("original");
-        var root = ResolutionScope.Create(Wrap(original, "configuration"));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Wrap(original, "rootFirst"));
+        root.AddAspect(Wrap(original, "rootSecond"));
+        var child = root.CreateChildScope();
+        child.AddAspect(Wrap(original, "childFirst"));
+        child.AddAspect(Wrap(original, "childSecond"));
 
-        var child = root.With(Wrap(original, "module"));
+        child.Resolve(original).Name.ShouldBe("rootFirst(rootSecond(childFirst(childSecond(original))))");
+    }
 
-        child.Resolve(original).Name.ShouldBe("configuration(module(original))");
+    // Run setup lists aspects in the order they are attached, and an aspect attached again keeps its first position.
+    [Fact]
+    public void ARunSetupScope_WrapsTheFirstAttachedAspectClosest()
+    {
+        var original = new CountingConfiguration("original");
+        var first = Wrap(original, "first");
+        var second = Wrap(original, "second");
+
+        new ResolutionScopeBuilder(first, second, first).Build().Resolve(original).Name.ShouldBe("second(first(original))");
     }
 
     [Fact]
-    public void AmongModules_TheFirstInstalledIsInnermost()
+    public void AdviceInSeveralScopes_AppliesOnceAtItsClosestOccurrence()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "first"), Wrap(original, "second"));
+        var shared = Wrap(original, "shared");
+        var root = ResolutionScope.Create();
+        root.AddAspect(new NamedAspect(Wrap(original, "root"), shared));
+        var child = root.CreateChildScope();
+        child.AddAspect(new NamedAspect(shared, Wrap(original, "child")));
 
-        scope.Resolve(original).Name.ShouldBe("second(first(original))");
+        child.Resolve(original).Name.ShouldBe("root(child(shared(original)))");
+        root.Resolve(original).Name.ShouldBe("shared(root(original))");
+    }
+
+    // ---------- Adding advice and sharing ----------
+
+    [Fact]
+    public void AddingAdviceAlreadyInEffect_ChangesNothing()
+    {
+        var original = new CountingConfiguration("original");
+        var aspect = Wrap(original, "once");
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(aspect);
+        scope.Resolve(original);
+
+        scope.AddAspect(aspect);
+        scope.AddAspect(new NamedAspect(aspect));
+        _ = scope.CreateChildScope();
+        scope.AddAspect(aspect);
+
+        scope.Resolve(original).Name.ShouldBe("once(original)");
+        original.CreateCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void AddingAdviceForAConfigurationTheScopeHasResolved_IsAnError()
+    {
+        var resolved = new CountingConfiguration("resolved");
+        var later = new CountingConfiguration("later");
+        var scope = ResolutionScope.Create();
+        scope.Resolve(resolved);
+
+        Should.Throw<InvalidOperationException>(() => scope.AddAspect(Wrap(resolved, "late"))).Message.ShouldContain("already resolved without it");
+        scope.AddAspect(Wrap(later, "early"));
+
+        scope.Resolve(later).Name.ShouldBe("early(later)");
+        scope.Resolve(resolved).Name.ShouldBe("resolved");
+    }
+
+    // A rejected change leaves the scope tree usable.
+    [Fact]
+    public void ChangingAScopeThatHasChildScopes_IsAnError()
+    {
+        var original = new CountingConfiguration("original");
+        var scope = ResolutionScope.Create();
+        var child = scope.CreateChildScope();
+
+        Should.Throw<InvalidOperationException>(() => scope.AddAspect(Wrap(original, "late"))).Message.ShouldContain("already has child scopes");
+        Should.Throw<InvalidOperationException>(() => scope.Share(original)).Message.ShouldContain("already has child scopes");
+
+        child.Resolve(original).Name.ShouldBe("original");
+        scope.Resolve(original).Name.ShouldBe("original");
+        original.CreateCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void SharingAConfigurationTheScopeHasResolved_IsAnError()
+    {
+        var configuration = new CountingConfiguration("shared");
+        var root = ResolutionScope.Create();
+        root.Share(configuration);
+        var child = root.CreateChildScope();
+        child.Resolve(configuration);
+        var local = ResolutionScope.Create();
+        local.Resolve(configuration);
+
+        Should.Throw<InvalidOperationException>(() => child.Share(configuration)).Message.ShouldContain("has already resolved it");
+        Should.Throw<InvalidOperationException>(() => local.Share(configuration)).Message.ShouldContain("has already resolved it");
+        // Sharing a configuration again changes nothing, even after child scopes exist.
+        root.Share(configuration);
+        configuration.CreateCount.ShouldBe(2);
+    }
+
+    // A scope fixes how it resolves a configuration when the resolution starts, so the configuration's own construction
+    // can neither share it nor add advice for it.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AConfigurationChangingHowItIsResolvedWhileBuilding_IsAnError(bool share)
+    {
+        var leaf = new CountingConfiguration("leaf");
+        CompositeConfiguration? composite = null;
+        composite = new CompositeConfiguration("composite", leaf, scope =>
+        {
+            if (share)
+                scope.Share(composite!);
+            else
+                scope.AddAspect(Wrap(composite!, "late"));
+        });
+
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve(composite))
+            .Message.ShouldContain(share ? "has already resolved it" : "already resolved without it");
+    }
+
+    // ---------- Explicit sharing ----------
+
+    [Fact]
+    public void ASharedConfiguration_IsBuiltOnceInAChildScopeOfItsOwn()
+    {
+        var leaf = new CountingConfiguration("leaf");
+        var composite = new CompositeConfiguration("composite", leaf);
+        var root = ResolutionScope.Create();
+        root.AddAspect(Wrap(leaf, "root"));
+        root.Share(composite);
+        var rootLeaf = root.Resolve(leaf);
+
+        var first = root.CreateChildScope().Resolve(composite);
+        var second = root.CreateChildScope().Resolve(composite);
+
+        second.State.ShouldBeSameAs(first.State);
+        root.Resolve(composite).State.ShouldBeSameAs(first.State);
+        composite.CreateCount.ShouldBe(1);
+        // The sharing scope's advice reaches inside the shared executor, but its children are its own.
+        first.Name.ShouldBe("composite[root(leaf)]");
+        first.State.ShouldBeOfType<NamedExecutor>().State.ShouldNotBeSameAs(rootLeaf.State);
+        leaf.CreateCount.ShouldBe(2);
+    }
+
+    // Like a budget, the composite adds advice for its child to the scope it is built in. Sharing keeps that advice
+    // inside the shared executor, whichever use of the child was built first.
+    [Fact]
+    public void AdviceASharedConfigurationAddsWhileBuilding_StaysInsideIt()
+    {
+        var leaf = new CountingConfiguration("leaf");
+        var budgeted = new CompositeConfiguration("budgeted", leaf, scope => scope.AddAspect(Wrap(leaf, "budget")));
+        var root = ResolutionScope.Create();
+        root.Share(budgeted);
+        var earlierTurn = root.CreateChildScope().Resolve(leaf);
+
+        var shared = root.CreateChildScope().Resolve(budgeted);
+        var laterTurn = root.CreateChildScope().Resolve(leaf);
+
+        earlierTurn.Name.ShouldBe("leaf");
+        shared.Name.ShouldBe("budgeted[budget(leaf)]");
+        laterTurn.Name.ShouldBe("leaf");
+        root.Resolve(leaf).Name.ShouldBe("leaf");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void SharedConfigurations_ShareAChildOnlyWhenItIsSharedToo(bool shareChild)
+    {
+        var leaf = new CountingConfiguration("leaf");
+        var first = new CompositeConfiguration("first", leaf);
+        var second = new CompositeConfiguration("second", leaf);
+        var root = ResolutionScope.Create();
+        IConfigurationNode[] shared = shareChild ? [first, second, leaf] : [first, second];
+        root.Share(shared);
+        var turn = root.CreateChildScope();
+
+        var firstLeaf = turn.Resolve(first).State;
+        var secondLeaf = turn.Resolve(second).State;
+
+        ReferenceEquals(firstLeaf, secondLeaf).ShouldBe(shareChild);
+        leaf.CreateCount.ShouldBe(shareChild ? 1 : 2);
+    }
+
+    [Fact]
+    public void AFailureWhileBuildingASharedConfiguration_EndsTheScopeTree()
+    {
+        var fault = new InvalidOperationException("shared failure");
+        var leaf = new CountingConfiguration("leaf");
+        var failing = new CompositeConfiguration("failing", leaf, _ => throw fault);
+        var root = ResolutionScope.Create();
+        root.Share(failing);
+        var turn = root.CreateChildScope();
+
+        Should.Throw<InvalidOperationException>(() => turn.Resolve(failing)).ShouldBeSameAs(fault);
+        Should.Throw<InvalidOperationException>(() => root.Resolve(leaf)).Message.ShouldContain("Resolve through a new scope");
+        Should.Throw<InvalidOperationException>(() => root.CreateChildScope().Resolve(leaf)).Message.ShouldContain("Resolve through a new scope");
+    }
+
+    // The parent's construction catches its child's failure, but the tree has ended, so the parent is not returned either.
+    [Fact]
+    public void ACaughtNestedConstructionFailure_StillFailsTheEnclosingResolution()
+    {
+        var fault = new InvalidOperationException("child failure");
+        var failing = new CompositeConfiguration("failing", new CountingConfiguration("leaf"), _ => throw fault);
+        var fallback = new FallbackConfiguration(failing);
+        var scope = ResolutionScope.Create();
+
+        Should.Throw<InvalidOperationException>(() => scope.TryResolve(fallback, out _, out _)).Message.ShouldContain("Resolve through a new scope");
+        fallback.Caught.ShouldBeSameAs(fault);
     }
 
     // ---------- Building the chain ----------
@@ -241,9 +453,10 @@ public class ResolutionScopeTests
     public void BuildingAChain_CreatesTheUnwrappedExecutionExactlyOnce()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "inner"),
-            Wrap(original, "middle"),
-            Wrap(original, "outer"));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Wrap(original, "outer"));
+        scope.AddAspect(Wrap(original, "middle"));
+        scope.AddAspect(Wrap(original, "inner"));
 
         scope.Resolve(original).Name.ShouldBe("outer(middle(inner(original)))");
         original.CreateCount.ShouldBe(1);
@@ -253,11 +466,12 @@ public class ResolutionScopeTests
     public void AfterAChainIsBuilt_TheUnwrappedConfigurationStillResolvesThroughItsWrappers()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "wrapper"));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Wrap(original, "wrapper"));
 
         scope.Resolve(original).Name.ShouldBe("wrapper(original)");
         scope.Resolve(original).Name.ShouldBe("wrapper(original)");
-        original.CreateCount.ShouldBe(2);
+        original.CreateCount.ShouldBe(1);
     }
 
     // ---------- Own roles ----------
@@ -266,7 +480,8 @@ public class ResolutionScopeTests
     public void RoleAdvice_ReadsTheSelectedConfigurationThroughItsRole()
     {
         ILabeledRole configuration = new LabeledConfiguration("role");
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(configuration), new RoleLabelAdvice()));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(configuration), new RoleLabelAdvice()));
 
         scope.Resolve(configuration).Name.ShouldBe("role(labeled)");
     }
@@ -279,7 +494,8 @@ public class ResolutionScopeTests
     public void RoleAdvice_ListedForAnotherRoleOfTheSameExecutorType_IsReported()
     {
         var other = new CountingConfiguration("other");
-        var scope = ResolutionScope.Create(new PairAspect(Pointcut.Reference(other), new RoleLabelAdvice()));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(new PairAspect(Pointcut.Reference(other), new RoleLabelAdvice()));
 
         Should.Throw<InvalidOperationException>(() => scope.Resolve(other)).Message.ShouldBe(
             $"{nameof(RoleLabelAdvice)} cannot wrap {nameof(INamedExecutor)} of {nameof(CountingConfiguration)}. " +
@@ -290,7 +506,8 @@ public class ResolutionScopeTests
     public void RoleAdvice_WrapsAResolutionThroughAWiderExecutorType()
     {
         var original = new CountingConfiguration("original");
-        var scope = ResolutionScope.Create(Wrap(original, "named"));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Wrap(original, "named"));
 
         scope.Resolve<IExecutor>(original).ShouldBeOfType<NamedExecutor>().Name.ShouldBe("named(original)");
     }
@@ -299,59 +516,69 @@ public class ResolutionScopeTests
     public void AdviceForAnotherExecutorTypeOfTheConfiguration_IsReportedRatherThanCast()
     {
         var configuration = new TwoRoleConfiguration();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(configuration), new OtherRoleAdvice()));
+        var aspect = Aspect.Create(Pointcut.Reference(configuration), new OtherRoleAdvice());
 
-        var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve<INamedExecutor>(configuration));
+        var namedScope = ResolutionScope.Create();
+        namedScope.AddAspect(aspect);
+        var exception = Should.Throw<InvalidOperationException>(() => namedScope.Resolve<INamedExecutor>(configuration));
 
         exception.Message.ShouldBe(
             $"{nameof(OtherRoleAdvice)} cannot wrap {nameof(INamedExecutor)} of {nameof(TwoRoleConfiguration)}. " +
             $"Advice for this role derives from Advice<TConfiguration, {nameof(INamedExecutor)}> for a TConfiguration the configuration implements.");
-        scope.Resolve<IOtherExecutor>(configuration).ShouldBeOfType<OtherExecutor>().Wrapped.ShouldBeTrue();
+        var otherScope = ResolutionScope.Create();
+        otherScope.AddAspect(aspect);
+        otherScope.Resolve<IOtherExecutor>(configuration).ShouldBeOfType<OtherExecutor>().Wrapped.ShouldBeTrue();
     }
 
     [Fact]
-    public void MultipleAspectsSnapshotInputsAndDeduplicateTheirSharedInstallation()
+    public void AdviceListedByAspectsOfOneScope_AppliesOnceAtItsClosestOccurrence()
     {
         var original = new CountingConfiguration("original");
         var installed = Wrap(original, "installed");
         var first = new NamedAspect(Wrap(original, "first"), installed);
         var second = new NamedAspect(Wrap(original, "second"), installed);
-        Aspect[] inputs = [first, second, installed, first];
-        var scope = ResolutionScope.Create(inputs);
-        inputs[0] = Wrap(original, "replacement");
-        scope.Resolve(original)
-            .Name.ShouldBe("second(installed(first(original)))");
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(first);
+        scope.AddAspect(second);
+        scope.AddAspect(installed);
+        scope.AddAspect(first);
+
+        scope.Resolve(original).Name.ShouldBe("first(second(installed(original)))");
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void MultipleAspectLayersPreserveInstallationOrdering(bool childState)
+    [Fact]
+    public void AspectsOfSeveralScopesFollowOneApplicationSequence()
     {
         var original = new CountingConfiguration("original");
         IConfigurationNode<INamedExecutor> selected = original;
         var installed = Wrap(selected, "installed");
         var first = new NamedAspect(Wrap(original, "first"), installed);
         var second = Wrap(selected, "second");
-        var root = ResolutionScope.Create(first, second);
+        var root = ResolutionScope.Create();
+        root.AddAspect(first);
+        root.AddAspect(second);
         root.Resolve(original);
         var third = Wrap(selected, "third");
         var fourth = Wrap(selected, "fourth");
-        var scope = childState ? root.With(third, fourth) : root.With(third, fourth);
+        var scope = root.CreateChildScope();
+        scope.AddAspect(third);
+        scope.AddAspect(fourth);
 
         scope.Resolve(original)
-            .Name.ShouldBe("second(installed(first(fourth(third(original)))))");
+            .Name.ShouldBe("installed(first(second(third(fourth(original)))))");
         original.CreateCount.ShouldBe(2);
     }
 
     [Fact]
-    public void ExistingAspectsFollowOneApplicationSequence()
+    public void PairsWithinOneAspect_ApplyInListedOrder()
     {
         var original = new CountingConfiguration("original");
         var existing = Wrap(original, "existing");
         var nested = Wrap(original, "nested");
         var combined = new NamedAspect(existing, Wrap(original, "inline"), nested, Wrap(original, "last"));
-        ResolutionScope.Create(combined).Resolve(original)
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(combined);
+        scope.Resolve(original)
             .Name.ShouldBe("last(nested(inline(existing(original))))");
     }
 
@@ -397,6 +624,41 @@ public class ResolutionScopeTests
             return new NamedExecutor(name, new object());
         }
 
+    }
+
+    // Resolves its child in the scope it is built in, after an optional action on that scope. Its state is the child's
+    // executor.
+    private sealed class CompositeConfiguration(string name, IConfigurationNode<INamedExecutor> child, Action<ResolutionScope>? building = null)
+        : IConfigurationNode<INamedExecutor>
+    {
+        public int CreateCount { get; private set; }
+
+        public INamedExecutor CreateExecutor(ResolutionScope scope)
+        {
+            CreateCount++;
+            building?.Invoke(scope);
+            var executor = scope.Resolve(child);
+            return new NamedExecutor($"{name}[{executor.Name}]", executor);
+        }
+    }
+
+    // Falls back to an executor of its own when its child cannot be built.
+    private sealed class FallbackConfiguration(IConfigurationNode<INamedExecutor> child) : IConfigurationNode<INamedExecutor>
+    {
+        public Exception? Caught { get; private set; }
+
+        public INamedExecutor CreateExecutor(ResolutionScope scope)
+        {
+            try
+            {
+                return scope.Resolve(child);
+            }
+            catch (InvalidOperationException exception)
+            {
+                Caught = exception;
+                return new NamedExecutor("fallback", null);
+            }
+        }
     }
 
     private interface ILabeledRole : IConfigurationNode<INamedExecutor>

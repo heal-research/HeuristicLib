@@ -18,7 +18,8 @@ public class ObservationModuleTests
         var mutator = new AddOneMutator();
         var problem = CreateProblem();
         var observations = new List<MutationObservation<int>>();
-        var scope = ResolutionScope.Create(Aspect.Observe(mutator.Invocations, observations.Add));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Observe(mutator.Invocations, observations.Add));
 
         var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator)
             .Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -39,7 +40,8 @@ public class ObservationModuleTests
     public void AnObservationWrittenForANarrowerProblem_IsReportedWhenTheGraphIsResolved()
     {
         IOperator<Mutation, int> mutator = new AddOneMutator();
-        var scope = ResolutionScope.Create(Aspect.Observe(mutator.Invocations, _ => { }));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Observe(mutator.Invocations, _ => { }));
 
         var exception = Should.Throw<InvalidOperationException>(() =>
             scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
@@ -55,7 +57,8 @@ public class ObservationModuleTests
     public void AMismatch_NamesGenericTypesWithTheirTypeArguments()
     {
         IOperator<Mutation, int> mutator = new AddOneMutator();
-        var scope = ResolutionScope.Create(Aspect.Observe(mutator.Invocations, _ => { }));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Observe(mutator.Invocations, _ => { }));
 
         var exception = Should.Throw<InvalidOperationException>(() =>
             scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
@@ -76,8 +79,10 @@ public class ObservationModuleTests
         var problem = CreateProblem();
         var counter = new CountAccumulator();
         var observed = new List<IOperator<Evaluation, int>>();
-        var root = ResolutionScope.Create(Aspect.Observe(evaluator.Invocations, observation => observed.Add(observation.Evaluator)));
-        var budget = root.With(Aspect.CountInvocations(evaluator, counter));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Observe(evaluator.Invocations, observation => observed.Add(observation.Evaluator)));
+        var budget = root.CreateChildScope();
+        budget.AddAspect(Aspect.CountInvocations(evaluator, counter));
 
         budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -92,7 +97,8 @@ public class ObservationModuleTests
         var algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
         var observations = new List<AlgorithmObservation<int, PopulationState<int>>>();
-        var scope = ResolutionScope.Create(Aspect.Observe(algorithm.Iterations, observations.Add));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Observe(algorithm.Iterations, observations.Add));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
 
         var states = new List<PopulationState<int>>();
@@ -118,7 +124,8 @@ public class ObservationModuleTests
         var problem = CreateProblem();
         var state = Population.From([EvaluatedCandidate.From(4, 4)]).ToPopulationState();
         var observed = new List<PopulationState<int>>();
-        var scope = ResolutionScope.Create(Aspect.Observe(interceptor.Invocations, observation => observed.Add(observation.State)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Observe(interceptor.Invocations, observation => observed.Add(observation.State)));
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor)
             .Transform(state, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -137,9 +144,10 @@ public class ObservationModuleTests
         var algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
         var recorder = new Recorder();
-        var scope = ResolutionScope.Create(Aspect.Observe(evaluator.Invocations, recorder.Record),
-            Aspect.Observe(mutator.Invocations, recorder.Record),
-            Aspect.Observe(algorithm.Iterations, recorder.Record));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Observe(evaluator.Invocations, recorder.Record));
+        scope.AddAspect(Aspect.Observe(mutator.Invocations, recorder.Record));
+        scope.AddAspect(Aspect.Observe(algorithm.Iterations, recorder.Record));
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

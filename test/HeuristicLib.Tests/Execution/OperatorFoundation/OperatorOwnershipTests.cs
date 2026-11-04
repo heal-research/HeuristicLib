@@ -54,8 +54,8 @@ public sealed class OperatorOwnershipTests
         Check(Pointcut.Named<IOperator<Mutation, RealVector>>("outer").Matches(named), "common pointcuts recognize generic names");
         Check(!Pointcut.Reference(mutation).Matches(named), "wrapper and child remain separate configurations");
         IOperator<Mutation, RealVector> counting = new CountingMutation();
-        Check(Invoke(typed.Resolve(counting)) == 1 && Invoke(typed.Resolve(counting.Named("count"))) == 1,
-            "private fields belong to each resolved executor");
+        Check(Invoke(typed.Resolve(counting)) == 1 && Invoke(typed.Resolve(counting.Named("count"))) == 2,
+            "a name resolves its child in the same scope, so both share the child's private fields");
         Check(typed.ResolveOptional((IOperator<Mutation, RealVector>?)null) is null, "optional resolution infers its operation");
         Check(typed.TryResolve(mutation, out var resolved, out var reason) && resolved is not null && reason is null,
             "TryResolve needs no explicit executor type");
@@ -86,17 +86,16 @@ public sealed class OperatorOwnershipTests
             Check(control is not null && control.Value == 3, "control projects from the selected executor");
             control!.Value = 12;
             _ = typed.Resolve(evaluation);
-            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 3,
-                "separately resolved operations have independent private data");
+            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 12,
+                "every operation of a configuration uses its one executor in a scope");
             var named = typed.Resolve(mutation.Named("one").Named("two"), out ILiveValue? namedControl);
-            // Each resolution builds its own executor and forwarding preserves that executor's control.
-            Check(namedControl is not null && namedControl.Value == 3 && Invoke(named) == 3, "forwarding preserves controls and operation");
+            // The names resolve their child in the same scope, and forwarding preserves that executor's control.
+            Check(namedControl is not null && namedControl.Value == 12 && Invoke(named) == 12, "forwarding preserves controls and operation");
             _ = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>().Resolve(mutation);
-            Check(log.Preparations == (evaluationFirst ? 6 : 5), "each view constructs independent private data");
-            var constructions = log.Constructions;
+            Check(log.Preparations == 1, "a view for another compatible state uses the same executor");
             _ = typed.Resolve(mutation);
-            Check(log.Constructions == constructions + 1, "every resolution constructs again; no view is cached");
-            Check(Invoke(Typed(ResolutionScope.Create()).Resolve(mutation)) == 3 && log.Preparations == (evaluationFirst ? 8 : 7),
+            Check(log.Constructions == 1, "a scope builds a configuration's executor once");
+            Check(Invoke(Typed(ResolutionScope.Create()).Resolve(mutation)) == 3 && log.Preparations == 2,
                 "an independent root starts with independent state");
         }
     }
@@ -115,7 +114,7 @@ public sealed class OperatorOwnershipTests
                 _ = narrow.Resolve(termination.Named("narrow"));
             _ = broad.Resolve(termination.Named("broad"));
             _ = narrow.Resolve(termination.Named("narrow"));
-            Check(source.Log.Preparations == (narrowFirst ? 3 : 2), "each compatible view constructs private data");
+            Check(source.Log.Preparations == 1, "compatible state views use the executor built first");
             Check(!narrow.Resolve(termination).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem), "terminator remains callable");
         }
         var interceptor = new IdentityInterceptor(new ProbeLog());
@@ -127,8 +126,8 @@ public sealed class OperatorOwnershipTests
             Problem.SearchSpace, Problem)), "a scope over another state resolves the interceptor over the state its operation names");
         Check(ReferenceEquals(state, exact.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
             Problem.SearchSpace, Problem)), "the exact scope resolves the same interceptor");
-        Check(interceptor.Log.Preparations == 2 && interceptor.Log.Constructions == 2,
-            "both contexts construct their own executor");
+        Check(interceptor.Log.Preparations == 1 && interceptor.Log.Constructions == 1,
+            "both state views of one scope use one executor");
     }
 
     [Fact]
@@ -136,21 +135,21 @@ public sealed class OperatorOwnershipTests
     {
         IOperator<Mutation, RealVector> source = new CountingMutation();
         var parent = ResolutionScope.Create();
-        var child = parent.With();
-        // A stateful leaf builds a new executor for each resolution, so the call count shows which state an executor shares.
+        var child = parent.CreateChildScope();
+        // A stateful leaf counts its calls, so the count shows which executor a resolution returns.
         var local = Typed(child).Resolve(source);
         var ancestor = Typed(parent).Resolve(source);
         Check(Invoke(local) == 1 && Invoke(ancestor) == 1, "child-first preparation is not hoisted");
-        Check(Invoke(Typed(child).Resolve(source)) == 1, "separate construction leaves the earlier executor independent");
-        var nextChild = parent.With();
-        Check(Invoke(Typed(nextChild).Resolve(source)) == 1, "contextual construction starts with private fields");
-        Check(Invoke(Typed(parent.With()).Resolve(source)) == 1, "With shares resources without sharing private fields");
+        Check(Invoke(Typed(child).Resolve(source)) == 2, "a scope returns the executor it built before");
+        var nextChild = parent.CreateChildScope();
+        Check(Invoke(Typed(nextChild).Resolve(source)) == 1, "a child scope starts with private fields of its own");
+        Check(Invoke(Typed(parent.CreateChildScope()).Resolve(source)) == 1, "child scopes share resources without sharing private fields");
         IOperator<Mutation, RealVector> equalCopy = new CountingMutation();
         Check(source.Equals(equalCopy) && Invoke(Typed(parent).Resolve(equalCopy)) == 1, "equal records construct independent executors");
 
         var firstChild = ResolutionScope.Create();
-        var left = firstChild.With();
-        var right = firstChild.With();
+        var left = firstChild.CreateChildScope();
+        var right = firstChild.CreateChildScope();
         Check(Invoke(Typed(left).Resolve(source)) == 1 && Invoke(Typed(right).Resolve(source)) == 1, "sibling contexts construct independent private fields");
     }
 
@@ -162,7 +161,7 @@ public sealed class OperatorOwnershipTests
             IOperator<Mutation, RealVector> source = new CountingMutation();
             var root = ResolutionScope.Create();
             var first = Typed(root).Resolve(source);
-            var second = Typed(root.With()).Resolve(source);
+            var second = Typed(root.CreateChildScope()).Resolve(source);
             Check(Invoke(first) == 1 && Invoke(second) == 1, $"{policy} state trajectory");
         }
     }
@@ -174,19 +173,19 @@ public sealed class OperatorOwnershipTests
         IOperator<Mutation, RealVector> source = new ContextualMutation(child);
         var root = ResolutionScope.Create();
         var first = Typed(root).Resolve(source);
-        var second = Typed(root.With()).Resolve(source);
+        var second = Typed(root.CreateChildScope()).Resolve(source);
         Check(!ReferenceEquals(first, second) && Invoke(first) == 1 && Invoke(second) == 2 && Invoke(first) == 1,
             "rebinding constructs new nodes without replacing an earlier node's children");
 
         IOperator<Mutation, RealVector> counter = new CountingMutation();
         var parent = ResolutionScope.Create();
-        var localScope = parent.With();
+        var localScope = parent.CreateChildScope();
         var local = Typed(localScope).Resolve(counter);
         var parentComposite = new ContextualMutation(counter);
         var parentNode = Typed(parent).Resolve(parentComposite);
         var descendantNode = Typed(localScope).Resolve(parentComposite);
-        Check(Invoke(local) == 1 && Invoke(parentNode) == 1 && Invoke(descendantNode) == 1,
-            "each composite constructs its own contextual children");
+        Check(Invoke(local) == 1 && Invoke(parentNode) == 1 && Invoke(descendantNode) == 2,
+            "a composite built in a child scope uses the children that scope already built");
     }
 
     [Fact]
@@ -197,17 +196,20 @@ public sealed class OperatorOwnershipTests
         IOperator<Mutation, RealVector> mutation = source;
         var typed = Typed(ResolutionScope.Create());
         Reject(() => typed.Resolve(mutation), "preparation failure");
+        Reject(() => typed.Resolve(mutation), "Resolve through a new scope");
         log.FailPreparation = false;
         log.FailConstruction = true;
-        Reject(() => typed.Resolve(mutation), "construction failure");
-        Check(log.Preparations == 2, "failed preparation is retried");
+        Reject(() => Typed(ResolutionScope.Create()).Resolve(mutation), "construction failure");
+        Check(log.Preparations == 2, "a new scope retries the failed preparation");
         log.FailConstruction = false;
-        Check(Invoke(typed.Resolve(mutation)) == 3 && log.Preparations == 3,
-            "private data is reconstructed after a construction failure");
+        Check(Invoke(Typed(ResolutionScope.Create()).Resolve(mutation)) == 3 && log.Preparations == 3,
+            "a new scope reconstructs private data after a construction failure");
         var dual = new DualRoleMutation();
         IOperator<Mutation, RealVector> dualMutation = dual;
         var root = ResolutionScope.Create();
-        Reject(() => Typed(root.With(Aspect.Create(Pointcut.Reference(dual), new DualRoleAdvice()))).Resolve(dualMutation), "Supported extension bases");
+        var advisedScope = root.CreateChildScope();
+        advisedScope.AddAspect(Aspect.Create(Pointcut.Reference(dual), new DualRoleAdvice()));
+        Reject(() => Typed(advisedScope).Resolve(dualMutation), "Supported extension bases");
         Check(Invoke(Typed(root).Resolve(dualMutation)) == Input[0][0], "advice rejection leaves unadvised construction usable");
     }
 
@@ -222,24 +224,24 @@ public sealed class OperatorOwnershipTests
         var ownRole = new OwnRoleNode();
         var scope = ResolutionScope.Create();
         var first = scope.Resolve(ownRole);
-        var second = scope.With().Resolve(ownRole);
+        var second = scope.CreateChildScope().Resolve(ownRole);
         Check(!ReferenceEquals(first, second) && !ReferenceEquals(first.State, second.State)
-            && !ReferenceEquals(first.State, scope.With().Resolve(ownRole).State)
+            && !ReferenceEquals(first.State, scope.CreateChildScope().Resolve(ownRole).State)
             && !ReferenceEquals(first.State, ResolutionScope.Create().Resolve(ownRole).State),
-            "a consumer role constructs private fields on each resolution");
+            "each scope constructs a consumer role's private fields");
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static (WeakReference Source, WeakReference Executor) MakeDiscarded(ResolutionScope root)
     {
         IOperator<Mutation, RealVector> source = new CountingMutation();
-        var executor = Typed(root.With()).Resolve(source);
+        var executor = Typed(root.CreateChildScope()).Resolve(source);
         return (new WeakReference(source), new WeakReference(executor));
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     private static WeakReference MakeFreshExecutor(ResolutionScope root, IOperator<Mutation, RealVector> source) =>
-        new(Typed(root.With()).Resolve(source));
+        new(Typed(root.CreateChildScope()).Resolve(source));
 
     [Fact]
     public void Lifetime()

@@ -87,9 +87,8 @@ public sealed class EvaluationResolutionTests
         var reports = new List<int>();
         var leaf = new CountingEvaluator(() => preparations++, () => calls++);
         var source = new CachingEvaluator<int>(leaf);
-        var scope = ResolutionScope.Create()
-            .With(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)))
-            .Sharing(source);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)));
         var first = Resolve(scope, source);
         var second = Resolve(scope, source);
 
@@ -113,7 +112,7 @@ public sealed class EvaluationResolutionTests
         var calls = 0;
         var leaf = new CountingEvaluator(() => preparations++, () => calls++);
         var source = new LimitEvaluator<int>(leaf, 2) { FallbackObjectiveVector = new ObjectiveVector(-1), EnforceLimitWithinBatch = true };
-        var scope = ResolutionScope.Create().Sharing(source);
+        var scope = ResolutionScope.Create();
         var first = Resolve(scope, source);
         var second = Resolve(scope, source);
 

@@ -43,16 +43,21 @@ public class ObservationPointTests
     }
 
     [Fact]
-    public void Reports_CallEachAdviceOnceInAspectOrder()
+    public void Reports_CallEachAdviceOnceInApplicationOrder()
     {
         var ticker = new Ticker();
         var events = new List<string>();
         var first = Aspect.Observe(ticker.First, value => events.Add($"first {value}"));
         var second = Aspect.Observe(ticker.First, value => events.Add($"second {value}"));
 
-        ResolutionScope.Create(first, second, first).Resolve(ticker).Tick();
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(first);
+        scope.AddAspect(second);
+        scope.AddAspect(first);
+        scope.Resolve(ticker).Tick();
 
-        events.ShouldBe(["first 1", "second 1"]);
+        // The aspect added last applies closest and observes first; adding an aspect again changes nothing.
+        events.ShouldBe(["second 1", "first 1"]);
     }
 
     [Fact]
@@ -62,7 +67,8 @@ public class ObservationPointTests
         var trace = Analyzer.Trace([ticker.First, ticker.Second, ticker.First], value => value);
         var other = new Ticker();
         var copy = ticker with { };
-        var scope = ResolutionScope.Create(trace);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(trace);
 
         scope.Resolve(other).Tick();
         scope.Resolve(copy).Tick();
@@ -78,7 +84,11 @@ public class ObservationPointTests
         var clock = new ObservationClock<int>(ticker.First);
         var first = Analyzer.Trace(ticker.First, value => value, clocks: [clock]);
         var second = Analyzer.Trace(ticker.First, value => value, clocks: [clock]);
-        var executor = ResolutionScope.Create(first, second, clock).Resolve(ticker);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(first);
+        scope.AddAspect(second);
+        scope.AddAspect(clock);
+        var executor = scope.Resolve(ticker);
 
         executor.Tick();
         executor.Tick();
@@ -93,9 +103,12 @@ public class ObservationPointTests
         var ticker = new Ticker();
         var outer = Analyzer.Trace(ticker.First, value => value);
         var inner = Analyzer.Trace(ticker.First, value => value);
-        var scope = ResolutionScope.Create(outer);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(outer);
         var original = scope.Resolve(ticker);
-        var rebound = scope.With(inner).Resolve(ticker);
+        var reboundScope = scope.CreateChildScope();
+        reboundScope.AddAspect(inner);
+        var rebound = reboundScope.Resolve(ticker);
 
         original.Tick();
         rebound.Tick();
@@ -111,7 +124,9 @@ public class ObservationPointTests
         var mutator = new ReportingMutator();
         var trace = Analyzer.Trace(mutator.Counts, count => count);
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var observed = ResolutionScope.Create(trace).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+        var observedScope = ResolutionScope.Create();
+        observedScope.AddAspect(trace);
+        var observed = observedScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
         var unobserved = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
 
         observed.Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1, 2]);

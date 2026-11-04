@@ -19,39 +19,57 @@ public partial class ResolutionScope
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
+        node.Tree.ThrowIfFailed();
         if (!source.Fits(ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>()))
             throw ExecutionSignature.Mismatch(source,
                 source is Operator<TOperation, TCandidate> authored ? authored.SupportedExecutionDescription : "its declared signature",
                 ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)));
-        using var building = construction.Enter(source);
+        ConstructionHooks.RequireOne(source);
+        using var building = node.Tree.Enter(source);
         var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
 
         List<Advice>? applicable = null;
-        foreach (var (pointcut, advice) in Advices())
-            if (pointcut.Matches(source) && CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(advice, operation, source))
+        foreach (var (_, advice) in MatchingAdvice(source))
+            if (CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(advice, operation, source))
                 (applicable ??= []).Add(advice);
 
-        // The resolver is the one place that constructs executors; the delegate only chooses the constructing layer.
-#pragma warning disable HLib0001
-        var executor = Construct(source, owner => source.CreateExecutor(owner.For<TCandidate, TSearchSpace, TProblem, TSearchState>()),
-            TOperation.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
-#pragma warning restore HLib0001
-        operation.RequireExecutor(executor, source);
-        if (applicable is not null)
-            foreach (var advice in applicable)
+        var owner = Owner(source);
+        var existing = Existing(owner, source, TOperation.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
+        // The checks passed, so this scope's advice for the operator is fixed from here on.
+        node.Advised.Add(source);
+        try
+        {
+            var executor = existing;
+            if (executor is null)
             {
-                executor = advice is OperatorAdvice general
-                    ? general.Wrap(executor, operation, source)
-                    : ((OperatorAdvice<TOperation, TCandidate>)advice).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-                operation.RequireExecutor(executor, advice);
+                // The resolver is the one place that constructs executors; the delegate only chooses the constructing scope.
+#pragma warning disable HLib0001
+                executor = Build(owner, source, scope => source.CreateExecutor(scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()));
+#pragma warning restore HLib0001
+                operation.RequireExecutor(executor, source);
             }
-        return executor;
+            if (applicable is not null)
+                foreach (var advice in applicable)
+                {
+                    executor = advice is OperatorAdvice general
+                        ? general.Wrap(executor, operation, source)
+                        : ((OperatorAdvice<TOperation, TCandidate>)advice).Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
+                    operation.RequireExecutor(executor, advice);
+                }
+            return executor;
+        }
+        catch
+        {
+            node.Tree.Fail(source);
+            throw;
+        }
     }
 
     /// <summary>Resolves an operator like <c>ResolveOperator</c> and returns its executor as the operation's interface.</summary>
     /// <remarks>
-    /// Invalid-operation failures become reasons; other exceptions propagate. Failed attempts may be retried.
-    /// <typeparamref name="TExecutor"/> is the operation's executor interface for the run types.
+    /// A rejection before anything is built becomes a reason and leaves the scope usable; a construction failure ends
+    /// the scope tree and propagates. <typeparamref name="TExecutor"/> is the operation's executor interface for the
+    /// run types.
     /// </remarks>
     public bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(IOperator<TOperation, TCandidate> source,
         [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)

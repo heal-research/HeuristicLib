@@ -21,7 +21,7 @@ public sealed class ResourceTests
         var aspect = Aspect.Create(Pointcut.Reference(source), new ResourceNodeAdvice(counter, observed.Add));
         var scope = new ResolutionScopeBuilder(aspect).AddResource(handle, counter).Build();
         var first = scope.Resolve(source);
-        var second = scope.With().Resolve(source);
+        var second = scope.CreateChildScope().Resolve(source);
         var independentCounter = new CountAccumulator();
         var independentAspect = Aspect.Create(Pointcut.Reference(source), new ResourceNodeAdvice(independentCounter, observed.Add));
         var independent = new ResolutionScopeBuilder(independentAspect).AddResource(handle, independentCounter).Build().Resolve(source);
@@ -63,7 +63,7 @@ public sealed class ResourceTests
         var creations = 0;
         var handle = new TestHandle(() => { Interlocked.Increment(ref creations); return new object(); });
         var root = ResolutionScope.Create();
-        var resources = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => root.With().Resource(handle), TestContext.Current.CancellationToken)));
+        var resources = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() => root.CreateChildScope().Resource(handle), TestContext.Current.CancellationToken)));
         creations.ShouldBe(1);
         resources.All(resource => ReferenceEquals(resource, resources[0])).ShouldBeTrue();
         ResolutionScope.Create().Resource(handle).ShouldNotBeSameAs(resources[0]);
@@ -104,9 +104,11 @@ public sealed class ResourceTests
         using var overlap = new Barrier(2);
         var gate = new SuppliedResourceHandle<Barrier>();
         var source = new OverlappingEvaluator(gate).Cached();
-        var scope = new ResolutionScopeBuilder().AddResource(gate, overlap).Build().Sharing(source).For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var root = new ResolutionScopeBuilder().AddResource(gate, overlap).Build();
+        root.Share(source);
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var first = scope.Resolve(source);
-        var second = scope.With().Resolve(source);
+        var second = scope.CreateChildScope().Resolve(source);
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var candidate = new RealVector(2.0);
         var results = await Task.WhenAll(
@@ -131,7 +133,7 @@ public sealed class ResourceTests
         first.Resource(handle).ShouldNotBeSameAs(supplied);
         second.Resource(handle).ShouldNotBeSameAs(supplied);
         third.Resource(handle).ShouldBeSameAs(supplied);
-        first.With().Resource(handle).ShouldBeSameAs(first.Resource(handle));
+        first.CreateChildScope().Resource(handle).ShouldBeSameAs(first.Resource(handle));
     }
 
     [Fact]

@@ -39,7 +39,9 @@ public class RefinerCompositionTests
     {
         var counter = new CountAccumulator();
         var observed = AddOffset(1);
-        var executor = ResolutionScope.Create(Aspect.CountInvocations(observed, counter)).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.AsIterated(4));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.AsIterated(4));
 
         Refine(executor, 3).ShouldBe([7]);
         counter.CurrentCount.ShouldBe(4);
@@ -106,7 +108,9 @@ public class RefinerCompositionTests
     {
         var counter = new CountAccumulator();
         var observed = AddOffset(1);
-        var executor = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
 
         Refine(executor, 3, 4, 5);
 
@@ -118,7 +122,9 @@ public class RefinerCompositionTests
     {
         var counter = new CountAccumulator();
         var observed = new ThrowingRefiner();
-        var executor = ResolutionScope.Create(Aspect.CountInvocations(observed, counter)).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 3));
 
@@ -131,7 +137,9 @@ public class RefinerCompositionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var observed = new ThrowingRefiner();
-        var executor = ResolutionScope.Create(Aspect.MeasureDuration(observed, duration, timeProvider)).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.MeasureDuration(observed, duration, timeProvider));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 3));
 
@@ -155,8 +163,12 @@ public class RefinerCompositionTests
         var around = new CountAccumulator();
         var inner = AddOffset(1);
         var outer = AddOffset(1).AsIterated(3);
-        var insideExecutor = ResolutionScope.Create(Aspect.CountInvocations(inner, inside)).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(inner.AsIterated(3));
-        var aroundExecutor = ResolutionScope.Create(Aspect.CountInvocations(outer, around)).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(outer);
+        var insideScope = ResolutionScope.Create();
+        insideScope.AddAspect(Aspect.CountInvocations(inner, inside));
+        var insideExecutor = insideScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(inner.AsIterated(3));
+        var aroundScope = ResolutionScope.Create();
+        aroundScope.AddAspect(Aspect.CountInvocations(outer, around));
+        var aroundExecutor = aroundScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(outer);
 
         Refine(insideExecutor, 3).ShouldBe([6]);
         Refine(aroundExecutor, 3).ShouldBe([6]);
@@ -171,7 +183,9 @@ public class RefinerCompositionTests
         var counter = new CountAccumulator();
         var observed = AddOffset(1);
         var refiner = PipelineRefiner.Create(observed, Multiply(2).AsIterated(2));
-        var executor = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner);
 
         Refine(executor, 3).ShouldBe([16]);
         counter.CurrentCount.ShouldBe(1);

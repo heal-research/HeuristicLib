@@ -51,7 +51,9 @@ public class RefinementEvaluatorTests
     {
         var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var executor = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed.AppliedAfterRefinement(new AddOffsetRefiner(10)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed.AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var problem = CreateProblem();
 
         executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -65,7 +67,8 @@ public class RefinementEvaluatorTests
     {
         var counter = new CountAccumulator();
         var sharedEvaluator = CreateEvaluator();
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(sharedEvaluator, counter));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(sharedEvaluator, counter));
         var refining = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator.AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var direct = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();

@@ -3,15 +3,15 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 public partial class ExecutorResolutionTests
 {
     [Fact]
-    public void RepeatedResolution_ConstructsIndependentPrivateFields()
+    public void RepeatedResolutionInOneScope_SharesPrivateFieldsByReference()
     {
         var scope = ResolutionScope.Create();
         var source = new CounterConfiguration("equal");
         var equal = new CounterConfiguration("equal");
         source.ShouldBe(equal);
         scope.Resolve(source).Next().ShouldBe(1);
-        scope.Resolve(source).Next().ShouldBe(1);
-        scope.Resolve(equal).Next().ShouldBe(1);
+        scope.Resolve(source).Next().ShouldBe(2);
+        scope.Resolve(equal).Next().ShouldBe(1); // an equal configuration is another reference
     }
 
     [Fact]
@@ -19,12 +19,12 @@ public partial class ExecutorResolutionTests
     {
         var parent = ResolutionScope.Create();
         var source = new CounterConfiguration("source");
-        var child = parent.With();
+        var child = parent.CreateChildScope();
         child.Resolve(source).Next().ShouldBe(1);
-        parent.With().Resolve(source).Next().ShouldBe(1);
+        parent.CreateChildScope().Resolve(source).Next().ShouldBe(1);
         parent.Resolve(source).Next().ShouldBe(1);
-        child.Resolve(source).Next().ShouldBe(1);
-        parent.With().Resolve(source).Next().ShouldBe(1);
+        child.Resolve(source).Next().ShouldBe(2);
+        parent.CreateChildScope().Resolve(source).Next().ShouldBe(1);
     }
 
     [Fact]
@@ -34,17 +34,18 @@ public partial class ExecutorResolutionTests
         var parentCounts = new List<int>();
         var childCounts = new List<int>();
         var wrapped = new List<IConfigurationNode<ICounterExecutor>>();
-        var parent = ResolutionScope.Create(
-            Aspect.Create(Pointcut.Reference(source), new CounterAdvice((executor, original) =>
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterAdvice((executor, original) =>
             {
                 wrapped.Add(original);
                 return executor;
-            })),
-            Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(parentCounts.Add)));
+            })));
+        parent.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(parentCounts.Add)));
         var first = parent.Resolve(source);
         for (var i = 0; i < 3; i++)
             first.Next();
-        var child = parent.With(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(childCounts.Add)));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(childCounts.Add)));
         var second = child.Resolve(source);
         second.Next().ShouldBe(1);
         second.Next().ShouldBe(2);
@@ -53,48 +54,51 @@ public partial class ExecutorResolutionTests
         wrapped.ShouldBe([source, source]);
         first.Next().ShouldBe(4);
         childCounts.Count.ShouldBe(2);
-        parent.With().Resolve(source).Next().ShouldBe(1);
+        parent.CreateChildScope().Resolve(source).Next().ShouldBe(1);
     }
 
     [Fact]
-    public void ChildFirstCollision_PreservesTheCompositeDependencyAndItsControl()
+    public void ChildFirstCollision_TheCompositeInTheChildUsesTheChildsLeafAndItsControl()
     {
         IConfigurationNode<ICounterExecutor> leaf = new CounterConfiguration("leaf");
         var composite = new Composite(leaf);
         var parent = ResolutionScope.Create();
         var observed = 0;
-        var child = parent.With(Aspect.Create(Pointcut.Reference(leaf), new CounterObservationAdvice(_ => observed++)));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CounterObservationAdvice(_ => observed++)));
         var local = child.Resolve(leaf);
         local.Next().ShouldBe(1);
         var ancestor = parent.Resolve(composite);
         ancestor.Next().ShouldBe(1);
         var rebound = child.Resolve(composite);
-        rebound.Next().ShouldBe(1);
-        rebound.Control.Value.ShouldBe(1);
+        rebound.Next().ShouldBe(2);
+        rebound.Control.Value.ShouldBe(2);
         ancestor.Control.Value.ShouldBe(1);
         rebound.Invocations.ShouldBe(1);
         ancestor.Invocations.ShouldBe(1);
-        local.Next().ShouldBe(2);
+        local.Next().ShouldBe(3);
         observed.ShouldBe(3);
         ancestor.Next().ShouldBe(2);
         rebound.Invocations.ShouldBe(1);
-        local.Value.ShouldBe(2);
+        local.Value.ShouldBe(3);
     }
 
     [Fact]
-    public void Ordering_UsesScopeLayersThenInstallationSequence_WithReverseEntryOrder()
+    public void Ordering_ChildScopesWrapCloser_AndWithinAScopeTheAspectAddedLastWrapsClosest()
     {
         var events = new List<string>();
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source");
         var module = Aspect.Create(Pointcut.Reference(source), new TraceAdvice("PM", events));
-        var parent = ResolutionScope.Create(module,
-            module,
-            Aspect.Create(Pointcut.Reference(source), new TraceAdvice("PC", events)));
-        var child = parent.With(Aspect.Create(Pointcut.Reference(source), new TraceAdvice("C1", events)),
-            Aspect.Create(Pointcut.Reference(source), new TraceAdvice("C2", events)),
-            Aspect.Create(Pointcut.Reference(source), new TraceAdvice("CM", events)));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(module);
+        parent.AddAspect(module);
+        parent.AddAspect(Aspect.Create(Pointcut.Reference(source), new TraceAdvice("PC", events)));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new TraceAdvice("C1", events)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new TraceAdvice("C2", events)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new TraceAdvice("CM", events)));
         child.Resolve(source).Next();
-        events.ShouldBe(["PC+", "PM+", "CM+", "C2+", "C1+", "C1-", "C2-", "CM-", "PM-", "PC-"]);
+        events.ShouldBe(["PM+", "PC+", "C1+", "C2+", "CM+", "CM-", "C2-", "C1-", "PC-", "PM-"]);
     }
 
     [Fact]
@@ -103,8 +107,9 @@ public partial class ExecutorResolutionTests
         IConfigurationNode<ICounterExecutor> leaf = new CounterConfiguration("leaf");
         IConfigurationNode<ICounterExecutor> wrapper = new CounterWrapper(leaf, _ => { });
         var observed = 0;
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(leaf), new CounterObservationAdvice(_ => { })),
-            Aspect.Create(Pointcut.Reference(wrapper), new CounterObservationAdvice(_ => observed++)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CounterObservationAdvice(_ => { })));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(wrapper), new CounterObservationAdvice(_ => observed++)));
         scope.Resolve(leaf).Next();
         observed.ShouldBe(0);
         scope.Resolve(wrapper).Next();
@@ -112,41 +117,44 @@ public partial class ExecutorResolutionTests
     }
 
     [Fact]
-    public void UnmatchedReferenceDeclaration_DoesNotObserveOrRecreateState()
+    public void UnmatchedReferenceDeclaration_DoesNotObserveOrRebuild()
     {
         var preparations = 0;
         var observed = 0;
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source", () => preparations++);
         IConfigurationNode<ICounterExecutor> other = new CounterConfiguration("other");
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(other), new CounterObservationAdvice(_ => observed++)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(other), new CounterObservationAdvice(_ => observed++)));
 
         var executor = scope.Resolve(source);
         executor.ShouldBeOfType<Counter>().Next().ShouldBe(1);
-        scope.Resolve(source).Next().ShouldBe(1);
+        scope.Resolve(source).Next().ShouldBe(2);
         observed.ShouldBe(0);
-        preparations.ShouldBe(2);
+        preparations.ShouldBe(1);
     }
 
+    // A construction failure ends the scope tree: none of its scopes, child scopes included, resolves anything more, so
+    // no executor built before the failure is reachable. A new scope retries from scratch.
     [Fact]
-    public void StateCreationFault_IsRetriedAcrossInheritedContextsAndTryResolve()
+    public void ConstructionFault_EndsTheScopeTreeAndIsRetriedInANewScope()
     {
         var fault = new InvalidOperationException("prepare failure");
         var attempts = 0;
         var source = new CounterConfiguration("fault", () => { attempts++; throw fault; });
+        var other = new CounterConfiguration("other");
         var parent = ResolutionScope.Create();
         Should.Throw<InvalidOperationException>(() => parent.Resolve(source)).ShouldBeSameAs(fault);
         var child = NewContext(parent);
-        Should.Throw<InvalidOperationException>(() => child.Resolve(source)).ShouldBeSameAs(fault);
-        child.TryResolve(source, out var executor, out var reason).ShouldBeFalse();
-        executor.ShouldBeNull();
-        reason.ShouldBe("prepare failure");
-        attempts.ShouldBe(3);
-        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve(source)).ShouldBeSameAs(fault);
-        attempts.ShouldBe(4);
+        Should.Throw<InvalidOperationException>(() => child.Resolve(other)).Message.ShouldContain("new scope");
+        Should.Throw<InvalidOperationException>(() => parent.Resolve(other)).Message.ShouldContain("new scope");
+        Should.Throw<InvalidOperationException>(() => child.TryResolve(other, out _, out _)).Message.ShouldContain("new scope");
+        attempts.ShouldBe(1);
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().TryResolve(source, out _, out _)).ShouldBeSameAs(fault);
+        attempts.ShouldBe(2);
     }
 
     [Fact]
-    public void FailedDependency_RetryConstructsFreshChildren()
+    public void FailedDependency_LeavesNoBuiltChildReachable()
     {
         var fault = new InvalidOperationException("child failure");
         var preparations = 0;
@@ -159,15 +167,13 @@ public partial class ExecutorResolutionTests
         });
         var parent = ResolutionScope.Create();
         Should.Throw<InvalidOperationException>(() => parent.Resolve(composite)).ShouldBeSameAs(fault);
-        Should.Throw<InvalidOperationException>(() => parent.Resolve(composite)).ShouldBeSameAs(fault);
-        parent.Resolve(good).Value.ShouldBe(0);
-        Should.Throw<InvalidOperationException>(() => NewContext(parent).Resolve(composite)).ShouldBeSameAs(fault);
-        parent.Resolve(good).Value.ShouldBe(0);
-        preparations.ShouldBe(3);
+        Should.Throw<InvalidOperationException>(() => parent.Resolve(good)).Message.ShouldContain("new scope");
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve(composite)).ShouldBeSameAs(fault);
+        preparations.ShouldBe(2);
     }
 
     [Fact]
-    public void BuildFailure_RetryReconstructsPrivateData()
+    public void BuildFailure_RetryInANewScopeReconstructsPrivateData()
     {
         var prepared = 0;
         var bound = 0;
@@ -175,37 +181,45 @@ public partial class ExecutorResolutionTests
         var source = new CounterConfiguration("source", () => prepared++, _ => ++bound == 1 ? throw fault : null);
         var scope = ResolutionScope.Create();
         Should.Throw<InvalidOperationException>(() => scope.Resolve(source)).ShouldBeSameAs(fault);
-        scope.Resolve(source).Next().ShouldBe(1);
-        NewContext(scope).Resolve(source).Next().ShouldBe(1);
+        Should.Throw<InvalidOperationException>(() => scope.Resolve(source)).Message.ShouldContain("new scope");
+        var retry = ResolutionScope.Create();
+        retry.Resolve(source).Next().ShouldBe(1);
+        NewContext(retry).Resolve(source).Next().ShouldBe(1);
         prepared.ShouldBe(3);
         bound.ShouldBe(3);
     }
 
+    // A failed wrap would leave the executor with part of its advice, so it ends the tree like any construction failure.
     [Fact]
-    public void AdviceFailure_FailsTheResolutionAndIsRetried()
+    public void AdviceFailure_EndsTheScopeTreeAndIsRetriedInANewScope()
     {
         var fault = new InvalidOperationException("advice failure");
         var wraps = 0;
         var prepared = 0;
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source", () => prepared++);
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CounterAdvice((executor, _) => ++wraps == 1 ? throw fault : executor)));
+        var aspect = Aspect.Create(Pointcut.Reference(source), new CounterAdvice((executor, _) => ++wraps == 1 ? throw fault : executor));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(aspect);
         Should.Throw<InvalidOperationException>(() => scope.Resolve(source)).ShouldBeSameAs(fault);
-        scope.Resolve(source).Next().ShouldBe(1);
-        NewContext(scope).Resolve(source).Next().ShouldBe(1);
+        Should.Throw<InvalidOperationException>(() => scope.Resolve(source)).Message.ShouldContain("new scope");
+        var retry = ResolutionScope.Create();
+        retry.AddAspect(aspect);
+        retry.Resolve(source).Next().ShouldBe(1);
+        NewContext(retry).Resolve(source).Next().ShouldBe(1);
         prepared.ShouldBe(3);
         wraps.ShouldBe(3);
     }
 
     [Fact]
-    public void TryResolve_OnlyConvertsInvalidOperationExceptions_AndRetries()
+    public void TryResolve_PropagatesConstructionFailuresOfEveryType()
     {
         var fault = new ArgumentException("invalid setting");
         var attempts = 0;
         var source = new CounterConfiguration("source", () => { attempts++; throw fault; });
         var scope = ResolutionScope.Create();
         Should.Throw<ArgumentException>(() => scope.TryResolve(source, out _, out _)).ShouldBeSameAs(fault);
-        Should.Throw<ArgumentException>(() => scope.TryResolve(source, out _, out _)).ShouldBeSameAs(fault);
-        attempts.ShouldBe(2);
+        Should.Throw<InvalidOperationException>(() => scope.TryResolve(source, out _, out _)).Message.ShouldContain("new scope");
+        attempts.ShouldBe(1);
     }
 
     [Fact]
@@ -213,8 +227,8 @@ public partial class ExecutorResolutionTests
     {
         var root = ResolutionScope.Create();
         CounterConfiguration? source = null;
-        source = new CounterConfiguration("recursive siblings", Bind: _ => root.With().Resolve(source!));
-        Should.Throw<InvalidOperationException>(() => root.With().Resolve(source)).Message.ShouldContain("Recursive");
+        source = new CounterConfiguration("recursive siblings", Bind: _ => root.CreateChildScope().Resolve(source!));
+        Should.Throw<InvalidOperationException>(() => root.CreateChildScope().Resolve(source)).Message.ShouldContain("Recursive");
     }
 
     [Fact]
@@ -222,9 +236,9 @@ public partial class ExecutorResolutionTests
     {
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source");
         var counts = new List<int>();
-        var scope = ResolutionScope.Create(
-            Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(counts.Add)),
-            Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(counts.Add)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(counts.Add)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(counts.Add)));
         scope.Resolve(source).Next();
         scope.Resolve(source).Next();
         counts.ShouldBe([1, 1, 2, 2]);
@@ -240,7 +254,7 @@ public partial class ExecutorResolutionTests
         var scope = ResolutionScope.Create();
         var fault = Should.Throw<InvalidOperationException>(() => scope.Resolve(source));
         fault.Message.ShouldContain("Recursive");
-        Should.Throw<InvalidOperationException>(() => scope.Resolve(source)).Message.ShouldContain("Recursive");
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve(source)).Message.ShouldContain("Recursive");
     }
 
     [Fact]
@@ -258,7 +272,8 @@ public partial class ExecutorResolutionTests
         var prepared = 0;
         var observed = 0;
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source", () => prepared++);
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ =>
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ =>
         {
             if (++observed == 1)
                 throw new InvalidOperationException("observer");
@@ -271,21 +286,22 @@ public partial class ExecutorResolutionTests
         observed.ShouldBe(2);
     }
 
+    // Advice is matched to the configuration before duplicates are removed, so each pairing applies where it matches.
     [Fact]
-    public void OneAdviceWithTwoPointcutsUsesItsFirstPairingEvenWhenTheSecondWouldMatch()
+    public void OneAdviceWithTwoPointcuts_AppliesThroughThePairingThatMatches()
     {
         IConfigurationNode<ICounterExecutor> first = new CounterConfiguration("first");
         IConfigurationNode<ICounterExecutor> second = new CounterConfiguration("second");
         var observed = new List<int>();
         var advice = new CounterObservationAdvice(observed.Add);
-        var scope = ResolutionScope.Create(
-            Aspect.Create(Pointcut.Reference(first), advice),
-            Aspect.Create(Pointcut.Reference(second), advice));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(first), advice));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(second), advice));
 
         scope.Resolve(second).Next().ShouldBe(1);
-        observed.ShouldBeEmpty();
-        scope.Resolve(first).Next().ShouldBe(1);
         observed.ShouldBe([1]);
+        scope.Resolve(first).Next().ShouldBe(1);
+        observed.ShouldBe([1, 2]); // the count lives on the advice
     }
 
     [Theory]
@@ -297,10 +313,12 @@ public partial class ExecutorResolutionTests
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("child");
         var observed = new List<int>();
         var currentContext = new List<int>();
-        var parent = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add)));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add)));
         parent.Resolve(source).Next().ShouldBe(1);
 
-        var contextual = parent.With(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(currentContext.Add)));
+        var contextual = parent.CreateChildScope();
+        contextual.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(currentContext.Add)));
         contextual.Resolve(source).Next().ShouldBe(secondCount);
 
         observed.ShouldBe([1, 2]);
@@ -310,7 +328,9 @@ public partial class ExecutorResolutionTests
     private static ResolutionScope NewContext(ResolutionScope parent)
     {
         IConfigurationNode<ICounterExecutor> unrelated = new CounterConfiguration("unrelated");
-        return parent.With(Aspect.Create(Pointcut.Reference(unrelated), new CounterObservationAdvice(_ => { })));
+        var scope = parent.CreateChildScope();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(unrelated), new CounterObservationAdvice(_ => { })));
+        return scope;
     }
 
     private abstract record WrappingCounter(IConfigurationNode<ICounterExecutor> Child) : IConfigurationNode<ICounterExecutor>

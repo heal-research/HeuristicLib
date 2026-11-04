@@ -12,29 +12,35 @@ public sealed class TypedRoleAdviceTests
     [InlineData("selection")]
     [InlineData("refinement")]
     [InlineData("replacement")]
-    public void TypedAdvice_ChecksBeforeConstructionAndRetriesWithFreshPrivateData(string role)
+    public void TypedAdvice_ChecksBeforeConstructionAndANewScopeRetriesWithFreshPrivateData(string role)
     {
         var source = new SingleResultOperator();
         var advice = new AdviceState { Reject = true };
-        var root = ResolutionScope.Create(ForRole(role, source, advice));
+        var aspect = ForRole(role, source, advice);
+        var root = ResolutionScope.Create();
+        root.AddAspect(aspect);
 
         Should.Throw<InvalidOperationException>(() => Invoke(role, root, source)).Message.ShouldBe("rejected");
         source.Constructions.ShouldBe(0);
         advice.Wraps.ShouldBe(0);
+        // The check rejected the operator while its Retry and Named parents were being built, so the tree has ended.
+        Should.Throw<InvalidOperationException>(() => Invoke(role, root, source)).Message.ShouldContain("new scope");
 
         advice.Reject = false;
-        Invoke(role, root, source).ShouldBe(1);
-        Invoke(role, root.With(), source).ShouldBe(1);
-        Invoke(role, root, source).ShouldBe(1);
-        source.Preparations.ShouldBe(3);
-        source.Constructions.ShouldBe(3);
+        var retry = ResolutionScope.Create();
+        retry.AddAspect(aspect);
+        Invoke(role, retry, source).ShouldBe(1);
+        Invoke(role, retry.CreateChildScope(), source).ShouldBe(1);
+        Invoke(role, retry, source).ShouldBe(2);
+        source.Preparations.ShouldBe(2);
+        source.Constructions.ShouldBe(2);
         advice.Checks.ShouldBe(4);
         advice.Wraps.ShouldBe(3);
 
-        // Another operation constructs independent fields and skips this typed advice.
-        Invoke(role == "creation" ? "replacement" : "creation", root, source).ShouldBe(1);
+        // Another operation uses the same executor and skips this typed advice.
+        Invoke(role == "creation" ? "replacement" : "creation", retry, source).ShouldBe(3);
         advice.Checks.ShouldBe(4);
-        source.Preparations.ShouldBe(4);
+        source.Preparations.ShouldBe(2);
     }
 
     private static readonly DummySearchSpace<int> Space = DummySearchSpace<int>.Instance;

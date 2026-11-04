@@ -14,7 +14,9 @@ public class SelectorCompositionTests
         var problem = CreateProblem();
         var observed = BestSelector.For(problem);
         var selector = observed.AvoidSameMates(maximumAttempts: 3);
-        var executor = ResolutionScope.Create(Aspect.CountInvocations(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
         var population = new[]
         {
             EvaluatedCandidate.From(1, new ObjectiveVector(1.0)),

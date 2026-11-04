@@ -5,17 +5,20 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 public partial class ExecutorResolutionTests
 {
     [Fact]
-    public void WithConstructsIndependentPrivateState()
+    public void ChildScopesBuildTheirOwnPrivateStateAndShareItWithinThemselves()
     {
         var root = ResolutionScope.Create();
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source");
         var observed = 0;
         var aspect = Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => observed++));
-        var first = root.With(aspect);
+        var first = root.CreateChildScope();
+        first.AddAspect(aspect);
         first.Resolve(source).Next().ShouldBe(1);
-        root.With(aspect).Resolve(source).Next().ShouldBe(1);
+        var scope = root.CreateChildScope();
+        scope.AddAspect(aspect);
+        scope.Resolve(source).Next().ShouldBe(1);
         root.Resolve(source).Next().ShouldBe(1);
-        first.Resolve(source).Next().ShouldBe(1);
+        first.Resolve(source).Next().ShouldBe(2);
         observed.ShouldBe(3);
     }
 
@@ -32,33 +35,41 @@ public partial class ExecutorResolutionTests
         }));
         var first = new AdviceGroup(shared);
         var second = new AdviceGroup(shared);
-        var scope = ResolutionScope.Create(first, second, shared);
-        scope.With(shared).Resolve(source).Next();
-        scope.With(shared).Resolve(source).Next();
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(first);
+        scope.AddAspect(second);
+        scope.AddAspect(shared);
+        var advisedScope = scope.CreateChildScope();
+        advisedScope.AddAspect(shared);
+        advisedScope.Resolve(source).Next();
+        var advisedScope2 = scope.CreateChildScope();
+        advisedScope2.AddAspect(shared);
+        advisedScope2.Resolve(source).Next();
         wraps.ShouldBe(2);
         observed.ShouldBe(2);
     }
 
     [Fact]
-    public void DeferredDependency_ConstructsPrivateDataInOriginalContext()
+    public void DeferredDependency_ResolvesInTheScopeThatBuiltItsOwner()
     {
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source");
         var root = ResolutionScope.Create();
         var owner = new FrameConfiguration();
         root.Resolve(owner);
         var observed = 0;
-        var child = root.With(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => observed++)));
+        var child = root.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => observed++)));
         var direct = child.Resolve(source);
         direct.Next().ShouldBe(1);
         var frame = child.Resolve(owner).Scope;
-        frame.Resolve(source).Next().ShouldBe(1);
+        frame.Resolve(source).Next().ShouldBe(2); // the child built its own owner, so its frame resolves in the child
         root.Resolve(source).Next().ShouldBe(1);
-        direct.Next().ShouldBe(2);
+        direct.Next().ShouldBe(3);
         observed.ShouldBe(3);
         var freshSource = new CounterConfiguration("fresh");
-        var first = frame.With().Resolve(freshSource);
+        var first = frame.CreateChildScope().Resolve(freshSource);
         first.Next().ShouldBe(1);
-        frame.With().Resolve(freshSource).Next().ShouldBe(1);
+        frame.CreateChildScope().Resolve(freshSource).Next().ShouldBe(1);
         root.Resolve(freshSource).Next().ShouldBe(1);
         first.Next().ShouldBe(2);
     }
@@ -69,10 +80,12 @@ public partial class ExecutorResolutionTests
         IConfigurationNode<ICounterExecutor> source = new CounterConfiguration("source");
         var outer = 0;
         var inner = 0;
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => outer++)));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => outer++)));
         var original = root.Resolve(source);
         original.Next().ShouldBe(1);
-        var child = root.With(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => inner++)));
+        var child = root.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => inner++)));
         var rebound = child.Resolve(source);
         rebound.Next().ShouldBe(1);
         original.Next().ShouldBe(2);
@@ -91,7 +104,8 @@ public partial class ExecutorResolutionTests
         var aspect = directAspect
             ? Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => { }))
             : new AdviceGroup(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(_ => { })));
-        var root = ResolutionScope.Create(aspect);
+        var root = ResolutionScope.Create();
+        root.AddAspect(aspect);
         CreateFreshBindings(root, source, weak);
         weak.Count.ShouldBe(64);
         Collect();
@@ -115,7 +129,7 @@ public partial class ExecutorResolutionTests
     }
 
     [Fact]
-    public void DeferredExecutionRetainsItsContextButNotDiscardedPrivateData()
+    public void DeferredExecutionRetainsItsScopeButNotTheDataOfDiscardedChildScopes()
     {
         var root = ResolutionScope.Create();
         var observed = new List<int>();
@@ -124,7 +138,7 @@ public partial class ExecutorResolutionTests
         references[0].IsAlive.ShouldBeFalse();
         references[1].IsAlive.ShouldBeTrue();
         binding.Scope.Resolve(binding.Source!).Next().ShouldBe(1);
-        binding.Scope.Resolve(binding.Source!).Next().ShouldBe(1);
+        binding.Scope.Resolve(binding.Source!).Next().ShouldBe(2);
         observed.ShouldBe([1, 2]);
         GC.KeepAlive(binding);
     }
@@ -134,7 +148,7 @@ public partial class ExecutorResolutionTests
     {
         for (var i = 0; i < 32; i++)
         {
-            var binding = root.With().Resolve(source);
+            var binding = root.CreateChildScope().Resolve(source);
             binding.Next().ShouldBe(1);
             weak.Add(new WeakReference(binding));
         }
@@ -150,7 +164,8 @@ public partial class ExecutorResolutionTests
             var aspect = directAspect
                 ? Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add))
                 : new AdviceGroup(Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add)));
-            var child = root.With(aspect);
+            var child = root.CreateChildScope();
+            child.AddAspect(aspect);
             var binding = child.Resolve(source);
             binding.Next();
             weak.AddRange([new(child), new(aspect), new(binding), new(observed)]);
@@ -164,9 +179,10 @@ public partial class ExecutorResolutionTests
         var references = new List<WeakReference>();
         IConfigurationNode<ICounterExecutor> source = new CollectingCounter(references);
         var aspect = Aspect.Create(Pointcut.Reference(source), new CounterObservationAdvice(observed.Add));
-        var child = root.With(aspect);
+        var child = root.CreateChildScope();
+        child.AddAspect(aspect);
         var binding = child.Resolve(new FrameConfiguration(source));
-        child.Resolve(source);
+        child.CreateChildScope().Resolve(source);
         references.Add(new(aspect));
         return (binding, references);
     }

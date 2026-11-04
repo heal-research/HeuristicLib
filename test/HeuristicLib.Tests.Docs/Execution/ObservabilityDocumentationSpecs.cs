@@ -308,7 +308,9 @@ public sealed class ObservabilityDocumentationSpecs
         #region observability-point-use
         var schedule = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
         var temperatures = Analyzer.Trace(schedule.Steps, static step => step.Temperature);
-        var executor = ResolutionScope.Create(temperatures).Resolve(schedule);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(temperatures);
+        var executor = scope.Resolve(schedule);
 
         executor.Temperature(step: 0);
         executor.Temperature(step: 1);

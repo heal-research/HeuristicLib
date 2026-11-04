@@ -9,8 +9,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms;
 
 /// <remarks>
-/// Sums invocation durations for every operation of the selected configuration references inside the child algorithm.
-/// Repeated references count once. Nested and concurrent calls contribute their full durations, including failed calls.
+/// Sums invocation durations for every operation of the selected configuration references in the resolution scope the
+/// budget is built in and in its child scopes, including calls from outside the child algorithm. Repeated references
+/// count once. Nested and concurrent calls contribute their full durations, including failed calls.
 /// Each executor owns one combined accumulator, checked after each produced state.
 /// </remarks>
 public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
@@ -39,7 +40,8 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
         var selection = ObservedOperators.Aggregate(Pointcut.OfType<IOperator>().Not(),
             (pointcut, source) => pointcut | Pointcut.Reference(source));
         var aspect = Aspect.Create(selection, new DurationMeasuringOperatorAdvice(accumulator, TimeProvider));
-        var algorithm = scope.With(aspect).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        scope.AddAspect(aspect);
+        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
         return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumDuration);
     }
 }
@@ -55,8 +57,9 @@ public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchSta
     /// Gets the operator whose call duration, including failed calls, is measured against the budget.
     /// </summary>
     /// <remarks>
-    /// Measurement applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
-    /// algorithm does not reference the observed operator, nothing is measured and the budget never stops.
+    /// Measurement applies to every call of the operator in the budget's resolution scope and its child scopes, so
+    /// enclosing budgets and observations compose. If nothing in that scope calls the observed operator, nothing is
+    /// measured and the budget never stops.
     /// </remarks>
     public IOperator<TOperation, TCandidate> ObservedOperator { get; init; }
 
@@ -83,7 +86,8 @@ public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchSta
     {
         var accumulator = new DurationAccumulator();
         var aspect = Aspect.Create(Pointcut.Reference(ObservedOperator), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(accumulator, TimeProvider));
-        var algorithm = scope.With(aspect).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        scope.AddAspect(aspect);
+        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
         return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumDuration);
     }
 }

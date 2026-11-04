@@ -41,9 +41,10 @@ public class AnalysisUsabilityTests
         foreach (var candidate in Enumerable.Range(1, 5))
             Evaluate(scope, evaluator, candidate);
 
-        // Every firing asks the one counter twice, so the second trace takes every entry and the first takes none.
-        first.Snapshot().ShouldBeEmpty();
-        second.Snapshot().Select(entry => entry.Value).ShouldBe([1, 2, 3, 4, 5]);
+        // Every firing asks the one counter twice. The trace added last observes first, so it takes no entry and the
+        // other trace takes every entry.
+        second.Snapshot().ShouldBeEmpty();
+        first.Snapshot().Select(entry => entry.Value).ShouldBe([1, 2, 3, 4, 5]);
     }
 
     [Fact]
@@ -83,7 +84,10 @@ public class AnalysisUsabilityTests
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var mutations = Analyzer.Trace(mutator.Invocations, observation => observation.Offspring.Count);
         var evaluations = Analyzer.Trace(evaluator.Invocations, observation => observation.Candidates.Count);
-        var scope = ResolutionScope.Create(mutations, evaluations).For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var root = ResolutionScope.Create();
+        root.AddAspect(mutations);
+        root.AddAspect(evaluations);
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
         scope.Resolve(mutator).Mutate([new RealVector(2.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         scope.Resolve(evaluator).Evaluate([new RealVector(2.0), new RealVector(3.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -194,8 +198,13 @@ public class AnalysisUsabilityTests
         exception.Message.ShouldContain("unknown decision");
     }
 
-    private static ResolutionScope Install(params Aspect[] analyzers) =>
-        ResolutionScope.Create(analyzers);
+    private static ResolutionScope Install(params Aspect[] analyzers)
+    {
+        var scope = ResolutionScope.Create();
+        foreach (var analyzer in analyzers)
+            scope.AddAspect(analyzer);
+        return scope;
+    }
 
     private static void Evaluate(ResolutionScope scope, ManualEvaluator evaluator, params int[] candidates) =>
         scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);

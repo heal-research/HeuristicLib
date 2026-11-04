@@ -6,6 +6,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+/// <remarks>
+/// Every stage resolves its algorithm in a new child scope, so stages share no executors unless the pipeline shares
+/// them through <c>Sharing</c>.
+/// </remarks>
 public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchState>
     : Algorithm<PipelineAlgorithm<TAlgorithm, TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
@@ -82,7 +86,7 @@ public class PipelineAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TPr
         {
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
-            var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
             await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algRng, state, ct))
             {

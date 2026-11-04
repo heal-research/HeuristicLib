@@ -17,20 +17,27 @@ public partial class ResolutionScope
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
+        node.Tree.ThrowIfFailed();
         if (source is not IAlgorithm<TCandidate, TSearchState> algorithm)
             throw new InvalidOperationException($"{ExecutionSignature.Name(source.GetType())} produces {ProducedSearchStates(source)}, " +
                 $"and cannot run producing {ExecutionSignature.Name(typeof(TSearchState))}.");
         var execution = ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>();
         if (!algorithm.Fits(execution))
             throw SearchConfigurationValidation.Mismatch(algorithm, execution);
-        using var building = construction.Enter(algorithm);
-        // The resolver is the one place that constructs executors; the delegate only chooses the constructing layer.
+        using var building = node.Tree.Enter(algorithm);
+        var owner = Owner(algorithm);
+        var existing = Existing(owner, algorithm, static executor => executor is IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
+        var applicable = MatchingAdvice(algorithm);
+        // This scope's advice for the algorithm is fixed from here on, also for its own construction.
+        node.Advised.Add(algorithm);
+        try
+        {
+            // The resolver is the one place that constructs executors; the delegate only chooses the constructing scope.
 #pragma warning disable HLib0001
-        var executor = Construct(algorithm, owner => algorithm.CreateExecutor(owner.For<TCandidate, TSearchSpace, TProblem, TSearchState>()),
-            existing => existing is IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
+            var executor = (IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>?)existing
+                ?? Build(owner, algorithm, scope => algorithm.CreateExecutor(scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()));
 #pragma warning restore HLib0001
-        foreach (var (pointcut, advice) in Advices())
-            if (pointcut.Matches(algorithm))
+            foreach (var (_, advice) in applicable)
                 executor = advice switch
                 {
                     AlgorithmAdvice<TCandidate, TSearchState> typed => typed.Wrap(executor, algorithm),
@@ -39,7 +46,13 @@ public partial class ResolutionScope
                     _ => throw new InvalidOperationException($"{advice.GetType().FullName} cannot wrap algorithm {algorithm.GetType().Name}. " +
                         "Algorithm advice derives from AlgorithmAdvice<TCandidate, TSearchState>.")
                 };
-        return executor;
+            return executor;
+        }
+        catch
+        {
+            node.Tree.Fail(algorithm);
+            throw;
+        }
     }
 
     [return: NotNullIfNotNull(nameof(algorithm))]
@@ -49,7 +62,7 @@ public partial class ResolutionScope
         where TSearchState : class, ISearchState =>
         algorithm is null ? null : Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 
-    /// <remarks>Invalid-operation failures become reasons; other exceptions propagate. Failed attempts may be retried.</remarks>
+    /// <inheritdoc cref="TryResolve{TExecutor}"/>
     public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate> algorithm,
         [NotNullWhen(true)] out IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor, [NotNullWhen(false)] out string? reason)
         where TSearchSpace : class, ISearchSpace<TCandidate>

@@ -55,7 +55,9 @@ public sealed class OperatorLifecycleTests
                 }
             };
             var source = new ProbeMutation(probe);
-            var operation = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new LifecycleAdvice(probe)))).Resolve(source);
+            var operationScope = ResolutionScope.Create();
+            operationScope.AddAspect(Aspect.Create(Pointcut.Reference(source), new LifecycleAdvice(probe)));
+            var operation = Typed(operationScope).Resolve(source);
             var failure = Capture(() => InvokeOperation(operation));
             Check(ReferenceEquals(failure, probe.ChildFailure), "a child failure propagates unchanged and success returns normally");
             Check(probe.ChildFailure?.StackTrace?.Contains(nameof(ThrowFailure), StringComparison.Ordinal) != false,
@@ -68,14 +70,18 @@ public sealed class OperatorLifecycleTests
         var entryFailure = new InvalidOperationException("enter failure");
         var entry = new Probe { EntryFailure = entryFailure };
         var entrySource = new ProbeMutation(entry);
-        var entryOperation = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(entrySource), new LifecycleAdvice(entry)))).Resolve(entrySource);
+        var entryOperationScope = ResolutionScope.Create();
+        entryOperationScope.AddAspect(Aspect.Create(Pointcut.Reference(entrySource), new LifecycleAdvice(entry)));
+        var entryOperation = Typed(entryOperationScope).Resolve(entrySource);
         Check(ReferenceEquals(Capture(() => InvokeOperation(entryOperation)), entryFailure) && entry.Events.SequenceEqual(new[] { "enter:1" }) && entry.ChildCalls == 0,
             "a failure before Proceed invokes neither the child nor cleanup");
 
         var nestedFailure = new AggregateException(new InvalidOperationException("inner a"), new InvalidOperationException("inner b"));
         var nested = new Probe { ChildFailure = nestedFailure };
         var nestedSource = new ProbeMutation(nested);
-        var nestedOperation = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(nestedSource), new LifecycleAdvice(nested)))).Resolve(nestedSource);
+        var nestedOperationScope = ResolutionScope.Create();
+        nestedOperationScope.AddAspect(Aspect.Create(Pointcut.Reference(nestedSource), new LifecycleAdvice(nested)));
+        var nestedOperation = Typed(nestedOperationScope).Resolve(nestedSource);
         Check(ReferenceEquals(Capture(() => InvokeOperation(nestedOperation)), nestedFailure), "an aggregate child failure is neither wrapped nor flattened");
     }
 
@@ -84,7 +90,9 @@ public sealed class OperatorLifecycleTests
     {
         var probe = new Probe();
         var source = new ProbeMutation(probe);
-        var operation = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new LifecycleAdvice(probe)))).Resolve(source);
+        var operationScope = ResolutionScope.Create();
+        operationScope.AddAspect(Aspect.Create(Pointcut.Reference(source), new LifecycleAdvice(probe)));
+        var operation = Typed(operationScope).Resolve(source);
         var entered = false;
         probe.ChildAction = () =>
         {
@@ -104,21 +112,24 @@ public sealed class OperatorLifecycleTests
         var probe = new Probe();
         var advice = new LifecycleAdvice(probe);
         var source = new SharedOperations(new ProbeLog());
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), advice));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), advice));
         var mutation = Typed(scope).Resolve((IOperator<Mutation, RealVector>)source, out ILiveValue? control);
         control!.Value = 14;
         Check(mutation.Mutate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)[0][0] == 14,
             "invocation wrappers preserve the live state used by the callable operation");
         _ = Typed(scope).Resolve((IOperator<Evaluation, RealVector>)source).Evaluate([Input[0], Input[0]],
             RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem);
-        Check(Typed(scope).Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 3, "an external scalar adapter uses the same wrapper");
+        Check(Typed(scope).Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 14,
+            "an external scalar adapter uses the same wrapper around the scope's one executor");
         var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
         var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         _ = broad.Resolve((IOperator<Termination, RealVector>)source).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
         _ = narrow.Resolve(((IOperator<Termination, RealVector>)source).Named("term")).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
-        Check(advice.Wraps == 5 && source.Log.Preparations == 5, "one advice wraps each independently constructed operation and state view");
+        Check(advice.Wraps == 5 && source.Log.Preparations == 1, "one advice wraps every request, whichever operation or state view it names");
         var interceptor = new IdentityInterceptor(new ProbeLog());
-        var interceptScope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(interceptor), advice));
+        var interceptScope = ResolutionScope.Create();
+        interceptScope.AddAspect(Aspect.Create(Pointcut.Reference(interceptor), advice));
         var state = new ProbeState();
         Check(ReferenceEquals(state, interceptScope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>()
             .Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)),
@@ -134,7 +145,9 @@ public sealed class OperatorLifecycleTests
         var duration = new DurationAccumulator();
         var probe = new Probe { ChildAction = () => clock.Advance(17) };
         var source = new ProbeMutation(probe);
-        var operation = Typed(ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new DurationAdvice(duration, clock)))).Resolve(source);
+        var operationScope = ResolutionScope.Create();
+        operationScope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationAdvice(duration, clock)));
+        var operation = Typed(operationScope).Resolve(source);
         InvokeOperation(operation);
         Check(duration.CurrentDuration.Ticks == 17 && clock.Reads == 2, "duration reads the supplied TimeProvider at entry and cleanup");
         probe.ChildFailure = new InvalidOperationException("timed failure");
@@ -166,8 +179,11 @@ public sealed class OperatorLifecycleTests
             var timing = Aspect.Create(Pointcut.Reference(source), new DurationAdvice(duration, clock));
             var observing = Aspect.Create(Pointcut.Reference(source), new CountInvocations(new InvocationCounter(),
                 new AdviceLog { AfterSuccess = () => clock.Advance(5) }));
-            var aspects = timingInside ? new[] { timing, observing } : new[] { observing, timing };
-            InvokeOperation(Typed(ResolutionScope.Create(aspects)).Resolve(source));
+            var scope = ResolutionScope.Create();
+            // The aspect added last wraps closest to the executor.
+            foreach (var aspect in timingInside ? new[] { observing, timing } : new[] { timing, observing })
+                scope.AddAspect(aspect);
+            InvokeOperation(Typed(scope).Resolve(source));
             Check(duration.CurrentDuration.Ticks == (timingInside ? 17 : 22),
                 "application order determines whether observer callbacks are inside the timed boundary");
         }

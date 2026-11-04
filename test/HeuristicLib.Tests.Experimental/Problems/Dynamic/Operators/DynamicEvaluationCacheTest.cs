@@ -83,7 +83,7 @@ public class DynamicEvaluationCacheTests
     {
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000, UpdatePolicy.AfterEachIteration);
         var source = new CountingEvaluator().Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 1 };
-        var scope = ResolutionScope.Create().Sharing(source);
+        var scope = ResolutionScope.Create();
         var first = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var second = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         first.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -122,9 +122,10 @@ public class DynamicEvaluationCacheTests
             release.Wait(TimeSpan.FromSeconds(10)).ShouldBeTrue();
         });
         var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
-        var scope = ResolutionScope.Create().Sharing(source);
+        var scope = ResolutionScope.Create();
+        scope.Share(source);
         var first = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
-        var second = scope.With().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var second = scope.CreateChildScope().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var tasks = new[] { first, second }.Select(executor => Task.Run(() =>
             executor.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem), TestContext.Current.CancellationToken)).ToArray();
         try
@@ -148,9 +149,10 @@ public class DynamicEvaluationCacheTests
         using var problem = new DummyDynamicProblem(RandomNumberGenerator.Create(0), 10_000) { ScoreEpoch = true };
         var evaluator = new CountingEvaluator();
         var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance) with { GraceCount = 20 };
-        var scope = ResolutionScope.Create().Sharing(source);
+        var scope = ResolutionScope.Create();
+        scope.Share(source);
         var first = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
-        var second = scope.With().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var second = scope.CreateChildScope().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         first.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         await Task.WhenAll(Enumerable.Range(0, 20).Select(i => Task.Run(() =>
             (i % 2 == 0 ? first : second).Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem), TestContext.Current.CancellationToken)));
@@ -549,9 +551,11 @@ public class DynamicEvaluationCacheTests
         var evaluator = new CountingEvaluator();
         var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
         var calls = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountInvocations(evaluator, calls)).Sharing(source);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountInvocations(evaluator, calls));
+        scope.Share(source);
         var outer = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
-        var inner = scope.With().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
+        var inner = scope.CreateChildScope().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
 
         outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
         inner.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -583,7 +587,8 @@ public class DynamicEvaluationCacheTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var calls = new CountAccumulator();
-        var child = root.With(Aspect.CountInvocations(evaluator, calls));
+        var child = root.CreateChildScope();
+        child.AddAspect(Aspect.CountInvocations(evaluator, calls));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
 
         outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -609,7 +614,8 @@ public class DynamicEvaluationCacheTests
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var independent = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var calls = new CountAccumulator();
-        var child = root.With(Aspect.CountInvocations(evaluator, calls));
+        var child = root.CreateChildScope();
+        child.AddAspect(Aspect.CountInvocations(evaluator, calls));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var state = Population.From([EvaluatedCandidate.From(new DummyGenotype(1), new ObjectiveVector(99))]).ToPopulationState();
         inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);

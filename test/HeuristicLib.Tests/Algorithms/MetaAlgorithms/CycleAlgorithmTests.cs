@@ -137,13 +137,13 @@ public class CycleAlgorithmTests
     }
 
     /// <summary>
-    /// Different run types construct independent Cycle executors, each with its own shared executors.
+    /// A request for a narrower problem type uses the scope's Cycle executor, which serves it, with its shared executors.
     /// </summary>
     [Theory]
     [InlineData(false, 4)]
-    [InlineData(true, 2)]
+    [InlineData(true, 1)]
 
-    public void CycleAlgorithm_BuiltForTwoRunTypes_CreatesIndependentCycleExecutors(bool shared, int expectedAlgorithmExecutions)
+    public void CycleAlgorithm_RequestedForANarrowerProblem_UsesTheExecutorOfItsScope(bool shared, int expectedAlgorithmExecutions)
     {
         var problem = (FuncProblem<int, DummySearchSpace<int>>)MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
@@ -152,6 +152,7 @@ public class CycleAlgorithmTests
         var scope = ResolutionScope.Create();
         var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
         var concrete = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
+        concrete.ShouldBeSameAs(general);
 
         general.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
         concrete.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);

@@ -18,7 +18,8 @@ public sealed class MutatorSelectionTests
         var large = new StepMutator(5);
         var mutator = ChoosePerItem.Create<Mutation, int>(small, large);
         var counts = new Dictionary<IOperator<Mutation, int>, CountAccumulator>(ReferenceEqualityComparer.Instance);
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
         {
             var count = new CountAccumulator();
             counts.Add(source, count);
@@ -39,7 +40,8 @@ public sealed class MutatorSelectionTests
         var second = new StepMutator(2);
         var cycle = Algorithm(first).CycleWith(Algorithm(second), maximumCycles: 2);
         var activations = new List<(IOperator<Mutation, int> Source, CountAccumulator Mutations)>();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
         {
             var mutations = new CountAccumulator();
             activations.Add((source, mutations));
@@ -97,7 +99,8 @@ public sealed class MutatorSelectionTests
         IOperator<Mutation, int> source = new StepMutator(1);
         var offered = new List<IOperator<Mutation, int>>();
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
         var algorithm = Algorithm(source) with { PopulationSize = 16, MaximumGenerations = 2, MutationRate = 0.5 };
 
         var states = await States(scope, nsga ? AsNsga2(algorithm) : algorithm);
@@ -120,7 +123,8 @@ public sealed class MutatorSelectionTests
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = new CountAccumulator();
-        var child = parent.With(Aspect.CountCandidates(source, observed));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.CountCandidates(source, observed));
         await using var rebound = Run(child, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await rebound.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -153,7 +157,8 @@ public sealed class MutatorSelectionTests
     {
         IOperator<Mutation, int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
         var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(source, count));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(source, count));
         var algorithm = Algorithm(source) with { MutationRate = rate };
         await RunToCompletion(scope, nsga ? AsNsga2(algorithm) : algorithm);
         count.CurrentCount.ShouldBe(0);

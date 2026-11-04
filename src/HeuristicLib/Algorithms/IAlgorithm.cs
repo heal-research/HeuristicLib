@@ -20,8 +20,9 @@ public interface IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>
 {
     /// <summary>Builds this algorithm's executor for the run types, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this for every construction. Validate configuration first. Obtain shared resources through
-    /// explicit handles when sharing is intended. Keep private mutable data in executor fields.
+    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
+    /// executor. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
+    /// Keep private mutable data in executor fields.
     /// </remarks>
     IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>

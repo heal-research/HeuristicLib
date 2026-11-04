@@ -4,9 +4,13 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 /// <summary>Runs its child algorithm with one shared executor for each of the given configurations.</summary>
 /// <remarks>
-/// Every use of a shared configuration inside the child receives the same executor, for as long as this algorithm's
-/// executor lives. Constructing this algorithm again, for example in the next Cycle turn or another run, creates new
-/// shared executors. Other configurations are constructed afresh for every use, as usual.
+/// Within one resolution scope every use of a configuration already receives one executor. Sharing extends that to the
+/// child scopes created below this algorithm, such as Cycle turns and Pipeline stages: every use of a shared
+/// configuration there receives one executor, kept by the scope this algorithm is resolved in for as long as that scope
+/// lives. Each shared executor is built in a child scope of its own, as for a child activation, so sharing changes how
+/// long it lives but not which advice reaches it: budgets inside it count only the calls made inside it, and two shared
+/// configurations share a child only when that child is shared too. Resolving this algorithm in another scope, for
+/// example in the next Cycle turn or another run, creates new shared executors.
 /// </remarks>
 public sealed record SharingAlgorithm<TCandidate, TSearchState> : WrappingAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
@@ -22,8 +26,11 @@ public sealed record SharingAlgorithm<TCandidate, TSearchState> : WrappingAlgori
     public ValueArray<IConfigurationNode> Shared { get; init; }
 
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        scope.Sharing([.. Shared]).Resolve(ChildAlgorithm);
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        scope.Share([.. Shared]);
+        return scope.Resolve(ChildAlgorithm);
+    }
 }
 
 public static class SharingAlgorithm
@@ -31,7 +38,7 @@ public static class SharingAlgorithm
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        /// <summary>Shares one executor of each given configuration across every use inside this algorithm.</summary>
+        /// <summary>Shares one executor of each given configuration across every use inside this algorithm, including its child scopes.</summary>
         public SharingAlgorithm<TCandidate, TSearchState> Sharing(params IReadOnlyList<IConfigurationNode> shared) => new(algorithm, shared);
     }
 }

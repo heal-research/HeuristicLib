@@ -15,18 +15,48 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
 public sealed partial class OperatorPreparationSpecs
 {
+    // One configuration performing two operations builds one executor per scope, whichever operation is requested first,
+    // so both operations use the same private fields. A child scope builds its own.
     [Fact]
-    public void PrivateFieldsAndConsumerOperationsShareOnlyAnExplicitResource()
+    public void BothOperationsOfOneConfigurationShareItsExecutorWithinAScope()
+    {
+        var source = new CountingSource();
+        var reads = new CountAccumulator();
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, reads));
+        var scope = root
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        var random = RandomNumberGenerator.Create(1);
+
+        var read = Read(scope, source);
+        var mutation = scope.Resolve((IOperator<Mutation, RealVector>)source);
+        read.Read(random, problem.SearchSpace, problem).ShouldBe(1);
+        mutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(2);
+        Read(scope, source).Read(random, problem.SearchSpace, problem).ShouldBe(3);
+
+        var child = scope.CreateChildScope();
+        var childMutation = child.Resolve((IOperator<Mutation, RealVector>)source);
+        var childRead = Read(child, source);
+        childMutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(1);
+        childRead.Read(random, problem.SearchSpace, problem).ShouldBe(2);
+        reads.CurrentCount.ShouldBe(3);
+    }
+
+    [Fact]
+    public void PrivateFieldsAndConsumerOperationsShareAnExplicitResourceAcrossScopes()
     {
         var source = new CountingSource();
         var outer = new CountAccumulator();
         var inner = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, outer))
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, outer));
+        var scope = root
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var random = RandomNumberGenerator.Create(1);
         var first = Read(scope, source);
-        var second = Read(scope, source);
+        var second = Read(scope.CreateChildScope(), source);
         first.Read(random, problem.SearchSpace, problem).ShouldBe(1);
         first.Read(random, problem.SearchSpace, problem).ShouldBe(2);
         second.Read(random, problem.SearchSpace, problem).ShouldBe(1);
@@ -35,18 +65,21 @@ public sealed partial class OperatorPreparationSpecs
         var shared = source with { Tally = handle };
         var read = Read(scope, shared);
         var mutation = scope.Resolve((IOperator<Mutation, RealVector>)shared);
-        var advised = Read(scope.With(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, inner)), source);
+        var advisedScope = scope.CreateChildScope();
+        advisedScope.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, inner));
+        var advised = Read(advisedScope, source);
         read.Read(random, problem.SearchSpace, problem).ShouldBe(1);
         mutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(2);
         advised.Read(random, problem.SearchSpace, problem).ShouldBe(1);
         outer.CurrentCount.ShouldBe(4);
         inner.CurrentCount.ShouldBe(1);
         var sharedCalls = new CountAccumulator();
-        var sharedContext = scope.With(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)shared, sharedCalls));
+        var sharedContext = scope.CreateChildScope();
+        sharedContext.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)shared, sharedCalls));
         Read(sharedContext, shared).Read(random, problem.SearchSpace, problem).ShouldBe(3);
         mutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(4);
         sharedCalls.CurrentCount.ShouldBe(1);
-        scope.Resource(handle).ShouldBeSameAs(scope.With().Resource(handle));
+        scope.Resource(handle).ShouldBeSameAs(scope.CreateChildScope().Resource(handle));
         scope.Resource(new TallyHandle()).ShouldNotBeSameAs(scope.Resource(handle));
         (shared with { }).ShouldBe(shared);
         (shared with { Tally = new TallyHandle() }).ShouldNotBe(shared);
@@ -113,14 +146,15 @@ public sealed partial class OperatorPreparationSpecs
         protected override Tally CreateResource() => new();
     }
 
+    // Performs two operations with one construction hook, implemented once as a public method.
     private sealed record CountingSource : IOperator<ReadValue, RealVector>, IOperator<Mutation, RealVector>
     {
         public TallyHandle? Tally { get; init; }
 
-        IExecutor IOperator<ReadValue, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
-            new Executor<TSearchSpace, TProblem>(Tally is null ? null : scope.Resource(Tally));
-
-        IExecutor IOperator<Mutation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
+        public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
+            where TSearchState : class, ISearchState =>
             new Executor<TSearchSpace, TProblem>(Tally is null ? null : scope.Resource(Tally));
 
         private sealed class Executor<TSearchSpace, TProblem>(Tally? tally)

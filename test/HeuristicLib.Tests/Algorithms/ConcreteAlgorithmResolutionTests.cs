@@ -19,7 +19,7 @@ public sealed class ConcreteAlgorithmResolutionTests
     [InlineData(nameof(GeneticAlgorithm<int>))]
     [InlineData(nameof(EvolutionStrategy<int>))]
     [InlineData(nameof(NSGA2<int>))]
-    public async Task NewExecutorsObserveContextualChildrenWithIndependentCreatorState(string kind)
+    public async Task EachScopeKeepsItsExecutorsAndAChildScopeObservesOnlyItsOwn(string kind)
     {
         var creatorPreparations = 0;
         var interceptorPreparations = 0;
@@ -30,24 +30,25 @@ public sealed class ConcreteAlgorithmResolutionTests
 
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
-        var child = parent.With(Aspect.CountInvocations(creator, observedCreations),
-            countInterceptions(observedInterceptions));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.CountInvocations(creator, observedCreations));
+        child.AddAspect(countInterceptions(observedInterceptions));
 
         (await Next(child, algorithm)).ShouldBe(1);
         observedCreations.CurrentCount.ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
-        (await Next(parent, algorithm)).ShouldBe(1);
+        (await Next(parent, algorithm)).ShouldBe(2);
         observedCreations.CurrentCount.ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
-        (await Next(child, algorithm)).ShouldBe(1);
+        (await Next(child, algorithm)).ShouldBe(2);
         observedCreations.CurrentCount.ShouldBe(2);
         observedInterceptions.CurrentCount.ShouldBe(2);
-        creatorPreparations.ShouldBe(4);
-        interceptorPreparations.ShouldBe(4);
+        creatorPreparations.ShouldBe(2);
+        interceptorPreparations.ShouldBe(2);
 
         (await Next(ResolutionScope.Create(), algorithm)).ShouldBe(1);
-        creatorPreparations.ShouldBe(5);
-        interceptorPreparations.ShouldBe(5);
+        creatorPreparations.ShouldBe(3);
+        interceptorPreparations.ShouldBe(3);
         observedCreations.CurrentCount.ShouldBe(2);
         observedInterceptions.CurrentCount.ShouldBe(2);
     }
@@ -67,7 +68,8 @@ public sealed class ConcreteAlgorithmResolutionTests
         Candidate(paused.Current).ShouldBe(1);
 
         var observedInterceptions = new CountAccumulator();
-        var child = parent.With(countInterceptions(observedInterceptions));
+        var child = parent.CreateChildScope();
+        child.AddAspect(countInterceptions(observedInterceptions));
         await using var observed = Run(child, algorithm).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         Candidate(observed.Current).ShouldBe(1);

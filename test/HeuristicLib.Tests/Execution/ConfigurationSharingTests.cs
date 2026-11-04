@@ -6,13 +6,14 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Execution;
 
-// Sharing binds a configuration's executor to the lifetime of the node that shares it. See plans/operator-state-lifetimes.md.
+// A scope holds one executor per configuration reference, and sharing lets child scopes, such as Cycle turns, use the
+// executor of the scope that shares it. See plans/operator-state-lifetimes.md.
 public class ConfigurationSharingTests
 {
     // Shared fixture notation from the system spec: A makes three calls to M per state, B makes two calls and yields once.
 
     [Fact]
-    public void WithoutSharing_EveryUseConstructsItsOwnExecutor()
+    public void WithoutSharing_EveryTurnConstructsItsOwnExecutor()
     {
         var (box, m) = Mutator();
         var cycle = Cycle(NewCaller("A", 3, 1, m, box), NewCaller("B", 2, 1, m, box));
@@ -102,19 +103,30 @@ public class ConfigurationSharingTests
     }
 
     [Fact]
-    public void Sharing_IsLocalToTheSubtreeBelowIt()
+    public void WithinOneScope_EveryUseOfAReferenceSharesOneExecutor()
     {
         var (box, m) = Mutator();
         var twoSlots = NewCaller("A", 3, 1, m, box) with { Second = m };
 
         Run(Cycle(twoSlots, NewCaller("B", 2, 1, m, box)));
-        var unshared = box.Builds;
 
-        box.Reset();
-        Run(Cycle(twoSlots.Sharing(m), NewCaller("B", 2, 1, m, box)));
-
-        unshared.ShouldBe(6);   // A: two slots per turn, B: one per turn
         box.Builds.ShouldBe(4); // A's two slots share one M within each A turn; B and the next A turn get new ones
+    }
+
+    // A wrapper such as a budget resolves its child in its own scope, so it opens no sharing boundary.
+    [Fact]
+    public void AlgorithmWrappers_ResolveInTheScopeOfWhatTheyWrap()
+    {
+        var (box, m) = Mutator();
+        var a = NewCaller("A", 3, 1, m, box);
+        var scope = ResolutionScope.Create();
+
+        var limited = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a.LimitedToInvocations(m, 5));
+        var bare = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a);
+
+        limited.ShouldNotBeSameAs(bare);
+        box.Log.ShouldBe("build A"); // the budget and the direct request use one A executor
+        box.Builds.ShouldBe(1);
     }
 
     [Fact]
@@ -129,30 +141,26 @@ public class ConfigurationSharingTests
     }
 
     [Fact]
-    public void SharingOperator_SharesOneExecutorAcrossItsChildSlots()
+    public void CompositeOperator_ChildSlotsShareOneExecutorInTheirScope()
     {
         var (box, m) = Mutator();
         var bothSlots = new TwoChildEvaluator(m, m);
 
         Run(Cycle(NewCaller("A", 3, 1, bothSlots, box), NewCaller("B", 2, 1, m, box)));
-        var unshared = box.Builds;
 
-        box.Reset();
-        Run(Cycle(NewCaller("A", 3, 1, bothSlots.Sharing(m), box), NewCaller("B", 2, 1, m, box)));
-
-        unshared.ShouldBe(6);   // A: two slots per turn, B: one per turn
-        box.Builds.ShouldBe(4); // one M per A turn, because the sharing operator is rebuilt with A; B keeps its own
+        box.Builds.ShouldBe(4); // one M per A turn for both slots, one per B turn
     }
 
     [Fact]
-    public void OperatorAndAlgorithmSharing_TheNearestSharingPointWins()
+    public void CycleSharing_ReachesTheSlotsOfACompositeOperatorInEveryTurn()
     {
         var (box, m) = Mutator();
-        var bothSlots = new TwoChildEvaluator(m, m).Sharing(m);
+        var bothSlots = new TwoChildEvaluator(m, m);
 
         Run(Cycle(NewCaller("A", 3, 1, bothSlots, box), NewCaller("B", 2, 1, m, box)).Sharing(m));
 
-        box.Builds.ShouldBe(3); // A's slots use the operator's M, new each A turn; B uses the Cycle's M in both turns
+        box.Builds.ShouldBe(1);
+        box.LastPrivateCount.ShouldBe(16); // A's turns call M twice per call, B's once: (6 + 2) * 2
     }
 
     // A shared executor is built once, where it is shared. Advice placed below that point wraps the shared
@@ -187,17 +195,18 @@ public class ConfigurationSharingTests
         counter.CurrentCount.ShouldBe(1); // the inner evaluator is reached once: candidate 1 is cached for every later call
     }
 
-    // A sharing layer holds one executor per configuration, so a request for other run types cannot reuse it.
+    // A scope holds one executor per configuration, so a request for other run types cannot reuse it.
     [Fact]
-    public void SharedConfiguration_RequestedForOtherRunTypes_IsRejected()
+    public void Configuration_RequestedForOtherRunTypesInOneScope_IsRejected()
     {
         var (_, m) = Mutator();
         var limited = m.LimitEvaluations(2);
-        var scope = ResolutionScope.Create().Sharing(limited);
+        var scope = ResolutionScope.Create();
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(limited);
 
         Should.Throw<InvalidOperationException>(() => scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(limited))
-            .Message.ShouldContain("is shared");
+            .Message.ShouldContain("already built");
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(limited).ShouldNotBeNull(); // nothing was built, so the scope stays usable
     }
 
     private static readonly IProblem<int, DummySearchSpace<int>> Problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();

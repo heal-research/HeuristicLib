@@ -37,8 +37,9 @@ public interface IConfigurationNode<out TExecutor> : IConfigurationNode
 {
     /// <summary>Builds this configuration's executor, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this for every construction. Validate configuration first. Obtain shared resources through
-    /// explicit handles when sharing is intended. Keep private mutable data in executor fields.
+    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
+    /// executor. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
+    /// Keep private mutable data in executor fields.
     /// </remarks>
     TExecutor CreateExecutor(ResolutionScope scope);
 }

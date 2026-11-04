@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -32,14 +33,12 @@ public abstract record Neighborhood<TCandidate, TSearchSpace, TProblem, TMove>
     public IOperator<MoveApplication<TMove>, TCandidate> MoveApplier => this;
     public IOperator<MoveEvaluation<TMove>, TCandidate> MoveEvaluator => this;
 
-    IExecutor IOperator<MoveCreation<TMove>, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => this;
-
-    IExecutor IOperator<MoveApplication<TMove>, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => this;
-
-    IExecutor IOperator<MoveEvaluation<TMove>, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => this;
+    /// <summary>Returns this neighborhood, the executor of all three move operations.</summary>
+    /// <remarks>One hook serves every operation, so a scope holds one executor for the neighborhood whichever operation it resolves first.</remarks>
+    public IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        where TRunSearchSpace : class, ISearchSpace<TCandidate>
+        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+        where TRunSearchState : class, ISearchState => this;
 
     public bool Fits(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));

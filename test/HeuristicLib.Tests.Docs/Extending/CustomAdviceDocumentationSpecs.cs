@@ -116,13 +116,16 @@ public sealed class CustomAdviceDocumentationSpecs
         var problem = FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
         var random = RandomNumberGenerator.Create(42);
         IReadOnlyList<RealVector> parents = [new RealVector(0.0)];
-        var scope = ResolutionScope.Create(logging);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(logging);
         var original = scope.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
-        var rebound = scope.With().For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
+        var rebound = scope.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
 
         original.Mutate(parents, random, searchSpace, problem);
         rebound.Mutate(parents, random, searchSpace, problem);
-        var independent = ResolutionScope.Create(logging)
+        var independentScope = ResolutionScope.Create();
+        independentScope.AddAspect(logging);
+        var independent = independentScope
             .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator);
         independent.Mutate(parents, random, searchSpace, problem);
 

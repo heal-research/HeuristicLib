@@ -321,6 +321,18 @@ Resolution runs once per run, or once per activation in a meta-algorithm, while 
 
 **Partly overridden by the developer on 2026-11-03.** A [resolution scope is now the sharing unit](operator-state-lifetimes.md#default-sharing-the-scope-is-the-unit-accepted-on-2026-11-03): within one scope, each configuration reference resolves to one executor. Performance is not the motive. Users expect a reference repeated within one algorithm to be one executor with its private data. Unlike the rejected cache, the table belongs to the scope rather than to each observation context. It has no fault records and no rebuild rule. A request from another advice context is an error, not a rebuild.
 
+### Building shared executors in the sharing scope itself
+
+Discussed and rejected on 2026-11-04, while implementing step 1 of the [operator state lifetimes plan](operator-state-lifetimes.md#step-1-decisions-accepted-on-2026-11-04). A shared configuration is built on its first request, usually from a Cycle turn, after the sharing scope has child scopes. Built literally in the sharing scope, a shared budget adds its advice there, which the guard against changing a scope with child scopes rejects. Relaxing the guard would let the shared budget count calls made in sibling turns, and whether it could still be added would depend on the order of the turns. Rejecting sharing for configurations that add advice drops the accepted `Cycle(limitedA, B).Sharing(limitedA)` scenario. Each shared configuration is instead built in a child scope of its own. Reopen if that ruling is simplified, for example together with a different budget mechanism.
+
+### Aspect parameters on scope creation
+
+Tried and removed on 2026-11-04 in step 1 of the [operator state lifetimes plan](operator-state-lifetimes.md#step-1-decisions-accepted-on-2026-11-04). `ResolutionScope.Create(aspects)` and `CreateChildScope(aspects)` applied their aspects in listed order beside `AddAspect`, which wraps closest, so node authors had two ways to add advice with opposite orders. `AddAspect` is the only scope-level way, and users attach advice through `Advised`.
+
+### Sharing a configuration the scope has already resolved
+
+Tried and removed on 2026-11-04 in step 1 of the [operator state lifetimes plan](operator-state-lifetimes.md#step-1-decisions-accepted-on-2026-11-04). `Share` kept the executor the scope had already resolved, so whether a later `Share` took effect depended on the order of resolution. It is an error instead. Reopen only for a meta-algorithm that cannot share before it resolves.
+
 ### Shared configurable run host
 
 Tried and removed during the layers overhaul in September 2026. `RunHost` wrapped a lifecycle enum and lock, accepted a transition table and exception-message prefix, and exposed its lock back to the runs. The callers still made the actual lifecycle decisions. The extraction introduced a generic state-machine mechanism without taking ownership of execution or scheduling.

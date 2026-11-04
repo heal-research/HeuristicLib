@@ -30,7 +30,8 @@ public class OperatorAuthoringSpecs
         var gaussian = new GaussianMutator(1.0, 3.0);
         IOperator<Mutation, RealVector> mutator = gaussian;
         var observedCalls = 0;
-        var scope = ResolutionScope.Create(Aspect.Observe(mutator.Invocations, _ => observedCalls++));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Observe(mutator.Invocations, _ => observedCalls++));
         var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator, out IMutationStrengthControl? strength);
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 0.0;
@@ -98,7 +99,7 @@ public class OperatorAuthoringSpecs
         IOperator<Mutation, RealVector> mutator = new CountingMutator();
         var runScope = ResolutionScope.Create();
         var outer = runScope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
-        var inner = runScope.With().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
+        var inner = runScope.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
         var anotherRun = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
         var parent = RealVector.Repeat(0.0, 3);
 
@@ -152,7 +153,7 @@ public class OperatorAuthoringSpecs
         var mutator = new CallOffsetMutator(new PullTowardZeroMutator());
         var scope = ResolutionScope.Create();
         var outer = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
-        var inner = scope.With().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
+        var inner = scope.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
         var independent = ResolveMutator(mutator);
 
         var parent = RealVector.Repeat(1.0, 1);

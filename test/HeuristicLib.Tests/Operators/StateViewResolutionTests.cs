@@ -18,7 +18,7 @@ public class StateViewResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ABroadTerminator_HasIndependentPrivateFieldsAcrossCompatibleStateViews(bool secondViewFirst)
+    public void ABroadTerminator_SharesItsPrivateFieldsAcrossTheCompatibleStateViewsOfAScope(bool secondViewFirst)
     {
         var probe = new Probe();
         var terminator = new ThirdCallTerminator(probe);
@@ -39,17 +39,17 @@ public class StateViewResolutionTests
 
         first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
         second.IsTerminalState(new SecondState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
         first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
 
-        probe.Preparations.ShouldBe(2);
+        probe.Preparations.ShouldBe(1);
     }
 
     [Fact]
     public void GeneralAdvice_WrapsTerminationAndInterception()
     {
         var total = new InvocationCounter();
-        var root = ResolutionScope.Create(Aspect.Create(Pointcut.OfType<IOperator>(), new CountInvocations(total, new AdviceLog())));
+        var root = ResolutionScope.Create();
+        root.AddAspect(Aspect.Create(Pointcut.OfType<IOperator>(), new CountInvocations(total, new AdviceLog())));
         var scope = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>();
         var terminator = scope.Resolve(new ThirdCallTerminator(new Probe()));
         var interceptor = scope.Resolve(new CountingInterceptor(new Probe()));

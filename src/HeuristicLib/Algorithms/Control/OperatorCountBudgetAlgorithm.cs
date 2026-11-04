@@ -9,7 +9,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms;
 
 /// <remarks>
-/// Counts every operation of the selected configuration references inside the child algorithm. Repeated references
+/// Counts every operation of the selected configuration references in the resolution scope the budget is built in and
+/// in its child scopes, including calls from outside the child algorithm, such as a terminator's. Repeated references
 /// count once. Each executor owns one combined accumulator, checked after each produced state.
 /// </remarks>
 public record OperatorCountBudgetAlgorithm<TCandidate, TSearchState>
@@ -40,7 +41,8 @@ public record OperatorCountBudgetAlgorithm<TCandidate, TSearchState>
         var selection = ObservedOperators.Aggregate(Pointcut.OfType<IOperator>().Not(),
             (pointcut, source) => pointcut | Pointcut.Reference(source));
         var aspect = Aspect.Create(selection, new CountingOperatorAdvice(accumulator, Metric));
-        var algorithm = scope.With(aspect).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        scope.AddAspect(aspect);
+        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
         return new OperatorCountBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumCount);
     }
 }
@@ -56,8 +58,9 @@ public record OperatorCountBudgetAlgorithm<TOperation, TCandidate, TSearchState>
     /// Gets the operator whose work is counted against the budget.
     /// </summary>
     /// <remarks>
-    /// Counting applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
-    /// algorithm does not reference the observed operator, nothing is counted and the budget never stops.
+    /// Counting applies to every call of the operator in the budget's resolution scope and its child scopes, so
+    /// enclosing budgets and observations compose. If nothing in that scope calls the observed operator, nothing is
+    /// counted and the budget never stops.
     /// </remarks>
     public IOperator<TOperation, TCandidate> ObservedOperator { get; init; }
 
@@ -88,7 +91,8 @@ public record OperatorCountBudgetAlgorithm<TOperation, TCandidate, TSearchState>
     {
         var accumulator = new CountAccumulator();
         var aspect = Aspect.Create(Pointcut.Reference(ObservedOperator), new CountingOperatorAdvice<TOperation, TCandidate>(accumulator, Metric));
-        var algorithm = scope.With(aspect).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+        scope.AddAspect(aspect);
+        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
         return new OperatorCountBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumCount);
     }
 }

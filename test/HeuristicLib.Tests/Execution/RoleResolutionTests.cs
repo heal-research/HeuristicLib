@@ -27,13 +27,15 @@ public sealed class RoleResolutionTests
         var source = CreateMutator(arity, () => preparations++);
         var outerReports = new List<double>();
         var innerReports = new List<double>();
-        var parent = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(outerReports.Add)));
+        var parent = ResolutionScope.Create();
+        parent.AddAspect(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(outerReports.Add)));
         var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
         Next(outer).ShouldBe(1);
         Next(outer).ShouldBe(2);
         Next(outer).ShouldBe(3);
 
-        var child = parent.With(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(innerReports.Add)));
+        var child = parent.CreateChildScope();
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(innerReports.Add)));
         var inner = child.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
         Next(inner).ShouldBe(1);
         Next(inner).ShouldBe(2);
@@ -49,20 +51,20 @@ public sealed class RoleResolutionTests
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(2)]
-    public void StatefulLeaf_ContextConstructionHasIndependentPrivateFields(int arity)
+    public void StatefulLeaf_EachScopeBuildsItsOwnPrivateFields(int arity)
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
         var parent = ResolutionScope.Create();
-        var child = parent.With();
+        var child = parent.CreateChildScope();
         var local = child.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
         Next(local).ShouldBe(1);
         var ancestor = parent.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
         Next(ancestor).ShouldBe(1);
 
-        Next(child.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(1);
-        Next(parent.With().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(1);
-        preparations.ShouldBe(4);
+        Next(child.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(2);
+        Next(parent.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(1);
+        preparations.ShouldBe(3);
     }
 
     [Theory]
@@ -77,7 +79,7 @@ public sealed class RoleResolutionTests
         var first = root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
         preparations.ShouldBe(1);
 
-        var second = root.With().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
+        var second = root.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
         first.ShouldNotBeSameAs(second);
         Next(first).ShouldBe(1);
         Next(second).ShouldBe(1);
@@ -90,7 +92,7 @@ public sealed class RoleResolutionTests
     [Theory]
     [InlineData(1)]
     [InlineData(2)]
-    public void StatefulLeaf_CompatibleProblemContractsHaveIndependentFields(int arity)
+    public void StatefulLeaf_CompatibleProblemContractsShareTheExecutorOfTheirScope(int arity)
     {
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
@@ -100,8 +102,8 @@ public sealed class RoleResolutionTests
         var problem = new TestFunctionProblem(new RastriginFunction(1));
 
         wide.Mutate([RealVector.Repeat(0, 1)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)[0][0].ShouldBe(1);
-        Next(narrow).ShouldBe(1);
-        preparations.ShouldBe(2);
+        Next(narrow).ShouldBe(2); // the executor built for the wider problem contract serves the narrower one too
+        preparations.ShouldBe(1);
     }
 
     [Fact]
@@ -121,7 +123,7 @@ public sealed class RoleResolutionTests
     }
 
     [Fact]
-    public void StatefulLeaf_StateCreationFaultIsRetriedWithoutPublishingState()
+    public void StatefulLeaf_StateCreationFaultEndsTheScopeTreeAndIsRetriedInANewScope()
     {
         var preparations = 0;
         var failure = new InvalidOperationException("initialization failed");
@@ -133,12 +135,14 @@ public sealed class RoleResolutionTests
         var parent = ResolutionScope.Create();
 
         Should.Throw<InvalidOperationException>(() => parent.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBeSameAs(failure);
-        Should.Throw<InvalidOperationException>(() => parent.With().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBeSameAs(failure);
+        Should.Throw<InvalidOperationException>(() => parent.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source))
+            .Message.ShouldContain("new scope");
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBeSameAs(failure);
         preparations.ShouldBe(2);
     }
 
     [Fact]
-    public void InputFreeTerminator_CompatibleSearchStatesHaveIndependentCounters()
+    public void InputFreeTerminator_CompatibleSearchStatesShareTheCounterOfTheirScope()
     {
         var preparations = 0;
         var source = new InputFreeTerminator(() => preparations++);
@@ -150,9 +154,8 @@ public sealed class RoleResolutionTests
 
         population.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
         single.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        population.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
         population.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
-        preparations.ShouldBe(2);
+        preparations.ShouldBe(1);
     }
 
     [Theory]
@@ -175,7 +178,7 @@ public sealed class RoleResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void AlgorithmBridge_CreatesStateOncePerOwningStateAndBindsThroughTheRequestedRunTypes(bool bound)
+    public void AlgorithmBridge_BuildsOncePerScopeThroughTheRequestedRunTypes(bool bound)
     {
         var preparations = 0;
         var source = CreateAlgorithm(bound, () => preparations++);
@@ -183,10 +186,10 @@ public sealed class RoleResolutionTests
 
         scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
         scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
-        preparations.ShouldBe(2);
+        preparations.ShouldBe(1);
 
         ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
-        preparations.ShouldBe(3);
+        preparations.ShouldBe(2);
     }
 
     [Fact]
@@ -228,15 +231,18 @@ public sealed class RoleResolutionTests
     }
 
     [Fact]
-    public void AlgorithmAdvice_ForAnotherSearchStateOfTheSelectedAlgorithm_IsSkipped()
+    public void AlgorithmAdvice_ForAnotherSearchStateOfTheSelectedAlgorithm_IsSkipped_AndAScopeBuildsOneOfTheStates()
     {
         var source = new TwoStateAlgorithm();
         var advice = new CountingSingleSolutionAdvice();
-        var scope = ResolutionScope.Create(Aspect.Create(Pointcut.Reference(source), advice));
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), advice));
 
         scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(source).ShouldNotBeNull();
         advice.Wraps.ShouldBe(0);
-        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
+        scope.TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, out _, out var reason).ShouldBeFalse();
+        reason.ShouldContain("already built in this resolution scope");
+        scope.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
         advice.Wraps.ShouldBe(1);
     }
 

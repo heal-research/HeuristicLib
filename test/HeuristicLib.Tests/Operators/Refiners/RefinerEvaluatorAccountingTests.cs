@@ -14,7 +14,7 @@ public class RefinerEvaluatorAccountingTests
     {
         var shared = CreateEvaluator().LimitEvaluations(1);
         var separateButEqual = shared with { };
-        var scope = ResolutionScope.Create().Sharing(shared);
+        var scope = ResolutionScope.Create();
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
         var problem = CreateProblem();
@@ -34,7 +34,7 @@ public class RefinerEvaluatorAccountingTests
     {
         var problem = CreateProblem();
         var sharedEvaluator = CreateEvaluator().LimitEvaluations(2);
-        var scope = ResolutionScope.Create().Sharing(sharedEvaluator);
+        var scope = ResolutionScope.Create();
         var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator));
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
 
@@ -91,7 +91,9 @@ public class RefinerEvaluatorAccountingTests
         var refiner = PipelineRefiner.Create(
             new AddOffsetRefiner(-1),
             new AddOffsetRefiner(-5).CheckedForImprovement(observed));
-        var executor = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var problem = CreateProblem();
 
         executor.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms;
 
 /// <remarks>
-/// Every turn constructs its algorithm's executor afresh, so private executor data such as terminator counts restarts
+/// Every turn resolves its algorithm in a new child scope, so private executor data such as terminator counts restarts
 /// each turn. Share a configuration through <c>Sharing</c> on the Cycle to keep one executor for it across turns.
 /// </remarks>
 public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
@@ -136,7 +136,7 @@ public class CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProbl
             {
                 ct.ThrowIfCancellationRequested();
                 var algorithmRng = cycleRng.Fork(algorithmIndex);
-                var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+                var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
                 turns.Report(new(cycleCount + 1, ++turn, algorithm, algorithmIndex, state, problem.SearchSpace, problem));
 
                 await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algorithmRng, state, ct))

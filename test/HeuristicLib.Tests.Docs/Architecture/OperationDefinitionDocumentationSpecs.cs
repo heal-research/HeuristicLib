@@ -154,7 +154,9 @@ public sealed class OperationDefinitionDocumentationSpecs
         var problem = FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
         var estimator = ChoosePerItem.Create<Estimation, RealVector>(new ScaledEstimator(1.0), new ScaledEstimator(10.0));
         var counts = Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count);
-        var scope = ResolutionScope.Create(counts).For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
+        var root = ResolutionScope.Create();
+        root.AddAspect(counts);
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         RealVector[] candidates = [new(1.0), new(2.0), new(3.0)];
 
         var estimates = scope.Resolve(estimator).Estimate(candidates, RandomNumberGenerator.Create(42), searchSpace, problem);

@@ -25,7 +25,19 @@ public sealed class ResolutionScopeBuilder(params IReadOnlyList<Aspect> aspects)
         return this;
     }
 
-    public ResolutionScope Build() => ResolutionScope.Create(new RunResources(resources), aspects);
+    /// <remarks>
+    /// An aspect supplied several times applies once, at its first position. The first aspect supplied wraps closest to
+    /// each executor, so aspects observe in the order they were first attached. An aspect added to a scope later wraps
+    /// closer, so the scope receives the aspects last to first.
+    /// </remarks>
+    public ResolutionScope Build()
+    {
+        var scope = ResolutionScope.Create(new RunResources(resources));
+        List<Aspect> attached = [.. aspects.Where(new HashSet<Aspect>(ReferenceEqualityComparer.Instance).Add)];
+        for (var index = attached.Count - 1; index >= 0; index--)
+            scope.AddAspect(attached[index]);
+        return scope;
+    }
 
     internal void CheckResourceSupply<TResource>(ResourceHandle<TResource> handle) where TResource : class
     {
