@@ -608,7 +608,7 @@ See also: Aspect, Configuration node, Join point, Pointcut.
 
 Status: `Canonical`
 
-A join point is the executor built for one configuration selected by a pointcut. Advice wraps every contextual executor built for the same configuration. Wrapping executors own their private fields. Advice may hold explicitly shared runtime data or obtain a resource through a handle for the current run.
+A join point is the executor built for one configuration selected by a pointcut. Advice wraps every contextual executor built for the same configuration, once per request, so a shared configuration receives one wrapper for each use. Advice wrappers keep no private data. Data that must accumulate belongs to the advice or to an object it receives, such as a counter.
 
 A join point does not identify one invocation or one occurrence of a configuration along a caller path.
 
@@ -696,7 +696,7 @@ See also: Executor.
 
 Status: `Canonical`
 
-A resource is an explicit runtime dependency whose data may be shared by several executors, such as an evaluation cache or counting accumulator. Its contract defines compatible participants and concurrent use. Sharing a resource does not share executors, children or advice.
+A resource is an explicit runtime dependency whose data may be shared by several executors, such as the counting accumulator that a counting aspect writes and an operator count terminator reads. Its contract defines compatible participants and concurrent use. Sharing a resource does not share executors, children or advice. Data kept by an operator itself, such as an evaluation cache, is an executor field and is shared by sharing its configuration instead.
 
 One run creates one resource per handle by default. A trial is one run. Explicit runtime supply can deliberately share one instance across runs. Automatically created resources need no deterministic cleanup. Supplied resources remain caller owned.
 
@@ -734,9 +734,9 @@ See also: Executor, Resource, Search state.
 
 Status: `Legacy`
 
-A former mechanism for selecting private state lifetimes during child activation. Cycle now constructs fresh executors by default and offers explicit executor reuse. Reuse is keyed by child configuration reference within one Cycle executor and retains children and advice too.
+A former mechanism for selecting private state lifetimes during child activation. Cycle now constructs fresh executors for every turn. Sharing a child configuration on the Cycle keeps one executor for it across turns.
 
-See also: Executor, Resource, Resolution scope.
+See also: Executor, Resource, Resolution scope, Shared configuration.
 
 ### Execution graph
 
@@ -744,7 +744,7 @@ Status: `Canonical`
 
 An execution graph is a graph of executors created from a configuration graph during a run.
 
-A run may contain more than one execution graph over time or through different observation contexts. Distinct executors can explicitly share resources while retaining private fields, children and observers.
+A run may contain more than one execution graph over time or through different observation contexts. A shared configuration has one executor for all its uses within the sharing node, each use wrapped by its own observers.
 
 See also: Configuration graph, Executor, Run.
 
@@ -754,11 +754,23 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to executors during a run.
 
-The scope combines an ordered aspect context with one flat resource table for its run. It constructs executors for each request and caches none. `With` adds aspects using the same resources. A separate root creates independent resources unless instances are explicitly supplied. `ResolutionScopeBuilder` collects bindings and aspects and builds independent scope snapshots. The scope has no resource supply phase. There is no private state ownership or ancestor resource lookup.
+The scope combines an ordered aspect context, sharing layers and one flat resource table for its run. It constructs executors for each request and keeps none, except one executor per shared configuration in the sharing layer that lists it. `With` adds aspects using the same resources. `Sharing` adds a sharing layer. A separate root creates independent resources unless instances are explicitly supplied. `ResolutionScopeBuilder` collects bindings and aspects and builds independent scope snapshots. The scope has no resource supply phase. There is no private state ownership or ancestor resource lookup.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for state, construction and observation rules.
 
 See also: Configuration, Wrapper chain, Execution graph, Executor, Aspect, Run.
+
+### Shared configuration
+
+Status: `Canonical`
+
+A shared configuration resolves to one executor for every use within the node that shares it, declared with `Sharing` on that node. The executor lives as long as the sharing node's executor, so constructing the sharing node again, for another Cycle turn or another run, creates a new one. Every other configuration is constructed afresh for each use.
+
+The configuration reference identifies what is shared. The shared executor is constructed in the sharing node's context, and each use applies its own advice around it.
+
+See [execution resolution](/contributing/architecture/execution-resolution#shared-configurations).
+
+See also: Configuration, Executor, Resolution scope.
 
 ### Wrapper chain
 

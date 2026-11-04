@@ -16,8 +16,6 @@ public sealed class EvaluationResolutionTests
         var preparations = 0;
         var leaf = new CountingEvaluator(() => preparations++, () => { });
         Should.Throw<InvalidOperationException>(() => Resolve(ResolutionScope.Create(), leaf.Cached(-1)));
-        Should.Throw<InvalidOperationException>(() => Resolve(ResolutionScope.Create(),
-            leaf.Cached(new EvaluationCacheHandle<int> { SizeLimit = -1 })));
         preparations.ShouldBe(0);
     }
 
@@ -82,58 +80,51 @@ public sealed class EvaluationResolutionTests
     }
 
     [Fact]
-    public void Cache_SharedHandlePreservesResultsAndObservesOnlyUncachedChildCalls()
+    public void Cache_SharedEvaluatorPreservesResultsAndObservesOnlyUncachedChildCalls()
     {
         var preparations = 0;
         var calls = 0;
         var reports = new List<int>();
         var leaf = new CountingEvaluator(() => preparations++, () => calls++);
-        var source = new CachingEvaluator<int>(leaf) { Cache = new EvaluationCacheHandle<int>() };
-        var parent = ResolutionScope.Create();
-        var outer = Resolve(parent, source);
-        Evaluate(outer, 1).ShouldBe([new ObjectiveVector(101)]);
+        var source = new CachingEvaluator<int>(leaf);
+        var scope = ResolutionScope.Create()
+            .With(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)))
+            .Sharing(source);
+        var first = Resolve(scope, source);
+        var second = Resolve(scope, source);
 
-        var child = parent.With(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)));
-        var inner = Resolve(child, source);
-        inner.ShouldNotBeSameAs(outer);
-        Evaluate(inner, 1).ShouldBe([new ObjectiveVector(101)]);
-        reports.ShouldBeEmpty();
-        Evaluate(inner, 2).ShouldBe([new ObjectiveVector(102)]);
-        Evaluate(outer, 2).ShouldBe([new ObjectiveVector(102)]);
-        Evaluate(outer, 3).ShouldBe([new ObjectiveVector(203)]);
-        Evaluate(inner, 3).ShouldBe([new ObjectiveVector(203)]);
-        reports.ShouldBe([2]);
-        preparations.ShouldBe(2);
-        calls.ShouldBe(3);
+        Evaluate(first, 1).ShouldBe([new ObjectiveVector(101)]);
+        Evaluate(second, 1).ShouldBe([new ObjectiveVector(101)]);
+        Evaluate(second, 2).ShouldBe([new ObjectiveVector(202)]);
+        Evaluate(first, 2).ShouldBe([new ObjectiveVector(202)]);
+        reports.ShouldBe([1, 2]);
+        preparations.ShouldBe(1);
+        calls.ShouldBe(2);
 
         Evaluate(Resolve(ResolutionScope.Create(), source), 1).ShouldBe([new ObjectiveVector(101)]);
-        preparations.ShouldBe(3);
-        calls.ShouldBe(4);
+        preparations.ShouldBe(2);
+        calls.ShouldBe(3);
     }
 
     [Fact]
-    public void Limit_ExplicitCounterSharesTheRemainingBudgetAndBindsTheObservedChild()
+    public void Limit_SharedEvaluatorSharesTheRemainingBudget()
     {
         var preparations = 0;
         var calls = 0;
-        var reports = new List<int>();
         var leaf = new CountingEvaluator(() => preparations++, () => calls++);
-        var source = new LimitEvaluator<int>(leaf, 2) { Counter = new HEAL.HeuristicLib.Inspection.CountAccumulatorHandle(), FallbackObjectiveVector = new ObjectiveVector(-1), EnforceLimitWithinBatch = true };
-        var parent = ResolutionScope.Create();
-        var outer = Resolve(parent, source);
-        Evaluate(outer, 1).ShouldBe([new ObjectiveVector(101)]);
+        var source = new LimitEvaluator<int>(leaf, 2) { FallbackObjectiveVector = new ObjectiveVector(-1), EnforceLimitWithinBatch = true };
+        var scope = ResolutionScope.Create().Sharing(source);
+        var first = Resolve(scope, source);
+        var second = Resolve(scope, source);
 
-        var child = parent.With(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)));
-        var inner = Resolve(child, source);
-        inner.ShouldNotBeSameAs(outer);
-        Evaluate(inner, 2, 3).ShouldBe([new ObjectiveVector(102), new ObjectiveVector(-1)]);
-        Evaluate(outer, 4).ShouldBe([new ObjectiveVector(-1)]);
-        reports.ShouldBe([2]);
-        preparations.ShouldBe(2);
+        Evaluate(first, 1).ShouldBe([new ObjectiveVector(101)]);
+        Evaluate(second, 2, 3).ShouldBe([new ObjectiveVector(202), new ObjectiveVector(-1)]);
+        Evaluate(first, 4).ShouldBe([new ObjectiveVector(-1)]);
+        preparations.ShouldBe(1);
         calls.ShouldBe(2);
 
         Evaluate(Resolve(ResolutionScope.Create(), source), 4).ShouldBe([new ObjectiveVector(104)]);
-        preparations.ShouldBe(3);
+        preparations.ShouldBe(2);
         calls.ShouldBe(3);
     }
 

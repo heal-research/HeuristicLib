@@ -8,15 +8,15 @@ namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
 
 public class RefinerEvaluatorAccountingTests
 {
-    // Sharing follows an explicit handle and participates in configuration equality.
+    // Sharing follows the configuration reference. An equal copy is a separate configuration with its own accounting.
     [Fact]
-    public void EvaluationAccountingFollowsHandleIdentity()
+    public void EvaluationAccountingFollowsTheSharedReference()
     {
-        var scope = ResolutionScope.Create();
-        var shared = CreateEvaluator().LimitEvaluations(1) with { Counter = new CountAccumulatorHandle() };
-        var separateButEqual = shared with { Counter = new CountAccumulatorHandle() };
+        var shared = CreateEvaluator().LimitEvaluations(1);
+        var separateButEqual = shared with { };
+        var scope = ResolutionScope.Create().Sharing(shared);
 
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
         var problem = CreateProblem();
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared)
             .Evaluate([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -24,7 +24,7 @@ public class RefinerEvaluatorAccountingTests
             .Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).ShouldBe([problem.Objective.Worst]);
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual)
             .Evaluate([10], RandomNumberGenerator.Create(3), problem.SearchSpace, problem).ShouldNotBe([problem.Objective.Worst]);
-        separateButEqual.ShouldNotBe(shared);
+        separateButEqual.ShouldBe(shared);
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
     }
 
@@ -33,8 +33,8 @@ public class RefinerEvaluatorAccountingTests
     public void WithASharedBudget_ComparisonEvaluationsConsumeTheAlgorithmsBudget()
     {
         var problem = CreateProblem();
-        var sharedEvaluator = CreateEvaluator().LimitEvaluations(2) with { Counter = new CountAccumulatorHandle() };
-        var scope = ResolutionScope.Create();
+        var sharedEvaluator = CreateEvaluator().LimitEvaluations(2);
+        var scope = ResolutionScope.Create().Sharing(sharedEvaluator);
         var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator));
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
 

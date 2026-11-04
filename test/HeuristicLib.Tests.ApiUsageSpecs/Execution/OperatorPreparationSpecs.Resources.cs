@@ -71,16 +71,15 @@ public sealed partial class OperatorPreparationSpecs
     public async Task CycleTurnsShareACacheWhileRepeatedTrialsCreateIndependentCaches()
     {
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var cache = new EvaluationCacheHandle<RealVector> { SizeLimit = 100 };
         var evaluator = new ProblemEvaluator<RealVector>();
-        var cached = evaluator.Cached(cache);
+        var cached = evaluator.Cached(sizeLimit: 100);
         var first = new RepeatedEvaluation(cached, new RealVector(2.0));
         var second = first with { };
         var cycle = CycleAlgorithm.Create(first.TerminatedAfterIterations(2), second.TerminatedAfterIterations(2)) with { MaximumCycles = 3 };
         var calls = new CountAccumulator();
         var produced = 0;
         var trialCounts = new List<CountAccumulator>();
-        var run = cycle.Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7), setup =>
+        var run = cycle.Sharing(cached).Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7), setup =>
         {
             setup.AddAspectPerTrial(_ =>
             {
@@ -97,16 +96,6 @@ public sealed partial class OperatorPreparationSpecs
         calls.CurrentCount.ShouldBe(3);
         trialCounts.Count.ShouldBe(3);
         trialCounts.ShouldAllBe(count => count.CurrentCount == 1);
-
-        var supplied = new EvaluationCache<RealVector>();
-        var sharedCalls = new CountAccumulator();
-        var suppliedRun = first.Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7), setup =>
-        {
-            setup.AddResourcePerTrial(configuration => (configuration.Evaluator.Cache!, supplied));
-            setup.AddAspectPerTrial(_ => Aspect.CountInvocations(evaluator, sharedCalls));
-        });
-        await suppliedRun.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        sharedCalls.CurrentCount.ShouldBe(1);
     }
 
     private static IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Read(

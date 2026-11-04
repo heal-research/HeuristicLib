@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -7,35 +6,25 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 
 /// <summary>A managed cache coordinating entries, epoch and consecutive all hit accounting.</summary>
 /// <remarks>
-/// All participants must use the same source problem and grace count, with compatible key and evaluation semantics.
-/// Storage and accounting are synchronized together. Child evaluations run outside the lock and may overlap or duplicate
-/// work. An evaluation spanning an epoch change is returned but never published into the new epoch.
-/// Key selectors, child evaluators and the source problem must support the concurrency the author permits.
+/// Each dynamic caching evaluator executor owns one cache. Its calls may be concurrent, for example when several uses
+/// share the evaluator's configuration. Storage and accounting are synchronized together. Child evaluations run
+/// outside the lock and may overlap or duplicate work. An evaluation spanning an epoch change is returned but never
+/// published into the new epoch. Key selectors, child evaluators and the source problem must support the concurrency
+/// the author permits.
 /// </remarks>
-public sealed class DynamicEvaluationCache<TKey> where TKey : notnull
+internal sealed class DynamicEvaluationCache<TKey> where TKey : notnull
 {
     private readonly Lock sync = new();
     private readonly EvaluationCache<TKey> entries;
-    private object? source;
-    private long graceCount;
+    private readonly long graceCount;
     private int epoch = -1;
     private long hitCount;
     private bool updateRequested;
 
-    public DynamicEvaluationCache(long? sizeLimit = null)
+    public DynamicEvaluationCache(long? sizeLimit, long graceCount)
     {
         entries = new(sizeLimit);
-    }
-
-    internal void Bind(object sourceProblem, long grace)
-    {
-        lock (sync)
-        {
-            if (source is not null && (!ReferenceEquals(source, sourceProblem) || graceCount != grace))
-                throw new InvalidOperationException("A dynamic cache can only be shared by the same source problem and grace count.");
-            source = sourceProblem;
-            graceCount = grace;
-        }
+        this.graceCount = graceCount;
     }
 
     private void SynchronizeEpoch(int currentEpoch)
@@ -122,17 +111,5 @@ public sealed class DynamicEvaluationCache<TKey> where TKey : notnull
                 foreach (var position in entry.Positions)
                     results[position] = evaluated[entry.Index];
         return results;
-    }
-}
-
-public sealed class DynamicEvaluationCacheHandle<TKey> : ResourceHandle<DynamicEvaluationCache<TKey>> where TKey : notnull
-{
-    public long? SizeLimit { get; init; }
-
-    protected override DynamicEvaluationCache<TKey> CreateResource()
-    {
-        if (SizeLimit < 0)
-            throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
-        return new(SizeLimit);
     }
 }

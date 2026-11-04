@@ -172,9 +172,9 @@ A refinement that has to pass through a worse candidate to reach a better one is
 
 ### Evaluation accounting for refinement
 
-Improvement checking evaluates twice and the algorithm evaluates the returned candidate again. Without caching this costs three problem evaluations per refined candidate. Use the same evaluator configuration to select all those calls for observation. Use an explicit resource handle to share cache entries or evaluation allowance across the independently constructed executors.
+Improvement checking evaluates twice and the algorithm evaluates the returned candidate again. Without caching this costs three problem evaluations per refined candidate. Use the same evaluator configuration to select all those calls for observation. Share the evaluator configuration with `Sharing` when those uses should share one cache or evaluation allowance.
 
-Configuration reference identity selects observation targets. Resource handle reference identity selects shared data within a run. Reusing an evaluator configuration alone does not share its private fields or cache. Record copies retain handles unless explicitly replaced.
+Configuration reference identity selects observation targets and shared executors. Reusing an evaluator configuration alone does not share its private fields or cache: every use constructs its own executor unless a node shares the configuration.
 
 The snippets in this section use these namespaces:
 
@@ -250,28 +250,27 @@ A list selects every operation of each configuration by reference. Repeating a r
 
 For explicit runtime accounting, several observed operators can also feed the same termination criterion through a supplied `CountAccumulator`. Reusing such a live accumulator deliberately combines consumption across its callers.
 
-Sharing an evaluation cache through a handle avoids the final repeated problem evaluation:
+Sharing the cached evaluator gives the algorithm and the improvement check one executor, and therefore one cache, which avoids the final repeated problem evaluation:
 
 ```csharp
-var cacheHandle = new EvaluationCacheHandle<RealVector>();
-var evaluator = new ProblemEvaluator<RealVector>().Cached(cacheHandle);
+var evaluator = new ProblemEvaluator<RealVector>().Cached();
 
-var cached = algorithm with
+var cached = (algorithm with
 {
     Evaluator = evaluator,
     Refiner = parameterFitting.CheckedForImprovement(evaluator)
-};
+}).Sharing(evaluator);
 ```
 
-`EvaluationCache<TKey>` uses MemoryCache for concurrent storage, key equality and eviction, with an optional entry count limit. Lookup, evaluation and publication are separate operations, so concurrent misses may evaluate the same key more than once. Share only when keys and evaluation semantics agree across every participant. Child evaluators, key selectors and other dependencies must support the concurrency the author permits. A cache cannot make incompatible problems, parameter settings or stochastic results interchangeable.
+`EvaluationCache<TKey>` uses MemoryCache for concurrent storage, key equality and eviction, with an optional entry count limit. Lookup, evaluation and publication are separate operations, so concurrent misses may evaluate the same key more than once. Share only when keys and evaluation semantics agree across every use. Child evaluators, key selectors and other dependencies must support the concurrency the author permits. A cache cannot make incompatible problems, parameter settings or stochastic results interchangeable.
 
-When writing an operator with shared data, use concurrency safe resource operations or synchronize the complete invariant you need to preserve. Every participant must use the same synchronization object. A separate lock on each executor cannot protect data shared between executors. Prefer keeping synchronization inside the shared resource. A cache with epoch metadata, for example, must coordinate invalidation and result publication with that epoch. Choose a simple lock, a read/write lock or concurrent storage according to those requirements. Avoid holding a shared lock across expensive child evaluation when validity can instead be checked before publication. Safe storage alone does not guarantee one evaluation per key or a strict shared evaluation budget.
+When writing an operator whose executor may be shared, use concurrency safe operations on its data or synchronize the complete invariant you need to preserve. Every participant must use the same synchronization object. A lock must cover every path to the data. Prefer keeping synchronization inside the data structure itself. A cache with epoch metadata, for example, must coordinate invalidation and result publication with that epoch. Choose a simple lock, a read/write lock or concurrent storage according to those requirements. Avoid holding a shared lock across expensive child evaluation when validity can instead be checked before publication. Safe storage alone does not guarantee one evaluation per key or a strict shared evaluation budget.
 
 Select the outer cache configuration to count evaluation requests and its child evaluator to count actual problem evaluations:
 
 ```csharp
 var problemEvaluator = new ProblemEvaluator<RealVector>();
-var cache = problemEvaluator.Cached(new EvaluationCacheHandle<RealVector>());
+var cache = problemEvaluator.Cached();
 var requests = Aspect.CountCandidates(cache, out var requestCount);
 var solves = Aspect.CountCandidates(problemEvaluator, out var solveCount);
 
@@ -281,9 +280,9 @@ var run = cached.CreateRun(problem, random, setup: setup => setup
     .AddAspect(solves));
 ```
 
-After the run, `requestCount` includes cache hits and `solveCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
+After the run, `requestCount` includes cache hits and `solveCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration, and share it so both uses hit one cache. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
 
-`LimitEvaluator` has private accounting by default. Set its `Counter` to a `CountAccumulatorHandle` when the refiner and algorithm need one shared allowance. Its separate check, evaluation and increment do not promise a strict limit under concurrent use. Cache and limit ordering determines whether hits consume allowance:
+`LimitEvaluator` accounting is private to its executor. Share the limited evaluator, for example with `algorithm.Sharing(limited)`, when the refiner and algorithm need one allowance. Its separate check, evaluation and increment do not promise a strict limit under concurrent use. Cache and limit ordering determines whether hits consume allowance:
 
 ```csharp
 new CachingEvaluator<...>(problemEvaluator, keySelector).LimitEvaluations(100_000) // cache hits consume budget
@@ -428,7 +427,7 @@ A multi-child composite such as a pipeline exposes its own controls. It does not
 
 Every operation call receives an explicit random number generator, and compositions invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. The built in terminators and interceptors draw nothing, so `AnyTerminator`, `AllTerminator` and `PipelineInterceptor` are deterministic with respect to child ordering unless a child draws or depends on some other explicit input or external resource.
 
-Child configurations resolve when each composition executor is built. Each construction has independent private fields and current contextual advice. Explicit resource handles can share selected data without sharing children or advice.
+Child configurations resolve when each composition executor is built. Each construction has independent private fields and current contextual advice. Sharing a configuration gives all its uses within the sharing node one executor, each use still wrapped by its own advice.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 
@@ -438,7 +437,7 @@ Use `WrappingOperator<TOperation, TCandidate>` for one child and `MultiOperator<
 
 Derive from `Operator<TOperation, TCandidate>` when a composition coordinates different operations or declares children with specific domain responsibilities. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
 
-The authored executor holds resolved children, private mutable fields and explicit resource references. The configuration owns parameters, child configurations and optional resource handles.
+The authored executor holds resolved children and private mutable fields. The configuration owns parameters and child configurations.
 
 ### A complete stateful composition
 
@@ -470,18 +469,18 @@ An independent root prepares a fresh cursor, even when it resolves the same conf
 
 ### Author a concurrent cache wrapper
 
-This executable example uses `EvaluationCache<int>` as the shared resource. MemoryCache provides concurrent storage and eviction, with an optional entry count limit. The wrapper keeps its child executor private and evaluates outside cache storage operations. This protocol allows duplicate evaluations on overlapping misses. It assumes immutable keys and deterministic evaluation with compatible semantics for all participants. Cache admission is not guaranteed at capacity, and eviction order is not part of the evaluator contract.
+This executable example keeps an `EvaluationCache<int>` in its executor. MemoryCache provides concurrent storage and eviction, with an optional entry count limit. The wrapper keeps its child executor private and evaluates outside cache storage operations. This protocol allows duplicate evaluations on overlapping misses. It assumes immutable keys and deterministic evaluation with compatible semantics for every use of the shared executor. Cache admission is not guaranteed at capacity, and eviction order is not part of the evaluator contract.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-imports{csharp}
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-authoring{csharp}
 
-The following usage constructs two executors with one handle. Separate RNGs belong to the separate calls. Counting advice deliberately shares its own accumulator without a resource handle.
+The following usage shares the wrapper, so both resolutions receive one executor and one cache, and calls it concurrently. Separate RNGs belong to the separate calls. The counting aspect sits above the sharing point and therefore reaches the child evaluator inside the shared executor.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-usage{csharp}
 
-Resource table synchronization only protects publication of one resource per handle. The operator author remains responsible for concurrent resource operations, child calls and key selection. A lock on each executor does not coordinate a shared resource. Keep synchronization with shared data, or ensure every participant uses the same synchronization object.
+Sharing does not synchronize calls. The operator author remains responsible for concurrent operations on the executor's data, child calls and key selection. Keep synchronization with the data, or ensure every path to it uses the same synchronization object.
 
-The experimental dynamic cache additionally coordinates entries, epoch and consecutive hit accounting under one shared lock. It rechecks the epoch before publication and never publishes results from an earlier epoch. It rejects participants using different source problem instances or grace counts. Once the hit threshold is reached, it requests at most one update per observed epoch. A miss resets the hit streak but does not queue another request while an update is pending. Key and evaluation compatibility still belongs to the author.
+The experimental dynamic cache additionally coordinates entries, epoch and consecutive hit accounting under one shared lock. It rechecks the epoch before publication and never publishes results from an earlier epoch. Once the hit threshold is reached, it requests at most one update per observed epoch. A miss resets the hit streak but does not queue another request while an update is pending. Key and evaluation compatibility still belongs to the author.
 
-Automatic creation supports resources requiring no deterministic cleanup. `EvaluationCache<TKey>` uses MemoryCache with statistics and linked entry tracking disabled and without expiration tokens or callbacks. This restricted use does not require deterministic cleanup. For a resource that does require cleanup, use a `SuppliedResourceHandle<TResource>` and bind it through the run or scope builder. The caller owns cleanup after every borrowing run has finished. No executor or run disposes supplied resources.
+Executors have no disposal lifecycle, so keep only data that needs no deterministic cleanup in executor fields. `EvaluationCache<TKey>` uses MemoryCache with statistics and linked entry tracking disabled and without expiration tokens or callbacks, so it requires none.

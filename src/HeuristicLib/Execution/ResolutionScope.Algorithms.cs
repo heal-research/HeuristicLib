@@ -24,7 +24,11 @@ public partial class ResolutionScope
         if (!algorithm.Fits(execution))
             throw SearchConfigurationValidation.Mismatch(algorithm, execution);
         using var building = construction.Enter(algorithm);
-        var executor = algorithm.CreateExecutor(this.For<TCandidate, TSearchSpace, TProblem, TSearchState>());
+        // The resolver is the one place that constructs executors; the delegate only chooses the constructing layer.
+#pragma warning disable HLib0001
+        var executor = Construct(algorithm, owner => algorithm.CreateExecutor(owner.For<TCandidate, TSearchSpace, TProblem, TSearchState>()),
+            existing => existing is IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
+#pragma warning restore HLib0001
         foreach (var (pointcut, advice) in Advices())
             if (pointcut.Matches(algorithm))
                 executor = advice switch

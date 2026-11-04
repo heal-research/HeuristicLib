@@ -122,7 +122,7 @@ var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setu
 
 `exploreQuality` then holds only the first stage's generations, and `wholeRun` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
 
-## Deferred children and executor reuse
+## Deferred children and shared executors
 
 Resolve fixed children through the scope received by `CreateExecutor`. Retain that scope on the executor when child construction is deferred. Each call constructs fresh private fields while using the same run resources:
 
@@ -132,13 +132,13 @@ var execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(
 
 A typed scope created with `For<TCandidate, TSearchSpace, TProblem, TSearchState>()` avoids repeating the type arguments. `With(aspects)` adds contextual advice using the same resource table.
 
-Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executors for each turn by default and carries search state forward. Enable reuse explicitly:
+Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executors for each turn and carries search state forward. Share a configuration on the Cycle to keep one executor for it across turns:
 
 ```csharp
-var cycle = first.CycleWith(second, maximumCycles: 3, reuseExecutors: true);
+var cycle = first.CycleWith(second, maximumCycles: 3).Sharing(first, second);
 ```
 
-Reuse is local to one Cycle executor. Its dictionary uses child configuration reference identity, so `Cycle(A, A)` retains one A executor. Equal but distinct configurations retain separate executors. Reuse preserves private fields, resolved children and advice. A separately constructed Cycle starts independently. Nested cycles still use the run's one flat resource table and can share a cache through the same handle.
+Sharing is local to one executor of the sharing node and uses configuration reference identity, so `Cycle(A, A)` shared on A uses one A executor. Equal but distinct configurations keep separate executors. A shared executor preserves its private fields and resolved children, and every turn applies the Cycle's current advice around it. A separately constructed Cycle starts independently. Share any configuration the same way, for example a cached evaluator used by both algorithms, to keep only that part across turns while terminators and budgets restart.
 
 Inner algorithms do not know they run inside a meta-algorithm, so the meta-algorithm reports its own progress. `CycleAlgorithm` publishes the start of each cycle and turn, as [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns) shows. To report a point of your own, declare a named child with `ObservationPoint.Of<TObservation>(this, nameof(Point))`, resolve it through `scope.Resolve(Point)` in `CreateExecutor`, and call its executor's `Report` method at that point. The point is itself an observation source.
 

@@ -11,13 +11,11 @@ namespace HEAL.HeuristicLib.Operators;
 public sealed record LimitEvaluator<TCandidate>
     : WrappingOperator<Evaluation, TCandidate>
 {
-    public int MaxEvaluations { get; init; }
-
     /// <remarks>
-    /// An explicit handle shares evaluation accounting across executors. Without it each executor has its own counter.
+    /// Each executor counts its own evaluations; share this configuration to let several uses draw from one allowance.
     /// Checking and incrementing are separate, so concurrent callers may exceed the limit.
     /// </remarks>
-    public ResourceHandle<CountAccumulator>? Counter { get; init; }
+    public int MaxEvaluations { get; init; }
 
     /// <summary>
     /// Gets the objective vector returned for candidates that are not evaluated because the limit has been reached.
@@ -40,7 +38,7 @@ public sealed record LimitEvaluator<TCandidate>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var counter = Counter is null ? new CountAccumulator() : scope.Resource(Counter);
+        var counter = new CountAccumulator();
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter);
     }

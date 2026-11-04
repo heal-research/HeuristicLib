@@ -33,11 +33,11 @@ Use `Aspect.Observe`, `Aspect.CountInvocations`, `Aspect.CountCandidates` or `As
 
 ## Resources and child activations
 
-A run owns one flat resource table. A trial is one run. `With` adds an aspect context using the same table. A separate root created with `ResolutionScope.Create` has an independent table. There is no configuration ownership lookup, resource ancestry or automatic sharing between separate constructions.
+A run owns one flat resource table. A trial is one run. `With` adds an aspect context using the same table. A separate root created with `ResolutionScope.Create` has an independent table. There is no configuration ownership lookup or resource ancestry. Separate constructions share an executor only when a sharing node lists the configuration.
 
 Supply existing resources with `algorithm.CreateRun(problem, random, setup => setup.AddResource(handle, resource))` or with `new ResolutionScopeBuilder().AddResource(handle, resource).Build()` for a direct scope. A builder remains reusable. Each build snapshots bindings and aspects, creates independent default resources and retains explicitly supplied instances. A scope accepts no further bindings. `ExperimentRunSetup.AddResourcePerTrial` supplies resources to materialized cases before trial runs are created. Explicitly supplying the same instance to several runs deliberately couples them.
 
-Cycle constructs fresh executors by default and passes search state to the next turn. `ReuseExecutors = true` retains one executor per child configuration reference within one Cycle executor. `Cycle(A, A)` then uses one A executor. Reuse retains children and advice too. Pipeline stages and racing contenders construct fresh executors through their current context and use the run's resource table.
+Cycle constructs fresh executors for every turn and passes search state to the next turn. `cycle.Sharing(A)` keeps one A executor, with its children, for every turn of one Cycle executor, so `Cycle(A, A)` then uses one A executor. Each request still applies its own advice around it. Pipeline stages and racing contenders construct fresh executors through their current context and use the run's resource table.
 
 Operator authors own concurrent access correctness. Synchronization must protect every participant sharing a resource. Automatically created resources must need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned. Executors and resource tables add no automatic disposal lifecycle.
 

@@ -91,7 +91,7 @@ public class IterationObservationSpecs
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var innerAlgorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
-        var cycle = CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2, ReuseExecutors = true };
+        var cycle = (CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2 }).Sharing(innerAlgorithm);
 
         var innerQuality = innerAlgorithm.Iterations.TracePopulationCandidates();
         var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup => setup.AddAspect(innerQuality));

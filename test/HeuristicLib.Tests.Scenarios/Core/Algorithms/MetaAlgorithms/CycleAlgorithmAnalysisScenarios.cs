@@ -13,7 +13,7 @@ public class CycleAlgorithmAnalysisScenarios
     [Fact]
     public void CycleAlgorithm_WithFreshExecutors_PreservesAnalyzerStateAcrossCycles()
     {
-        var result = RunCycleAlgorithm(false);
+        var result = RunCycleAlgorithm(Shared.Nothing);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 1.0, 1.0, 1.0, 1.0]);
@@ -22,9 +22,9 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     [Fact]
-    public void CycleAlgorithm_WithSharedResource_SharesAccountingAndPreservesAnalyzerState()
+    public void CycleAlgorithm_SharingTheEvaluator_SharesAccountingAndPreservesAnalyzerState()
     {
-        var result = RunCycleAlgorithm(true, shareResource: true);
+        var result = RunCycleAlgorithm(Shared.Evaluator);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]);
@@ -33,9 +33,9 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     [Fact]
-    public void CycleAlgorithm_WithReusedExecutors_IsolatesSiblingDependenciesAndPreservesAnalyzerState()
+    public void CycleAlgorithm_SharingItsAlgorithms_IsolatesSiblingDependenciesAndPreservesAnalyzerState()
     {
-        var result = RunCycleAlgorithm(true);
+        var result = RunCycleAlgorithm(Shared.Algorithms);
 
         result.EvaluationTrace1.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
         result.EvaluationTrace2.ObjectiveValues.ShouldBe([1.0, 1.0, 2.0, 2.0, 3.0, 3.0]);
@@ -43,15 +43,20 @@ public class CycleAlgorithmAnalysisScenarios
         result.FinalState.Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
     }
 
-    private static CycleRunResult RunCycleAlgorithm(bool mode, bool shareResource = false)
+    private enum Shared { Nothing, Algorithms, Evaluator }
+
+    private static CycleRunResult RunCycleAlgorithm(Shared shared)
     {
-        var evaluator = new IncrementingEvaluator { Counter = shareResource ? new CountAccumulatorHandle() : null };
+        var evaluator = new IncrementingEvaluator();
         var interceptor = new IdentityInterceptor<int, PopulationState<int>>();
         var algorithm1 = new SingleStepAlgorithm(1, evaluator, interceptor);
         var algorithm2 = new SingleStepAlgorithm(2, evaluator, interceptor);
-        var cycleAlgorithm = algorithm1.CycleWith(algorithm2, maximumCycles: 3) with
+        var cycle = algorithm1.CycleWith(algorithm2, maximumCycles: 3);
+        IAlgorithm<int, PopulationState<int>> cycleAlgorithm = shared switch
         {
-            ReuseExecutors = mode
+            Shared.Algorithms => cycle.Sharing(algorithm1, algorithm2),
+            Shared.Evaluator => cycle.Sharing(evaluator),
+            _ => cycle
         };
 
         var evaluationTrace1 = new EvaluationTraceAnalysis(evaluator);
@@ -87,12 +92,9 @@ public class CycleAlgorithmAnalysisScenarios
     private sealed record IncrementingEvaluator
         : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public ResourceHandle<CountAccumulator>? Counter { get; init; }
-
         protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
         {
-            var counter = Counter is null ? new CountAccumulator() : scope.Resource(Counter);
-            return new Executor(counter);
+            return new Executor(new CountAccumulator());
         }
 
         private sealed class Executor(CountAccumulator counter)

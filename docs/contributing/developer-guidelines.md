@@ -127,7 +127,7 @@ Search states are public progress values. Do not use them to carry private count
 
 ### § 4.3 Resolve declared children through the resolution scope
 
-Every configuration's `CreateExecutor` receives a scope typed to the run for operators and algorithms. Resolve children through it and pass them to the executor. Retain a scope only for delayed child construction. Cycle executor reuse is local to one Cycle executor and retains child executors and advice. Do not add another scope abstraction or call a child's hook directly.
+Every configuration's `CreateExecutor` receives a scope typed to the run for operators and algorithms. Resolve children through it and pass them to the executor. Retain a scope only for delayed child construction. To keep one executor for a configuration across several uses, share it with `Sharing` on the node whose lifetime it should follow rather than caching executors yourself. Do not add another scope abstraction or call a child's hook directly.
 
 Algorithms resolve only their configured parameters and their own declared observation points, and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 

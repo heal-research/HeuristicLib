@@ -26,6 +26,10 @@ public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionSco
     public new ResolutionScope<TCandidate, TSearchSpace, TProblem> With(params IReadOnlyList<Aspect> aspects) =>
         new(base.With(aspects));
 
+    /// <inheritdoc cref="ResolutionScope.Sharing"/>
+    public new ResolutionScope<TCandidate, TSearchSpace, TProblem> Sharing(params IReadOnlyList<IConfigurationNode> configurations) =>
+        new(base.Sharing(configurations));
+
 }
 
 /// <summary>
@@ -50,6 +54,10 @@ public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchS
     /// <inheritdoc cref="ResolutionScope.With"/>
     public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> With(params IReadOnlyList<Aspect> aspects) =>
         new(base.With(aspects));
+
+    /// <inheritdoc cref="ResolutionScope.Sharing"/>
+    public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> Sharing(params IReadOnlyList<IConfigurationNode> configurations) =>
+        new(base.Sharing(configurations));
 
 }
 

@@ -73,9 +73,9 @@ public class ImprovementCheckingRefinerTests
     {
         var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var sharedEvaluator = observed.Cached(new EvaluationCacheHandle<int>());
+        var sharedEvaluator = observed.Cached();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(observed, counter));
+        var scope = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Sharing(sharedEvaluator);
         var refinerExecutor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();

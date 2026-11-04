@@ -6,15 +6,21 @@ See [configuration vs executors](/contributing/architecture/execution-nodes) for
 
 ## Resources and construction
 
-`ResolutionScope.Create(aspects)` creates an independent root with one flat resource table. `With(aspects)` adds an aspect layer and uses the same table. Both accept zero or several aspects in supplied order. Aspect ancestry controls advice order only.
+`ResolutionScope.Create(aspects)` creates an independent root with one flat resource table. `With(aspects)` adds an aspect layer and uses the same table. Both accept zero or several aspects in supplied order. Aspect ancestry controls advice order only. `Sharing(configurations)` adds a sharing layer, described under [shared configurations](#shared-configurations).
 
 For each resolution:
 
 1. Check the requested operation and run signature.
-2. Build an executor through the configuration's `CreateExecutor`, resolving contextual children through the supplied scope.
+2. Build an executor through the configuration's `CreateExecutor`, resolving contextual children through the supplied scope, unless a sharing layer already holds one for the configuration.
 3. Apply matching advice in context order and return the advised executor.
 
-Private fields are fresh on each construction, even for two resolutions of the same configuration in one context. The resolver caches no executors. Stateless leaves may return an immutable executor repeatedly.
+Private fields are fresh on each construction, even for two resolutions of the same configuration in one context. The resolver keeps no executors except those of shared configurations. Stateless leaves may return an immutable executor repeatedly.
+
+### Shared configurations
+
+A sharing layer holds one executor slot for each configuration it shares, keyed by configuration reference. Resolution walks the same layer chain that it walks for advice. The nearest layer sharing the configuration supplies its executor, which that layer constructs on the first request with its own children and the advice visible from that layer. Every request then applies its own matching advice around the shared executor, exactly as it would around a fresh one, so sharing changes how many executors exist but not which advice wraps them or in which order. Advice installed below the sharing point therefore wraps the shared configuration itself but does not reach the children inside it.
+
+`SharingAlgorithm` and `SharingOperator` add such a layer for their child, through `algorithm.Sharing(configurations)` and `source.Sharing(configurations)`. Every construction of the sharing node creates a new layer, so shared executors live as long as the sharing node's executor: a Cycle turn or another run that constructs it again starts with new shared executors. A layer shares one executor per configuration. A later request for other run types, such as another search state, is rejected rather than given a second executor. Equal but distinct configurations are separate keys. Configurations that are listed but never requested construct nothing.
 
 `scope.Resource(handle)` obtains one resource per handle reference in the run. Creation settings belong to the handle and its factory receives no requesting context. Different handles of one type stay distinct. Record copies preserve handles and handle reference identity participates in configuration equality.
 
@@ -60,7 +66,7 @@ An `Aspect` stores ordered `(Pointcut, Advice)` pairs in `Advices`. `Aspect.Crea
 
 Advice receives concrete runtime dependencies through its constructor and passes them to wrapping executors. Assemble resource dependent advice for each run. Supply the same instance under a handle when configurations must also resolve it or callers need `run.Resource(handle)` inspection. Advice has no resource lookup or supply capability. Advice resolves no configured children and introduces no configuration nodes into selection. An explicitly configured wrapper remains a configuration and can be selected independently of its child.
 
-A join point is the executor built for one selected configuration. A shared configuration can have several contextual bindings and does not identify one caller path or invocation. Wrapping executors own their private fields. Runtime data held by the advice object is intentionally shared wherever that advice instance is reused. Handle based resources instead follow the current run lifetime, so reusing one counting aspect across trials preserves independent default counters. Invocation local values stay in the operation or iterator.
+A join point is the executor built for one selected configuration. A shared configuration can have several contextual bindings and does not identify one caller path or invocation. Resolution applies advice separately for every request, so a shared configuration receives one advice wrapper per request around its single executor. Advice wrappers therefore keep no private data; data that must accumulate belongs to the advice or to an object it receives, such as a `CountAccumulator`. Runtime data held by the advice object is intentionally shared wherever that advice instance is reused. Handle based resources instead follow the current run lifetime, so reusing one counting aspect across trials preserves independent default counters. Invocation local values stay in the operation or iterator.
 
 ## Ordering and shared advice
 
@@ -68,9 +74,9 @@ The current scope's aspect layer precedes its parent's layers. Within each layer
 
 Each advice instance applies once, at its first position in this chain. Two traces can include the same clock's advice without counting twice. A trace lists clock advice before its own observation, so the clock has advanced when it records an entry. Readding the clock later must not move that first position. If the same advice appears with two pointcuts, the first pairing wins without validation. Use separate advice instances to apply the same behavior at two distinct pointcuts; they may share a counter.
 
-## Deferred construction and executor reuse
+## Deferred construction
 
-Cycle resolves fresh children for every turn by default while forwarding search state. Its `ReuseExecutors` option keeps a reference keyed dictionary on one Cycle executor. Repeated child references reuse one executor, including its private fields, children and advice. Equal but distinct configurations keep distinct executors. A separately resolved Cycle has its own dictionary.
+Cycle resolves fresh children for every turn while forwarding search state. Sharing a child configuration on the Cycle, `cycle.Sharing(child)`, keeps one executor for that child across turns, including its private fields and children; each turn still applies the Cycle's current advice around it. A separately resolved Cycle has its own shared executors.
 
 Pipeline stages and dynamic racing contenders resolve fresh children through their current context. Every deferred construction in the run sees the same resource table. Nested cycles do not introduce nested resource lifetimes. Pause/resume continues the existing iterator and executors with their resource bindings.
 
@@ -90,6 +96,6 @@ Predefined observation, counting and timing advice lives in `HEAL.HeuristicLib.I
 
 Operator budgets remain configurations. Each construction creates a private accumulator and the counting or timing advice that feeds it, adds that advice with `scope.With(aspect)` and resolves the inner algorithm. Calls through that child context contribute to the budget. The single operator variants select one inferred operation. The operator list variants select all operations of every listed configuration reference with one union pointcut, so duplicate references do not duplicate accounting. Their constructors and extensions use the same configuration. Directly resolving the child algorithm creates independent private data and does not add budget advice. An absent observed operator matches nothing.
 
-`LimitEvaluator.Counter` optionally names an explicit shared `CountAccumulator` resource. Without a handle its accounting is private. Atomic accumulation does not turn separate checking, evaluation and accounting into a strict concurrent budget. Such reservation semantics remain outside this contract.
+`LimitEvaluator` accounting is private to its executor. Sharing the limited evaluator lets several uses draw from one allowance. Atomic accumulation does not turn separate checking, evaluation and accounting into a strict concurrent budget. Such reservation semantics remain outside this contract.
 
 A budget's local layer wraps closer to the operator than inherited analysis. This keeps observer work outside the measured operation. Among aspects in the same layer, order is explicit; add timing before an observation when its callback should remain outside the timed span.

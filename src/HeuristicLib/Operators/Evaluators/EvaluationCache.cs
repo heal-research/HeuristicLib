@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -28,16 +27,4 @@ public sealed class EvaluationCache<TKey> where TKey : notnull
     public void Set(TKey key, ObjectiveVector value) => entries.Set(key, value, new MemoryCacheEntryOptions { Size = 1 });
 
     public void Clear() => entries.Clear();
-}
-
-public sealed class EvaluationCacheHandle<TKey> : ResourceHandle<EvaluationCache<TKey>> where TKey : notnull
-{
-    public long? SizeLimit { get; init; }
-
-    protected internal override EvaluationCache<TKey> CreateResource()
-    {
-        if (SizeLimit < 0)
-            throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
-        return new(SizeLimit);
-    }
 }

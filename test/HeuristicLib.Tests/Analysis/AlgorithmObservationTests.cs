@@ -228,21 +228,18 @@ public class AlgorithmObservationTests
 
     /// <summary>
     /// The clock keeps its own count, so it continues across every turn of the observed algorithm, while each turn
-    /// restarts the algorithm's iteration count, whether Cycle constructs or reuses its executor.
+    /// restarts the algorithm's iteration count, whether Cycle constructs or shares its executor.
     /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
 
-    public async Task IterationClock_ContinuesAcrossTheCyclesTurnsWhileEachTurnRestartsTheIteration(bool policy)
+    public async Task IterationClock_ContinuesAcrossTheCyclesTurnsWhileEachTurnRestartsTheIteration(bool shared)
     {
         var problem = CreateProblem();
         var inner = CreateAlgorithm(problem, maximumGenerations: 3);
-        var cycle = CycleAlgorithm.Create(inner) with
-        {
-            MaximumCycles = 2,
-            ReuseExecutors = policy
-        };
+        var fresh = CycleAlgorithm.Create(inner) with { MaximumCycles = 2 };
+        IAlgorithm<RealVector, PopulationState<RealVector>> cycle = shared ? fresh.Sharing(inner) : fresh;
 
         var iterations = Clock.FromIterations(inner);
         var iteration = Analyzer.Trace(inner.Iterations, observation => observation.Iteration, [iterations]);
@@ -254,27 +251,24 @@ public class AlgorithmObservationTests
     }
 
     /// <summary>
-    /// The cycle numbers its cycles and turns per call, whatever its scope policy, and reports the state each starts from.
+    /// The cycle numbers its cycles and turns per call, whether or not it shares its algorithms, and reports the state each starts from.
     /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
 
-    public async Task CycleObservations_NumberCyclesAndTurnsAndCarryTheStateTheyStartFrom(bool policy)
+    public async Task CycleObservations_NumberCyclesAndTurnsAndCarryTheStateTheyStartFrom(bool shared)
     {
         var problem = CreateProblem();
         var first = CreateAlgorithm(problem, maximumGenerations: 3);
         var second = CreateAlgorithm(problem, maximumGenerations: 2);
-        var cycle = CycleAlgorithm.Create(first, second) with
-        {
-            MaximumCycles = 2,
-            ReuseExecutors = policy
-        };
+        var cycle = CycleAlgorithm.Create(first, second) with { MaximumCycles = 2 };
+        IAlgorithm<RealVector, PopulationState<RealVector>> runnable = shared ? cycle.Sharing(first, second) : cycle;
         var cycles = new List<CycleStart<RealVector, PopulationState<RealVector>>>();
         var turns = new List<CycleTurn<RealVector, PopulationState<RealVector>>>();
         var states = new List<PopulationState<RealVector>>();
 
-        await foreach (var state in cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
+        await foreach (var state in runnable.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
             .AddAspect(Aspect.Observe(cycle.Cycles, cycles.Add))
             .AddAspect(Aspect.Observe(cycle.Turns, turns.Add)))
             .Stream(cancellationToken: TestContext.Current.CancellationToken))

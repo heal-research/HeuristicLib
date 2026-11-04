@@ -3,9 +3,12 @@ using System.Diagnostics.CodeAnalysis;
 namespace HEAL.HeuristicLib.Execution;
 
 /// <remarks>
-/// Every resolution constructs an executor with the requesting context's children and advice. Private data belongs
-/// to that executor. Contexts share one flat resource table and apply their own aspects before ancestor aspects.
-/// Resource use is not automatically synchronized and supplied resources remain caller owned.
+/// Every resolution constructs an executor with the requesting context's children and advice, unless a layer shares
+/// the configuration. Private data belongs to that executor. A layer adds context for the subtree resolved through it:
+/// aspects (<see cref="With"/>), applied before ancestor aspects, or shared configurations (<see cref="Sharing"/>).
+/// A shared configuration resolves to one executor per sharing layer, constructed in that layer on first request,
+/// with each requester's advice applied around it. Contexts share one flat resource table, whose use is not
+/// automatically synchronized; supplied resources remain caller owned.
 /// </remarks>
 public partial class ResolutionScope
 {
@@ -14,17 +17,23 @@ public partial class ResolutionScope
     private readonly ResolutionScope? parent;
     private readonly ImmutableArray<Aspect> aspects;
 
-    private ResolutionScope(RunResources resources, ConstructionGuard construction, ResolutionScope? parent, ImmutableArray<Aspect> aspects)
+    // The executors this layer shares, by configuration. An entry stays empty until its first request constructs it.
+    // Null in layers that share nothing.
+    private readonly Dictionary<IConfigurationNode, IExecutor?>? shared;
+
+    private ResolutionScope(RunResources resources, ConstructionGuard construction, ResolutionScope? parent, ImmutableArray<Aspect> aspects,
+        Dictionary<IConfigurationNode, IExecutor?>? shared = null)
     {
         this.resources = resources;
         this.construction = construction;
         this.parent = parent;
         this.aspects = aspects;
+        this.shared = shared;
     }
 
     /// <summary>Creates a scope that resolves exactly like <paramref name="scope"/>, for a typed scope over it.</summary>
     private protected ResolutionScope(ResolutionScope scope)
-        : this(scope.resources, scope.construction, scope.parent, scope.aspects)
+        : this(scope.resources, scope.construction, scope.parent, scope.aspects, scope.shared)
     {
     }
 
@@ -43,13 +52,53 @@ public partial class ResolutionScope
     public ResolutionScope With(params IReadOnlyList<Aspect> aspects) =>
         new(resources, construction, this, [.. aspects]);
 
+    /// <summary>Returns a scope in which each given configuration resolves to one shared executor.</summary>
+    /// <remarks>
+    /// The shared executor is constructed on its first request, in the returned scope rather than the requester's, so
+    /// its children and the advice inside it are fixed there. Each request applies the requester's advice around it.
+    /// Every call creates new shared executors, so sharing lasts as long as the executor that called it.
+    /// </remarks>
+    public ResolutionScope Sharing(params IReadOnlyList<IConfigurationNode> configurations)
+    {
+        var shared = new Dictionary<IConfigurationNode, IExecutor?>(ReferenceEqualityComparer.Instance);
+        foreach (var configuration in configurations)
+            shared.TryAdd(configuration, null);
+        return new(resources, construction, this, [], shared);
+    }
+
+    // Called while the construction lock is held. Returns the executor of the nearest layer that shares the
+    // configuration, constructing it in that layer on first request, or constructs a new one here. A layer shares one
+    // executor per configuration, so a request that the shared executor does not fit is rejected.
+    private TExecutor Construct<TExecutor>(IConfigurationNode configuration, Func<ResolutionScope, TExecutor> create, Func<IExecutor, bool> fits)
+        where TExecutor : class, IExecutor
+    {
+        for (var layer = this; layer is not null; layer = layer.parent)
+            if (layer.shared is { } table && table.TryGetValue(configuration, out var executor))
+            {
+                if (executor is null)
+                {
+                    var created = create(layer);
+                    table[configuration] = created;
+                    return created;
+                }
+                return fits(executor)
+                    ? (TExecutor)executor
+                    : throw new InvalidOperationException($"{configuration.GetType().Name} is shared, and its executor was constructed for other run types " +
+                        "than this request. A shared configuration has one executor, so every use must request the same executor type.");
+            }
+        return create(this);
+    }
+
     /// <summary>Builds a configuration's executor and applies the matching advice for its role.</summary>
     /// <remarks>Matching advice must derive from <see cref="Advice{TConfiguration, TExecutor}"/> for this executor type.</remarks>
     public TExecutor Resolve<TExecutor>(IConfigurationNode<TExecutor> configuration)
         where TExecutor : class, IExecutor
     {
         using var building = construction.Enter(configuration);
-        var executor = configuration.CreateExecutor(this);
+        // The resolver is the one place that constructs executors; the delegate only chooses the constructing layer.
+#pragma warning disable HLib0001
+        var executor = Construct(configuration, owner => configuration.CreateExecutor(owner), existing => existing is TExecutor);
+#pragma warning restore HLib0001
         foreach (var (pointcut, advice) in Advices())
             if (pointcut.Matches(configuration))
                 executor = advice.WrapNode(executor, configuration) as TExecutor

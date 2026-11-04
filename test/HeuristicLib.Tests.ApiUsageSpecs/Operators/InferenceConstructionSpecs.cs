@@ -89,8 +89,8 @@ public class InferenceConstructionSpecs
         var pipelineAlgorithm = PipelineAlgorithm.Create(firstStage, secondStage);
         var fluentPipelineAlgorithm = firstStage.Then(secondStage);
         var cycleAlgorithm = CycleAlgorithm.Create(firstStage, secondStage);
-        var fluentCycleAlgorithm = firstStage.CycleWith(secondStage, maximumCycles: 2, reuseExecutors: true);
-        var fluentMultiCycleAlgorithm = firstStage.CycleWith([secondStage], maximumCycles: 2, reuseExecutors: true);
+        var fluentCycleAlgorithm = firstStage.CycleWith(secondStage, maximumCycles: 2);
+        var fluentMultiCycleAlgorithm = firstStage.CycleWith([secondStage], maximumCycles: 2);
         var interfacePipelineAlgorithm = PipelineAlgorithm.Create(firstStage.Algorithm, firstStage);
 
         problemDirectEvaluator.ShouldBeOfType<ProblemEvaluator<RealVector>>();

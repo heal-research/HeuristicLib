@@ -31,7 +31,11 @@ public partial class ResolutionScope
             if (pointcut.Matches(source) && CheckOperatorAdvice<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(advice, operation, source))
                 (applicable ??= []).Add(advice);
 
-        var executor = source.CreateExecutor(this.For<TCandidate, TSearchSpace, TProblem, TSearchState>());
+        // The resolver is the one place that constructs executors; the delegate only chooses the constructing layer.
+#pragma warning disable HLib0001
+        var executor = Construct(source, owner => source.CreateExecutor(owner.For<TCandidate, TSearchSpace, TProblem, TSearchState>()),
+            TOperation.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
+#pragma warning restore HLib0001
         operation.RequireExecutor(executor, source);
         if (applicable is not null)
             foreach (var advice in applicable)

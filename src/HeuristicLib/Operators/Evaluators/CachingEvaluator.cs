@@ -24,9 +24,6 @@ public record CachingEvaluator<TCandidate, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    /// <remarks>When supplied, creation settings belong to the handle. Do not also set SizeLimit.</remarks>
-    public ResourceHandle<EvaluationCache<TKey>>? Cache { get; init; }
-
     public CachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
@@ -38,9 +35,7 @@ public record CachingEvaluator<TCandidate, TKey>
     {
         if (SizeLimit < 0)
             throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
-        if (Cache is not null && SizeLimit is not null)
-            throw new InvalidOperationException("A shared cache takes its size limit from its handle. Do not also set SizeLimit.");
-        var cache = Cache is null ? new EvaluationCache<TKey>(SizeLimit) : scope.Resource(Cache);
+        var cache = new EvaluationCache<TKey>(SizeLimit);
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
     }
@@ -152,12 +147,6 @@ public static class CachingEvaluatorExtensions
     {
         public CachingEvaluator<TCandidate, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>
             new(evaluator, keySelector) { SizeLimit = sizeLimit };
-
-        public CachingEvaluator<TCandidate, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, ResourceHandle<EvaluationCache<TKey>> cache) where TKey : notnull =>
-            new(evaluator, keySelector) { Cache = cache };
-
-        public CachingEvaluator<TCandidate> Cached(ResourceHandle<EvaluationCache<TCandidate>> cache) =>
-            new(evaluator) { Cache = cache };
 
         public CachingEvaluator<TCandidate> Cached(long? sizeLimit = null) =>
             new(evaluator) { SizeLimit = sizeLimit };

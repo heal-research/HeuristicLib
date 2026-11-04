@@ -118,16 +118,13 @@ public class CycleAlgorithmTests
     [Theory]
     [InlineData(true, 2)]
     [InlineData(false, 1)]
-    public void CycleAlgorithm_UsesConfiguredExecutorReuseWithPrivateChildren(bool newExecutionInstancesPerCycle, int expectedAlgorithmExecutions)
+    public void CycleAlgorithm_SharingItsAlgorithm_KeepsOneExecutorWithPrivateChildren(bool newExecutionInstancesPerCycle, int expectedAlgorithmExecutions)
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingExecutionAlgorithm(1, evaluator);
-        var cycle = CycleAlgorithm.Create(algorithm) with
-        {
-            MaximumCycles = 2,
-            ReuseExecutors = !newExecutionInstancesPerCycle
-        };
+        var fresh = CycleAlgorithm.Create(algorithm) with { MaximumCycles = 2 };
+        IAlgorithm<int, PopulationState<int>> cycle = newExecutionInstancesPerCycle ? fresh : fresh.Sharing(algorithm);
         var scope = ResolutionScope.Create();
         _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
         var cycleExecutor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
@@ -140,21 +137,18 @@ public class CycleAlgorithmTests
     }
 
     /// <summary>
-    /// Different run types construct independent Cycle executors and independent reuse dictionaries.
+    /// Different run types construct independent Cycle executors, each with its own shared executors.
     /// </summary>
     [Theory]
     [InlineData(false, 4)]
     [InlineData(true, 2)]
 
-    public void CycleAlgorithm_BuiltForTwoRunTypes_CreatesIndependentCycleExecutors(bool policy, int expectedAlgorithmExecutions)
+    public void CycleAlgorithm_BuiltForTwoRunTypes_CreatesIndependentCycleExecutors(bool shared, int expectedAlgorithmExecutions)
     {
         var problem = (FuncProblem<int, DummySearchSpace<int>>)MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
-        var cycle = CycleAlgorithm.Create(algorithm) with
-        {
-            MaximumCycles = 2,
-            ReuseExecutors = policy
-        };
+        var fresh = CycleAlgorithm.Create(algorithm) with { MaximumCycles = 2 };
+        IAlgorithm<int, PopulationState<int>> cycle = shared ? fresh.Sharing(algorithm) : fresh;
         var scope = ResolutionScope.Create();
         var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
         var concrete = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);

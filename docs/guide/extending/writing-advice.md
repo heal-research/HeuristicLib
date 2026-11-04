@@ -18,7 +18,7 @@ Resolution calls `Wrap` for every executor it builds for a selected mutator, pas
 
 The executor implements `IExecutorControlProvider` to pass on the wrapped executor's controls, so an algorithm that adapts its mutator, such as an evolution strategy, still finds them behind the logging wrapper. Override `Check` to reject a mutator before its executor is built, for example when the advice reads a problem type the run does not supply.
 
-The call counter belongs to the advice object. Every executor built for its selected mutators, in every scope and run it is attached to, advances the same counter. Create one advice per run when the numbering should restart. This counter expects sequential calls; a shared logging sink must also synchronize its own writes if several executions can call it concurrently.
+The call counter belongs to the advice object, not to the logging executor. Resolution creates a new wrapper for every request, and a shared configuration receives one wrapper per use, so a counter on the wrapper would be split across them. Keep advice wrappers free of private data. Every executor built for its selected mutators, in every scope and run it is attached to, advances the same counter. Create one advice per run when the numbering should restart. This counter expects sequential calls; a shared logging sink must also synchronize its own writes if several executions can call it concurrently.
 
 ## Pair the advice with a pointcut and add it to a run
 

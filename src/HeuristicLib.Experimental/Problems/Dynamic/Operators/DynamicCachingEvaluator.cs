@@ -35,9 +35,6 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    /// <remarks>Shared cache creation settings belong to the handle. Do not also set SizeLimit.</remarks>
-    public ResourceHandle<DynamicEvaluationCache<TKey>>? Cache { get; init; }
-
     public DynamicCachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, IDynamicProblem<TCandidate, TSearchSpace> problem, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
@@ -48,7 +45,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// <summary>
     /// Gets the number of cached candidate evaluations across consecutive all-hit batches that advances the problem epoch.
     /// A batch containing any cache miss resets the accumulated count. The default effectively disables cache-driven epoch advancement.
-    /// A shared cache requests at most one update per epoch, even when the problem defers applying it.
+    /// The cache requests at most one update per epoch, even when the problem defers applying it.
     /// </summary>
     public long GraceCount { get; init; } = long.MaxValue;
 
@@ -60,10 +57,7 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     {
         if (SizeLimit < 0)
             throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
-        if (Cache is not null && SizeLimit is not null)
-            throw new InvalidOperationException("A shared cache takes its size limit from its handle. Do not also set SizeLimit.");
-        var cache = Cache is null ? new DynamicEvaluationCache<TKey>(SizeLimit) : scope.Resource(Cache);
-        cache.Bind(SourceProblem, GraceCount);
+        var cache = new DynamicEvaluationCache<TKey>(SizeLimit, GraceCount);
         var childEvaluator = scope.Resolve(ChildOperator);
         return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, SourceProblem, KeySelector, cache);
     }

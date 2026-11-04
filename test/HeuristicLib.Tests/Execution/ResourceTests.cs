@@ -103,9 +103,8 @@ public sealed class ResourceTests
     {
         using var overlap = new Barrier(2);
         var gate = new SuppliedResourceHandle<Barrier>();
-        var store = new EvaluationCacheHandle<RealVector>();
-        var source = new OverlappingEvaluator(gate).Cached(store);
-        var scope = new ResolutionScopeBuilder().AddResource(gate, overlap).Build().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var source = new OverlappingEvaluator(gate).Cached();
+        var scope = new ResolutionScopeBuilder().AddResource(gate, overlap).Build().Sharing(source).For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var first = scope.Resolve(source);
         var second = scope.With().Resolve(source);
         var problem = new TestFunctionProblem(new SphereFunction(1));

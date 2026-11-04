@@ -15,18 +15,17 @@ namespace HEAL.HeuristicLib.Tests.Docs.Extending;
 #region resource-cache-authoring
 public sealed record MemoizingEvaluator : WrappingOperator<Evaluation, int>
 {
-    public ResourceHandle<EvaluationCache<int>> Cache { get; init; }
+    public long? SizeLimit { get; init; }
 
-    public MemoizingEvaluator(IOperator<Evaluation, int> child, ResourceHandle<EvaluationCache<int>> cache) : base(child)
+    public MemoizingEvaluator(IOperator<Evaluation, int> child) : base(child)
     {
-        Cache = cache;
     }
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
     {
         var child = scope.Resolve(ChildOperator);
-        var cache = scope.Resource(Cache);
+        var cache = new EvaluationCache<int>(SizeLimit);
         return new Executor<TSearchSpace, TProblem>(child, cache);
     }
 
@@ -65,16 +64,16 @@ public sealed class UnrestrictedIntegerSpace : ISearchSpace<int>
 public sealed class ResourceCachingDocumentationSpecs
 {
     [Fact]
-    public async Task ContextualExecutorsShareSafeStorageWithIndependentCalls()
+    public async Task SharedExecutorServesConcurrentCallsFromSafeStorage()
     {
         #region resource-cache-usage
-        var cache = new EvaluationCacheHandle<int> { SizeLimit = 100 };
         var evaluator = new ProblemEvaluator<int>();
-        var memoized = new MemoizingEvaluator(evaluator, cache);
+        var memoized = new MemoizingEvaluator(evaluator) { SizeLimit = 100 };
         var space = new UnrestrictedIntegerSpace();
         var problem = FuncProblem.Create((int candidate) => candidate * candidate, space, SingleObjective.Minimize);
         var evaluations = new CountAccumulator();
         var scope = ResolutionScope.Create(Aspect.CountCandidates(evaluator, evaluations))
+            .Sharing(memoized)
             .For<int, UnrestrictedIntegerSpace, IProblem<int, UnrestrictedIntegerSpace>>();
         var first = scope.Resolve(memoized);
         var second = scope.With().Resolve(memoized);

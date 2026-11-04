@@ -78,9 +78,9 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Two resolutions of one configuration construct independent fields. Get controls from the same advised executor that performs the operation.
 
-Use a typed resource handle only when sharing has domain meaning. `EvaluationCacheHandle<TKey>` and `CountAccumulatorHandle` are examples. The resource is created once per handle per run, or supplied explicitly during preparation. Its creation settings belong to the handle. Record copies retain the handle reference.
+Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Resource handles remain only for the counters that counting and timing aspects write for `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator`; the resource is created once per handle per run, or supplied explicitly during preparation.
 
-The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and explicit resource lookup. Resources must not retain contextual children or advice. Authors own concurrency correctness across all participants. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned.
+The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Resources must not retain contextual children or advice. Authors own concurrency correctness across all participants. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned.
 
 ## Explicit executors
 
