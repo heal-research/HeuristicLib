@@ -52,6 +52,16 @@ Use executable API usage specs for important user flows. Keep them small and rep
 
 Every pattern needs a concrete responsibility. This includes streaming, explicit runs, configuration and execution separation, builders and helper base classes.
 
+### § 2.4 Review changes for overall code health
+
+Evaluate requirements and correctness, readability, architecture, relevant security risks and performance. A change should improve overall code health without requiring perfection or unrelated cleanup.
+
+- Check findings against the actual callers, contracts and tests. Cite the affected code, the relevant requirement or principle and the practical consequence.
+- For a structural concern, describe a simpler alternative and its tradeoffs. Consider deletion, inlining and consolidation as well as extraction. Explain whether complexity disappears or merely moves.
+- Judge simplicity by the concepts, ownership rules and coordination a reader or extension author must understand. Line counts, file sizes and repeated syntax are inspection signals, not automatic reasons to split or generalize.
+- Distinguish required fixes from optional suggestions, and problems introduced by the change from pre-existing concerns. Do not invent findings; no material concern is a valid conclusion.
+- Justify useful abstractions as well as questioning unnecessary ones. A pattern name or a SOLID label alone is not evidence that a design is better.
+
 ## § 3 Architecture and responsibility boundaries
 
 ### § 3.1 Keep responsibilities explicit and concepts coherent
@@ -112,6 +122,24 @@ recommendations.
 Follow the [layering rules](/contributing/architecture/layering) when adding or moving types. Assign a type by its
 responsibility, including where a namespace contains both contracts and implementations, and keep dependencies directed
 from higher layers to lower ones. Treat configuration and executor as phases within those responsibilities.
+
+### § 3.6 Apply clean code values with judgment
+
+Use these values when designing, implementing and reviewing code. Each must explain a concrete responsibility, invariant or cost in HeuristicLib. They do not authorize changes to accepted contracts or require a particular number of classes, interfaces or patterns.
+
+| Value                                                    | Application in HeuristicLib                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| KISS and YAGNI                                           | Prefer the simplest coherent design that meets the requirements. Add abstractions and extension points for demonstrated needs or required capability boundaries; explain what knowledge or coordination they remove.                        |
+| DRY                                                      | Give each semantic rule one owner. Similar syntax alone does not justify combining behavior that changes for different reasons.                                                                                                             |
+| Single responsibility and cohesion                       | Keep behavior that changes for the same reasons together. Separate independent policies and state lifetimes without fragmenting cohesive behavior into trivial types.                                                                       |
+| Separation of concerns and abstraction levels            | Keep composition and resolution distinct from operation behavior. Make orchestration readable without forcing every small operation into another helper.                                                                                    |
+| Composition and substitution                             | Prefer composition for independently varying behavior. Use inheritance when subtypes preserve the behavioral contract, including preconditions, results, ownership, ordering and failure semantics.                                         |
+| Dependency inversion                                     | Keep dependencies explicit and directed according to § 3.5. Introduce an interface when it provides a meaningful policy or substitution boundary, rather than one interface per class.                                                      |
+| Interface segregation                                    | Require only capabilities a client needs. An external operation should not implement unrelated candidate or problem contracts.                                                                                                              |
+| Open/closed and external extensibility                   | Extend through declared contracts, with consumer-provided types participating as § 3.3 requires. Do not enumerate built-in cases in shared mechanisms. This does not prevent deliberate alpha API changes under § 1.1.                      |
+| Information hiding and least astonishment                | Expose necessary capabilities and predictable costs, defaults and side effects. Keep construction details and private execution state behind the responsible boundary.                                                                      |
+| Tell, don't ask and the Law of Demeter                   | Put invariant-preserving behavior with its owner and avoid callers navigating another object's internals. Value-oriented candidate and search-state data remains appropriate; do not add forwarding layers merely to shorten access chains. |
+| Component orientation and implementation reflects design | Give components coherent contracts and explicit dependencies. Organize code by the existing responsibility layers; a framework pattern or folder layout is not a design goal by itself.                                                     |
 
 ## § 4 Configuration and execution ownership
 
