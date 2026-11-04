@@ -504,10 +504,8 @@ public class OperatorCountBudgetAlgorithmTests
         results.Count.ShouldBe(2);
     }
 
-    /// <summary>
-    /// One counter counts the evaluator where it is attached and the mutator where it is placed explicitly, and the
-    /// terminator reads that one run result.
-    /// </summary>
+    // One counter counts the evaluator where it is attached and the mutator where it is placed explicitly, and the
+    // terminator reads that one run result.
     [Fact]
     public void AfterOperatorCountTerminator_CanUseSharedCounterAcrossObservedOperators()
     {

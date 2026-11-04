@@ -47,9 +47,7 @@ public class ExperimentSpecs
         ]);
     }
 
-    /// <summary>
-    /// A trace attached to each case's algorithm gives every trial its own result, read from the trial's run.
-    /// </summary>
+    // A trace attached to each case's algorithm gives every trial its own result, read from the trial's run.
     [Fact]
     public async Task TrialTraces_GiveEachConcreteAlgorithmItsOwnResult()
     {

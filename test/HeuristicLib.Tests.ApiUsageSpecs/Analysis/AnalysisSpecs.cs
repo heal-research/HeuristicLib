@@ -14,9 +14,7 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Analysis;
 
 public class AnalysisSpecs
 {
-    /// <summary>
-    /// One trace observes two algorithms of one run, keeping one best so far across both, which each run creates anew.
-    /// </summary>
+    // One trace observes two algorithms of one run, keeping one best so far across both, which each run creates anew.
     [Fact]
     public async Task OneAnalyzer_CanCombineTwoAlgorithms()
     {
@@ -77,7 +75,7 @@ public class AnalysisSpecs
         run.Result(quality).SampleCount.ShouldBe(4);
     }
 
-    /// <summary>Each trial is its own run, so one trace attached to the repeated algorithm gives every trial its own result.</summary>
+    // Each trial is its own run, so one trace attached to the repeated algorithm gives every trial its own result.
     [Fact]
     public async Task EveryTrial_HasItsOwnTraceAndClockObservingTwoBoundaries()
     {

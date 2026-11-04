@@ -12,15 +12,13 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
-/// <summary>
-/// An instrument attached with advice and the same instrument placed explicitly with a wrapper configuration collect
-/// the same data into the run's one result. Each theory runs both paths over equivalent boundaries.
-/// </summary>
+// An instrument attached with advice and the same instrument placed explicitly with a wrapper configuration collect
+// the same data into the run's one result. Each theory runs both paths over equivalent boundaries.
 public sealed class InstrumentPlacementTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> IntegerProblem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
 
-    /// <summary>Counting counts successful calls and their candidates; timing includes calls that fail.</summary>
+    // Counting counts successful calls and their candidates; timing includes calls that fail.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -47,10 +45,8 @@ public sealed class InstrumentPlacementTests
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(4));
     }
 
-    /// <summary>
-    /// Retry around an operator sees the counting and the trace inside it through both paths, and the trace's clock
-    /// counts each call before the trace records it.
-    /// </summary>
+    // Retry around an operator sees the counting and the trace inside it through both paths, and the trace's clock
+    // counts each call before the trace records it.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -79,7 +75,7 @@ public sealed class InstrumentPlacementTests
         scope.Results.Result(evaluations).CurrentCount.ShouldBe(3);
     }
 
-    /// <summary>Both paths use the same trace, retention and clocks, so equal runs record equal entries.</summary>
+    // Both paths use the same trace, retention and clocks, so equal runs record equal entries.
     [Fact]
     public async Task Tracing_RecordsTheSameEntriesThroughBothPaths()
     {
@@ -99,10 +95,8 @@ public sealed class InstrumentPlacementTests
         placed.Result(evaluations).CurrentCount.ShouldBe(attached.Result(evaluations).CurrentCount);
     }
 
-    /// <summary>
-    /// A shared configuration keeps one executor across a cycle's turns through both paths, and the observations of all
-    /// turns go into the run's one trace.
-    /// </summary>
+    // A shared configuration keeps one executor across a cycle's turns through both paths, and the observations of all
+    // turns go into the run's one trace.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -126,10 +120,8 @@ public sealed class InstrumentPlacementTests
         run.Result(states).Snapshot().Values.ShouldBe([1, 2, 3]);
     }
 
-    /// <summary>
-    /// A terminator reads the same counter result as the placement that counts, whichever of the two the scope builds
-    /// first.
-    /// </summary>
+    // A terminator reads the same counter result as the placement that counts, whichever of the two the scope builds
+    // first.
     [Theory]
     [InlineData(true, true)]
     [InlineData(true, false)]
@@ -156,10 +148,8 @@ public sealed class InstrumentPlacementTests
         termination.IsTerminalState(state, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem).ShouldBeTrue();
     }
 
-    /// <summary>
-    /// Reusing one configuration for several runs gives each run fresh results through both paths, including a best so
-    /// far and a retention that keep state across observations.
-    /// </summary>
+    // Reusing one configuration for several runs gives each run fresh results through both paths, including a best so
+    // far and a retention that keep state across observations.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -184,10 +174,8 @@ public sealed class InstrumentPlacementTests
         second.Result(everyOther).Snapshot().Values.ShouldBe([2L, 4L]);
     }
 
-    /// <summary>
-    /// A clock shared by two traces applies once and before both observations, whichever trace is attached first and
-    /// whether they are attached in one scope or in a scope and its child.
-    /// </summary>
+    // A clock shared by two traces applies once and before both observations, whichever trace is attached first and
+    // whether they are attached in one scope or in a scope and its child.
     [Theory]
     [InlineData(true, false)]
     [InlineData(true, true)]
@@ -214,10 +202,8 @@ public sealed class InstrumentPlacementTests
         root.Results.Result(candidates).CurrentCount.ShouldBe(5);
     }
 
-    /// <summary>
-    /// An operation defined outside the library declares its source and its <c>Observed</c> line like a built-in one,
-    /// and gets both paths, counters and timing from them.
-    /// </summary>
+    // An operation defined outside the library declares its source and its Observed line like a built-in one,
+    // and gets both paths, counters and timing from them.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -240,10 +226,8 @@ public sealed class InstrumentPlacementTests
         scope.Results.Result(values).By(reads).ShouldBe([new(1L, 1), new(2L, 2)]);
     }
 
-    /// <summary>
-    /// An observation wrapper has one child, <c>ChildOperator</c>: a copy with another child observes that child through
-    /// the same observation wrapper.
-    /// </summary>
+    // An observation wrapper has one child, ChildOperator: a copy with another child observes that child through
+    // the same observation wrapper.
     [Fact]
     public void AnObservedWrapper_ObservesTheChildItWraps()
     {
@@ -259,10 +243,8 @@ public sealed class InstrumentPlacementTests
         scope.Results.Result(reads).Snapshot().Values.ShouldHaveSingleItem().ShouldBeSameAs(second);
     }
 
-    /// <summary>
-    /// Advice an <c>Advised</c> node adds never applies to that node itself, so an instrument selecting every algorithm
-    /// can be attached at a run's root and counts the algorithms below it.
-    /// </summary>
+    // Advice an Advised node adds never applies to that node itself, so an instrument selecting every algorithm
+    // can be attached at a run's root and counts the algorithms below it.
     [Fact]
     public async Task Advised_DoesNotSelectItself()
     {
@@ -276,10 +258,8 @@ public sealed class InstrumentPlacementTests
         run.Result(resolutions).CurrentCount.ShouldBe(3);
     }
 
-    /// <summary>
-    /// The exclusion covers only the node adding the advice: an inner <c>Advised</c> node attaching an instrument that
-    /// selects the outer one, which is already resolved, is an error.
-    /// </summary>
+    // The exclusion covers only the node adding the advice: an inner Advised node attaching an instrument that
+    // selects the outer one, which is already resolved, is an error.
     [Fact]
     public void Advised_AddingAdviceForAnotherResolvedNode_IsAnError()
     {
@@ -290,7 +270,7 @@ public sealed class InstrumentPlacementTests
             .Message.ShouldContain("already resolved without it");
     }
 
-    /// <summary>The first instrument listed wraps closest, and nesting keeps the order, so inner advice wraps closer.</summary>
+    // The first instrument listed wraps closest, and nesting keeps the order, so inner advice wraps closer.
     [Fact]
     public void Advised_FirstListedAndInnerAttachmentsWrapClosest()
     {

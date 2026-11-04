@@ -40,10 +40,8 @@ public class OperatorCountClockTests
         exception.Message.ShouldContain("reports none");
     }
 
-    /// <summary>
-    /// A candidate counter of another operation, placed explicitly on an operation without candidate work, fails when
-    /// the wrapper is built and before its child is.
-    /// </summary>
+    // A candidate counter of another operation, placed explicitly on an operation without candidate work, fails when
+    // the wrapper is built and before its child is.
     [Fact]
     public void CountedWithACandidateCounter_RejectsAnOperationWithoutCandidateWorkBeforeBuildingIt()
     {

@@ -6,10 +6,8 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
-/// <summary>
-/// Covers the run's results: one per instrument, created at the first lookup and kept for the run, and the time the
-/// root algorithm has spent executing.
-/// </summary>
+// Covers the run's results: one per instrument, created at the first lookup and kept for the run, and the time the
+// root algorithm has spent executing.
 public sealed class RunResultsTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> Problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
@@ -69,10 +67,8 @@ public sealed class RunResultsTests
         Should.Throw<InvalidOperationException>(() => Resolve(root, algorithm)).Message.ShouldContain("failed in this resolution scope tree");
     }
 
-    /// <summary>
-    /// Elapsed time counts the time inside the root algorithm's calls only, so the time before it starts and the time a
-    /// consumer spends between states are excluded, and direct resolution without a run measures it too.
-    /// </summary>
+    // Elapsed time counts the time inside the root algorithm's calls only, so the time before it starts and the time a
+    // consumer spends between states are excluded, and direct resolution without a run measures it too.
     [Fact]
     public async Task Elapsed_CountsOnlyTheTimeInsideTheRootAlgorithm()
     {
@@ -127,7 +123,18 @@ public sealed class RunResultsTests
         root.Results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
     }
 
-    /// <summary>A trace reading the elapsed clock records the time of each state inside the call that produced it.</summary>
+    // Measuring elapsed time at the root keeps the root executor's own controls reachable.
+    [Fact]
+    public async Task TheRootAlgorithmsControls_PassThroughTheElapsedTimeMeasurement()
+    {
+        var executor = Resolve(ResolutionScope.Create(), new ControlledAlgorithm());
+
+        ExecutorControls.Find<IStepControl>(executor).ShouldNotBeNull().Steps = 2;
+
+        (await Run(executor)).Count.ShouldBe(2);
+    }
+
+    // A trace reading the elapsed clock records the time of each state inside the call that produced it.
     [Fact]
     public async Task ElapsedClock_ReadsTheTimeOfEachObservation()
     {
@@ -221,6 +228,34 @@ public sealed class RunResultsTests
             {
                 await gate;
                 yield return Population.From([1.ToEvaluated(new ObjectiveVector(1))]).ToPopulationState();
+            }
+        }
+    }
+
+    private interface IStepControl
+    {
+        int Steps { get; set; }
+    }
+
+    // Yields as many states as its executor's control asks for.
+    private sealed record ControlledAlgorithm : Algorithm<ControlledAlgorithm, int, PopulationState<int>>
+    {
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            new Executor<TSearchSpace, TProblem>();
+
+        private sealed class Executor<TSearchSpace, TProblem> : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>, IStepControl
+            where TSearchSpace : class, ISearchSpace<int>
+            where TProblem : class, IProblem<int, TSearchSpace>
+        {
+            public int Steps { get; set; } = 1;
+
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
+                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            {
+                for (var step = 1; step <= Steps; step++)
+                    yield return Population.From([step.ToEvaluated(new ObjectiveVector(step))]).ToPopulationState();
+                await Task.CompletedTask;
             }
         }
     }

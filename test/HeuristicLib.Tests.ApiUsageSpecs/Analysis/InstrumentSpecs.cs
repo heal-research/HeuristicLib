@@ -10,10 +10,8 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Analysis;
 
-/// <summary>
-/// Instruments define what a run collects, such as a counter or a trace. Attach them with <c>Advised</c> or place them
-/// with a wrapper where they are written, and read each run's own result from the run.
-/// </summary>
+// Instruments define what a run collects, such as a counter or a trace. Attach them with Advised or place them
+// with a wrapper where they are written, and read each run's own result from the run.
 public class InstrumentSpecs
 {
     [Fact]
@@ -53,10 +51,8 @@ public class InstrumentSpecs
         run.Result(mutations).CurrentCount.ShouldBe(run.Result(offspring).SampleCount);
     }
 
-    /// <summary>
-    /// An instrument of your own derives from <c>Instrument&lt;TResult&gt;</c>, creates its aspect from the library's
-    /// sources and implements <c>IObservationInstrument</c>, so the library's <c>Observed</c> wrappers can place it too.
-    /// </summary>
+    // An instrument of your own derives from Instrument<TResult>, creates its aspect from the library's
+    // sources and implements IObservationInstrument, so the library's Observed wrappers can place it too.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -77,7 +73,7 @@ public class InstrumentSpecs
         run.Result(sizes).Values.Sum().ShouldBe((int)run.Result(mutations).CurrentCount);
     }
 
-    /// <summary>A node of your own attaches instruments the way <c>Advised</c> does, through the scope it is resolved in.</summary>
+    // A node of your own attaches instruments the way Advised does, through the scope it is resolved in.
     [Fact]
     public async Task ANodeOfYourOwnAttachesInstruments()
     {

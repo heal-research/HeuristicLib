@@ -5,9 +5,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
-/// <summary>
-/// Covers the start and end of each algorithm call, and the turns of a cycle observed through them.
-/// </summary>
+// Covers the start and end of each algorithm call, and the turns of a cycle observed through them.
 public sealed class AlgorithmCallTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> Problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
@@ -69,7 +67,7 @@ public sealed class AlgorithmCallTests
         events.Select(call => (call.Event, call.Iterations)).ShouldBe([(AlgorithmCallEvent.Started, 0L), (AlgorithmCallEvent.Stopped, 1L)]);
     }
 
-    /// <summary>A paused run keeps its call to resume it, so the call ends only when the run does.</summary>
+    // A paused run keeps its call to resume it, so the call ends only when the run does.
     [Fact]
     public async Task APausedRun_ReportsNoEndUntilItResumesAndCompletes()
     {
@@ -85,10 +83,8 @@ public sealed class AlgorithmCallTests
         run.Result(calls).Snapshot().Values.ShouldBe([AlgorithmCallEvent.Started, AlgorithmCallEvent.Completed]);
     }
 
-    /// <summary>
-    /// The call counter counts calls when they start, so a turn's number is known while it runs, and a stopped call
-    /// counts too; the iteration counter counts yielded states across calls.
-    /// </summary>
+    // The call counter counts calls when they start, so a turn's number is known while it runs, and a stopped call
+    // counts too; the iteration counter counts yielded states across calls.
     [Fact]
     public async Task CallAndIterationCounters_CountStartedCallsAndYieldedStates()
     {
@@ -112,11 +108,9 @@ public sealed class AlgorithmCallTests
         root.Results.Result(iterations).CurrentCount.ShouldBe(4);
     }
 
-    /// <summary>
-    /// Each turn of a cycle is a call of an inner algorithm, so observing the inner algorithms' calls records every
-    /// turn's start and end, also a turn that yields nothing. Attaching the trace to the cycle and placing it on each
-    /// inner algorithm record the same calls, and both work with the fresh executors each turn builds.
-    /// </summary>
+    // Each turn of a cycle is a call of an inner algorithm, so observing the inner algorithms' calls records every
+    // turn's start and end, also a turn that yields nothing. Attaching the trace to the cycle and placing it on each
+    // inner algorithm record the same calls, and both work with the fresh executors each turn builds.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -141,10 +135,8 @@ public sealed class AlgorithmCallTests
         ]);
     }
 
-    /// <summary>
-    /// Turn numbers come from a counter of the inner algorithm's calls: the states a turn yields and the turn's end read
-    /// the number of the turn. The start of a turn reads the counter before its own call is counted.
-    /// </summary>
+    // Turn numbers come from a counter of the inner algorithm's calls: the states a turn yields and the turn's end read
+    // the number of the turn. The start of a turn reads the counter before its own call is counted.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

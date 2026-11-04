@@ -249,10 +249,8 @@ public class PointcutSpecs
         scope.Results.Result(temperatures).Snapshot().Values.ShouldBe([100, 2]);
     }
 
-    /// <summary>
-    /// A role of your own is observed by attaching an instrument to the scope, as <c>Advised</c> does, or explicitly by
-    /// a wrapper of the role's own that applies the same observation advice and records into the instrument.
-    /// </summary>
+    // A role of your own is observed by attaching an instrument to the scope, as Advised does, or explicitly by
+    // a wrapper of the role's own that applies the same observation advice and records into the instrument.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]

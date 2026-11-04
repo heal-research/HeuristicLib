@@ -92,10 +92,8 @@ public class AnalysisUsabilityTests
         root.Results.Result(evaluations).Snapshot().Select(entry => entry.Value).ShouldBe([2]);
     }
 
-    /// <summary>
-    /// The scopes of one run share its trace, so calls from concurrent child scopes, such as parallel contenders, record
-    /// into one trace whose function sees one observation at a time.
-    /// </summary>
+    // The scopes of one run share its trace, so calls from concurrent child scopes, such as parallel contenders, record
+    // into one trace whose function sees one observation at a time.
     [Fact]
     public async Task OneRunsTrace_SerializesItsFunctionAcrossConcurrentScopes()
     {

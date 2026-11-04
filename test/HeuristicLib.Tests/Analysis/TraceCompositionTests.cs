@@ -132,7 +132,7 @@ public class TraceCompositionTests
         run.Result(third).By(evaluations).Single().Time.ShouldBe(16);
     }
 
-    /// <summary>A counter is an instrument, so each run counts from zero with its own result.</summary>
+    // A counter is an instrument, so each run counts from zero with its own result.
     [Fact]
     public async Task CandidateClock_CountsEachRunOnItsOwn()
     {
@@ -152,7 +152,7 @@ public class TraceCompositionTests
         firstRun.Result(evaluations).ShouldNotBeSameAs(secondRun.Result(evaluations));
     }
 
-    /// <summary>Reusing one analyzer for several runs gives each run an independent trace.</summary>
+    // Reusing one analyzer for several runs gives each run an independent trace.
     [Fact]
     public async Task AnalyzerReuse_CollectsEachRunIndependently()
     {

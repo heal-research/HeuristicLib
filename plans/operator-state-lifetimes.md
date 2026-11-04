@@ -343,10 +343,16 @@ Step 2 is implemented in the working tree under the decisions above and awaits t
 - The explicit operator wrappers `Counted`, `Timed` and `Observed` apply the same advice an aspect applies, through one internal helper that checks the advice, resolves the child and wraps it as resolution does.
 - `Observed` and `ObservedAlgorithm` take their source in the constructor but expose only `ChildOperator` or `ChildAlgorithm`. The source supplies the observation wrapper, so a copy with another child observes that child.
 
-**Open decisions, proposed to the developer on 2026-11-04.** None of these is accepted yet.
+**Open decisions, proposed to the developer on 2026-11-04.** The developer accepted decisions 1 and 2 on the same day; the others are not accepted yet.
 
 1. **Per-run value functions.** C# cannot infer `TValue` for `source.Trace(Func<Func<TObservation, TValue>>)`, and an extension block member then also needs its receiver's type argument. Every call spells both, which developer guidelines § 8.6 forbids. The published best-so-far snippet shows the cost: `evaluator.Invocations.Trace<EvaluationObservation<RealVector>, ObjectiveVector>(() => { var best = new BestSoFar(); return o => best.Update(…); })`. Recommendation: replace the overload with `source.Trace(createState, value)`, which a probe confirmed infers fully, as in `evaluator.Invocations.Trace(() => new BestSoFar(), (best, o) => best.Update(o.ObjectiveVectors, o.Problem.Objective))`.
+
+   **Accepted by the developer on 2026-11-04.** `Trace<TState, TValue>(Func<TState> createState, Func<TState, TObservation, TValue> value, clocks, retention)` replaces both per-run overloads, the source's and the one of `Analyzer.Trace` for several sources. `TState` is constrained to classes, because a struct state would silently stop accumulating. The internal `TraceAnalyzer` constructor stays. Not yet implemented: the five call sites that spell both type arguments migrate, among them the published best-so-far snippet, and an API usage spec proves the inference.
+
 2. **Counters at the start of a call.** A trace's clocks wrap closest, so an observation made after a call reads clocks that include it. The start of an algorithm call is reported before the wrappers inside it run, so a `Started` entry reads `Calls.Count()` before its own call is counted. The states a turn yields and its end read the turn's number. Recommendation: accept, as the trace remarks and `AlgorithmCallTests` now state. The alternative is an exception to the ordering rule for clocks of call starts.
+
+   **Accepted by the developer on 2026-11-04.** A `Started` entry reads the count before its own call is counted, and the ordering rule gets no exception. Step 4 documents this with the algorithm-call source.
+
 3. **Direct resolution at the root.** The elapsed-time wrapper means a root request for an algorithm returns a wrapper, neither the executor its hook built nor the same object on a second request. Two tests that checked executor identity or type at the root now resolve in a child scope. Recommendation: accept, because advice wraps per request anyway.
 4. **Counting external operations.** Counters come from sources, so an operation defined outside the library can be counted only once it declares an `Invocations` source; `Clock.FromCandidates` used to count any operator. This follows from the accepted removal. Recommendation: accept, since sources are the public mechanism.
 5. **Per-trial traces in experiments.** A per-trial aspect cannot take an instrument, and `Advised` changes a case's type. A grid over a typed algorithm can therefore trace each trial only if every case is built advised through an untyped grid, as the migrated experiment spec does. Recommendation: settle it in the step 3 migration plan, together with the removal of per-trial aspects.
@@ -383,6 +389,12 @@ Rejected, with the reason:
 The open decisions above are the remaining findings: the inference cost of the per-run overload is decision 1, and the counter read at a call's start is decision 2.
 
 **Validation.** With SDK 10.0.114 and the Roslyn 5.9 compiler, the Release build has no errors. Compared with a clean build of `27c295ac`, its only new warning is S2326 on the marker type parameter of `IClock<TTime>`, which `IAlgorithm` already carries. All 3339 solution tests pass, up from 3286. The whitespace, style and error-severity analyzer checks, the documentation build and Prettier on the changed plan files pass. Packaging is validated with step 3.
+
+**Review of the step 2 commit.** A review of `ac9bd3f3` against `27c295ac` reported four findings; two are decisions 1 and 2 above, which the developer accepted afterwards.
+
+- Fixed: the elapsed-time wrapper returned for every root request hid the root executor's controls from `ExecutorControls.Find`. It now forwards them, as a transparent wrapper must; a test resolves an algorithm whose executor is its own control at the root.
+- Fixed: the XML documentation step 2 added to tests, which developer guidelines § 9.1 forbids, is now ordinary comments. XML documentation that predates step 2 stays, including four blocks step 2 reworded.
+- Found while fixing, not changed: the observation wrappers of `Iterations`, since before step 2, and of `Calls` do not forward the wrapped algorithm executor's controls either, nor does `WrappingAlgorithmExecutor`, although execution resolution requires transparent advice wrappers to forward them.
 
 **Left for step 3:** a migration plan for the developer's agreement, then the removal of run setup, `ResolutionScopeBuilder`, the resource handles and `RunResources`, observation points with the Cycle points and `FromCycles` and `FromTurns`, per-trial aspects and the counting and timing aspects with live accumulators; the accumulating analyses as instruments; decision 5; and the root `README.md` example, which already used an API that did not exist at `27c295ac`.
 

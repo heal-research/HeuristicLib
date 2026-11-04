@@ -83,10 +83,10 @@ public partial class ResolutionScope
 
 // Adds the time spent inside each call that advances the root algorithm, including its advice, to the run's elapsed
 // time. Everything else passes through unchanged, so the stream completes, fails and is disposed exactly as the wrapped
-// one is.
+// one is, and the wrapped executor's controls stay reachable.
 file sealed class ElapsedTimeExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(
     IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, RunResults results)
-    : IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>, IExecutorControlProvider
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
@@ -94,6 +94,8 @@ file sealed class ElapsedTimeExecutor<TCandidate, TSearchSpace, TProblem, TSearc
     public IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
         TSearchState? initialState = null, CancellationToken ct = default) =>
         new TimedStates(executor.RunStreamingAsync(problem, random, initialState, ct), results);
+
+    public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
 
     private sealed class TimedStates(IAsyncEnumerable<TSearchState> states, RunResults results) : IAsyncEnumerable<TSearchState>
     {
