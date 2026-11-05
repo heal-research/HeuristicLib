@@ -14,10 +14,10 @@ public class EvaluatorCompositionTests
         var observed = CreateEvaluator();
         var evaluator = observed.Cached();
         var firstScope = ResolutionScope.Create();
-        firstScope.AddAspect(Aspect.CountInvocations(observed, counter));
+        firstScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var firstExecutor = firstScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondScope = ResolutionScope.Create();
-        secondScope.AddAspect(Aspect.CountInvocations(observed, counter));
+        secondScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var secondExecutor = secondScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
@@ -35,10 +35,10 @@ public class EvaluatorCompositionTests
         var observed = CreateEvaluator();
         var evaluator = observed.LimitEvaluations(2, enforceLimitWithinBatch: true);
         var firstScope = ResolutionScope.Create();
-        firstScope.AddAspect(Aspect.CountCandidates(observed, counter));
+        firstScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var firstExecutor = firstScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondScope = ResolutionScope.Create();
-        secondScope.AddAspect(Aspect.CountCandidates(observed, counter));
+        secondScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var secondExecutor = secondScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
@@ -56,7 +56,7 @@ public class EvaluatorCompositionTests
         var observed = CreateEvaluator();
         var evaluator = observed.AsRepeated(2, ObjectiveVectorAggregation.Mean);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 

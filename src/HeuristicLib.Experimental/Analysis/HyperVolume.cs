@@ -47,11 +47,8 @@ public static class HyperVolumeTraces
         public TraceAnalyzer<EvaluationObservation<TCandidate>, double> TraceHyperVolume(ObjectiveVector referencePoint,
             IReadOnlyList<IClock>? clocks = null,
             TraceRetention? retention = null) =>
-            invocations.Trace<EvaluationObservation<TCandidate>, double>(() =>
-                {
-                    var hyperVolume = new HyperVolumeSoFar<TCandidate>(referencePoint);
-                    return observation => hyperVolume.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective);
-                },
+            invocations.Trace(() => new HyperVolumeSoFar<TCandidate>(referencePoint),
+                (hyperVolume, observation) => hyperVolume.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective),
                 clocks, retention);
     }
 }

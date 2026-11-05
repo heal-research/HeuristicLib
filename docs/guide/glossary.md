@@ -308,7 +308,7 @@ Status: `Canonical`
 
 A cycle is one pass of `CycleAlgorithm` over its inner algorithms, running each once in order. `MaximumCycles` limits the cycles of one call.
 
-The cycle algorithm publishes the start of each cycle as a `CycleStart` through its `Cycles` source, numbered from 1 in each call, and `Clock.FromCycles` counts them.
+The inner algorithms' `Calls` sources observe their starts and outcomes. There is no separate cycle-start source.
 
 See also: Meta-algorithm, Turn.
 
@@ -318,7 +318,7 @@ Status: `Canonical`
 
 A turn is one activation of an inner algorithm by `CycleAlgorithm`. A cycle has one turn per inner algorithm.
 
-The cycle algorithm publishes the start of each turn as a `CycleTurn` through its `Turns` source, with the cycle number, the turn number counted across the cycles of one call, the inner algorithm, its position and the state it starts from. `Clock.FromTurns` counts them. An inner algorithm does not know it runs in a turn; its own iteration count restarts at each turn.
+A turn is observed through the inner algorithm's `Calls`, including a call yielding no state. The call reports its start and outcome, without a cycle number or slot index. The inner algorithm's iteration number restarts in each call.
 
 Related terms:
 
@@ -359,7 +359,7 @@ See also: Executor, Item, Operation invocation, Operator roles.
 
 Status: `Canonical`
 
-An operation invocation is one call to an operation method, such as one call to `Mutate`. A caller invokes mutation through an executor's `Mutate` method. Names say invocation, as in `IInvocation<TResult>`, an operator's `Invocations` source, `Aspect.CountInvocations`, `Clock.FromInvocations` and `ChoosePerInvocation`. One invocation is one method call, however many items it carries; its candidate work counts the candidates it produced or evaluated.
+An operation invocation is one call to an operation method, such as `Mutate`. Names use invocation, as in `IInvocation<TResult>`, an operator's `Invocations` source and `ChoosePerInvocation`. One invocation is one method call regardless of batch size; its candidate work counts what it produced or evaluated.
 
 Every invocation carries its primary inputs followed by a random number generator, search space and problem. `IInvocation<TResult>` exposes that random number generator, search space and problem to invocation wrappers, the latter two without their run types, and can repeat the call with the same arguments.
 
@@ -527,7 +527,7 @@ Status: `Canonical`
 
 A configuration is a reusable object that users set up before execution, such as an algorithm or operator.
 
-A configuration can contain parameters, child configurations, validation or helper logic and the mechanism that creates executors. It is not required to be a passive data object. Mutable execution data belongs to executor fields or explicitly shared resources. Configurations may contain resource handles, never the live resources introduced by that mechanism.
+A configuration can contain settings, child configurations, instrument definitions and validation or construction logic. It need not be a passive data object. Mutable data belongs to executor fields or run-bound results; the configuration contains no live executor or result.
 
 Use more specific terms when the context benefits from them:
 
@@ -548,7 +548,7 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IOperator<Mutation, TCandidate>` do not acquire a `Node` suffix.
 
-`IOperator<TOperation, TCandidate>` builds its executor in one hook, `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which resolution calls for every build with a scope typed to the run. The hook resolves children through that scope, obtains explicitly shared resources through `scope.Resource(handle)` and resolves its own declared observation points like children. Operator authoring bases override the protected run-generic `CreateExecutor` for compositions and `CreateExecutor(ResolutionScope scope)` for fixed-signature leaves. Their child properties are `ChildOperator` and `ChildOperators`.
+`IOperator<TOperation, TCandidate>` builds its executor through one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` hook. The hook resolves children and looks up run-bound results through the typed scope. Multi-operation configurations implement the hook once and use one executor per scope. Wrapping and multi bases expose `ChildOperator` and `ChildOperators`.
 
 Algorithms and consumer-defined roles build the same way. An algorithm's `CreateExecutor<TSearchSpace, TProblem>(scope)` receives a scope typed to the run and its search state; an algorithm bound to a search space and problem overrides a `CreateExecutor` typed to them instead. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope scope)`. The hook is runtime machinery, not a configuration value strategy.
 
@@ -620,9 +620,9 @@ Status: `Canonical`
 
 An aspect is the ordered list of its pointcut/advice pairs. `Aspect.Create(pointcut, advice)` creates one pair. A derived constructor assigns its pairs to the protected `Advices` and spreads other aspects into them, as in `Advices = [.. Aspect.Observe(evaluator.Invocations, Record)]`.
 
-Run setup accepts aspects through `setup.AddAspect` inside the `CreateRun` callback. Resolution applies earlier advice closer to the source executor, with a new scope's pairs preceding inherited pairs. Each advice instance applies once at its first position. If the same advice appears with two pointcuts, the first pairing wins. Two traces sharing a clock therefore share its advice without counting twice.
+Attach aspects and instruments through `Advised` before creating the run. Direct scope users call `AddAspect`. Within a scope, later added aspects wrap closer; within an aspect, pairs retain their listed order. Match pointcuts first and keep the closest occurrence of each advice instance. Traces sharing a clock therefore update it once before recording.
 
-An aspect holds its pairs. Reusing an aspect shares any runtime data held by its advice while executor fields and default run resources remain independent across runs. An analyzer or clock may own collected data that it intentionally shares across runs.
+An aspect holds its pairs and any runtime dependencies in its advice. Reusing a raw aspect may couple caller-owned data. Instruments instead create independent result/aspect pairs for each run.
 
 See also: Advice, Join point, Pointcut, Resolution scope.
 
@@ -636,9 +636,27 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Run analyzers are added through the `CreateRun` setup callback and their advice is applied during resolution, so their observations can span nested algorithms and multiple short-lived executors. The returned run starts in `Ready` and accepts no further attachments. Setup is snapshotted before the run is returned.
+Attach analysis definitions to the algorithm with `Advised` before creating its run. Their results span nested algorithms and fresh executor activations within that run. The returned run starts in `Ready` and accepts no later attachments.
 
 See also: Analyzer, Configuration, Executor, Search state.
+
+### Instrument
+
+Status: `Canonical`
+
+An instrument is an immutable definition of one typed result per run and the aspect that collects into it. `Instrument<TResult>` creates that result and aspect together on the first lookup. Definitions use reference identity. Several placements within one run share its result; another run creates independent data.
+
+Attach instruments through `Advised` or explicit placement such as `Observed`, `Counted` or `Timed`.
+
+See also: Analyzer, Clock, Run result.
+
+### Run result
+
+Status: `Canonical`
+
+A run result is the runtime data created for one instrument in one run. `RunResults` looks it up by definition reference, and callers use `AlgorithmRun.Result(instrument)`. The result remains available after stopping or failure and defines its supported concurrent reads. All scopes of one root use the same result table.
+
+See also: Instrument, Run, Resolution scope.
 
 ### Search state
 
@@ -660,7 +678,7 @@ Status: `Canonical`
 
 An executor is a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It holds resolved children, private fields and any explicitly shared resources. Private data lives with its executor.
 
-Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Executors share resources only through explicit handles or runtime supply. A stateless configuration can also serve as its own executor.
+Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Use explicit `Sharing` to keep an executor across child scopes. A stateless configuration can also serve as its own executor.
 
 The common interface is `IExecutor`. Operation-specific interfaces include `IMutationExecutor` and `IEvaluationExecutor`; algorithms use `IAlgorithmExecutor`. The term does not give the object scheduling, threading, disposal or run-lifecycle responsibilities.
 
@@ -696,35 +714,15 @@ See also: Executor.
 
 Status: `Canonical`
 
-A resource is an explicit runtime dependency whose data may be shared by several executors, such as the counting accumulator that a counting aspect writes and an operator count terminator reads. Its contract defines compatible participants and concurrent use. Sharing a resource does not share executors, children or advice. Data kept by an operator itself, such as an evaluation cache, is an executor field and is shared by sharing its configuration instead.
+A resource is a runtime dependency with its own ownership and concurrency contract. Private resources such as an evaluation cache belong to an executor. Share that executor through `Sharing` when several uses need the same data. Accounting and analysis accumulators are run-bound instrument results.
 
-One run creates one resource per handle by default. A trial is one run. Explicit runtime supply can deliberately share one instance across runs. Automatically created resources need no deterministic cleanup. Supplied resources remain caller owned.
-
-See also: Executor, Resource handle, Run.
-
-### Resource handle
-
-Status: `Canonical`
-
-A resource handle describes resource creation and explicitly identifies a sharing relationship. `ResourceHandle<TResource>` contains immutable creation settings rather than a live resource. Handle reference identity determines sharing and participates in configuration equality. Separate handles remain distinct even when their settings match. Record copies retain their handles.
-
-Resource lookup is flat within a run. `run.Resource(handle)` returns the same resource used by that run's executors and lazily creates its default instance if necessary. A handle does not name a configuration owner or a nested lifetime. Its creation method receives no resolution context or graph dependency. `ResourceHandle<TResource>` is abstract. A `SuppliedResourceHandle<TResource>` requires explicit runtime supply.
-
-See also: Configuration, Resource, Run.
-
-### Run resources
-
-Status: `Canonical`
-
-Run resources are the resources associated with one run and shared explicitly through handles. Configurations obtain them through their resolution scope and callers through `run.Resource(handle)`. Advice receives concrete resource instances through its constructor. Supplying an instance under a handle connects these uses without giving advice access to the table. Resources retain their own mutation, concurrency and ownership contracts.
-
-See also: Advice, Resource, Resource handle, Resolution scope, Run.
+See also: Executor, Run result, Shared configuration.
 
 ### Scoped state
 
 Status: `Legacy`
 
-A former mechanism that shared private data by configuration ownership and ancestor lookup. Private mutable execution data now belongs to executor fields. Use an explicit resource handle when sharing has domain meaning.
+A former mechanism that shared private data by configuration ownership and ancestor lookup. Private mutable execution data now belongs to executor fields. Use `Sharing` when a configuration's executor should be shared across child scopes.
 
 `Execution state` is also a legacy name for that former mechanism. Search state remains the public value describing search progress.
 
@@ -754,7 +752,7 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to executors during a run.
 
-The scope combines an ordered aspect context, sharing layers and one flat resource table for its run. It constructs executors for each request and keeps none, except one executor per shared configuration in the sharing layer that lists it. `With` adds aspects using the same resources. `Sharing` adds a sharing layer. A separate root creates independent resources unless instances are explicitly supplied. `ResolutionScopeBuilder` collects bindings and aspects and builds independent scope snapshots. The scope has no resource supply phase. There is no private state ownership or ancestor resource lookup.
+The scope holds one bare executor per configuration reference, ordered advice and the root's run results. `CreateChildScope()` inherits advice and explicit sharing while constructing independent executors for other configurations. `Share` selects configurations retained for child scopes. `AddAspect` adds advice before its targets resolve. Independent roots have separate results.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for state, construction and observation rules.
 
@@ -764,9 +762,9 @@ See also: Configuration, Wrapper chain, Execution graph, Executor, Aspect, Run.
 
 Status: `Canonical`
 
-A shared configuration resolves to one executor for every use within the node that shares it, declared with `Sharing` on that node. The executor lives as long as the sharing node's executor, so constructing the sharing node again, for another Cycle turn or another run, creates a new one. Every other configuration is constructed afresh for each use.
+A shared configuration resolves to one bare executor in the nearest scope that shares it. Its first construction uses a dedicated child scope of that owner, and every request applies its own scope's advice. Other configurations have one executor per requesting scope. A new root or sharing owner creates independent data.
 
-The configuration reference identifies what is shared. The shared executor is constructed in the sharing node's context, and each use applies its own advice around it.
+The configuration reference identifies what is shared. Sharing preserves private executor fields and resolved children for that owner's lifetime; advice below the sharing point cannot reach those children.
 
 See [execution resolution](/contributing/architecture/execution-resolution#shared-configurations).
 
@@ -780,7 +778,7 @@ A wrapper chain is the ordered set of execution wrappers applied to one selected
 
 Configured wrappers belong to the configuration graph. Advice wraps the raw executor built for a configuration. Earlier advice wraps closer to that source executor; later advice wraps outside it. A new scope's advice precedes inherited advice. Each advice instance applies once at its first position.
 
-Constructing another chain creates its own executor fields and child bindings. Existing chains keep their controls and advice. Explicit resources can be shared between those chains.
+Constructing another chain creates its own executor fields and child bindings. Existing chains keep their controls and advice. Run-bound results are shared within the root scope tree, and `Sharing` retains explicitly selected executors across child scopes.
 
 See also: Advice, Aspect, Configuration, Executor, Resolution scope.
 
@@ -842,15 +840,13 @@ See also: Executor, Run.
 
 Status: `Canonical`
 
-An analyzer is a stateful aspect that records or derives information from selected execution boundaries. Run setup accepts it through `AddAspect` alongside other aspects.
+An analyzer is an immutable instrument definition that derives data from selected execution boundaries. Each run creates its own collector and typed result, obtained through `run.Result(analyzer)`. Attach the definition with `Advised` or explicit observation placement.
 
-The caller selects its sources, clocks and analysis behavior. A trace owns its function, its retention object and any best-so-far object the function updates; none of them is resolved through a scope. Its constructor assigns observation and clock advice. Reusing an analyzer across runs intentionally combines its results.
+A trace result supports live reads and immutable snapshots. An accumulating result publishes its domain accumulator and is read after execution has stopped. Reusing a definition across runs keeps their data independent.
 
-Properties on a trace read published values without allocation. Methods can allocate immutable snapshots or projections. An accumulating analyzer publishes its accumulator itself and is read once its run has finished.
+Use Roslyn analyzer for compiler diagnostics when the context could be ambiguous.
 
-Do not use analyzer for Roslyn analyzers without the Roslyn qualifier when the context could be ambiguous.
-
-See also: Accumulator, Analysis snapshot, Aspect, Observation, Run.
+See also: Accumulator, Analysis snapshot, Instrument, Observation, Run result.
 
 ### Analysis snapshot
 
@@ -862,7 +858,7 @@ A trace publishes snapshots: `Snapshot()` and `By(clock)` copy its entries, so w
 
 An accumulator does not. Copying a Pareto front or a genealogy graph per read would cost the whole accumulator, so those analyzers publish the object itself and are read once their run has finished.
 
-The analyzer remains the owner of its mutable accumulator. The run installs observations but does not own analyzer disposal or provide result lookup.
+The run result owns the mutable accumulator. The run exposes it through `Result`, and neither provides automatic disposal.
 
 See also: Analyzer, Observation, Run.
 
@@ -872,12 +868,11 @@ Status: `Canonical`
 
 A trace is an ordered history of values that a trace analyzer records while a run executes.
 
-Each trace entry contains one analyzed value and the moment when the value was observed. A trace analyzer owns its
-mutable trace and exposes safe live reads and immutable trace snapshots during and after execution.
+Each trace entry contains an analyzed value and its recorded clock readings. A per-run trace result owns the entries and supports live reads and immutable snapshots during or after execution.
 
 Do not use series for this concept. In HeuristicLib, a series is a named column in tabular data.
 
-`Analyzer.Trace` reads each observation through one function, as in `Analyzer.Trace(crossover.Invocations, observation => observation.Offspring.Count)`. Counting, collecting and single values are plain functions. Ranking functions such as `BestMedianWorst` receive the objective directions they order by, usually the observed invocation's own, as in `observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective)`. A best-so-far object keeps its running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. The first directions it receives fix it, and other directions or another dimensionality throw.
+`Analyzer.Trace` reads each observation through one function, as in `crossover.Invocations.Trace(observation => observation.Offspring.Count)`. Counting, collecting and single values are plain functions. Ranking functions such as `BestMedianWorst` receive the objective directions they order by, usually the observed invocation's own, as in `observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective)`. A best-so-far object keeps its running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. The first directions it receives fix it, and other directions or another dimensionality throw.
 
 Related terms:
 
@@ -891,40 +886,27 @@ See also: Analysis snapshot, Analyzer, Run.
 
 Status: `Canonical`
 
-An accumulator is the single object an analyzer updates in place as it observes a run, rather than a history of
-values. A Pareto front, a genealogy graph and a fitted model are accumulators.
+An accumulator is one mutable object updated in place rather than a history of immutable values. A Pareto front, genealogy graph and performance model are accumulators.
 
-An analyzer holding one derives from `AccumulatingAnalyzer` and updates it under the analyzer's lock. What it
-publishes is that object, not a copy of it, so it is read once the run has finished. Neither trace retention nor
-clocks apply to an accumulator: there is nothing to store apart from what was computed, and one current state has no
-moment of its own.
+An accumulating analysis creates its accumulator separately for each run through `Instrument<TResult>`. Synchronization belongs to the result or its collector. Read its live collections after execution has stopped. Clocks and retention apply to trace entries rather than to the accumulator itself.
 
-See also: Trace, Analyzer.
+See also: Analyzer, Run result, Trace.
 
 ### Trace retention
 
 Status: `Canonical`
 
-Trace retention decides what a trace does with the value its function read from an observation: append it as a new entry, store it over the entry before it, or drop it. `TraceRetention` is an object that holds whatever counting or remembering its policy needs, so each trace is given its own. Retention happens after the function reads the observation and never skips that work. A policy that appends or drops leaves stored entries untouched; `TraceRetention.LatestOnly()` replaces, so a trace using it keeps one entry rather than a history.
+Trace retention is an immutable policy that creates a separate `RetentionDecider<TValue>` for each trace result. Its decision appends, replaces the latest entry or skips publication. It runs after the value function and never skips that computation. Sharing a policy definition does not share retention progress.
 
 ### Clock
 
 Status: `Canonical`
 
-A clock defines one typed notion of time for a trace. A clock may progress with algorithm iterations, an operator's
-invocations or candidate work, the cycles and turns of a cycle algorithm, elapsed duration or a domain event such as a
-dynamic-problem epoch.
+A clock defines one typed notion of time for a trace. `Clock<TTime, TResult>` is an instrument whose run-bound result is read as a time. Operator sources offer counters of calls or candidate work and durations; algorithm sources offer counters of iterations or started calls. `Clock.Elapsed` reads the root algorithm's active execution time. Custom clocks may read domain quantities such as dynamic-problem epochs.
 
-A counting clock keeps its own count and reads nothing from the observations it counts, so it never runs backwards:
-`Clock.FromIterations(algorithm)` keeps counting while each call restarts the algorithm's own iteration count.
-`Clock.FromIterations`, `Clock.FromCycles` and `Clock.FromTurns` count the observations of a source;
-`Clock.FromInvocations` and `Clock.FromCandidates` count an operator's invocations or candidate work, and a candidate
-clock over an operation without candidate work fails before its executor is built.
+A counter keeps progressing across executor activations within the run. Reusing its definition in another run creates independent state. A trace explicitly selects its clocks and is projected through those same definition references.
 
-The caller explicitly selects the clocks a trace analyzer reads. The same clock object is used to project the trace by
-the time it reports.
-
-See also: Moment, Time, Trace.
+See also: Instrument, Moment, Time, Trace.
 
 ### Time
 
@@ -984,14 +966,6 @@ A source describes observations; creating one installs nothing. `Analyzer.Trace`
 
 See also: Observation, Trace.
 
-### Observation point
-
-Status: `Canonical`
-
-An observation point names progress inside a configuration's executor that no invocation or iteration shows. It is a child configuration and an observation source, represented by `ObservationPoint<TObservation>`. `ObservationPoint.Of<TObservation>(configuration, name)` returns the same point on repeated access to that configuration reference and name; record copies have independent points. Several points can report the same observation type. The configuration resolves its own point and the executor calls `Report` on its `IObservationPointExecutor<TObservation>`. Observation advice wraps that executor through ordinary role advice. An unobserved point still resolves to an executor that ignores reports.
-
-See [Observation source](#observation-source) and [Execution resolution](/contributing/architecture/execution-resolution#observation-points).
-
 ### Experiment
 
 Status: `Provisional`
@@ -1018,10 +992,6 @@ See also: Algorithm, Experiment, Run.
 
 Status: `Canonical`
 
-A trial analyzer is the analyzer created for one trial's algorithm configuration. `ExperimentRunSetup.AddAspectPerTrial` takes a function of that configuration during the `CreateRun` callback, creates one aspect for each materialized case and returns the cases with their aspects in case order. Each `TrialAspect` exposes the materialized case as `Trial` and the concrete analyzer as `Aspect`. The resulting execution trial retains the same case reference through `Case`. The function can select several observation boundaries and create clocks for its trial.
+A trial analyzer is an analysis definition attached to a trial's algorithm configuration. Each trial's algorithm run creates an independent result, read through `trial.Run.Result(definition)`. A definition may be shared across trials while their collectors, clocks and retention progress remain separate.
 
-Related terms:
-
-- `Trial analyzer factory`: `Legacy`. The former `AspectFactory`, which created per-trial aspects and served to look them up. Pass a function to `AddAspectPerTrial` and keep its result.
-
-See also: Analyzer, Aspect, Experiment trial, Run.
+See also: Analyzer, Experiment trial, Instrument, Run result.

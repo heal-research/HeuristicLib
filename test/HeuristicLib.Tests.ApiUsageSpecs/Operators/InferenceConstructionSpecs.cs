@@ -55,8 +55,8 @@ public class InferenceConstructionSpecs
         var fluentTransformedCrossover = algorithm.Crossover.TransformWith(algorithm.Mutator);
         var pipelineInterceptor = PipelineInterceptor.Create(identityInterceptor, identityInterceptor);
         var fluentPipelineInterceptor = identityInterceptor.Then(identityInterceptor);
-        var countingInterceptor = Aspect.CountInvocations(identityInterceptor, new CountAccumulator());
-        var measuredInterceptor = Aspect.MeasureDuration(identityInterceptor, new DurationAccumulator());
+        var countingInterceptor = ResolutionScope.Create().Results.Aspect(identityInterceptor.Invocations.Count());
+        var measuredInterceptor = ResolutionScope.Create().Results.Aspect(identityInterceptor.Invocations.Duration());
         var eliteSelector = EliteSelector.Create(algorithm.Selector, elites: 1);
         var fluentEliteSelector = algorithm.Selector.CombinedWithElites(elites: 1);
         var genderSpecificSelector = GenderSpecificSelector.Create(algorithm.Selector, algorithm.Selector);
@@ -79,8 +79,8 @@ public class InferenceConstructionSpecs
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
         var fluentAllTerminator = firstTerminator.And(secondTerminator);
-        var countingTerminator = Aspect.CountInvocations(firstTerminator, new CountAccumulator());
-        var measuredTerminator = Aspect.MeasureDuration(firstTerminator, new DurationAccumulator());
+        var countingTerminator = ResolutionScope.Create().Results.Aspect(firstTerminator.Invocations.Count());
+        var measuredTerminator = ResolutionScope.Create().Results.Aspect(firstTerminator.Invocations.Duration());
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
         var fluentTerminatedAlgorithm = algorithm.TerminatedBy(firstTerminator);
 

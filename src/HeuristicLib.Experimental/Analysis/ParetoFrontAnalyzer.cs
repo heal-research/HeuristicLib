@@ -2,8 +2,6 @@ using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Analysis;
 
@@ -11,13 +9,13 @@ namespace HEAL.HeuristicLib.Analysis;
 /// Accumulates the Pareto front over every candidate the observed evaluators produce.
 /// </summary>
 /// <remarks>
-/// This analyzer holds its own data. It merges observations from several evaluators into one front, rather than
+/// Each run creates its own front. It merges observations from several evaluators into one front, rather than
 /// retaining a front snapshot after every observation. The front is an accumulator, so read it once the run has
 /// finished.
 /// </remarks>
-public sealed class ParetoFrontAnalyzer<T> : AccumulatingAnalyzer
+public sealed class ParetoFrontAnalyzer<T> : Instrument<ParetoFront<T>>
 {
-    private readonly ParetoFront<T> front;
+    private readonly ValueArray<IOperator<Evaluation, T>> evaluators;
 
     public ParetoFrontAnalyzer(ObjectiveDirections problemObjective,
                                ObjectiveVector referencePoint,
@@ -26,19 +24,25 @@ public sealed class ParetoFrontAnalyzer<T> : AccumulatingAnalyzer
         if (evaluators.Count == 0)
             throw new ArgumentException("An analyzer needs at least one observation source.", nameof(evaluators));
 
-        front = new ParetoFront<T>(referencePoint, problemObjective);
-        Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Invocations, Record))];
+        Objective = problemObjective;
+        ReferencePoint = referencePoint;
+        this.evaluators = evaluators.ToValueArray();
     }
 
-    public ObjectiveDirections Objective => front.Objective;
-    public ObjectiveVector ReferencePoint => front.ReferencePoint;
+    public ObjectiveDirections Objective { get; }
+    public ObjectiveVector ReferencePoint { get; }
 
-    /// <summary>The front this analyzer accumulates.</summary>
-    public ParetoFront<T> Front => front;
+    protected override ParetoFront<T> CreateResult(RunResults results) => new(ReferencePoint, Objective);
 
-    private void Record(EvaluationObservation<T> observation)
+    protected override Aspect CreateAspect(ParetoFront<T> result, RunResults results) =>
+        new Collection(result, evaluators);
+
+    private sealed class Collection : Aspect
     {
-        lock (Sync)
-            front.AddPoints(observation.Candidates.ToEvaluated(observation.ObjectiveVectors));
+        public Collection(ParetoFront<T> front, IReadOnlyList<IOperator<Evaluation, T>> evaluators)
+        {
+            Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Invocations,
+                observation => front.AddPoints(observation.Candidates.ToEvaluated(observation.ObjectiveVectors))))];
+        }
     }
 }

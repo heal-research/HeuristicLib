@@ -33,7 +33,7 @@ public class OperatorInspectionTests
         outer.Mutate([0, 0], random, problem.SearchSpace, problem).ShouldBe([1, 1]);
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(leaf, observedCalls));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
         var inner = child.ResolveMutator(source);
         inner.ShouldNotBeSameAs(outer);
         inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
@@ -62,7 +62,7 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var leaf = new AdvancingMutator(() => preparations++);
         var source = leaf;
-        var aspect = Aspect.MeasureDuration(source, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, timeProvider));
         var problem = CreateProblem();
         var random = RandomNumberGenerator.Create(1);
         var parent = ResolutionScope.Create();
@@ -73,7 +73,7 @@ public class OperatorInspectionTests
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(leaf, observedCalls));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
         var inner = child.ResolveMutator(source);
         inner.ShouldNotBeSameAs(outer);
         duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
@@ -114,7 +114,7 @@ public class OperatorInspectionTests
         var time = new CallbackTimeProvider(() => ++timestamps == 2 && failTimer ? throw timerFailure : timestamps);
         var duration = new DurationAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(source, duration, time));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, time)));
         var executor = scope.ResolveMutator(source);
         var problem = CreateProblem();
 
@@ -136,7 +136,7 @@ public class OperatorInspectionTests
         var time = new CallbackTimeProvider(() => { timestamps++; throw failure; });
         var duration = new DurationAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(source, duration, time));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, time)));
         var executor = scope.ResolveMutator(source);
         var problem = CreateProblem();
 
@@ -153,7 +153,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var creator = new SequenceCreator();
-        var aspect = Aspect.CountInvocations(creator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice<Creation, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Creation, int>>().Counter.ShouldBeSameAs(counter);
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Creation, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
@@ -172,7 +172,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var creator = new SequenceCreator();
-        var aspect = Aspect.CountCandidates(creator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.ResolveCreator(creator);
@@ -190,7 +190,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var creator = new SequenceCreator();
-        var aspect = Aspect.MeasureDuration(creator, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(creator), new DurationMeasuringOperatorAdvice<Creation, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Creation, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Creation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -210,7 +210,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var source = new ThrowingCreator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.ResolveCreator(source);
         var problem = CreateProblem();
 
@@ -227,7 +227,7 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var source = new ThrowingCreator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(source, duration, timeProvider));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, timeProvider)));
         var executor = scope.ResolveCreator(source);
         var problem = CreateProblem();
 
@@ -242,7 +242,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var mutator = new AddOneMutator();
-        var aspect = Aspect.CountInvocations(mutator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice<Mutation, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Mutation, int>>().Counter.ShouldBeSameAs(counter);
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Mutation, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
@@ -261,7 +261,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var mutator = new AddOneMutator();
-        var aspect = Aspect.CountCandidates(mutator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.ResolveMutator(mutator);
@@ -279,7 +279,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var source = new ThrowingMutator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.ResolveMutator(source);
         var problem = CreateProblem();
 
@@ -295,7 +295,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new AddOneMutator();
-        var aspect = Aspect.MeasureDuration(mutator, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(mutator), new DurationMeasuringOperatorAdvice<Mutation, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -315,7 +315,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var mutator = new ThrowingMutator();
-        var aspect = Aspect.MeasureDuration(mutator, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(mutator), new DurationMeasuringOperatorAdvice(duration, timeProvider));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.ResolveMutator(mutator);
@@ -347,8 +347,8 @@ public class OperatorInspectionTests
             return actualParents;
         });
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(childMutator, outerDuration, timeProvider));
-        scope.AddAspect(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(childMutator), new DurationMeasuringOperatorAdvice(outerDuration, timeProvider)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(childMutator), new DurationMeasuringOperatorAdvice(innerDuration, timeProvider)));
         var executor = scope.ResolveMutator(childMutator);
 
         var result = executor.Mutate(parents, random, problem.SearchSpace, problem);
@@ -373,8 +373,8 @@ public class OperatorInspectionTests
             throw new InvalidOperationException();
         });
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(childMutator, outerDuration, timeProvider));
-        scope.AddAspect(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(childMutator), new DurationMeasuringOperatorAdvice(outerDuration, timeProvider)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(childMutator), new DurationMeasuringOperatorAdvice(innerDuration, timeProvider)));
         var executor = scope.ResolveMutator(childMutator);
 
         Should.Throw<InvalidOperationException>(() =>
@@ -390,7 +390,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.CountInvocations(crossover, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(crossover), new CountingOperatorAdvice<Crossover, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Crossover, int>>().Counter.ShouldBeSameAs(counter);
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Crossover, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
@@ -417,7 +417,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.CountCandidates(crossover, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(crossover), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.ResolveCrossover(crossover);
@@ -443,7 +443,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.MeasureDuration(crossover, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(crossover), new DurationMeasuringOperatorAdvice<Crossover, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Crossover, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Crossover, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -471,7 +471,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var source = new ThrowingCrossover();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.ResolveCrossover(source);
         var problem = CreateProblem();
 
@@ -488,7 +488,7 @@ public class OperatorInspectionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var source = new ThrowingCrossover();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(source, duration, timeProvider));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, timeProvider)));
         var executor = scope.ResolveCrossover(source);
         var problem = CreateProblem();
 
@@ -503,7 +503,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.CountInvocations(selector, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(selector), new CountingOperatorAdvice<Selection, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Selection, int>>().Counter.ShouldBeSameAs(counter);
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Selection, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
@@ -522,7 +522,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.CountCandidates(selector, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(selector), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.ResolveSelector(selector);
@@ -540,7 +540,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var source = new ThrowingSelector();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.ResolveSelector(source);
         var problem = CreateProblem();
 
@@ -556,7 +556,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.MeasureDuration(selector, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(selector), new DurationMeasuringOperatorAdvice<Selection, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Selection, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Selection, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -576,7 +576,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var selector = new ThrowingSelector();
-        var aspect = Aspect.MeasureDuration(selector, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(selector), new DurationMeasuringOperatorAdvice(duration, timeProvider));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.ResolveSelector(selector);
@@ -593,7 +593,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.CountInvocations(replacer, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(replacer), new CountingOperatorAdvice<Replacement, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Replacement, int>>().Counter.ShouldBeSameAs(counter);
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Replacement, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
@@ -626,7 +626,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.CountCandidates(replacer, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(replacer), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.ResolveReplacer(replacer);
@@ -658,7 +658,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var source = new ThrowingReplacer();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.ResolveReplacer(source);
         var problem = CreateProblem();
 
@@ -680,7 +680,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.MeasureDuration(replacer, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(replacer), new DurationMeasuringOperatorAdvice<Replacement, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Replacement, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Replacement, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -714,7 +714,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var source = new ThrowingReplacer();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))));
         var executor = scope.ResolveReplacer(source);
         var problem = CreateProblem();
 
@@ -735,7 +735,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var interceptor = new AddOneInterceptor();
-        var aspect = Aspect.CountInvocations(interceptor, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice<Interception<CounterState>, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Interception<CounterState>, int>>().Counter.ShouldBeSameAs(counter);
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
@@ -754,7 +754,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var interceptor = new AddOneInterceptor();
-        var aspect = Aspect.MeasureDuration(interceptor, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(interceptor), new DurationMeasuringOperatorAdvice<Interception<CounterState>, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Interception<CounterState>, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Interception<CounterState>, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -774,7 +774,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var source = new ThrowingInterceptor();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
         var problem = CreateProblem();
 
@@ -789,7 +789,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var source = new ThrowingInterceptor();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
         var problem = CreateProblem();
 
@@ -803,7 +803,7 @@ public class OperatorInspectionTests
     {
         var counter = new CountAccumulator();
         var terminator = new NeverTerminalStateTerminator();
-        var aspect = Aspect.CountInvocations(terminator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(terminator), new CountingOperatorAdvice<Termination, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Termination, int>>().Counter.ShouldBeSameAs(counter);
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
@@ -822,7 +822,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var terminator = new NeverTerminalStateTerminator();
-        var aspect = Aspect.MeasureDuration(terminator, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(terminator), new DurationMeasuringOperatorAdvice<Termination, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Termination, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Termination, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -842,7 +842,7 @@ public class OperatorInspectionTests
         var counter = new CountAccumulator();
         var source = new ThrowingTerminator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
         var problem = CreateProblem();
 
@@ -857,7 +857,7 @@ public class OperatorInspectionTests
         var duration = new DurationAccumulator();
         var source = new ThrowingTerminator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
         var problem = CreateProblem();
 

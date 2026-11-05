@@ -240,17 +240,6 @@ public class ResolutionScopeTests
         child.Resolve(original).Name.ShouldBe("rootFirst(rootSecond(childFirst(childSecond(original))))");
     }
 
-    // Run setup lists aspects in the order they are attached, and an aspect attached again keeps its first position.
-    [Fact]
-    public void ARunSetupScope_WrapsTheFirstAttachedAspectClosest()
-    {
-        var original = new CountingConfiguration("original");
-        var first = Wrap(original, "first");
-        var second = Wrap(original, "second");
-
-        new ResolutionScopeBuilder(first, second, first).Build().Resolve(original).Name.ShouldBe("second(first(original))");
-    }
-
     [Fact]
     public void AdviceInSeveralScopes_AppliesOnceAtItsClosestOccurrence()
     {

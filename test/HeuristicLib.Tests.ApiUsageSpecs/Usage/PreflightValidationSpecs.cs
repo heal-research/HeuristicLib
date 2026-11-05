@@ -138,10 +138,8 @@ public class PreflightValidationSpecs
     /// Creating a run checks the whole configuration against the problem's search space, so an operator that declares
     /// it cannot be used there stops the run before it starts instead of quietly leaving the space.
     /// </summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void CreatingARun_RefusesAnOperatorTheSearchSpaceRulesOut(bool configure)
+    [Fact]
+    public void CreatingARun_RefusesAnOperatorTheSearchSpaceRulesOut()
     {
         var problem = ConstrainedProblem();
         var algorithm = new HillClimber<BoolVector>
@@ -150,28 +148,21 @@ public class PreflightValidationSpecs
             Mutator = new FlipOneBitMutator()
         };
 
-        var setupCalls = 0;
         var failure = Should.Throw<InvalidOperationException>(() =>
         {
-            if (configure)
-                algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1), _ => setupCalls++);
-            else
-                algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1));
+            algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1));
         });
 
         failure.Message.ShouldContain(nameof(FlipOneBitMutator));
         failure.Message.ShouldContain("Cardinality(2)");
-        setupCalls.ShouldBe(0);
     }
 
     /// <summary>
     /// The check is a default, not a rule. <c>validate: false</c> runs the same configuration, which is what an author
     /// needs while an operator's declared contract is still being worked out.
     /// </summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void CreatingARun_SkipsTheCheckWhenAskedTo(bool configure)
+    [Fact]
+    public void CreatingARun_SkipsTheCheckWhenAskedTo()
     {
         var problem = ConstrainedProblem();
         var algorithm = new HillClimber<BoolVector>
@@ -180,13 +171,9 @@ public class PreflightValidationSpecs
             Mutator = new FlipOneBitMutator()
         };
 
-        var setupCalls = 0;
-        var run = configure
-            ? algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1), _ => setupCalls++, validate: false)
-            : algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1), validate: false);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1), validate: false);
 
         run.ShouldNotBeNull();
-        setupCalls.ShouldBe(configure ? 1 : 0);
     }
 
     /// <summary>

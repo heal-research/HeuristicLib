@@ -34,8 +34,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
     }
 
-    public ExperimentRun(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment, TProblem problem, IRandomNumberGenerator random,
-        Action<ExperimentRunSetup<TCandidate, TSearchState, TAlgorithm, TKey>>? setup = null)
+    public ExperimentRun(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
     {
         Experiment = experiment;
         Problem = problem;
@@ -52,14 +51,12 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
                 throw new InvalidOperationException($"Experiment trial key {experimentCase.Key} is not unique.");
         }
 
-        var preparation = new ExperimentRunSetup<TCandidate, TSearchState, TAlgorithm, TKey>(cases);
-        setup?.Invoke(preparation);
         var trials = new List<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>>(cases.Length);
         for (var index = 0; index < cases.Length; index++)
         {
             var experimentCase = cases[index];
             var trialRandom = experimentCase.RandomForkPath.Aggregate(random, static (current, forkKey) => current.Fork(forkKey));
-            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom, preparation.BuildScope(index));
+            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom);
             trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase, algorithmRun));
         }
 
@@ -364,7 +361,7 @@ public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchS
 {
     internal int Index { get; }
 
-    /// <summary>The materialized case used during setup and retained by this trial.</summary>
+    /// <summary>The materialized case retained by this trial.</summary>
     public ExperimentCase<TAlgorithm, TKey> Case { get; }
 
     public TKey Key => Case.Key;

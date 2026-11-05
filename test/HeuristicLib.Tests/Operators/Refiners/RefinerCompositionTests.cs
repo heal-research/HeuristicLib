@@ -40,7 +40,7 @@ public class RefinerCompositionTests
         var counter = new CountAccumulator();
         var observed = AddOffset(1);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.AsIterated(4));
 
         Refine(executor, 3).ShouldBe([7]);
@@ -109,7 +109,7 @@ public class RefinerCompositionTests
         var counter = new CountAccumulator();
         var observed = AddOffset(1);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
 
         Refine(executor, 3, 4, 5);
@@ -123,7 +123,7 @@ public class RefinerCompositionTests
         var counter = new CountAccumulator();
         var observed = new ThrowingRefiner();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 3));
@@ -138,7 +138,7 @@ public class RefinerCompositionTests
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var observed = new ThrowingRefiner();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.MeasureDuration(observed, duration, timeProvider));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new DurationMeasuringOperatorAdvice(duration, timeProvider)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 3));
@@ -164,10 +164,10 @@ public class RefinerCompositionTests
         var inner = AddOffset(1);
         var outer = AddOffset(1).AsIterated(3);
         var insideScope = ResolutionScope.Create();
-        insideScope.AddAspect(Aspect.CountInvocations(inner, inside));
+        insideScope.AddAspect(Aspect.Create(Pointcut.Reference(inner), new CountingOperatorAdvice(inside, OperatorCountMetric.Invocations)));
         var insideExecutor = insideScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(inner.AsIterated(3));
         var aroundScope = ResolutionScope.Create();
-        aroundScope.AddAspect(Aspect.CountInvocations(outer, around));
+        aroundScope.AddAspect(Aspect.Create(Pointcut.Reference(outer), new CountingOperatorAdvice(around, OperatorCountMetric.Invocations)));
         var aroundExecutor = aroundScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(outer);
 
         Refine(insideExecutor, 3).ShouldBe([6]);
@@ -184,7 +184,7 @@ public class RefinerCompositionTests
         var observed = AddOffset(1);
         var refiner = PipelineRefiner.Create(observed, Multiply(2).AsIterated(2));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner);
 
         Refine(executor, 3).ShouldBe([16]);

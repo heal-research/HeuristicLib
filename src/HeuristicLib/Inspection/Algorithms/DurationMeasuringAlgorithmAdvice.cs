@@ -58,17 +58,3 @@ public sealed class DurationMeasuringAlgorithmAdvice<TCandidate, TSearchState> :
         }
     }
 }
-
-public static class AlgorithmDurationExtensions
-{
-    extension(Aspect)
-    {
-        public static Aspect MeasureDuration<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm, DurationAccumulator duration)
-            where TSearchState : class, ISearchState =>
-            Aspect.Create(Pointcut.Reference(algorithm), new DurationMeasuringAlgorithmAdvice<TCandidate, TSearchState>(duration));
-
-        public static Aspect MeasureDuration<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm, DurationAccumulator duration, TimeProvider timeProvider)
-            where TSearchState : class, ISearchState =>
-            Aspect.Create(Pointcut.Reference(algorithm), new DurationMeasuringAlgorithmAdvice<TCandidate, TSearchState>(duration, timeProvider));
-    }
-}

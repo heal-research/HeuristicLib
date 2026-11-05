@@ -140,8 +140,8 @@ public sealed class DynamicRacingResolutionTests
         var creations = new CountAccumulator();
         var mutations = new CountAccumulator();
         var parent = ResolutionScope.Create();
-        parent.AddAspect(Aspect.CountInvocations(metaCreator, creations));
-        parent.AddAspect(Aspect.CountInvocations(metaMutator, mutations));
+        parent.AddAspect(Aspect.Observe(metaCreator.Invocations, _ => creations.IncrementBy(1)));
+        parent.AddAspect(Aspect.Observe(metaMutator.Invocations, _ => mutations.IncrementBy(1)));
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
         _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender);
         await using var paused = Run(parent, racing, problem).GetAsyncEnumerator();
@@ -153,8 +153,8 @@ public sealed class DynamicRacingResolutionTests
         var evaluations = new CountAccumulator();
         var interceptions = new CountAccumulator();
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(contender.Evaluator, evaluations));
-        child.AddAspect(Aspect.CountInvocations(interceptor, interceptions));
+        child.AddAspect(Aspect.Observe(contender.Evaluator.Invocations, _ => evaluations.IncrementBy(1)));
+        child.AddAspect(Aspect.Observe(interceptor.Invocations, _ => interceptions.IncrementBy(1)));
         await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         sources[1].ShouldBeNull();
@@ -172,7 +172,7 @@ public sealed class DynamicRacingResolutionTests
 
         var independentSourceIndex = sources.Count;
         var independent = ResolutionScope.Create();
-        independent.AddAspect(Aspect.CountInvocations(metaCreator, creations));
+        independent.AddAspect(Aspect.Observe(metaCreator.Invocations, _ => creations.IncrementBy(1)));
         await using var fresh = Run(independent, racing, problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(3);

@@ -37,13 +37,13 @@ var algorithm = GeneticAlgorithm.For(
     mutationRate: 0.25);
 
 var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42),
-    setup => setup.AddAspect(qualityAnalyzer));
+var run = algorithm.Advised(qualityAnalyzer).CreateRun(
+    problem, RandomNumberGenerator.Create(seed: 42));
 
 await run.CompleteAsync();
 
-var qualityCurve = qualityAnalyzer.Snapshot().Values;
-var best = qualityAnalyzer.RequireLatestValue().Best;
+var qualityCurve = run.Result(qualityAnalyzer).Snapshot().Values;
+var best = run.Result(qualityAnalyzer).RequireLatestValue().Best;
 
 Console.WriteLine($"Execution: {instance.Name}");
 Console.WriteLine($"Best tour length: {best.ObjectiveVector[0]:F0}");

@@ -53,7 +53,7 @@ public class RefinerBatchSemanticsTests
         var counter = new CountAccumulator();
         var observed = new DropLastRefiner();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var executor = scope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(observed);
 
         Refine(executor, 1, 2, 3);
@@ -81,8 +81,8 @@ public class RefinerBatchSemanticsTests
         yield return ("iterated", noChange.AsIterated(3), null);
         yield return ("choose one", ChoosePerItem.Create(noChange), null);
         yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0), null);
-        yield return ("counting", noChange, Aspect.CountCandidates(noChange, new CountAccumulator()));
-        yield return ("duration measuring", noChange, Aspect.MeasureDuration(noChange, new DurationAccumulator()));
+        yield return ("counting", noChange, Aspect.Create(Pointcut.Reference(noChange), new CountingOperatorAdvice(new CountAccumulator(), OperatorCountMetric.Candidates)));
+        yield return ("duration measuring", noChange, Aspect.Create(Pointcut.Reference(noChange), new DurationMeasuringOperatorAdvice(new DurationAccumulator(), TimeProvider.System)));
         yield return ("improvement checking", noChange.CheckedForImprovement(), null);
         yield return ("single candidate", new IdentityRefiner(), null);
     }

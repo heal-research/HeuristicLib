@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// <remarks>
 /// This is an accumulator: one mutable graph that grows while the run executes, and reading it means reading that
 /// graph. Everything it exposes is a live view, so read it once the run has finished rather than during it. Its own
-/// writes take a lock, which is what lets one analyzer build a graph from several runs at once.
+/// writes take a lock so one run can collect observations from concurrent boundaries.
 /// </remarks>
 public class GenealogyGraph<TCandidate> where TCandidate : notnull
 {

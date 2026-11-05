@@ -82,7 +82,7 @@ public class ObservationModuleTests
         var root = ResolutionScope.Create();
         root.AddAspect(Aspect.Observe(evaluator.Invocations, observation => observed.Add(observation.Evaluator)));
         var budget = root.CreateChildScope();
-        budget.AddAspect(Aspect.CountInvocations(evaluator, counter));
+        budget.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
 
         budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

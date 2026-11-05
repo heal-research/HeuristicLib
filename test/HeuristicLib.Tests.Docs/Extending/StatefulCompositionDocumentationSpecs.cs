@@ -78,11 +78,11 @@ public sealed class StatefulCompositionDocumentationSpecs
             .Resolve(composition);
         original.Mutate(parents, random, searchSpace, problem); // First child.
 
-        var firstCalls = new CountAccumulator();
-        var secondCalls = new CountAccumulator();
+        var firstCalls = first.Invocations.Count();
+        var secondCalls = second.Invocations.Count();
         var observedScope = scope.CreateChildScope();
-        observedScope.AddAspect(Aspect.CountInvocations(first, firstCalls));
-        observedScope.AddAspect(Aspect.CountInvocations(second, secondCalls));
+        observedScope.AddAspect(observedScope.Results.Aspect(firstCalls));
+        observedScope.AddAspect(observedScope.Results.Aspect(secondCalls));
         var observed = observedScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
@@ -93,13 +93,13 @@ public sealed class StatefulCompositionDocumentationSpecs
         original.Mutate(parents, random, searchSpace, problem); // Second child with the original cursor.
         #endregion stateful-composition-usage
 
-        firstCalls.CurrentCount.ShouldBe(1);
-        secondCalls.CurrentCount.ShouldBe(0);
+        observedScope.Results.Result(firstCalls).CurrentCount.ShouldBe(1);
+        observedScope.Results.Result(secondCalls).CurrentCount.ShouldBe(0);
 
         #region stateful-composition-independent
-        var independentFirstCalls = new CountAccumulator();
+        var independentFirstCalls = first.Invocations.Count();
         var independentScope = ResolutionScope.Create();
-        independentScope.AddAspect(Aspect.CountInvocations(first, independentFirstCalls));
+        independentScope.AddAspect(independentScope.Results.Aspect(independentFirstCalls));
         var independent = independentScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
@@ -108,7 +108,7 @@ public sealed class StatefulCompositionDocumentationSpecs
         independent.Mutate(parents, random, searchSpace, problem); // First child with a fresh cursor.
         #endregion stateful-composition-independent
 
-        independentFirstCalls.CurrentCount.ShouldBe(1);
-        secondCalls.CurrentCount.ShouldBe(0);
+        independentScope.Results.Result(independentFirstCalls).CurrentCount.ShouldBe(1);
+        observedScope.Results.Result(secondCalls).CurrentCount.ShouldBe(0);
     }
 }

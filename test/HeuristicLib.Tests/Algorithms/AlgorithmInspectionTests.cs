@@ -20,8 +20,8 @@ public sealed class AlgorithmInspectionTests
         var duration = new DurationAccumulator();
         var observed = new List<IAlgorithm<int, PopulationState<int>>>();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(algorithm, count));
-        scope.AddAspect(Aspect.MeasureDuration(algorithm, duration, time));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(algorithm), new CountingAlgorithmAdvice<int, PopulationState<int>>(count)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(algorithm), new DurationMeasuringAlgorithmAdvice<int, PopulationState<int>>(duration, time)));
         scope.AddAspect(Aspect.Observe(algorithm.Iterations, observation => observed.Add(observation.Algorithm)));
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>().Resolve(algorithm);

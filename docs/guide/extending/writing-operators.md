@@ -59,11 +59,11 @@ Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs th
 
 Operator records are reusable configuration. Do not store counters, caches or other changing run data in their properties.
 
-Author an executor with fields for mutable counters, cursors and adaptation values. Each separate construction starts with independent fields. Expose a typed resource handle only when sharing has domain meaning. `scope.Resource(handle)` obtains one resource per handle in the run. Keep live resources off configurations.
+Author an executor with fields for mutable counters, cursors and adaptation values. Each separate construction starts with independent fields. Share a configuration explicitly with `Sharing` when its executor must outlive a child scope. Instruments describe run-bound results; their definitions contain no live result.
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
 
-Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and obtains explicit resources through `scope.Resource(handle)`. A fixed-signature leaf using the explicit executor base instead overrides `CreateExecutor(ResolutionScope scope)`.
+Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and reads run-bound instrument results through `scope.Results.Result(instrument)`. A fixed-signature leaf using the explicit executor base instead overrides `CreateExecutor(ResolutionScope scope)`.
 
 Custom advice for one role derives from a role advice base such as `MutatorAdvice<TCandidate>` and wraps typed executors. Advice for every operation derives from `OperatorAdvice` and passes a struct `IInvocationWrapper` to the operation's `Wrap`. See [Write custom advice](/guide/extending/writing-advice) for complete examples.
 

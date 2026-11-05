@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>The observations of one operator's invocations, one algorithm's iterations or calls, or an observation point.</summary>
+/// <summary>The observations of one operator's invocations, one algorithm's iterations or calls.</summary>
 /// <remarks>
 /// <para>
 /// A source is a configuration and the wrapper that makes each call of that configuration's executor produce an

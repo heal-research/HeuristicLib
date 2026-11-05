@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -26,14 +25,6 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     /// <remarks>A nonpositive limit runs no cycles.</remarks>
     public int? MaximumCycles { get; init; }
 
-    /// <summary>The observations of the start of each cycle.</summary>
-    public ObservationPoint<CycleStart<TCandidate, TSearchState>> Cycles =>
-        ObservationPoint.Of<CycleStart<TCandidate, TSearchState>>(this, nameof(Cycles));
-
-    /// <summary>The observations of the start of each turn of an inner algorithm.</summary>
-    public ObservationPoint<CycleTurn<TCandidate, TSearchState>> Turns =>
-        ObservationPoint.Of<CycleTurn<TCandidate, TSearchState>>(this, nameof(Turns));
-
     public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
     {
         if (algorithms.Count == 0)
@@ -42,17 +33,10 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    /// <remarks>
-    /// The executor publishes the start of each cycle and turn to the observers of <c>Cycles</c> and <c>Turns</c>.
-    /// </remarks>
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
-    {
-        var cycles = scope.Resolve(Cycles);
-        var turns = scope.Resolve(Turns);
-        return new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
-            scope, Algorithms, MaximumCycles, cycles, turns);
-    }
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, MaximumCycles);
+
 }
 
 public static class CycleAlgorithm
@@ -103,24 +87,17 @@ public class CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProbl
     private readonly ResolutionScope scope;
     protected readonly ImmutableArray<TAlgorithm> Algorithms;
     protected readonly int? MaximumCycles;
-    private readonly IObservationPointExecutor<CycleStart<TCandidate, TSearchState>> cycles;
-    private readonly IObservationPointExecutor<CycleTurn<TCandidate, TSearchState>> turns;
 
-    public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles,
-        IObservationPointExecutor<CycleStart<TCandidate, TSearchState>> cycles,
-        IObservationPointExecutor<CycleTurn<TCandidate, TSearchState>> turns)
+    public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
-        this.cycles = cycles;
-        this.turns = turns;
     }
 
     public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var state = initialState;
-        var turn = 0L;
 
         var cycleCountGenerator = MaximumCycles.HasValue
             ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
@@ -131,13 +108,11 @@ public class CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProbl
             ct.ThrowIfCancellationRequested();
             var producedState = false;
             var cycleRng = random.Fork(cycleCount);
-            cycles.Report(new(cycleCount + 1, state, problem.SearchSpace, problem));
             foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i)))
             {
                 ct.ThrowIfCancellationRequested();
                 var algorithmRng = cycleRng.Fork(algorithmIndex);
                 var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
-                turns.Report(new(cycleCount + 1, ++turn, algorithm, algorithmIndex, state, problem.SearchSpace, problem));
 
                 await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algorithmRng, state, ct))
                 {

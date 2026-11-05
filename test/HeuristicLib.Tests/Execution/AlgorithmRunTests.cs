@@ -14,8 +14,7 @@ public class AlgorithmRunTests
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var aspect = new CheckCountingAspect();
-        var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup: setup => setup
-            .AddAspect(aspect));
+        var run = algorithm.Advised(aspect).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
         var cancellationToken = TestContext.Current.CancellationToken;
 
         algorithm.ExecutionCount.ShouldBe(0);
@@ -86,8 +85,7 @@ public class AlgorithmRunTests
     public void AdviceFailure_IsTerminal(bool canceled)
     {
         Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException();
-        var run = new SequenceAlgorithm().CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), setup: setup => setup
-            .AddAspect(new FailingModule(failure)));
+        var run = new SequenceAlgorithm().Advised(new FailingModule(failure)).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
         var expectedState = canceled ? RunLifecycleState.Canceled : RunLifecycleState.Failed;
 
         var thrown = Record.Exception(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
@@ -225,50 +223,13 @@ public class AlgorithmRunTests
     }
 
     [Fact]
-    public void CapturedSetupCannotAttachAdviceToAnExistingRun()
-    {
-        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var algorithm = new AdditiveStepAlgorithm(1);
-        AlgorithmRunSetup<int, PopulationState<int>> captured = null!;
-        var calls = 0;
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup =>
-        {
-            calls++;
-            captured = setup;
-        });
-        var late = new CheckCountingAspect();
-        captured.AddAspect(late);
-
-        run.LifecycleState.ShouldBe(RunLifecycleState.Ready);
-        calls.ShouldBe(1);
-        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-
-        late.CheckCount.ShouldBe(0);
-        calls.ShouldBe(1);
-    }
-
-    [Fact]
-    public void SetupFailureReturnsNoRunAndBuildsNoExecutor()
-    {
-        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
-        var failure = new InvalidOperationException("setup");
-        var thrown = Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(
-            MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42), _ => throw failure));
-
-        thrown.ShouldBeSameAs(failure);
-        algorithm.ExecutionCount.ShouldBe(0);
-    }
-
-    [Fact]
     public void AnAnalyzerWrappingDirectly_ObservesInTheOrderItWasAttached()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new AdditiveStepAlgorithm(1);
         var observed = new List<string>();
 
-        _ = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup
-                     .AddAspect(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")))
-                     .AddAspect(new WrappingAnalyzer(algorithm.Evaluator, () => observed.Add("second"))))
+        _ = algorithm.Advised(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")), new WrappingAnalyzer(algorithm.Evaluator, () => observed.Add("second"))).CreateRun(problem, RandomNumberGenerator.Create(42))
                      .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // Both bind as modules, so the one attached first sits innermost and observes first. Recorded as
@@ -281,8 +242,7 @@ public class AlgorithmRunTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var aspect = new CheckCountingAspect();
-        var run = new AdditiveStepAlgorithm(1).CreateRun(problem, RandomNumberGenerator.Create(42),
-            setup => setup.AddAspect(aspect).AddAspect(aspect));
+        var run = new AdditiveStepAlgorithm(1).Advised(aspect, aspect).CreateRun(problem, RandomNumberGenerator.Create(42));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 

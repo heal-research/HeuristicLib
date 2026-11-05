@@ -192,7 +192,7 @@ public sealed class OperationBindingTests
 
         var contextCalls = new CountAccumulator();
         var secondScope = root.CreateChildScope();
-        secondScope.AddAspect(Aspect.CountInvocations(mutation, contextCalls));
+        secondScope.AddAspect(Aspect.Create(Pointcut.Reference(mutation), new CountingOperatorAdvice(contextCalls, OperatorCountMetric.Invocations)));
         var second = secondScope
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
         factory.Wraps.ShouldBe(2);

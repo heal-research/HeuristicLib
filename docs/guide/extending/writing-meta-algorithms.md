@@ -20,7 +20,7 @@ Obtain a child algorithm's executor with `scope.Resolve(childAlgorithm)`. Callin
 The `HLib0001` analyzer reports direct child `CreateExecutor` calls in construction hooks, custom resolvers and deferred execution methods. It does not prove correct state ownership or follow configurations passed through arbitrary helper code. Keep child construction on the scope's resolution path.
 :::
 
-The same rule applies to operators. An operator's `CreateExecutor` resolves fixed children through its scope, initializes private executor fields and obtains explicit resources with `scope.Resource(handle)` and passes both to the executor it builds. A meta-algorithm with deferred children can retain the scope its `CreateExecutor` receives for later child activation.
+The same rule applies to operators. An operator's `CreateExecutor` resolves fixed children through its scope, initializes private executor fields and passes resolved children to the executor it builds. A meta-algorithm with deferred children can retain the scope its `CreateExecutor` receives for later child activation.
 
 ## A two-stage meta-algorithm
 
@@ -103,8 +103,7 @@ var staged = new TwoStageAlgorithm<RealVector, PopulationState<RealVector>>
 };
 
 var wholeRun = staged.Iterations.TracePopulationQuality();
-var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
-    .AddAspect(wholeRun));
+var run = staged.Advised(wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 ```
 
 Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
@@ -115,16 +114,14 @@ Because the children are resolved through the scope, either stage can also be ob
 var exploreQuality = explore.Iterations.TracePopulationQuality();
 
 var wholeRun = staged.Iterations.TracePopulationQuality();
-var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
-    .AddAspect(exploreQuality)
-    .AddAspect(wholeRun));
+var run = staged.Advised(exploreQuality, wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 ```
 
-`exploreQuality` then holds only the first stage's generations, and `wholeRun` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
+`run.Result(exploreQuality)` then holds only the first stage's generations, and `run.Result(wholeRun)` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
 
 ## Deferred children and shared executors
 
-Resolve fixed children through the scope received by `CreateExecutor`. Retain that scope on the executor when child construction is deferred. Each call constructs fresh private fields while using the same run resources:
+Resolve fixed children through the scope received by `CreateExecutor`. Retain that scope on the executor when child construction is deferred. Each call constructs fresh private fields while using the same run results:
 
 ```csharp
 var execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm);
@@ -140,7 +137,7 @@ var cycle = first.CycleWith(second, maximumCycles: 3).Sharing(first, second);
 
 Sharing is local to one executor of the sharing node and uses configuration reference identity, so `Cycle(A, A)` shared on A uses one A executor. Equal but distinct configurations keep separate executors. A shared executor preserves its private fields and resolved children, and every turn applies the Cycle's current advice around it. A separately constructed Cycle starts independently. Share any configuration the same way, for example a cached evaluator used by both algorithms, to keep only that part across turns while terminators and budgets restart.
 
-Inner algorithms do not know they run inside a meta-algorithm, so the meta-algorithm reports its own progress. `CycleAlgorithm` publishes the start of each cycle and turn, as [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns) shows. To report a point of your own, declare a named child with `ObservationPoint.Of<TObservation>(this, nameof(Point))`, resolve it through `scope.Resolve(Point)` in `CreateExecutor`, and call its executor's `Report` method at that point. The point is itself an observation source.
+A Cycle turn is one call of an inner algorithm. Observe the inner algorithms' `Calls` to record starts and outcomes, including a turn that yields no state; see [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns).
 
 ## Preserve run behavior
 
@@ -149,6 +146,6 @@ A meta-algorithm should:
 1. Yield every state its children yield, unless it deliberately summarizes them.
 2. Derive each child's random stream from the supplied one with a stable index.
 3. Pass the cancellation token to every child stream.
-4. Keep configurations immutable, private data in executor fields and invocation progress in iterators. Use explicit resource handles for intentional sharing.
+4. Keep configurations immutable, private data in executor fields and invocation progress in iterators. Use explicit `Sharing` for intentional sharing.
 
 Read [Observability and analysis](/guide/execution/observability-and-analysis) for what observing a child algorithm means for the resulting series.

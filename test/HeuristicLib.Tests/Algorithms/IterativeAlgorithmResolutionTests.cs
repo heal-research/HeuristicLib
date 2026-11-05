@@ -51,7 +51,7 @@ public sealed class IterativeAlgorithmResolutionTests
         (await Next(outer)).Value.ShouldBe(101);
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(interceptor, observedCalls));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
         var inner = Resolve(child, source);
         inner.ShouldNotBeSameAs(outer);
         (await Next(inner)).Value.ShouldBe(101);
@@ -84,7 +84,7 @@ public sealed class IterativeAlgorithmResolutionTests
         paused.Current.PreviousValue.ShouldBeNull();
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(interceptor, observedCalls));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
         var inner = Resolve(child, source);
         var innerRandom = new RecordingRandom();
         await using var observed = inner.RunStreamingAsync(Problem, innerRandom, ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();

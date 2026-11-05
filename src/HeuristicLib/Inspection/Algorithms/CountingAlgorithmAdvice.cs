@@ -37,13 +37,3 @@ public sealed class CountingAlgorithmAdvice<TCandidate, TSearchState> : Algorith
         }
     }
 }
-
-public static class AlgorithmCounterExtensions
-{
-    extension(Aspect)
-    {
-        public static Aspect CountInvocations<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm, CountAccumulator counter)
-            where TSearchState : class, ISearchState =>
-            Aspect.Create(Pointcut.Reference(algorithm), new CountingAlgorithmAdvice<TCandidate, TSearchState>(counter));
-    }
-}

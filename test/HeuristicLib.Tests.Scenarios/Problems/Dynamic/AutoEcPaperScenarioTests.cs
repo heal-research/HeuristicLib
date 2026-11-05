@@ -105,7 +105,6 @@ public class AutoEcPaperScenarioTests
         var bbcp =
             new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
                 ActivatedTravelingSalesmanProblem>(
-                problem,
                 [evaluator]);
 
         var run = racing.Advised(qualityCurve).Advised(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
@@ -117,8 +116,8 @@ public class AutoEcPaperScenarioTests
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
         run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(2);
-        bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
-        double.IsFinite(bbcp.Performance).ShouldBeTrue();
+        run.Result(bbcp).BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
+        double.IsFinite(run.Result(bbcp).Performance).ShouldBeTrue();
     }
 
     [Fact]
@@ -154,7 +153,6 @@ public class AutoEcPaperScenarioTests
         var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
         var bbcp =
             new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
-                problem,
                 [evaluator]);
 
         var run = racing.Advised(qualityCurve).Advised(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
@@ -167,8 +165,8 @@ public class AutoEcPaperScenarioTests
             problem.SearchSpace.Contains(candidate.Candidate));
         run.Result(qualityCurve).SampleCount.ShouldBeGreaterThanOrEqualTo(3);
         run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(3);
-        bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
-        double.IsFinite(bbcp.Performance).ShouldBeTrue();
+        run.Result(bbcp).BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
+        double.IsFinite(run.Result(bbcp).Performance).ShouldBeTrue();
     }
 
     private static async Task<TSearchState> RunUntilEpochChanges<TProblem, TCandidate, TSearchSpace, TSearchState>(

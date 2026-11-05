@@ -14,8 +14,7 @@ public static class ExperimentExtensions
         where TSearchState : class, ISearchState
         where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     {
-        public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> CreateRun(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random,
-            Action<ExperimentRunSetup<TCandidate, TSearchState, TAlgorithm, TKey>>? setup = null) => new(experiment, (TProblem)problem, random, setup);
+        public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> CreateRun(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random) => new(experiment, (TProblem)problem, random);
 
         public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(Problem<TProblem, TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
             experiment.CreateRun(problem, random).Stream(concurrency, initialState, cancellationToken);
@@ -72,8 +71,7 @@ public static class ExperimentExtensions
         where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
     {
         public ExperimentRun<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState, TAlgorithm, TKey> CreateRun(
-            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random,
-            Action<ExperimentRunSetup<TCandidate, TSearchState, TAlgorithm, TKey>>? setup = null) => new(experiment, problem, random, setup);
+            IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random) => new(experiment, problem, random);
 
         public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(
             IProblem<TCandidate, TSearchSpace> problem, IRandomNumberGenerator random, ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default) =>

@@ -168,7 +168,7 @@ public class OperatorAuthoringSpecs
     public void MutatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Mutation, RealVector> childMutator = new PullTowardZeroMutator();
-        var counting = Aspect.CountInvocations(childMutator, new CountAccumulator());
+        var counting = ResolutionScope.Create().Results.Aspect(childMutator.Invocations.Count());
         counting.Single().Pointcut.Matches(childMutator).ShouldBeTrue();
     }
 
@@ -275,7 +275,7 @@ public class OperatorAuthoringSpecs
     public void RefinerCompositionFactories_InferRoleTypes()
     {
         IOperator<Refinement, RealVector> childRefiner = new HalveRefiner();
-        var counting = Aspect.CountInvocations(childRefiner, new CountAccumulator());
+        var counting = ResolutionScope.Create().Results.Aspect(childRefiner.Invocations.Count());
         var iterated = IteratedRefiner.Create(childRefiner, 2);
         counting.Single().Pointcut.Matches(childRefiner).ShouldBeTrue();
         iterated.ChildOperator.ShouldBeSameAs(childRefiner);
@@ -470,8 +470,8 @@ public class OperatorAuthoringSpecs
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Evaluation, RealVector> child = new FirstValueEvaluator();
-        var counting = Aspect.CountInvocations(child, new CountAccumulator());
-        var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
+        var counting = ResolutionScope.Create().Results.Aspect(child.Invocations.Count());
+        var duration = ResolutionScope.Create().Results.Aspect(child.Invocations.Duration());
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
         counting.Single().Pointcut.Matches(child).ShouldBeTrue();
@@ -561,7 +561,7 @@ public class OperatorAuthoringSpecs
     public void SelectorCompositionFactories_InferRoleTypes()
     {
         IOperator<Selection, RealVector> childSelector = new FirstSelector();
-        var counting = Aspect.CountInvocations(childSelector, new CountAccumulator());
+        var counting = ResolutionScope.Create().Results.Aspect(childSelector.Invocations.Count());
         var chooseOne = ChoosePerInvocation.Create(childSelector, new LastSelector());
         counting.Single().Pointcut.Matches(childSelector).ShouldBeTrue();
         chooseOne.ChildOperators[0].ShouldBeSameAs(childSelector);
@@ -639,8 +639,8 @@ public class OperatorAuthoringSpecs
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
         IOperator<Replacement, RealVector> child = new OffspringReplacer();
-        var counting = Aspect.CountInvocations(child, new CountAccumulator());
-        var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
+        var counting = ResolutionScope.Create().Results.Aspect(child.Invocations.Count());
+        var duration = ResolutionScope.Create().Results.Aspect(child.Invocations.Duration());
         counting.Single().Pointcut.Matches(child).ShouldBeTrue();
         duration.Single().Pointcut.Matches(child).ShouldBeTrue();
     }

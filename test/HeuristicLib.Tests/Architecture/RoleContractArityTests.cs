@@ -126,7 +126,7 @@ public sealed class RoleContractArityTests
         hooks.ShouldNotBeEmpty();
         foreach (var hook in hooks)
             hook.GetParameters().Select(parameter => parameter.ParameterType)
-                .ShouldNotContain(type => type == typeof(RunResources) || typeof(ResolutionScope).IsAssignableFrom(type));
+                .ShouldNotContain(type => typeof(ResolutionScope).IsAssignableFrom(type));
     }
 
     private static IReadOnlyList<Type> RolesDerivedFrom(Type half) =>

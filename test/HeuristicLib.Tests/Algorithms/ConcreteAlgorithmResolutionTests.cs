@@ -31,7 +31,7 @@ public sealed class ConcreteAlgorithmResolutionTests
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(creator, observedCreations));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice(observedCreations, OperatorCountMetric.Invocations)));
         child.AddAspect(countInterceptions(observedInterceptions));
 
         (await Next(child, algorithm)).ShouldBe(1);
@@ -99,7 +99,7 @@ public sealed class ConcreteAlgorithmResolutionTests
                 BatchSize = 1,
                 Direction = LocalSearchDirection.FirstImprovement
             };
-            return (hillClimber, counter => Aspect.CountInvocations(solutionInterceptor, counter));
+            return (hillClimber, counter => Aspect.Create(Pointcut.Reference(solutionInterceptor), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         }
 
         var interceptor = new IdentityInterceptor<PopulationState<int>>(prepareInterceptor);
@@ -141,7 +141,7 @@ public sealed class ConcreteAlgorithmResolutionTests
             },
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
-        return (algorithm, counter => Aspect.CountInvocations(interceptor, counter));
+        return (algorithm, counter => Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
     }
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>

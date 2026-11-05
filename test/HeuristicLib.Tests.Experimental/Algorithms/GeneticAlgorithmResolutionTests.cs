@@ -29,7 +29,7 @@ public sealed class GeneticAlgorithmResolutionTests
         var observedCreations = new CountAccumulator();
         var observedInterceptions = new CountAccumulator();
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(creator, observedCreations));
+        child.AddAspect(Aspect.Observe(creator.Invocations, _ => observedCreations.IncrementBy(1)));
         child.AddAspect(countInterceptions(observedInterceptions));
 
         (await Next(child, algorithm)).ShouldBe(1);
@@ -96,7 +96,7 @@ public sealed class GeneticAlgorithmResolutionTests
                 MaximumGenerations = 3,
                 MutationRate = mutationRate
             };
-            return (alpsAlgorithm, counter => Aspect.CountInvocations(alpsInterceptor, counter));
+            return (alpsAlgorithm, counter => Aspect.Observe(alpsInterceptor.Invocations, _ => counter.IncrementBy(1)));
         }
 
         var interceptor = new IdentityInterceptor<PopulationState<int>>(prepareInterceptor);
@@ -112,7 +112,7 @@ public sealed class GeneticAlgorithmResolutionTests
             MaxEffort = 1,
             MaximumGenerations = 3
         };
-        return (algorithm, counter => Aspect.CountInvocations(interceptor, counter));
+        return (algorithm, counter => Aspect.Observe(interceptor.Invocations, _ => counter.IncrementBy(1)));
     }
 
     private static IAsyncEnumerable<ISearchState> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>

@@ -23,10 +23,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 1);
         var callbacks = new List<string>();
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
-            .AddAspect(new RecordingModule(algorithm, () => callbacks.Add("first module")))
-            .AddAspect(new RecordingAnalyzer(algorithm, () => callbacks.Add("analyzer")))
-            .AddAspect(new RecordingModule(algorithm, () => callbacks.Add("last module"))));
+        var run = algorithm.Advised(new RecordingModule(algorithm, () => callbacks.Add("first module")), new RecordingAnalyzer(algorithm, () => callbacks.Add("analyzer")), new RecordingModule(algorithm, () => callbacks.Add("last module"))).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

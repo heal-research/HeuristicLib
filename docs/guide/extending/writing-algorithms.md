@@ -7,9 +7,9 @@ Create an algorithm only when the state transition or control flow is new. Put d
 An algorithm has two parts:
 
 1. An immutable configuration record that holds operators and settings.
-2. An executor bound to resolved operators and the interceptor, built for every resolution, with private fields and optional explicit shared resources.
+2. An executor bound to resolved operators and the interceptor, with private fields and references to any run-bound results it uses.
 
-Each call to `Stream` or `CompleteAsync` starts an independent root execution. Every resolution of the algorithm builds a new executor with its own resolved children; private fields are independent and explicit resource handles identify data shared within the run.
+Each call to `Stream` or `CompleteAsync` starts an independent root execution. Each scope keeps one executor per configuration reference. Child scopes construct their own executors unless an ancestor explicitly shares a configuration through `Sharing`.
 
 ## Implement an iterative algorithm
 
@@ -94,7 +94,7 @@ Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm
 
 Resolve the optional interceptor and every other configured child operator through the scope that `CreateExecutor` receives. Retain the resolved children on the executor. Do not call operator configurations directly from `ExecuteStep` or resolve children on every iteration.
 
-Keep private counters and adaptation data in executor fields. Use `scope.Resource(handle)` for an explicitly shared cache or accumulator. Keep iteration position, previous search state and invocation local values in the operation or iterator. A paused iterator retains its children, interceptor and resource bindings when another context constructs an executor. Never mutate the configuration record.
+Keep private counters and adaptation data in executor fields. Keep caches in their executors; use `Sharing` to retain the executor across child scopes. Use `scope.Results.Result(instrument)` for a run-bound counter or analysis result. Keep iteration position, previous search state and invocation local values in the operation or iterator. A paused iterator retains its children, interceptor and run-bound results when another context constructs an executor. Never mutate the configuration record.
 
 ## Preserve run behavior
 

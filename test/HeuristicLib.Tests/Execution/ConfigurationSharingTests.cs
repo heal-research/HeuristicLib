@@ -188,11 +188,12 @@ public class ConfigurationSharingTests
         var (box, m) = Mutator();
         var cached = m.Cached();
         var cycle = Cycle(NewCaller("A", 3, 1, cached, box), NewCaller("B", 2, 1, cached, box)).Sharing(cached);
-        var counter = new CountAccumulator();
+        var counter = m.Invocations.Count();
 
-        cycle.CreateRun(Problem, Rng, setup => setup.AddAspect(m.CountInvocations(counter))).Complete();
+        var run = cycle.Advised(counter).CreateRun(Problem, Rng);
+        run.Complete();
 
-        counter.CurrentCount.ShouldBe(1); // the inner evaluator is reached once: candidate 1 is cached for every later call
+        run.Result(counter).CurrentCount.ShouldBe(1); // the inner evaluator is reached once: candidate 1 is cached for every later call
     }
 
     // A scope holds one executor per configuration, so a request for other run types cannot reuse it.

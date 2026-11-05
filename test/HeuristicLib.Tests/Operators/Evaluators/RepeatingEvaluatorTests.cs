@@ -24,7 +24,7 @@ public class RepeatingEvaluatorTests
         var evaluator = observed.AsRepeated(3);
 
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
             .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 

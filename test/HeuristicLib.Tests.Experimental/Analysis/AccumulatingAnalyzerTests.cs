@@ -1,13 +1,12 @@
+using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
-/// <summary>
-/// Covers an <see cref="AccumulatingAnalyzer"/> end to end: it installs its own observations and merges every source
-/// into the one accumulator it publishes.
-/// </summary>
 public class AccumulatingAnalyzerTests
 {
     private static readonly ObjectiveDirections TwoMinimized =
@@ -22,22 +21,70 @@ public class AccumulatingAnalyzerTests
             TwoMinimized, new ObjectiveVector(100, 100), first, second);
         var scope = Install(analyzer);
 
-        analyzer.Front.Count.ShouldBe(0);
+        scope.Results.Result(analyzer).Count.ShouldBe(0);
         Evaluate(scope, first, 1, 9);
         Evaluate(scope, second, 3, 7);
 
-        analyzer.Front.Points.Select(evaluated => evaluated.Candidate).ShouldBe([1, 3, 7, 9], ignoreOrder: true);
+        scope.Results.Result(analyzer).Points.Select(evaluated => evaluated.Candidate).ShouldBe([1, 3, 7, 9], ignoreOrder: true);
 
         // The front keeps accumulating, so a later observation shows up in the same front.
         Evaluate(scope, first, 5);
-        analyzer.Front.Count.ShouldBe(5);
+        scope.Results.Result(analyzer).Count.ShouldBe(5);
     }
 
-    private static ResolutionScope Install(params Aspect[] analyzers)
+    [Fact]
+    public async Task ConcurrentRunsOfOneFrontDefinitionHaveIndependentAccumulators()
+    {
+        var evaluator = new SketchEvaluator();
+        var analyzer = new ParetoFrontAnalyzer<int>(TwoMinimized, new ObjectiveVector(100, 100), evaluator);
+        var first = Install(analyzer);
+        var second = Install(analyzer);
+
+        await Task.WhenAll(
+            Task.Run(() => Evaluate(first, evaluator, 1, 2), TestContext.Current.CancellationToken),
+            Task.Run(() => Evaluate(second, evaluator, 8, 9), TestContext.Current.CancellationToken));
+
+        first.Results.Result(analyzer).Points.Select(point => point.Candidate).ShouldBe([1, 2]);
+        second.Results.Result(analyzer).Points.Select(point => point.Candidate).ShouldBe([8, 9]);
+        first.Results.Result(analyzer).ShouldNotBeSameAs(second.Results.Result(analyzer));
+        first.CreateChildScope().Results.Result(analyzer).ShouldBeSameAs(first.Results.Result(analyzer));
+    }
+
+    [Fact]
+    public async Task ReusedGenealogyAndRankDefinitionsCreateIndependentGraphsAndRecordClosedGenerations()
+    {
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        var algorithm = GeneticAlgorithm.For(problem, creator: new UniformDistributedCreator(problem.SearchSpace),
+            crossover: new AlphaBetaBlendCrossover(), mutator: new GaussianMutator(1, 0.1),
+            populationSize: 4, maximumGenerations: 3, mutationRate: 1);
+        var genealogy = Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
+        RankAnalyzer<RealVector> ranks = Analyzer.Rank(algorithm.Crossover, algorithm.Mutator, algorithm);
+        var configured = algorithm.Advised(genealogy, ranks);
+        var first = configured.CreateRun(problem, RandomNumberGenerator.Create(1));
+        var second = configured.CreateRun(problem, RandomNumberGenerator.Create(2));
+
+        await Task.WhenAll(
+            Task.Run(() => first.Complete(cancellationToken: TestContext.Current.CancellationToken), TestContext.Current.CancellationToken),
+            Task.Run(() => second.Complete(cancellationToken: TestContext.Current.CancellationToken), TestContext.Current.CancellationToken));
+
+        foreach (var run in new[] { first, second })
+        {
+            run.Result(genealogy).GenerationCount.ShouldBe(4);
+            run.Result(ranks).Graph.GenerationCount.ShouldBe(4);
+            run.Result(ranks).Ranks.Count.ShouldBe(2);
+            run.Result(ranks).Ranks.ShouldAllBe(row => row.Length == 4);
+            run.Result(ranks).Graph.ShouldNotBeSameAs(run.Result(genealogy));
+        }
+        first.Result(genealogy).ShouldNotBeSameAs(second.Result(genealogy));
+        first.Result(ranks).ShouldNotBeSameAs(second.Result(ranks));
+        first.Result(ranks).Graph.ShouldNotBeSameAs(second.Result(ranks).Graph);
+    }
+
+    private static ResolutionScope Install(params Instrument[] analyzers)
     {
         var scope = ResolutionScope.Create();
         foreach (var analyzer in analyzers)
-            scope.AddAspect(analyzer);
+            scope.AddAspect(scope.Results.Aspect(analyzer));
         return scope;
     }
 

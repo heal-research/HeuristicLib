@@ -18,7 +18,7 @@ public sealed class NamedOperatorTests
         var childCalls = new CountAccumulator();
         var scope = ResolutionScope.Create();
         scope.AddAspect(Aspect.Create(Pointcut.Named<IOperator<Mutation, int>>("exploration"), new CountingOperatorAdvice<Mutation, int>(explored, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.CountInvocations(leaf, childCalls));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(childCalls, OperatorCountMetric.Invocations)));
         var typedScope = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var random = RandomNumberGenerator.Create(1);

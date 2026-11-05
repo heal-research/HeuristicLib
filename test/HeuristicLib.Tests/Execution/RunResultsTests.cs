@@ -29,6 +29,38 @@ public sealed class RunResultsTests
     }
 
     [Fact]
+    public async Task ConcurrentLookupsAcrossChildScopesPublishOneResultAndAspect()
+    {
+        var instrument = new CreationCountingInstrument();
+        var root = ResolutionScope.Create();
+        var lookups = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() =>
+        {
+            var results = root.CreateChildScope().Results;
+            return (Result: results.Result(instrument), Aspect: results.Aspect(instrument));
+        }, TestContext.Current.CancellationToken)));
+
+        instrument.Created.ShouldBe(1);
+        lookups.ShouldAllBe(value => ReferenceEquals(value.Result, lookups[0].Result) && ReferenceEquals(value.Aspect, lookups[0].Aspect));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void FailedResultOrAspectCreationPublishesNeitherAndCanRetry(bool failAspect)
+    {
+        var instrument = new FailsFirstCreation(failAspect);
+        var results = ResolutionScope.Create().Results;
+
+        Should.Throw<InvalidOperationException>(() => results.Aspect(instrument));
+        var result = results.Result(instrument);
+
+        instrument.Attempts.ShouldBe(2);
+        results.Result(instrument).ShouldBeSameAs(result);
+        results.Aspect(instrument).ShouldBeSameAs(results.Aspect(instrument));
+        instrument.Attempts.ShouldBe(2);
+    }
+
+    [Fact]
     public void InstrumentsMatchByReference()
     {
         var results = ResolutionScope.Create().Results;
@@ -73,7 +105,7 @@ public sealed class RunResultsTests
     public async Task Elapsed_CountsOnlyTheTimeInsideTheRootAlgorithm()
     {
         var time = new ManualTimeProvider();
-        var root = ResolutionScope.Create([], time);
+        var root = ResolutionScope.Create(time);
         var executor = Resolve(root, new SteppingAlgorithm(time, Steps: 3));
         time.Advance(TimeSpan.FromSeconds(100));
 
@@ -94,7 +126,7 @@ public sealed class RunResultsTests
     public async Task Elapsed_IsNotMeasuredBelowTheRoot()
     {
         var time = new ManualTimeProvider();
-        var root = ResolutionScope.Create([], time);
+        var root = ResolutionScope.Create(time);
 
         await Run(Resolve(root.CreateChildScope(), new SteppingAlgorithm(time, Steps: 2)));
 
@@ -106,7 +138,7 @@ public sealed class RunResultsTests
     {
         var time = new ManualTimeProvider();
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var root = ResolutionScope.Create([], time);
+        var root = ResolutionScope.Create(time);
         var algorithm = new GatedAlgorithm(gate.Task);
         await using var first = Resolve(root, algorithm).RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
@@ -141,7 +173,7 @@ public sealed class RunResultsTests
         var time = new ManualTimeProvider();
         var algorithm = new SteppingAlgorithm(time, Steps: 3);
         var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
-        var root = ResolutionScope.Create([], time);
+        var root = ResolutionScope.Create(time);
         var states = Resolve(root, algorithm.Advised(steps)).RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
 
         await foreach (var _ in states)
@@ -172,6 +204,26 @@ public sealed class RunResultsTests
         {
             Created++;
             return new object();
+        }
+    }
+
+    private sealed class FailsFirstCreation(bool failAspect) : Instrument<object>
+    {
+        public int Attempts { get; private set; }
+
+        protected override object CreateResult(RunResults results)
+        {
+            Attempts++;
+            if (!failAspect && Attempts == 1)
+                throw new InvalidOperationException("result creation");
+            return new object();
+        }
+
+        protected override Aspect? CreateAspect(object result, RunResults results)
+        {
+            if (failAspect && Attempts == 1)
+                throw new InvalidOperationException("aspect creation");
+            return null;
         }
     }
 

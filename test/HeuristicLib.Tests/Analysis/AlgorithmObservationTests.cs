@@ -253,65 +253,6 @@ public class AlgorithmObservationTests
         run.Result(iteration).By(iterations).ShouldBe([new(1, 1), new(2, 2), new(3, 3), new(4, 1), new(5, 2), new(6, 3)]);
     }
 
-    /// <summary>
-    /// The cycle numbers its cycles and turns per call, whether or not it shares its algorithms, and reports the state each starts from.
-    /// </summary>
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-
-    public async Task CycleObservations_NumberCyclesAndTurnsAndCarryTheStateTheyStartFrom(bool shared)
-    {
-        var problem = CreateProblem();
-        var first = CreateAlgorithm(problem, maximumGenerations: 3);
-        var second = CreateAlgorithm(problem, maximumGenerations: 2);
-        var cycle = CycleAlgorithm.Create(first, second) with { MaximumCycles = 2 };
-        IAlgorithm<RealVector, PopulationState<RealVector>> runnable = shared ? cycle.Sharing(first, second) : cycle;
-        var cycles = new List<CycleStart<RealVector, PopulationState<RealVector>>>();
-        var turns = new List<CycleTurn<RealVector, PopulationState<RealVector>>>();
-        var states = new List<PopulationState<RealVector>>();
-
-        await foreach (var state in runnable.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
-            .AddAspect(Aspect.Observe(cycle.Cycles, cycles.Add))
-            .AddAspect(Aspect.Observe(cycle.Turns, turns.Add)))
-            .Stream(cancellationToken: TestContext.Current.CancellationToken))
-        {
-            states.Add(state);
-        }
-
-        cycles.Select(start => start.Cycle).ShouldBe([1L, 2L]);
-        cycles.Select(start => start.State).ShouldBe([null, states[4]]);
-        turns.Select(turn => (turn.Cycle, turn.Turn, turn.Index)).ShouldBe([(1L, 1L, 0), (1L, 2L, 1), (2L, 3L, 0), (2L, 4L, 1)]);
-        turns.Select(turn => turn.Algorithm).ShouldBe([first, second, first, second]);
-        turns.Select(turn => turn.State).ShouldBe([null, states[2], states[4], states[7]]);
-        turns.ShouldAllBe(turn => ReferenceEquals(turn.Problem, problem) && ReferenceEquals(turn.SearchSpace, problem.SearchSpace));
-    }
-
-    /// <summary>
-    /// A turn is published before the inner algorithm runs, so its clock has counted the turn when the inner algorithm's
-    /// iterations are recorded; a clock shared by two traces counts each turn once.
-    /// </summary>
-    [Fact]
-    public async Task CycleClocks_TickBeforeTheInnerIterationsAndCountOnceWhenShared()
-    {
-        var problem = CreateProblem();
-        var first = CreateAlgorithm(problem, maximumGenerations: 3);
-        var second = CreateAlgorithm(problem, maximumGenerations: 2);
-        var cycle = CycleAlgorithm.Create(first, second) with { MaximumCycles = 2 };
-        var cycleClock = Clock.FromCycles(cycle);
-        var turnClock = Clock.FromTurns(cycle);
-        var firstIterations = first.Iterations.Trace(observation => observation.Iteration, [cycleClock, turnClock]);
-        var secondIterations = second.Iterations.Trace(observation => observation.Iteration, [cycleClock, turnClock]);
-
-        var run = cycle.Advised(firstIterations, secondIterations).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
-        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-
-        run.Result(firstIterations).By(cycleClock).Select(point => point.Time).ShouldBe([1L, 1L, 1L, 2L, 2L, 2L]);
-        run.Result(firstIterations).By(turnClock).Select(point => point.Time).ShouldBe([1L, 1L, 1L, 3L, 3L, 3L]);
-        run.Result(secondIterations).By(cycleClock).Select(point => point.Time).ShouldBe([1L, 1L, 2L, 2L]);
-        run.Result(secondIterations).By(turnClock).Select(point => point.Time).ShouldBe([2L, 2L, 4L, 4L]);
-    }
-
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));
 
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(

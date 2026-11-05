@@ -51,6 +51,7 @@ This example loads the named `berlin52` benchmark from a standard TSPLIB file, s
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 
@@ -66,13 +67,13 @@ var algorithm = GeneticAlgorithm.For(
     maximumGenerations: 500,
     mutationRate: 0.05);
 
-var run = algorithm
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TracePopulationCandidates(out var qualityAnalyzer);
+var quality = algorithm.Iterations.TracePopulationCandidates();
+var run = algorithm.Advised(quality)
+    .CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
 await run.CompleteAsync();
 
-var qualityCurve = qualityAnalyzer.Snapshot().Values;
+var qualityCurve = run.Result(quality).Snapshot().Values;
 var best = qualityCurve[^1].Best;
 
 Console.WriteLine($"Instance: {instance.Name}");

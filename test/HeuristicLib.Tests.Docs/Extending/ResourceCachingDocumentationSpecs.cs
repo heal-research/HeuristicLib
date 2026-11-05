@@ -71,9 +71,9 @@ public sealed class ResourceCachingDocumentationSpecs
         var memoized = new MemoizingEvaluator(evaluator) { SizeLimit = 100 };
         var space = new UnrestrictedIntegerSpace();
         var problem = FuncProblem.Create((int candidate) => candidate * candidate, space, SingleObjective.Minimize);
-        var evaluations = new CountAccumulator();
+        var evaluations = evaluator.Invocations.CountCandidates();
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.CountCandidates(evaluator, evaluations));
+        root.AddAspect(root.Results.Aspect(evaluations));
         var scope = root
             .For<int, UnrestrictedIntegerSpace, IProblem<int, UnrestrictedIntegerSpace>>();
         var first = scope.Resolve(memoized);
@@ -85,10 +85,10 @@ public sealed class ResourceCachingDocumentationSpecs
         #endregion resource-cache-usage
 
         results.ShouldAllBe(result => result.Select(vector => vector[0]).SequenceEqual(new[] { 1.0, 4.0, 9.0 }));
-        evaluations.CurrentCount.ShouldBeInRange(3, 4);
-        var before = evaluations.CurrentCount;
+        root.Results.Result(evaluations).CurrentCount.ShouldBeInRange(3, 4);
+        var before = root.Results.Result(evaluations).CurrentCount;
         second.Evaluate([3], RandomNumberGenerator.Create(4), space, problem);
-        evaluations.CurrentCount.ShouldBe(before);
+        root.Results.Result(evaluations).CurrentCount.ShouldBe(before);
     }
 
 }

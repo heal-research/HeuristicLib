@@ -92,7 +92,7 @@ public class GenealogyGraphTests
 
         var qres = run.Result(qualities).Snapshot();
         var eres = run.Result(evalQualities).Snapshot();
-        var gres = genealogyAnalysis.Graph;
+        var gres = run.Result(genealogyAnalysis);
 
         qres.Count.ShouldBe(gens);
         res.Population.EvaluatedCandidates.Count.ShouldBe(popsize);
@@ -117,9 +117,9 @@ public class GenealogyGraphTests
         var genealogy =
             new GenealogyAnalyzer<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>(
                 mutators: [algorithm.Mutator], algorithms: [algorithm]);
-        var run = algorithm.TerminatedAfterIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), setup: setup => setup.AddAspect(genealogy));
+        var run = algorithm.TerminatedAfterIterations(8).Advised(genealogy).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-        var gres = genealogy.Graph;
+        var gres = run.Result(genealogy);
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
         problem.SearchSpace.Contains(res.Population.EvaluatedCandidates.Single().Candidate).ShouldBeTrue();
         res.Population.EvaluatedCandidates.Single().ObjectiveVector.Count.ShouldBe(1);
@@ -154,7 +154,7 @@ public class GenealogyGraphTests
 
         var run = algorithm.Advised(genealogy).Advised(qualities).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-        var gres = genealogy.Graph;
+        var gres = run.Result(genealogy);
         var qres = run.Result(qualities).Snapshot();
 
         qres.Count.ShouldBe(maximumIterations);

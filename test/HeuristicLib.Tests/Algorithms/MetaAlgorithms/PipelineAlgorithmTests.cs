@@ -65,7 +65,7 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(analysis));
+        var run = pipeline.Advised(analysis).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 

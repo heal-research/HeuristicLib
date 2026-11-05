@@ -95,8 +95,7 @@ public sealed class CustomAdviceDocumentationSpecs
             messages.Add($"{source.GetType().Name}: call {call}, {count} offspring"));
         var logging = Aspect.Create(Pointcut.Reference(mutator), advice);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
-            .AddAspect(logging));
+        var run = algorithm.Advised(logging).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: cancellationToken);
         #endregion custom-advice-run
 
@@ -152,8 +151,7 @@ public sealed class CustomAdviceDocumentationSpecs
         var advice = new SlowCallAdvice(TimeSpan.Zero, TimeProvider.System,
             (source, elapsed) => slow.Add(source.GetType().Name));
         var operators = Pointcut.Reference<IOperator>(algorithm.Mutator) | Pointcut.Reference<IOperator>(algorithm.Evaluator);
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), setup: setup => setup
-            .AddAspect(Aspect.Create(operators, advice)));
+        var run = algorithm.Advised(Aspect.Create(operators, advice)).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         #endregion general-advice-run
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

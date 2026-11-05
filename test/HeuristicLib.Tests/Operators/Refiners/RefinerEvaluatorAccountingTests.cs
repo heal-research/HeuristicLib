@@ -92,7 +92,7 @@ public class RefinerEvaluatorAccountingTests
             new AddOffsetRefiner(-1),
             new AddOffsetRefiner(-5).CheckedForImprovement(observed));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountCandidates(observed, counter));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var problem = CreateProblem();
 

@@ -23,7 +23,7 @@ The built in composition overview is:
 | Logical composition                  | Combines child conditions with short circuit Boolean logic                                                    | `AnyTerminator`, `AllTerminator`                                                                            | Terminators                                                  |
 | Fallback composition                 | Handles part of a request directly and delegates the remainder                                                | `PredefinedCandidatesCreator`                                                                               | Creators                                                     |
 | Specialized coordination             | Applies a policy whose meaning depends on one operator contract                                               | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                                     |
-| Inspection                           | Wraps a selected execution boundary to observe, count or measure calls                                        | `Aspect.Observe`, `Aspect.CountInvocations` and `Aspect.MeasureDuration`                                    | Role-specific observations; counting and timing across roles |
+| Inspection                           | Wraps a selected execution boundary to observe, count or measure calls                                        | `Aspect.Observe`, source counters and source durations                                                      | Role-specific observations; counting and timing across roles |
 
 A missing helper usually means that the role does not provide the inputs needed by that policy or that the intermediate result has no single clear meaning. It does not prohibit authors from implementing a domain specific composition with explicit semantics.
 
@@ -185,40 +185,38 @@ using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 ```
 
-Counting and timing are aspects. They select the configured evaluator by reference and leave the reusable algorithm configuration unchanged:
+Counters and durations are instrument definitions. They select the evaluator by reference and collect into one result per run:
 
 ```csharp
 var evaluator = algorithm.Evaluator;
-var counter = new CountAccumulatorHandle();
-var counting = Aspect.CountCandidates(evaluator, counter);
+var counter = evaluator.Invocations.CountCandidates();
 var unshared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement()
 };
-var run = unshared.CreateRun(problem, random, setup: setup => setup.AddAspect(counting));
+var run = unshared.Advised(counter).CreateRun(problem, random);
 ```
 
 The improvement check uses its own evaluator configuration here, so the counter measures only the algorithm's evaluations. Share the selected evaluator to include comparison work:
 
 ```csharp
 var evaluator = algorithm.Evaluator;
-var counter = new CountAccumulatorHandle();
-var counting = Aspect.CountCandidates(evaluator, counter);
+var counter = evaluator.Invocations.CountCandidates();
 var shared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(evaluator)
 };
-var run = shared.CreateRun(problem, random, setup: setup => setup.AddAspect(counting));
+var run = shared.Advised(counter).CreateRun(problem, random);
 ```
 
 Each refined candidate causes two comparison evaluations and the algorithm's subsequent evaluation. All three reach the selected evaluator and increment the same counter.
 
-An external terminator can obtain the same run accumulator through its handle. Read the measured count with `run.Resource(counter).CurrentCount`:
+An external terminator reads the same run-bound counter definition. Read its value with `run.Result(counter).CurrentCount`:
 
 ```csharp
 var budgeted = shared.TerminatedBy(
     AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
-var run = budgeted.CreateRun(problem, random, setup: setup => setup.AddAspect(counting));
+var run = budgeted.Advised(counter).CreateRun(problem, random);
 ```
 
 `shared.LimitedToCandidates(evaluator, 100_000)` owns its accumulator and adds counting advice only to the resolution context for the budgeted algorithm. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
@@ -248,7 +246,7 @@ var constructed = new OperatorCountBudgetAlgorithm<RealVector, PopulationState<R
 
 A list selects every operation of each configuration by reference. Repeating a reference does not count it twice. The single operator overload retains its inferred operation, so it can select one operation of a configuration implementing several. Each budget executor owns one accumulator for all selected calls. Repeated runs remain independent. Duration is the sum of invocation durations, including overlapping and nested time, rather than wall clock time for the algorithm.
 
-For explicit runtime accounting, several observed operators can also feed the same termination criterion through a supplied `CountAccumulator`. Reusing such a live accumulator deliberately combines consumption across its callers.
+Use a list budget to combine work from several operators. A run-bound instrument remains independent of other runs, while a private budget restarts with its executor.
 
 Sharing the cached evaluator gives the algorithm and the improvement check one executor, and therefore one cache, which avoids the final repeated problem evaluation:
 
@@ -271,16 +269,14 @@ Select the outer cache configuration to count evaluation requests and its child 
 ```csharp
 var problemEvaluator = new ProblemEvaluator<RealVector>();
 var cache = problemEvaluator.Cached();
-var requests = Aspect.CountCandidates(cache, out var requestCount);
-var solves = Aspect.CountCandidates(problemEvaluator, out var solveCount);
+var requests = cache.Invocations.CountCandidates();
+var solves = problemEvaluator.Invocations.CountCandidates();
 
 var cached = algorithm with { Evaluator = cache };
-var run = cached.CreateRun(problem, random, setup: setup => setup
-    .AddAspect(requests)
-    .AddAspect(solves));
+var run = cached.Advised(requests, solves).CreateRun(problem, random);
 ```
 
-After the run, `requestCount` includes cache hits and `solveCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration, and share it so both uses hit one cache. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
+After the run, `run.Result(requests).CurrentCount` includes cache hits and `run.Result(solves).CurrentCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration, and share it so both uses hit one cache. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
 
 `LimitEvaluator` accounting is private to its executor. Share the limited evaluator, for example with `algorithm.Sharing(limited)`, when the refiner and algorithm need one allowance. Its separate check, evaluation and increment do not promise a strict limit under concurrent use. Cache and limit ordering determines whether hits consume allowance:
 
@@ -295,15 +291,15 @@ To attribute refinement effort separately instead of folding it into one counter
 
 ```csharp
 var refinementEvaluator = new ProblemEvaluator<RealVector>();
-var refinementCounting = Aspect.CountCandidates(refinementEvaluator, out var refinementCount);
+var refinementCount = refinementEvaluator.Invocations.CountCandidates();
 var attributed = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(refinementEvaluator)
 };
-var run = attributed.CreateRun(problem, random, setup: setup => setup.AddAspect(refinementCounting));
+var run = attributed.Advised(refinementCount).CreateRun(problem, random);
 ```
 
-`refinementCount` measures the improvement check's comparison evaluations. The algorithm's own evaluator is a different configuration, so its calls do not contribute to that count.
+`run.Result(refinementCount).CurrentCount` measures the improvement check's comparison evaluations. The algorithm's own evaluator is a different configuration, so its calls do not contribute to that count.
 
 ### Refinement evaluation
 
@@ -387,7 +383,7 @@ These types should document their own batching, state and cardinality behavior b
 
 ## Observation and inspection boundaries
 
-Inspection uses execution advice installed through aspects. `Aspect.Observe`, `Aspect.CountInvocations` and `Aspect.MeasureDuration` select existing configurations and wrap their executors; they do not add observation, counting or timing configurations to the operator graph.
+Instruments create run-bound counting and timing advice; aspects can also attach observation callbacks. `Aspect.Observe`, source counters and source durations select existing configurations and wrap their executors; they do not add observation, counting or timing configurations to the operator graph.
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 

@@ -489,8 +489,8 @@ public class RoutedOperatorTests
     public void DurationWrappers_SharingAChildConfiguration_CreateIndependentExecutors()
     {
         var innerOperator = new CountingExecutionMutator();
-        var firstWrapper = Aspect.MeasureDuration(innerOperator, new DurationAccumulator());
-        var secondWrapper = Aspect.MeasureDuration(innerOperator, new DurationAccumulator());
+        var firstWrapper = Aspect.Create(Pointcut.Reference(innerOperator), new DurationMeasuringOperatorAdvice(new DurationAccumulator(), TimeProvider.System));
+        var secondWrapper = Aspect.Create(Pointcut.Reference(innerOperator), new DurationMeasuringOperatorAdvice(new DurationAccumulator(), TimeProvider.System));
         var scope = ResolutionScope.Create();
         var firstScope = scope.CreateChildScope();
         firstScope.AddAspect(firstWrapper);

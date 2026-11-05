@@ -46,30 +46,3 @@ file readonly struct DurationMeasurement(DurationAccumulator duration, TimeProvi
         }
     }
 }
-
-public static class OperatorDurationExtensions
-{
-    extension(Aspect)
-    {
-        public static Aspect MeasureDuration<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, DurationAccumulator duration)
-            where TOperation : IOperation<TOperation> => Aspect.MeasureDuration(source, duration, TimeProvider.System);
-
-        public static Aspect MeasureDuration<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, DurationAccumulator duration, TimeProvider timeProvider)
-            where TOperation : IOperation<TOperation> =>
-            Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(duration, timeProvider));
-    }
-}
-
-public static class OperatorDurationAspectExtensions
-{
-    extension<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
-        where TOperation : IOperation<TOperation>
-    {
-        /// <summary>Creates an aspect that measures invocation duration in the supplied accumulator.</summary>
-        public Aspect MeasureDuration(DurationAccumulator duration) => Aspect.MeasureDuration(source, duration);
-
-        /// <summary>Creates an aspect that measures invocation duration using the supplied clock.</summary>
-        public Aspect MeasureDuration(DurationAccumulator duration, TimeProvider timeProvider) =>
-            Aspect.MeasureDuration(source, duration, timeProvider);
-    }
-}

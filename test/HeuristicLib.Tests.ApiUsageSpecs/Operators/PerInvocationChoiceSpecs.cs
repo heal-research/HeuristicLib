@@ -24,20 +24,17 @@ public sealed class PerInvocationChoiceSpecs
             populationSize: 10,
             maximumGenerations: 5,
             mutationRate: 1.0);
-        var fineTuningCalls = new CountAccumulator();
-        var exploringCalls = new CountAccumulator();
-        var choiceCalls = new CountAccumulator();
+        var fineTuningCalls = fineTuning.Invocations.Count();
+        var exploringCalls = exploring.Invocations.Count();
+        var choiceCalls = mutator.Invocations.Count();
 
-        var states = algorithm.CreateRun(problem, RandomNumberGenerator.Create(7), setup: setup => setup
-            .AddAspect(Aspect.CountInvocations(fineTuning, fineTuningCalls))
-            .AddAspect(Aspect.CountInvocations(exploring, exploringCalls))
-            .AddAspect(Aspect.CountInvocations(mutator, choiceCalls)))
-            .Stream(cancellationToken: TestContext.Current.CancellationToken)
+        var run = algorithm.Advised(fineTuningCalls, exploringCalls, choiceCalls).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
             .ToList();
 
         states.Count.ShouldBe(5);
         mutator.Weights.ShouldBe([3.0, 1.0]);
-        choiceCalls.CurrentCount.ShouldBePositive();
-        (fineTuningCalls.CurrentCount + exploringCalls.CurrentCount).ShouldBe(choiceCalls.CurrentCount);
+        run.Result(choiceCalls).CurrentCount.ShouldBePositive();
+        (run.Result(fineTuningCalls).CurrentCount + run.Result(exploringCalls).CurrentCount).ShouldBe(run.Result(choiceCalls).CurrentCount);
     }
 }

@@ -59,7 +59,7 @@ public class ObservationSourceRequirementTests
         var withCrossoverOnly = new GenealogyAnalyzer<RealVector, PopulationState<RealVector>>(
             crossovers: [new SinglePointCrossover()]);
 
-        withCrossoverOnly.Graph.ShouldNotBeNull();
+        ResolutionScope.Create().Results.Result(withCrossoverOnly).ShouldNotBeNull();
     }
 
     private sealed class NoSimilarity : ICandidateSimilarityCalculator<RealVector>

@@ -3,7 +3,6 @@ using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
@@ -11,15 +10,18 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// Builds the genealogy graph of a run from crossover, mutation and generation boundaries.
 /// </summary>
 /// <remarks>
-/// This analyzer holds its own data. It combines multiple kinds of boundary into a graph with domain-specific
+/// Each run creates its own graph. It combines multiple kinds of boundary into a graph with domain-specific
 /// queries. The graph is an accumulator, so read it once the run has finished.
 /// </remarks>
-public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : AccumulatingAnalyzer
+public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : Instrument<GenealogyGraph<TCandidate>>
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
     private readonly bool saveSpace;
-    private readonly GenealogyGraph<TCandidate> graph;
+    private readonly ValueArray<IOperator<Crossover, TCandidate>> crossovers;
+    private readonly ValueArray<IOperator<Mutation, TCandidate>> mutators;
+    private readonly ValueArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
+    private readonly IEqualityComparer<TCandidate> equality;
 
     /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
     /// <param name="mutators">Mutators whose offspring become graph edges from one parent.</param>
@@ -38,59 +40,53 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : AccumulatingAn
                              IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                              IEqualityComparer<TCandidate>? equality = null,
                              bool saveSpace = false)
-        : this(new GenealogyGraph<TCandidate>(equality ?? EqualityComparer<TCandidate>.Default), crossovers, mutators, algorithms, saveSpace)
-    {
-    }
-
-    /// <summary>
-    /// Builds into a graph another analyzer owns, so that one analysis can reuse this observation logic while
-    /// publishing a different result.
-    /// </summary>
-    internal GenealogyAnalyzer(GenealogyGraph<TCandidate> graph,
-                               IReadOnlyList<IOperator<Crossover, TCandidate>>? crossovers,
-                               IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators,
-                               IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms,
-                               bool saveSpace)
     {
         if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
             throw new ArgumentException("A genealogy analysis needs at least one crossover, mutator or algorithm to observe.");
-
-        this.graph = graph;
+        this.crossovers = (crossovers ?? []).ToValueArray();
+        this.mutators = (mutators ?? []).ToValueArray();
+        this.algorithms = (algorithms ?? []).ToValueArray();
+        this.equality = equality ?? EqualityComparer<TCandidate>.Default;
         this.saveSpace = saveSpace;
-        Advices =
-        [
-            .. (crossovers ?? []).SelectMany(crossover => Aspect.Observe(
-                crossover.Invocations, observation => AfterCross(observation.Offspring, observation.Parents))),
-            .. (mutators ?? []).SelectMany(mutator => Aspect.Observe(
-                mutator.Invocations, observation => AfterMutate(observation.Offspring, observation.Parents))),
-            .. (algorithms ?? []).SelectMany(algorithm => Aspect.Observe(
-                algorithm.Iterations, observation => CloseGeneration(observation.State, observation.Problem)))
-        ];
     }
 
-    /// <summary>The graph this analyzer accumulates.</summary>
-    public GenealogyGraph<TCandidate> Graph => graph;
+    protected override GenealogyGraph<TCandidate> CreateResult(RunResults results) => new(equality);
+
+    protected override Aspect CreateAspect(GenealogyGraph<TCandidate> result, RunResults results) => Observe(result);
+
+    internal Aspect Observe(GenealogyGraph<TCandidate> graph) =>
+        new Collection(graph, crossovers, mutators, algorithms, saveSpace, ObjectiveComparer);
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
 
-    private void AfterCross(IReadOnlyList<TCandidate> offspring, IReadOnlyList<Parents<TCandidate>> parents)
+    private sealed class Collection : Aspect
     {
-        foreach (var (parentPair, child) in parents.Zip(offspring))
-            graph.AddConnection([parentPair.Parent1, parentPair.Parent2], child);
-    }
-
-    private void AfterMutate(IReadOnlyList<TCandidate> offspring, IReadOnlyList<TCandidate> parents)
-    {
-        foreach (var (parent, child) in parents.Zip(offspring))
-            graph.AddConnection([parent], child);
-    }
-
-    private void CloseGeneration(TSearchState currentState, IProblem problem)
-    {
-        var ordered = currentState.Population
-                                  .OrderBy(keySelector: x => x.ObjectiveVector, problem.Objective.RequireTotalOrder(ObjectiveComparer))
-                                  .ToArray();
-        graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
+        public Collection(GenealogyGraph<TCandidate> graph,
+            IReadOnlyList<IOperator<Crossover, TCandidate>> crossovers,
+            IReadOnlyList<IOperator<Mutation, TCandidate>> mutators,
+            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms,
+            bool saveSpace, IComparer<ObjectiveVector>? objectiveComparer)
+        {
+            Advices =
+            [
+                .. crossovers.SelectMany(crossover => Aspect.Observe(crossover.Invocations, observation =>
+                {
+                    foreach (var (parents, child) in observation.Parents.Zip(observation.Offspring))
+                        graph.AddConnection([parents.Parent1, parents.Parent2], child);
+                })),
+                .. mutators.SelectMany(mutator => Aspect.Observe(mutator.Invocations, observation =>
+                {
+                    foreach (var (parent, child) in observation.Parents.Zip(observation.Offspring))
+                        graph.AddConnection([parent], child);
+                })),
+                .. algorithms.SelectMany(algorithm => Aspect.Observe(algorithm.Iterations, observation =>
+                {
+                    var ordered = observation.State.Population.OrderBy(x => x.ObjectiveVector,
+                        observation.Problem.Objective.RequireTotalOrder(objectiveComparer));
+                    graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
+                }))
+            ];
+        }
     }
 }
 

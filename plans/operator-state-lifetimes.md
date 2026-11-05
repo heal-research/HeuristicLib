@@ -1,14 +1,14 @@
 # Operator state lifetimes
 
-Status on 2026-11-04:
+Status on 2026-11-05:
 
-- **Implemented:** executor fields, [lifetime binding through explicit `Sharing`](#lifetime-binding-through-sharing-accepted-on-2026-11-03), removal of the cache and limit handles and of `Cycle.ReuseExecutors`.
-- **Accepted, implementation in progress:** [the scope as the sharing unit](#default-sharing-the-scope-is-the-unit-accepted-on-2026-11-03), with [advice and sharing belonging to the scope](#advice-and-scope-layers-under-discussion-since-2026-11-04), run-bound results and observation through executor calls. The developer accepted the consolidated design and the [design review](#design-review-on-2026-11-04) integration on 2026-11-04. The [implementation sequence](#implementation-sequence-confirmed-on-2026-11-04) records the order of work. Step 1, the scope model, is implemented; its [decisions](#step-1-decisions-accepted-on-2026-11-04) are recorded. Step 2, instruments and observation, is implemented under its [decisions](#step-2-decisions-accepted-on-2026-11-04) and awaits the developer's review, with [open decisions](#step-2-implementation-and-review-on-2026-11-04) still to settle. Published documentation still describes the earlier scope layers until step 4.
-- **Provisional, still present:** the accounting handles and supply APIs. Since step 2 the two operator count and duration terminators read [run-bound results](#advice-and-scope-layers-under-discussion-since-2026-11-04) instead, and step 3 removes the handles.
+- **Implemented through step 3:** executor fields, explicit `Sharing`, default sharing within a scope, run-bound instruments and results, and observation through executor calls. Setup, resource supply and handles, observation points, per-trial aspect mappings and live-accumulator accounting factories are removed. Accumulating analyses create per-run results. See the [step 3 migration and validation record](operator-unification-step3-migration.md).
+- **Accepted migration decisions:** the existing advised-case grid path, direct `Instrument<TResult>` accumulating definitions, and dynamic performance reading each observation's problem. The developer reviewed the implementation and authorized committing it on 2026-11-05.
+- **Deferred:** the broad step 4 documentation rewrite and all simplification selections. Affected examples and directly contradictory documentation have been corrected; retained limitations are recorded in the migration plan.
 
 The P0 through P5 completion and validation results in this plan apply to the earlier implementation, not the accepted default sharing design.
 
-This plan supersedes the earlier recommendation to start with option 1.1 and the scoped state, ancestor reuse, child ownership and child scope policy decisions in the [operator unification plan](operator-role-parameterization-rework.md). Published architecture documentation now describes executor fields and explicit run resources. Resource terminology is canonical in the glossary.
+This plan supersedes the earlier recommendation to start with option 1.1 and the scoped state, ancestor reuse, child ownership and child scope policy decisions in the [operator unification plan](operator-role-parameterization-rework.md). Published architecture documentation describes executor fields, explicit sharing and run-bound instrument results. The glossary records that terminology.
 
 ### Provisional status of resource handles, recorded on 2026-11-03
 
@@ -397,6 +397,8 @@ The open decisions above are the remaining findings: the inference cost of the p
 - Found while fixing, not changed: the observation wrappers of `Iterations`, since before step 2, and of `Calls` do not forward the wrapped algorithm executor's controls either, nor does `WrappingAlgorithmExecutor`, although execution resolution requires transparent advice wrappers to forward them.
 
 **Left for step 3:** a migration plan for the developer's agreement, then the removal of run setup, `ResolutionScopeBuilder`, the resource handles and `RunResources`, observation points with the Cycle points and `FromCycles` and `FromTurns`, per-trial aspects and the counting and timing aspects with live accumulators; the accumulating analyses as instruments; decision 5; and the root `README.md` example, which already used an API that did not exist at `27c295ac`.
+
+**Step 3 scope accepted on 2026-11-05.** The developer selected finishing step 3 as the baseline before deciding any simplifications. The [concrete migration plan](operator-unification-step3-migration.md) records the removal inventory, proposed experiment and accumulating-result migrations, validation and completion criteria. Its decisions A and B, including the dynamic problem dependency, were accepted on the same day. Broad step 4 rewriting remains deferred; affected examples and directly contradictory API documentation migrate with step 3.
 
 ## Problem and accepted decision
 

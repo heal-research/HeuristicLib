@@ -12,7 +12,7 @@ public class EvaluatorInspectionTests
     {
         var counter = new CountAccumulator();
         var evaluator = CreateEvaluator();
-        var aspect = Aspect.CountInvocations(evaluator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice<Evaluation, int>(counter, OperatorCountMetric.Invocations));
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Counter.ShouldBeSameAs(counter);
         aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
@@ -31,7 +31,7 @@ public class EvaluatorInspectionTests
     {
         var counter = new CountAccumulator();
         var evaluator = CreateEvaluator();
-        var aspect = Aspect.CountCandidates(evaluator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
         var scope = ResolutionScope.Create();
         scope.AddAspect(aspect);
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
@@ -49,7 +49,7 @@ public class EvaluatorInspectionTests
         var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var evaluator = CreateEvaluator();
-        var aspect = Aspect.MeasureDuration(evaluator, duration, timeProvider);
+        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new DurationMeasuringOperatorAdvice<Evaluation, int>(duration, timeProvider));
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().Duration.ShouldBeSameAs(duration);
         aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
@@ -68,7 +68,7 @@ public class EvaluatorInspectionTests
     {
         var counter = new CountAccumulator();
         var evaluator = new ThrowingEvaluator();
-        var aspect = Aspect.CountInvocations(evaluator, counter);
+        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations));
         var problem = CreateProblem();
 
         var scope = ResolutionScope.Create();
@@ -84,7 +84,7 @@ public class EvaluatorInspectionTests
     {
         var duration = new DurationAccumulator();
         var evaluator = new ThrowingEvaluator();
-        var aspect = Aspect.MeasureDuration(evaluator, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new DurationMeasuringOperatorAdvice(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))));
         var problem = CreateProblem();
 
         var scope = ResolutionScope.Create();

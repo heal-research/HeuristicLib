@@ -54,7 +54,7 @@ public class MoveResolutionTests
         IOperator<MoveEvaluation<int>, int> evaluator = new CountingEvaluator(new Counter());
         var candidates = new CountAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountCandidates(evaluator, candidates));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice<MoveEvaluation<int>, int>(candidates, OperatorCountMetric.Candidates)));
         var executor = scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator);
 
         executor.Evaluate(new ObjectiveVector(0), 0, 0, Random, SearchSpace, Problem);

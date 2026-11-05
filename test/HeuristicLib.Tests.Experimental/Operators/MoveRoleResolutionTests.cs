@@ -30,9 +30,9 @@ public class MoveRoleResolutionTests
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
         var (creations, applications, evaluations) = (new CountAccumulator(), new CountAccumulator(), new CountAccumulator());
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.CountInvocations(neighborhood.MoveCreator, creations));
-        root.AddAspect(Aspect.CountInvocations(neighborhood.MoveApplier, applications));
-        root.AddAspect(Aspect.CountInvocations(neighborhood.MoveEvaluator, evaluations));
+        root.AddAspect(Aspect.Create(Pointcut.Reference(neighborhood.MoveCreator), new CountingOperatorAdvice<MoveCreation<int>, RealVector>(creations, OperatorCountMetric.Invocations)));
+        root.AddAspect(Aspect.Create(Pointcut.Reference(neighborhood.MoveApplier), new CountingOperatorAdvice<MoveApplication<int>, RealVector>(applications, OperatorCountMetric.Invocations)));
+        root.AddAspect(Aspect.Create(Pointcut.Reference(neighborhood.MoveEvaluator), new CountingOperatorAdvice<MoveEvaluation<int>, RealVector>(evaluations, OperatorCountMetric.Invocations)));
         var scope = root
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var random = RandomNumberGenerator.Create(1);

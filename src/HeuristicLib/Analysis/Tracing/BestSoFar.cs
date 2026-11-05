@@ -97,22 +97,16 @@ public static class BestSoFarTraces
         /// <remarks>Each run keeps its own best so far.</remarks>
         public TraceAnalyzer<EvaluationObservation<TCandidate>, ObjectiveVector> TraceBestSoFar(IReadOnlyList<IClock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null) =>
-            Analyzer.Trace<EvaluationObservation<TCandidate>, ObjectiveVector>(invocations, () =>
-                {
-                    var best = new BestSoFar(objectiveComparer);
-                    return observation => best.Update(observation.ObjectiveVectors, observation.Problem.Objective);
-                },
+            Analyzer.Trace(invocations, () => new BestSoFar(objectiveComparer),
+                (best, observation) => best.Update(observation.ObjectiveVectors, observation.Problem.Objective),
                 clocks, retention ?? TraceRetention.OnChange());
 
         /// <summary>Accumulates the best evaluated candidate across the invocations of several evaluators into one trace.</summary>
         /// <remarks>Each run keeps its own best so far.</remarks>
         public TraceAnalyzer<EvaluationObservation<TCandidate>, EvaluatedCandidate<TCandidate>> TraceBestCandidateSoFar(IReadOnlyList<IClock>? clocks = null,
             TraceRetention? retention = null, IComparer<ObjectiveVector>? objectiveComparer = null) =>
-            Analyzer.Trace<EvaluationObservation<TCandidate>, EvaluatedCandidate<TCandidate>>(invocations, () =>
-                {
-                    var best = new BestSoFar<EvaluatedCandidate<TCandidate>>(static candidate => candidate.ObjectiveVector, objectiveComparer);
-                    return observation => best.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective);
-                },
+            Analyzer.Trace(invocations, () => new BestSoFar<EvaluatedCandidate<TCandidate>>(static candidate => candidate.ObjectiveVector, objectiveComparer),
+                (best, observation) => best.Update(observation.Candidates.ToEvaluated(observation.ObjectiveVectors), observation.Problem.Objective),
                 clocks, retention ?? TraceRetention.OnChange());
     }
 }

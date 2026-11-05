@@ -17,56 +17,32 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Tests.Docs.Execution;
 
 #region observability-accumulating-analyzer
-public sealed class CandidateSummaryAnalyzer<TCandidate> : AccumulatingAnalyzer
+public sealed class CandidateSummaryAnalyzer<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
+    : Instrument<CandidateSummary<TCandidate>>
 {
+    protected override CandidateSummary<TCandidate> CreateResult(RunResults results) => new();
+
+    protected override Aspect CreateAspect(CandidateSummary<TCandidate> result, RunResults results) =>
+        Aspect.Observe(evaluator.Invocations, observation => result.Add(observation.Candidates));
+}
+
+public sealed class CandidateSummary<TCandidate>
+{
+    private readonly Lock sync = new();
     private readonly List<TCandidate> candidates = [];
 
-    public CandidateSummaryAnalyzer(IOperator<Evaluation, TCandidate> evaluator)
-    {
-        Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
-    }
-
+    // Read the live collection once execution has stopped.
     public IReadOnlyList<TCandidate> Candidates => candidates;
 
-    private void Record(EvaluationObservation<TCandidate> observation)
+    public void Add(IReadOnlyList<TCandidate> batch)
     {
-        lock (Sync)
-        {
-            candidates.AddRange(observation.Candidates);
-        }
+        lock (sync)
+            candidates.AddRange(batch);
     }
 }
 #endregion observability-accumulating-analyzer
 
-#region observability-point-type
-public sealed record CoolingStep(int Step, double Temperature);
 
-public interface ICoolingScheduleExecutor : IExecutor
-{
-    double Temperature(int step);
-}
-
-public sealed record GeometricCooling(double StartTemperature, double Factor) : IConfigurationNode<ICoolingScheduleExecutor>
-{
-    public ObservationPoint<CoolingStep> Steps => ObservationPoint.Of<CoolingStep>(this, nameof(Steps));
-
-    public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope)
-    {
-        var steps = scope.Resolve(Steps);
-        return new Executor(StartTemperature, Factor, steps);
-    }
-
-    private sealed class Executor(double startTemperature, double factor, IObservationPointExecutor<CoolingStep> steps) : ICoolingScheduleExecutor
-    {
-        public double Temperature(int step)
-        {
-            var temperature = startTemperature * Math.Pow(factor, step);
-            steps.Report(new CoolingStep(step, temperature));
-            return temperature;
-        }
-    }
-}
-#endregion observability-point-type
 
 #region observability-custom-pointcut
 public sealed class SmallMutations : Pointcut<IOperator<Mutation, RealVector>>
@@ -196,7 +172,7 @@ public sealed class ObservabilityDocumentationSpecs
         var run = algorithm.Advised(summary).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        summary.Candidates.Count.ShouldBe(12);
+        run.Result(summary).Candidates.Count.ShouldBe(12);
     }
 
     [Fact]
@@ -215,11 +191,8 @@ public sealed class ObservabilityDocumentationSpecs
         #endregion observability-custom-traces
 
         #region observability-best-so-far
-        var bestSoFar = evaluator.Invocations.Trace<EvaluationObservation<RealVector>, ObjectiveVector>(() =>
-        {
-            var best = new BestSoFar();
-            return observation => best.Update(observation.ObjectiveVectors, observation.Problem.Objective);
-        });
+        var bestSoFar = evaluator.Invocations.Trace(() => new BestSoFar(),
+            (best, observation) => best.Update(observation.ObjectiveVectors, observation.Problem.Objective));
         #endregion observability-best-so-far
 
         var run = algorithm.Advised(size, offspring, quality, bestSoFar).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
@@ -262,7 +235,7 @@ public sealed class ObservabilityDocumentationSpecs
     }
 
     [Fact]
-    public async Task ACycleReportsItsCyclesAndTurns()
+    public async Task ACycleReportsItsInnerAlgorithmCalls()
     {
         var exploration = CreateAlgorithm(maximumGenerations: 3);
         var exploitation = CreateAlgorithm(maximumGenerations: 2);
@@ -272,37 +245,17 @@ public sealed class ObservabilityDocumentationSpecs
 
         #region observability-cycle
         var cycle = CycleAlgorithm.Create(exploration, exploitation) with { MaximumCycles = 2 };
-        var cycles = Clock.FromCycles(cycle);
-        var iterations = exploitation.Iterations.Count();
-        var iteration = exploitation.Iterations.Trace(observation => observation.Iteration, [cycles, iterations]);
-        var turns = new List<string>();
-        var run = cycle
-            .Advised(iteration)
-            .Advised(Aspect.Observe(cycle.Turns, turn => turns.Add($"cycle {turn.Cycle}, turn {turn.Turn}: algorithm {turn.Index}")))
-            .CreateRun(problem, random);
+        var calls = exploitation.Calls.Count();
+        var iteration = exploitation.Iterations.Trace(observation => observation.Iteration, [calls]);
+        var turns = Analyzer.Trace(new[] { exploration.Calls, exploitation.Calls }, call => call.Event);
+        var run = cycle.Advised(iteration, turns).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
         #endregion observability-cycle
 
-        run.Result(iteration).By(cycles).Select(point => (point.Time, point.Value)).ShouldBe([(1L, 1L), (1L, 2L), (2L, 1L), (2L, 2L)]);
-        run.Result(iteration).By(iterations).Select(point => (point.Time, point.Value)).ShouldBe([(1L, 1L), (2L, 2L), (3L, 1L), (4L, 2L)]);
-        turns.ShouldBe(["cycle 1, turn 1: algorithm 0", "cycle 1, turn 2: algorithm 1", "cycle 2, turn 3: algorithm 0", "cycle 2, turn 4: algorithm 1"]);
-    }
-
-    [Fact]
-    public void AConfigurationOfYourOwnPublishesItsObservations()
-    {
-        #region observability-point-use
-        var schedule = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
-        var temperatures = schedule.Steps.Trace(static step => step.Temperature);
-        var scope = ResolutionScope.Create();
-        scope.AddAspect(scope.Results.Aspect(temperatures));
-        var executor = scope.Resolve(schedule);
-
-        executor.Temperature(step: 0);
-        executor.Temperature(step: 1);
-        #endregion observability-point-use
-
-        scope.Results.Result(temperatures).Snapshot().Values.ShouldBe([100.0, 50.0]);
+        run.Result(iteration).By(calls).Select(point => (point.Time, point.Value)).ShouldBe([(1L, 1L), (1L, 2L), (2L, 1L), (2L, 2L)]);
+        run.Result(turns).Snapshot().Values.ShouldBe([
+            AlgorithmCallEvent.Started, AlgorithmCallEvent.Completed, AlgorithmCallEvent.Started, AlgorithmCallEvent.Completed,
+            AlgorithmCallEvent.Started, AlgorithmCallEvent.Completed, AlgorithmCallEvent.Started, AlgorithmCallEvent.Completed]);
     }
 
     [Fact]
@@ -315,17 +268,15 @@ public sealed class ObservabilityDocumentationSpecs
         var offspring = new List<int>();
 
         #region observability-aspects
-        var counter = new CountAccumulator();
-        var counting = algorithm.Mutator.CountInvocations(counter);
-        var duration = new DurationAccumulator();
-        var timing = algorithm.Mutator.MeasureDuration(duration, TimeProvider.System);
+        var counting = algorithm.Mutator.Invocations.Count();
+        var timing = algorithm.Mutator.Invocations.Duration();
         var observation = Aspect.Observe(algorithm.Mutator.Invocations,
             value => offspring.Add(value.Offspring.Count));
-        var run = algorithm.Advised(counting, timing, observation).CreateRun(problem, random);
+        var run = algorithm.Advised(counting, timing).Advised(observation).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
         #endregion observability-aspects
 
-        counter.CurrentCount.ShouldBe(2L);
+        run.Result(counting).CurrentCount.ShouldBe(2L);
         offspring.ShouldBe([4, 4]);
     }
 

@@ -635,7 +635,7 @@ public class OperatorCountBudgetAlgorithmTests
         var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
 
         algorithm.LimitedToCandidates(algorithm.Evaluator, maximumCandidates: 1000)
-                 .CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(analyzer))
+                 .Advised(analyzer).CreateRun(problem, RandomNumberGenerator.Create(42))
                  .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
@@ -657,7 +657,7 @@ public class OperatorCountBudgetAlgorithmTests
         var unbudgeted = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count();
 
         var budgeted = algorithm.LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), clock)
-            .CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(slowObservation))
+            .Advised(slowObservation).CreateRun(problem, RandomNumberGenerator.Create(42))
             .Stream(cancellationToken: TestContext.Current.CancellationToken).Count();
 
         budgeted.ShouldBe(unbudgeted);

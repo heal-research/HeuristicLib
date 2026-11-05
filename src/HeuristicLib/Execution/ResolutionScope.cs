@@ -29,15 +29,11 @@ public partial class ResolutionScope
     }
 
     /// <summary>Creates the root of a new scope tree, without advice, with the results of a new run.</summary>
-    public static ResolutionScope Create() =>
-        Create([]);
-
-    internal static ResolutionScope Create(IEnumerable<KeyValuePair<object, object>> supplied) =>
-        Create(supplied, TimeProvider.System);
+    public static ResolutionScope Create() => Create(TimeProvider.System);
 
     // The time provider measures the root algorithm's elapsed time; tests pass a controllable one.
-    internal static ResolutionScope Create(IEnumerable<KeyValuePair<object, object>> supplied, TimeProvider timeProvider) =>
-        new(new Node(new Tree(new RunResults(supplied, timeProvider)), null));
+    internal static ResolutionScope Create(TimeProvider timeProvider) =>
+        new(new Node(new Tree(new RunResults(timeProvider)), null));
 
     /// <summary>The results of the run this scope tree belongs to, one per instrument.</summary>
     /// <remarks>
@@ -45,10 +41,6 @@ public partial class ResolutionScope
     /// of one tree has the same results.
     /// </remarks>
     public RunResults Results => node.Tree.Results;
-
-    /// <remarks>Lookup is lazy and uses handle identity. It does not serialize access to the resource itself.</remarks>
-    public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class =>
-        node.Tree.Results.Resource(handle);
 
     /// <summary>Adds an aspect to this scope, so that its advice applies to every later resolution here and in child scopes.</summary>
     /// <remarks>

@@ -71,13 +71,13 @@ public sealed class AlpsMutationCompositionTests
         var algorithm = CreateAlgorithm(rate);
         if (noChange)
             algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
-        var count = new CountAccumulator();
+        var candidates = algorithm.Mutator.Invocations.CountCandidates();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountCandidates(algorithm.Mutator, count));
+        scope.AddAspect(scope.Results.Aspect(candidates));
 
         await States(scope, algorithm);
 
-        count.CurrentCount.ShouldBe(0);
+        scope.Results.Result(candidates).CurrentCount.ShouldBe(0);
     }
 
     private sealed class OfferedMutators(List<IOperator<Mutation, int>> offered) : Pointcut<IOperator<Mutation, int>>

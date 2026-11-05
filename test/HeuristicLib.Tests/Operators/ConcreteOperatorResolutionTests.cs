@@ -68,13 +68,13 @@ public sealed class ConcreteOperatorResolutionTests
         var parent = ResolutionScope.Create();
         invoke(parent);
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(creator, counters[0]));
-        child.AddAspect(Aspect.CountInvocations(crossover, counters[1]));
-        child.AddAspect(Aspect.CountInvocations(mutator, counters[2]));
-        child.AddAspect(Aspect.CountInvocations(refiner, counters[3]));
-        child.AddAspect(Aspect.CountInvocations(evaluator, counters[4]));
-        child.AddAspect(Aspect.CountInvocations(female, counters[5]));
-        child.AddAspect(Aspect.CountInvocations(male, counters[6]));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice(counters[0], OperatorCountMetric.Invocations)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(crossover), new CountingOperatorAdvice(counters[1], OperatorCountMetric.Invocations)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice(counters[2], OperatorCountMetric.Invocations)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(refiner), new CountingOperatorAdvice(counters[3], OperatorCountMetric.Invocations)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counters[4], OperatorCountMetric.Invocations)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(female), new CountingOperatorAdvice(counters[5], OperatorCountMetric.Invocations)));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(male), new CountingOperatorAdvice(counters[6], OperatorCountMetric.Invocations)));
 
         invoke(child);
         counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations);

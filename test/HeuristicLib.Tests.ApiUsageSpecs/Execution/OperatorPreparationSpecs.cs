@@ -18,19 +18,19 @@ public sealed partial class OperatorPreparationSpecs
     {
         IOperator<Mutation, RealVector> source = new IdentityMutation();
         var twice = new Twice<Mutation, RealVector>(source);
-        var childCalls = new CountAccumulator();
-        var wrapperCalls = new CountAccumulator();
+        var childCalls = source.Invocations.Count();
+        var wrapperCalls = twice.Invocations.Count();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, childCalls));
-        scope.AddAspect(Aspect.CountInvocations(twice, wrapperCalls));
+        scope.AddAspect(scope.Results.Aspect(childCalls));
+        scope.AddAspect(scope.Results.Aspect(wrapperCalls));
         var executor = scope
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(twice);
         var problem = new TestFunctionProblem(new SphereFunction(1));
         IReadOnlyList<RealVector> parents = [new(1.0)];
 
         executor.Mutate(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(parents);
-        childCalls.CurrentCount.ShouldBe(2);
-        wrapperCalls.CurrentCount.ShouldBe(1);
+        scope.Results.Result(childCalls).CurrentCount.ShouldBe(2);
+        scope.Results.Result(wrapperCalls).CurrentCount.ShouldBe(1);
     }
 
     [Fact]

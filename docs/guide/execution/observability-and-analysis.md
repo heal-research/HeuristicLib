@@ -1,6 +1,6 @@
 # Observability and analysis
 
-An analyzer collects data from the execution boundaries you select. Create it, add it through the run setup callback, then read its typed properties or take a snapshot.
+An analyzer defines the analysis of selected execution boundaries. Attach the definition with `Advised`, create a run, then read the typed result through `run.Result(analyzer)`. Each run creates independent result data.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-imports{csharp}
 
@@ -12,14 +12,14 @@ An algorithm observation captures each search state it yields, after its interce
 
 An analyzer is one of several ways to see what a run does. Pick by what you need:
 
-| Need                                                                                        | Use                                                                                            |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                            |
-| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                     |
-| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer attached with `AddAspect`                                                          |
-| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect added with `AddAspect`                                                               |
-| A count or duration that stops or limits the run                                            | Inspection such as `CountCandidates` or `LimitedToCandidates`, read by terminators and budgets |
-| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                              |
+| Need                                                                                        | Use                                                                                                          |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                          |
+| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                                   |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An instrument attached with `Advised`                                                                        |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect attached with `Advised`                                                                            |
+| A count or duration that stops or limits the run                                            | Inspection such as `Invocations.CountCandidates()` or `LimitedToCandidates`, read by terminators and budgets |
+| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                            |
 
 Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. General aspects may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
 
@@ -33,11 +33,11 @@ Ready-made traces are extensions on sources, such as `evaluator.Invocations` or 
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-boundary-and-clock{csharp}
 
-A clock gives each recorded entry its time. `Clock.FromIterations(algorithm)` counts an algorithm's iterations, `Clock.FromInvocations(source)` an operator's invocations and `Clock.FromCandidates(source)` the candidates its invocations produced or evaluated. A counting clock keeps its own count and never runs backwards, even where the observed number restarts, as an algorithm's `Iteration` does in each call; see [Cycles and turns](#cycles-and-turns). `Clock.FromElapsedTime(timeProvider)` measures time since the clock was constructed. Create it when that interval should begin.
+A clock gives each recorded entry its time. `algorithm.Iterations.Count()` counts yielded states, `algorithm.Calls.Count()` counts started calls, and `source.Invocations.Count()` or `CountCandidates()` counts successful operator calls or their candidate work. `Clock.Elapsed` measures time spent advancing the root algorithm, excluding pauses and consumer work. Counts accumulate across fresh executor activations within one run.
 
 Several traces may share the same clock in one run. Its advice applies once. Use that same clock object to project the trace; constructing another clock does not identify the original axis.
 
-Candidate counts describe the selected boundary. A caching evaluator's outer boundary can count requests while its inner evaluator counts cache misses. Choose the boundary whose work you intend to compare. An operation without candidate work cannot have a candidate clock; resolution rejects it before the run starts, and `Clock.FromInvocations` counts it instead.
+Candidate counts describe the selected boundary. A caching evaluator's outer boundary counts requests while its inner evaluator counts cache misses. An operation without candidate work rejects `Invocations.CountCandidates()` when the definition is created; use `Invocations.Count()` for its calls.
 
 Observation sources match configurations by reference. A copied configuration is observed separately, even if its settings compare equal. A configuration that never participates produces no observations. Create analyzers for the actual configured objects that will execute. An operator implementing several operations offers each operation's source through that operation's typed view.
 
@@ -48,7 +48,7 @@ A source resembles a cold `IObservable<T>`: it describes observations without pr
 ```csharp
 var subject = new Subject<CrossoverObservation<RealVector>>();
 var feed = Aspect.Observe(crossover.Invocations, subject.OnNext);
-var run = algorithm.CreateRun(problem, random, setup: setup => setup.AddAspect(feed));
+var run = algorithm.Advised(feed).CreateRun(problem, random);
 ```
 
 The callback runs on the thread that invoked the operator, inside the wrapped invocation.
@@ -67,13 +67,13 @@ Names compare exactly and case-sensitively. Several nodes may share a name, and 
 
 ## Ownership and reads
 
-The `CreateRun` setup callback accepts analyzers and other aspects through `setup.AddAspect`. It collects them in the supplied order and snapshots setup before returning the run; resolution weaves their advice into the execution graph when the run starts. Adding the same aspect again does not apply its advice twice. Create fresh analyzers and clocks for independent results. You may reuse them across runs when combined history or cumulative counts are intentional. Adding an aspect does not reset its collected data.
+Attach instruments and aspects through `Advised` before creating a run. Instruments are reusable definitions; each run creates a fresh result, clock state and retention state. A definition attached several times in one run still collects into that run's single result, and shared advice applies once by reference. Raw aspects retain any caller-owned dependencies supplied to their advice constructors.
 
 `LifecycleState` reports whether a run is `Ready`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. The returned run accepts no further attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 
-`SampleCount` counts recorded entries. `Latest` is the latest recorded entry, or null before any entry is recorded. These properties do not allocate. `Snapshot()` and `By(clock)` allocate stable copies. Taking a snapshot does not stop collection.
+Read the trace through `run.Result(trace)`. Its `SampleCount` and `Latest` properties do not allocate; `Latest` is null before an entry is recorded. `Snapshot()` and `By(clock)` allocate stable copies without stopping collection.
 
-Results remain available after completion, cancellation or pausing. An analyzer has no completion flag because another run may still be using it. Disposing a stream enumerator pauses the run without disposing its underlying algorithm iterator.
+Results remain available after completion, cancellation, failure or pausing. A trace supports snapshots during execution. Read accumulating results such as a Pareto front or genealogy graph after execution has stopped. Disposing a stream enumerator pauses the run without disposing its retained algorithm iterator.
 
 ## Retention and accumulation
 
@@ -81,13 +81,13 @@ Results remain available after completion, cancellation or pausing. An analyzer 
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-retention{csharp}
 
-`TraceRetention.EveryNth(10)` records observations 10, 20, 30, and so on. It adds no extra initial or final entry. `TraceRetention.OnChange()` records the first value and subsequent changes by value equality, and `TraceRetention.OnChange(comparer)` decides sameness with a comparer of your own. `TraceRetention.LatestOnly()` stores each value over the one before it, so the trace holds a single entry carrying the moment of the observation that produced it. Use it when you want what a trace says now rather than how it moved, and read it with `Latest` or `RequireLatestValue()`. A retention counts for the object it is, so give each trace its own, which the factories do.
+`TraceRetention.EveryNth(10)` records observations 10, 20, 30, and so on, with no extra initial or final entry. `OnChange()` records the first value and subsequent changes by equality; `LatestOnly()` replaces the preceding entry. Retention definitions are immutable, and each result creates its own retention progress even when several traces or runs use one definition.
 
 Retention runs after a trace's function reads an observation. It controls stored entries and never skips expensive computations, so best-so-far still sees an improvement between retained observations. `EveryNth` and `OnChange` leave stored entries alone; `LatestOnly` is the one policy that discards what the trace already held.
 
 ## Accumulating analyzers
 
-Some analysis produces one mutable summary rather than a history. Derive from `AccumulatingAnalyzer`, assign observation advice in the constructor, and update the summary under `Sync`:
+Some analysis produces one mutable summary rather than a history. Derive the definition from `Instrument<TResult>`, create the accumulator in `CreateResult` and its observations in `CreateAspect`. Put synchronization on the run-created result or collector:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-accumulating-analyzer{csharp}
 
@@ -103,17 +103,17 @@ Each operation has its own observation record, such as `CrossoverObservation<TCa
 
 Counting, collecting and single values are plain functions of the observation. Ranking functions such as `Best` and `BestMedianWorst` receive the objective directions they order by, usually the observed invocation's own, `observation.Problem.Objective`, so each invocation is ranked by its own problem. `MinMeanMax` summarizes plain numbers and needs no directions.
 
-A best-so-far object keeps the running best across observations. `BestSoFar` keeps the best objective vector; `BestSoFar<T>` keeps any other value, ranked by the objective vector its selector reads, such as `new BestSoFar<EvaluatedCandidate<RealVector>>(candidate => candidate.ObjectiveVector)`. Create one per trace and update it from the trace's function:
+A best-so-far object keeps the running best across observations. `BestSoFar` keeps an objective vector, and `BestSoFar<T>` keeps a value ranked by its selected objective vector. Supply a state factory so every run creates a separate accumulator:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-best-so-far{csharp}
 
-The first directions it receives fix it; other directions or another dimensionality throw. The ready-made traces create their own best-so-far and retention objects, as `TraceRetention.EveryNth(10)` returns a fresh object every call. Hoisting one into a variable and passing it to two traces makes them share its state.
+The first directions a best-so-far accumulator receives fix its ordering. Other directions or dimensionality throw. Ready-made traces create their accumulation state per run. State deliberately captured by a caller's own delegate remains the caller's responsibility.
 
 To collect several sources of one observation type into one accumulator and result sink, create one combined trace:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-combined-trace{csharp}
 
-Attach `combined` to both runs to intentionally accumulate shared history. Separate traces have independent state when each receives its own best-so-far and retention objects.
+Attach `combined` to the enclosing algorithm to collect several sources into one result within each run. Reusing the definition in another run creates a separate result.
 
 A combined trace observes each boundary once. Giving it the same source twice records each invocation once. The sources of different operations of one operator observe different boundaries, and each is recorded.
 
@@ -137,45 +137,37 @@ This makes dimension priority explicit and affects this trace's comparisons, inc
 
 An algorithm observation's `Iteration` numbers the iterations of one call, as the algorithm sees them. A meta-algorithm that runs an inner algorithm again calls it again, so the inner iterations number from 1 again, whether its executor is fresh or reused. A clock over the iterations keeps counting across those calls.
 
-An inner algorithm does not know it runs inside a cycle, so the cycle algorithm reports its own progress. `cycle.Cycles` observes the start of each cycle as a `CycleStart`, and `cycle.Turns` the start of each turn, one run of an inner algorithm, as a `CycleTurn` with the cycle and turn numbers, the inner algorithm, its position and the state it starts from. Both number from 1 in each call of the cycle, and `Clock.FromCycles` and `Clock.FromTurns` count them:
+A turn is one call of an inner algorithm. Its `Calls` source reports `Started`, then `Completed`, `Failed` or `Stopped`, including calls that yield no states. The example counts calls of `exploitation` and combines both inner algorithms' call events:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-cycle{csharp}
 
-`exploitation` runs two iterations per turn. By the iteration clock, the trace holds (1, 1), (2, 2), (3, 1) and (4, 2): the clock continues while the observed iteration restarts. By the cycle clock, it holds (1, 1), (1, 2), (2, 1) and (2, 2). A cycle or turn is observed at its start, before the inner algorithm runs, so its clock has counted it when the turn's iterations are recorded.
+`exploitation` runs two iterations per call. Its iteration trace holds (1, 1), (1, 2), (2, 1) and (2, 2) against its call counter. A `Started` observation reads that counter before its own call is counted; yielded states and the call's end read the updated count. The combined event trace records both inner algorithms. Call observations provide no cycle number or slot index.
 
 ## Experiments
 
-An experiment creates fresh analyzers for every trial from a function of the trial's algorithm. `setup.AddAspectPerTrial` returns the typed case/analyzer pairs during experiment creation; read each analyzer directly. See [Experiments](/guide/execution/experiments).
+Attach analysis definitions to the algorithms before constructing an experiment, then read each trial's result through `trial.Run.Result(definition)`. See [Experiments](/guide/execution/experiments) for advised grids and repetition.
 
 ## Observe an operation of your own
 
 An operation you define becomes observable when it declares an observation record, the advice that builds it, and an `Invocations` source, as each built-in operation does. Its source then works with `Analyzer.Trace` and `Aspect.Observe` like any other. An observation that carries the problem of the invocation it observed lets a trace rank by that problem's objective. See [Make the operation observable](/contributing/architecture/operator-implementation#make-the-operation-observable) for a complete example.
 
-A configuration of your own can report observations from inside its executor, at points that no boundary shows. Declare an observation record and a named child with `ObservationPoint.Of<TObservation>(this, nameof(Point))`. Resolve it in the configuration's build with `scope.Resolve(Point)` and call its executor's `Report` method. The point is an observation source, so traces use it directly. For example, a cooling schedule of your own can report each temperature it computes:
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-point-type{csharp}
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-point-use{csharp}
-
-Each named point has its own identity, so several points of one configuration may report the same value type. The configuration resolves only its own declared points. A cooling step carries no objective, so this trace reads plain values and ranks nothing. Unobserved points still resolve and receive records through an executor that ignores reports.
-
 ## Use an aspect directly
 
-`Aspect.Create` pairs a pointcut with advice. Pass it to `ResolutionScope.Create` or `With`, or call `setup.AddAspect` inside the `CreateRun` setup callback.
+`Aspect.Create` pairs a pointcut with advice. Attach aspects with `algorithm.Advised(aspect)` or call `scope.AddAspect(aspect)` before direct resolution. Instruments can be attached alongside them through the instrument overload of `Advised`:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-aspects{csharp}
 
-Earlier advice wraps closer to the source executor. Here timing finishes before the observation callback, so the callback runs outside the timed span. Counting updates only after success; timing uses `finally` and records failed invocations too.
+Within an aspect, earlier pairs wrap closer to the executor. The first definition listed in `Advised` wraps closest, and nested `algorithm.Advised(a).Advised(b)` places `a` closer. In the example, timing finishes before the observation callback. Counting updates after success; timing also records failed calls.
 
-The fluent counting and timing methods create aspects. Their concrete accumulators can be inspected directly, so measurement alone needs no `AddResource` call.
+`Invocations.Count()`, `CountCandidates()` and `Duration()` create definitions. Read their accumulators through the run. `Counted` and `Timed` place the same instruments explicitly around a selected configuration.
 
 ### Share accounting with a terminator
 
-A count terminator holds a handle because it is part of a reusable configuration. Supply the same concrete accumulator to that handle and to the counting aspect:
+A count terminator holds the counter definition whose result it reads. Attach that definition so observations update the same run-bound counter:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-shared-accounting{csharp}
 
-Here `AddResource` connects the terminator's handle to the accumulator used by `algorithm.Mutator.CountInvocations(counter)`. The run stops after two successful mutation invocations. `run.Resource(handle)` returns that same accumulator. Create a fresh accumulator and aspect for each independent run.
+The run stops after two successful mutation invocations and `run.Result(mutations)` returns the measured accumulator. A run-wide counter accumulates throughout the run, but a terminator stops only its own stream. Place it on the root algorithm to stop the run. A counter attached nowhere stays at zero and never stops a positive-limit terminator.
 
 ### Select several configurations
 
@@ -189,8 +181,8 @@ Custom selection derives a small class:
 
 Reference, type and custom pointcuts of the same configuration type combine with `And`/`&` and `Or`/`|`. Matching short-circuits from left to right. The pointcut sees configurations that resolution reaches, including those created later by a meta-algorithm.
 
-An aspect is the ordered list of its pointcut/advice pairs. An aspect subclass assigns several pairs to `Advices` in its constructor and can spread a clock's pairs before its own observations, as in `Advices = [.. clock, .. Aspect.Observe(evaluator.Invocations, Record)]`. Resolution applies each advice instance once, at its first position; sharing a clock across several traces therefore counts each invocation once. If the same advice is paired with two pointcuts, the first pairing wins. Use separate advice instances for separate selections.
+An aspect stores its pointcut/advice pairs in `Advices`. An instrument creates one result and one collecting aspect per run; an instrument that depends on another includes that run's aspect for it through `RunResults.Aspect`. Matching precedes reference deduplication, and the closest effective occurrence of an advice instance wins. Shared clock advice is therefore applied once before trace observations.
 
-A new scope layer precedes inherited layers. Data that outlives one executor belongs to the advice object, so a clock keeps counting across every execution of the configuration it observes, including a meta-algorithm's fresh activations, and reusing it across runs continues it too. An observation's own numbers, such as an algorithm's `Iteration`, belong to the call they observe. Reusing operator advice, or its caller-owned accumulator, intentionally combines its counts or durations.
+Child-scope advice wraps closer than inherited advice. A scope receives later added aspects closer to the executor. Instrument results remain run-bound across child activations, while raw advice may intentionally retain caller-owned runtime dependencies. An observation's own numbers, such as `Iteration`, describe the call it observes.
 
 Continue with [Writing custom advice](/guide/extending/writing-advice) for complete role-specific and general advice examples and run attachment.

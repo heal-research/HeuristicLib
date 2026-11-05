@@ -15,17 +15,14 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
 public sealed partial class OperatorPreparationSpecs
 {
-    // One configuration performing two operations builds one executor per scope, whichever operation is requested first,
-    // so both operations use the same private fields. A child scope builds its own.
     [Fact]
     public void BothOperationsOfOneConfigurationShareItsExecutorWithinAScope()
     {
         var source = new CountingSource();
-        var reads = new CountAccumulator();
+        var reads = ReadSource(source).Count();
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, reads));
-        var scope = root
-            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        root.AddAspect(root.Results.Aspect(reads));
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var random = RandomNumberGenerator.Create(1);
 
@@ -36,68 +33,28 @@ public sealed partial class OperatorPreparationSpecs
         Read(scope, source).Read(random, problem.SearchSpace, problem).ShouldBe(3);
 
         var child = scope.CreateChildScope();
-        var childMutation = child.Resolve((IOperator<Mutation, RealVector>)source);
-        var childRead = Read(child, source);
-        childMutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(1);
-        childRead.Read(random, problem.SearchSpace, problem).ShouldBe(2);
-        reads.CurrentCount.ShouldBe(3);
+        child.Resolve((IOperator<Mutation, RealVector>)source).Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(1);
+        Read(child, source).Read(random, problem.SearchSpace, problem).ShouldBe(2);
+        root.Results.Result(reads).CurrentCount.ShouldBe(3);
     }
 
     [Fact]
-    public void PrivateFieldsAndConsumerOperationsShareAnExplicitResourceAcrossScopes()
+    public void ExplicitSharingKeepsBothOperationsStateAcrossChildScopes()
     {
         var source = new CountingSource();
-        var outer = new CountAccumulator();
-        var inner = new CountAccumulator();
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, outer));
-        var scope = root
-            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        root.Share(source);
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var first = scope.CreateChildScope();
+        var second = scope.CreateChildScope();
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var random = RandomNumberGenerator.Create(1);
-        var first = Read(scope, source);
-        var second = Read(scope.CreateChildScope(), source);
-        first.Read(random, problem.SearchSpace, problem).ShouldBe(1);
-        first.Read(random, problem.SearchSpace, problem).ShouldBe(2);
-        second.Read(random, problem.SearchSpace, problem).ShouldBe(1);
 
-        var handle = new TallyHandle();
-        var shared = source with { Tally = handle };
-        var read = Read(scope, shared);
-        var mutation = scope.Resolve((IOperator<Mutation, RealVector>)shared);
-        var advisedScope = scope.CreateChildScope();
-        advisedScope.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)source, inner));
-        var advised = Read(advisedScope, source);
-        read.Read(random, problem.SearchSpace, problem).ShouldBe(1);
-        mutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(2);
-        advised.Read(random, problem.SearchSpace, problem).ShouldBe(1);
-        outer.CurrentCount.ShouldBe(4);
-        inner.CurrentCount.ShouldBe(1);
-        var sharedCalls = new CountAccumulator();
-        var sharedContext = scope.CreateChildScope();
-        sharedContext.AddAspect(Aspect.CountInvocations((IOperator<ReadValue, RealVector>)shared, sharedCalls));
-        Read(sharedContext, shared).Read(random, problem.SearchSpace, problem).ShouldBe(3);
-        mutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(4);
-        sharedCalls.CurrentCount.ShouldBe(1);
-        scope.Resource(handle).ShouldBeSameAs(scope.CreateChildScope().Resource(handle));
-        scope.Resource(new TallyHandle()).ShouldNotBeSameAs(scope.Resource(handle));
-        (shared with { }).ShouldBe(shared);
-        (shared with { Tally = new TallyHandle() }).ShouldNotBe(shared);
-    }
-
-    [Fact]
-    public void DirectScopeSupplyUsesAReusableBuilder()
-    {
-        var handle = new SuppliedResourceHandle<Tally>();
-        var supplied = new Tally();
-        var builder = new ResolutionScopeBuilder().AddResource(handle, supplied);
-        var scope = builder.Build();
-        scope.Resource(handle).ShouldBeSameAs(supplied);
-        var another = new SuppliedResourceHandle<Tally>();
-        builder.AddResource(another, new Tally());
-        builder.Build().Resource(handle).ShouldBeSameAs(supplied);
-        Should.Throw<InvalidOperationException>(() => scope.Resource(another)).Message.ShouldContain("explicit supply");
-        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resource(handle)).Message.ShouldContain("explicit supply");
+        Read(first, source).Read(random, problem.SearchSpace, problem).ShouldBe(1);
+        second.Resolve((IOperator<Mutation, RealVector>)source).Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(2);
+        Read(second, source).Read(random, problem.SearchSpace, problem).ShouldBe(3);
+        Read(ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(), source)
+            .Read(random, problem.SearchSpace, problem).ShouldBe(1);
     }
 
     [Fact]
@@ -109,63 +66,58 @@ public sealed partial class OperatorPreparationSpecs
         var first = new RepeatedEvaluation(cached, new RealVector(2.0));
         var second = first with { };
         var cycle = CycleAlgorithm.Create(first.TerminatedAfterIterations(2), second.TerminatedAfterIterations(2)) with { MaximumCycles = 3 };
-        var calls = new CountAccumulator();
-        var produced = 0;
-        var trialCounts = new List<CountAccumulator>();
-        var run = cycle.Sharing(cached).Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7), setup =>
-        {
-            setup.AddAspectPerTrial(_ =>
-            {
-                var count = new CountAccumulator();
-                trialCounts.Add(count);
-                return Aspect.CountInvocations(evaluator, count);
-            });
-            setup.AddAspectPerTrial(_ => Aspect.CountInvocations(evaluator, calls));
-            setup.AddAspectPerTrial(_ => Aspect.Observe(cycle.Iterations, _ => Interlocked.Increment(ref produced)));
-        });
+        var calls = evaluator.Invocations.Count();
+        var produced = cycle.Iterations.Count();
+        var run = cycle.Sharing(cached).Advised(calls, produced).Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7));
         var results = await run.CompleteAsync(ExecutionConcurrency.Concurrent(3), cancellationToken: TestContext.Current.CancellationToken);
+
         results.Length.ShouldBe(3);
-        produced.ShouldBe(36);
-        calls.CurrentCount.ShouldBe(3);
-        trialCounts.Count.ShouldBe(3);
-        trialCounts.ShouldAllBe(count => count.CurrentCount == 1);
+        run.Trials.Sum(trial => trial.Run.Result(produced).CurrentCount).ShouldBe(36);
+        run.Trials.ShouldAllBe(trial => trial.Run.Result(calls).CurrentCount == 1);
+        run.Trials.Select(trial => trial.Run.Result(calls)).Distinct(ReferenceEqualityComparer.Instance).Count().ShouldBe(3);
     }
 
     private static IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Read(
         ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> scope, CountingSource source) =>
         (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator((IOperator<ReadValue, RealVector>)source);
 
-    private sealed class Tally
-    {
-        private int count;
-        public int Next() => Interlocked.Increment(ref count);
-    }
+    private static InvocationSource<ReadValue, RealVector, int> ReadSource(CountingSource source) =>
+        ObservationSource.Create((IOperator<ReadValue, RealVector>)source, (Action<int> observe) => new ReadObservationAdvice(observe));
 
-    private sealed class TallyHandle : ResourceHandle<Tally>
+    private sealed class ReadObservationAdvice(Action<int> observe) : OperatorAdvice<ReadValue, RealVector>
     {
-        protected override Tally CreateResource() => new();
+        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
+            IOperator<ReadValue, RealVector> source) => operation.Wrap(executor, new Reporter(observe));
+
+        private readonly struct Reporter(Action<int> observe) : IInvocationWrapper
+        {
+            public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
+            {
+                var result = invocation.Proceed();
+                observe(1);
+                return result;
+            }
+        }
     }
 
     // Performs two operations with one construction hook, implemented once as a public method.
     private sealed record CountingSource : IOperator<ReadValue, RealVector>, IOperator<Mutation, RealVector>
     {
-        public TallyHandle? Tally { get; init; }
-
         public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            new Executor<TSearchSpace, TProblem>(Tally is null ? null : scope.Resource(Tally));
+            new Executor<TSearchSpace, TProblem>();
 
-        private sealed class Executor<TSearchSpace, TProblem>(Tally? tally)
+        private sealed class Executor<TSearchSpace, TProblem>
             : IReadValueExecutor<RealVector, TSearchSpace, TProblem>, IMutationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
             private int count;
-            public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => tally?.Next() ?? ++count;
+            public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => ++count;
             public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                [new(tally?.Next() ?? ++count)];
+                [new(++count)];
         }
     }
 

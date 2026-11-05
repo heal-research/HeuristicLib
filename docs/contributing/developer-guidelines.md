@@ -147,7 +147,7 @@ See [execution resolution](/contributing/architecture/execution-resolution) for 
 
 ### § 4.1 Separate reusable configurations from executors
 
-Configurations own immutable settings, child configurations and optional typed resource handles. Each construction creates an executor with private fields and contextual children and advice. Shared resources are obtained through explicit handles. Invocation local values stay in the operation or iterator. Never store mutable execution data on a configuration.
+Configurations own immutable settings, child configurations and instrument definitions. Executors own private mutable data. Share an executor explicitly with `Sharing`; instrument results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
@@ -157,13 +157,13 @@ Search states are public progress values. Do not use them to carry private count
 
 Every configuration's `CreateExecutor` receives a scope typed to the run for operators and algorithms. Resolve children through it and pass them to the executor. Retain a scope only for delayed child construction. To keep one executor for a configuration across several uses, share it with `Sharing` on the node whose lifetime it should follow rather than caching executors yourself. Do not add another scope abstraction or call a child's hook directly.
 
-Algorithms resolve only their configured parameters and their own declared observation points, and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
+Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
-Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executors and introduces no configuration children. Supply concrete runtime dependencies through advice constructors and pass them to wrapping executors. Advice has no resource lookup or child resolution capability. Keep handle lookup and child resolution in configuration hooks.
+Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executors and introduces no configuration children. Supply concrete runtime dependencies through advice constructors and pass them to wrapping executors. Advice has no resource lookup or child resolution capability. Keep run-result lookup and child resolution in configuration hooks.
 
 ### § 4.4 Expose one construction hook
 
-Every configuration exposes one `CreateExecutor` hook, which resolution calls for every build. Operation-parameterized operators expose `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds an executor for the operation and run types. Algorithms expose `CreateExecutor<TSearchSpace, TProblem>(scope)` with a scope typed to the run and their search state. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Private data belongs to executor fields. Intentionally shared data comes from `scope.Resource(handle)` using one flat resource table per run. Do not add a second initializer per operation, role-named alternatives or a competing public entry.
+Every configuration exposes one `CreateExecutor` hook, which resolution calls for every build. Operation-parameterized operators expose `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds an executor for the operation and run types. Algorithms expose `CreateExecutor<TSearchSpace, TProblem>(scope)` with a scope typed to the run and their search state. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Private data belongs to executor fields. Use `Sharing` for shared executors and `scope.Results.Result(instrument)` for run-bound results. Do not add a second initializer per operation, role-named alternatives or a competing public entry.
 
 Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor(ResolutionScope scope)`; generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or wrap that resolved child with `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(childOperator, wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
 
@@ -188,17 +188,19 @@ A setting has one input path.
 
 Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor` and throw `InvalidOperationException` before execution begins. Bound bases validate run-type compatibility before calling the hook. Do not add a separate validation API.
 
-For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before requesting resources. `Fits` supplies preflight metadata and resolution checks each executor against its requested interface. Advice rejects unsupported operators in `Check` before raw construction and child work. A later construction failure retains resources already published.
+For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before requesting resources. `Fits` supplies preflight metadata and resolution checks each executor against its requested interface. Advice rejects unsupported operators in `Check` before raw construction and child work. A construction failure ends the scope tree while retaining published results.
 
-Resource creation must not depend on the first requesting executor or its children. The handle owns immutable creation settings and supplies no factory context. Failed creation publishes no resource. Later direct resolution can retry. Private executor fields are constructed afresh on each attempt.
+Instrument result creation must not depend on a requesting executor or its children. Its hooks receive only `RunResults`. Failed creation publishes no result or aspect; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
 
 ### § 4.8 Represent configured behavior with value strategies
 
 Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Construction hooks are runtime machinery and are not persisted configuration strategies.
 
+Temporary exception: analysis definitions may retain value functions and runtime callbacks, including Python callbacks, and `Advised` may attach those definitions to an algorithm configuration. Such configurations are not persistable. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
+
 ### § 4.9 Use records only for value semantics
 
-Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry. Resource handles use reference identity, including when compared as properties of configuration records. Record copies retain those references.
+Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry. Instrument definitions use reference identity, including when compared as properties of configuration records. Record copies retain those references.
 
 ### § 4.10 Validate operation inputs before side effects
 
@@ -230,10 +232,10 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 - Use a stateless base for configuration data without mutable run data.
 - Author an executor for private mutable fields, child executors or custom execution structure.
 - Use a single item base for independent per item work.
-- Keep resource handles and shared resources free of configurations, executors, resolution scopes and delegates bound to child executors.
+- Keep mutable data in executors or run-bound instrument results; definitions contain no live result or executor.
 - Coordinate concurrent access across every executor sharing a resource. An executor local lock cannot protect a shared resource.
 
-Stateless leaf bases hide executor construction. Other authors keep private mutable data in executor fields. Configurations may hold typed resource handles, never the live resources introduced by this mechanism. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned. There is no automatic disposal contract.
+Stateless leaf bases hide executor construction. Other authors keep private mutable data in executor fields. Configurations contain immutable settings, children and instrument definitions. Share configurations explicitly when their executors should retain data across child scopes. There is no automatic disposal contract.
 
 ### § 4.15 Keep single item batching explicit and deterministic
 
@@ -245,7 +247,7 @@ Operator scaffolding remains checked in source. Do not add source generators, ID
 
 ### § 4.17 Give algorithms explicit executors
 
-Algorithms use a configuration paired with an explicitly authored executor. Private data belongs to executor fields and shared resources require explicit handles. Child operators and interceptors bind per construction. Active iterators retain their children, RNG forks, progress, timers and resources across pause/resume. See [Algorithms](/guide/fundamentals/algorithms).
+Algorithms use a configuration paired with an explicitly authored executor. Private data belongs to executor fields and shared executors require explicit `Sharing`. Child operators and interceptors bind per construction. Active iterators retain their children, RNG forks, progress, timers and resources across pause/resume. See [Algorithms](/guide/fundamentals/algorithms).
 
 Iterative algorithms build an `IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` in their protected `CreateExecutor`. Both bases declare that return type, so an iterative algorithm cannot return an executor that skips its interceptor; the bound base derives from the bound `Algorithm` base, which converts the executor to the run's types, and declares `Interceptor` itself. The hook resolves the optional interceptor and other declared children through its scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before calling the hook.
 
@@ -530,7 +532,7 @@ because an adjective cannot be misread as a command to modify the receiver: `alg
 more, and the name should not suggest otherwise.
 
 A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
-the receiver for chaining: `setup.AddAspect(analyzer)`. A fluent chain is not evidence that a value is being built,
+the receiver for chaining: `scope.AddAspect(aspect)`. A fluent chain is not evidence that a value is being built,
 so the name has to carry that distinction on its own.
 
 This was applied across the library after `With*` was found covering three different semantics at once, one of which

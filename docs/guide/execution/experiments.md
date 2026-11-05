@@ -114,7 +114,7 @@ Limit concurrency when evaluation is CPU heavy or uses a constrained external re
 
 ## Run lifecycle
 
-An experiment run is returned in `Ready` after its setup callback completes and starts once. Do not start one of its trial runs directly before starting the experiment; the experiment rejects that mixed ownership.
+An experiment run is returned in `Ready` with one independent algorithm run per trial and starts once. Do not start one of its trial runs directly before starting the experiment; the experiment rejects that mixed ownership.
 
 An experiment moves from `Running` to `Completed`, `Failed` or `Canceled`. Disposing its stream before completion stops scheduling, cancels active work and leaves the experiment `Stopped`. These states are terminal: create a new experiment run to execute again. Unlike an individual algorithm run, an experiment does not pause and resume.
 
@@ -132,10 +132,8 @@ Parameter search can overfit benchmark instances. Keep separate instances for fi
 
 Analyzers can collect progress during each trial rather than only final states. Continue with [Observability and analysis](/guide/execution/observability-and-analysis).
 
-`setup.AddAspectPerTrial` takes a function of the concrete trial algorithm and calls it once for each materialized case inside the `CreateRun` callback. Create any clocks inside the function so they belong to that trial:
+Attach instruments before constructing the experiment. Every trial receives its own result even when all trials use the same definition:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-experiment-setup{csharp}
 
-`AddAspectPerTrial` returns `TrialAspect` entries in case order. Each has the materialized case as its typed `Trial` and an `Aspect` property; here `Aspect` has the concrete analyzer type the function returns. Capture that result when case mappings are needed, or collect the analyzers in a list as above. Each execution trial exposes the identical materialized object through `trial.Case`. Reuse the function across experiments and create fresh analyzers and clocks for each trial when results should be independent. Returning a shared analyzer or clock intentionally combines its history or counts.
-
-Use `AddAspectPerTrial` for any per-trial aspect, including analyzers. Each call during setup adds one aspect to every trial; aspects follow the order of the calls in each trial.
+Read each result with `trial.Run.Result(instrument)`, including while processing completed trials. For a parameter grid, configure each concrete algorithm before attaching its analysis and use the existing grid over advised algorithms. The wrapper boundary preserves candidate and search-state typing but does not expose the concrete algorithm's properties through the grid key. When a case replaces an observed operator, create an instrument targeting that replacement and retain the definition for reading its trial result.

@@ -67,6 +67,35 @@ public class ExperimentSpecs
     }
 
     [Fact]
+    public async Task AdvisedGridCasesCanReplaceTheEvaluatorAndKeepItsTraceDefinitionForReading()
+    {
+        var problem = CreateRastriginProblem(dimension: 2);
+        var algorithm = CreateSimpleHillClimber(problem);
+        var cases = Enumerable.Range(0, 2).Select(_ =>
+        {
+            var evaluator = new ProblemEvaluator<RealVector>();
+            var observations = evaluator.Invocations.Trace(observation => observation.Evaluator);
+            var configured = (algorithm with { Evaluator = evaluator }).Advised(observations);
+            return (Algorithm: configured, Trace: observations, Evaluator: evaluator);
+        }).ToArray();
+        var experiment = cases[0].Algorithm.AsGrid().VaryBy(cases, (_, value) => value.Algorithm).Repeat(2);
+        var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(17));
+
+        await run.CompleteAsync(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
+
+        run.Trials.Length.ShouldBe(4);
+        foreach (var trial in run.Trials)
+        {
+            var selected = cases.Single(value => ReferenceEquals(value.Algorithm, trial.Algorithm));
+            var observations = trial.Run.Result(selected.Trace).Snapshot().Values;
+            observations.ShouldNotBeEmpty();
+            observations.ShouldAllBe(evaluator => ReferenceEquals(evaluator, selected.Evaluator));
+            var other = cases.Single(value => !ReferenceEquals(value.Algorithm, trial.Algorithm));
+            trial.Run.Result(other.Trace).SampleCount.ShouldBe(0);
+        }
+    }
+
+    [Fact]
     public async Task StartTrials_AllowsProcessingTrialsAsTheyComplete()
     {
         var problem = CreateRastriginProblem(dimension: 4);

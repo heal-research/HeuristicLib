@@ -35,10 +35,10 @@ public sealed class RetryOperatorTests
         var outerTime = new DurationAccumulator();
         var clock = new TickClock();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(leaf, innerCalls));
-        scope.AddAspect(Aspect.CountCandidates(retry, outerWork));
-        scope.AddAspect(Aspect.MeasureDuration(leaf, innerTime, clock));
-        scope.AddAspect(Aspect.MeasureDuration(retry, outerTime, clock));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(innerCalls, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(retry), new CountingOperatorAdvice(outerWork, OperatorCountMetric.Candidates)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new DurationMeasuringOperatorAdvice(innerTime, clock)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(retry), new DurationMeasuringOperatorAdvice(outerTime, clock)));
         var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry);
         executor.Mutate(parents, random, Space.Instance, Problem()).ShouldBeSameAs(parents);
         attempts.ShouldBe(failures + 1);
@@ -69,7 +69,7 @@ public sealed class RetryOperatorTests
         var calls = new CountAccumulator();
         var retry = leaf.Retry(3);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(retry, calls));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(retry), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
         var executor = scope
             .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry);
         Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()))
@@ -113,9 +113,9 @@ public sealed class RetryOperatorTests
         var innerCalls = new CountAccumulator();
         var outerCalls = new CountAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(leaf, childCalls));
-        scope.AddAspect(Aspect.CountInvocations(inner, innerCalls));
-        scope.AddAspect(Aspect.CountInvocations(outer, outerCalls));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(childCalls, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(inner), new CountingOperatorAdvice(innerCalls, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(outer), new CountingOperatorAdvice(outerCalls, OperatorCountMetric.Invocations)));
         scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(outer)
             .Mutate([0], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBe([4]);
         attempts.ShouldBe(4);
@@ -144,8 +144,8 @@ public sealed class RetryOperatorTests
         var calls = new CountAccumulator();
         var time = new DurationAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(source, calls));
-        scope.AddAspect(Aspect.MeasureDuration(source, time));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(time, TimeProvider.System)));
         var executor = scope
             .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
 
@@ -161,8 +161,8 @@ public sealed class RetryOperatorTests
         var counter = new CountAccumulator();
         var duration = new DurationAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(leaf, counter));
-        scope.AddAspect(Aspect.MeasureDuration(source, duration));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, TimeProvider.System)));
         var executor = scope
             .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
         var random = RandomNumberGenerator.Create(1);

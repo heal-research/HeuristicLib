@@ -222,8 +222,8 @@ public class PythonGenealogyAnalysis
 
             if (RankAnalysis is not null)
             {
-                rankGraph = RankAnalysis.State.Graph.ToGraphViz();
-                rankLines = RankAnalysis.State.Ranks.Select(row => row.ToList()).ToArray();
+                rankGraph = run.Result(RankAnalysis).Graph.ToGraphViz();
+                rankLines = run.Result(RankAnalysis).Ranks.Select(row => row.ToList()).ToArray();
             }
 
             IReadOnlyList<EvaluatedCandidate<TCandidate>[]> apRes =
@@ -232,7 +232,7 @@ public class PythonGenealogyAnalysis
             return new ExperimentResult<TCandidate>(rankGraph, rankLines, qRes, apRes);
         }
 
-        // The traces are instruments, attached closer than the analyzers that are still aspects.
+        // All analysis definitions collect into their own result in this run.
         public AdvisedAlgorithm<TCandidate, TSearchState> AttachTo<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
             where TSearchState : class, ISearchState
         {
@@ -242,7 +242,7 @@ public class PythonGenealogyAnalysis
 
             List<Aspect> aspects = [];
             if (RankAnalysis is not null)
-                aspects.Add(RankAnalysis);
+                instruments.Add(RankAnalysis);
             if (CallbackAnalyzer is not null)
                 aspects.Add(CallbackAnalyzer);
             return new AdvisedAlgorithm<TCandidate, TSearchState>(algorithm, instruments, aspects);

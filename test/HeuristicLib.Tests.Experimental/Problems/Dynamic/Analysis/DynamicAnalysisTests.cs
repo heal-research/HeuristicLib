@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -107,7 +108,7 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(problem.CreateIterationUpdateAspect(algorithm)));
+        var run = algorithm.Advised(problem.CreateIterationUpdateAspect(algorithm)).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -172,7 +173,6 @@ public class DynamicAnalysisTests
         ]);
         var analysis =
             new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>(
-                problem,
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
@@ -181,9 +181,46 @@ public class DynamicAnalysisTests
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The epoch in progress when the run ends never changed, so its best is not a best before a change.
-        analysis.BestBeforeChange.Select(entry => (entry.Candidate, entry.ObjectiveValue, entry.Epoch))
+        run.Result(analysis).BestBeforeChange.Select(entry => (entry.Candidate, entry.ObjectiveValue, entry.Epoch))
                 .ShouldBe([(3, 3.0, 0), (1, 1.0, 1)]);
-        analysis.Performance.ShouldBe(2.0);
+        run.Result(analysis).Performance.ShouldBe(2.0);
+    }
+
+    [Fact]
+    public async Task ReusingPerformanceDefinitionReadsEachRunsProblemAndCreatesFreshPredictionState()
+    {
+        var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([algorithm.Evaluator]);
+        var configured = algorithm.Advised(analysis);
+        var first = configured.CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(1));
+        var second = configured.CreateRun(new IntegerDynamicProblem(epochLength: 100), RandomNumberGenerator.Create(2));
+
+        await Task.WhenAll(first.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken),
+            second.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken));
+
+        first.Result(analysis).BestBeforeChange.Select(entry => entry.Epoch).ShouldBe([0, 1]);
+        second.Result(analysis).BestBeforeChange.ShouldBeEmpty();
+        second.Result(analysis).Performance.ShouldBe(double.NaN);
+        second.Result(analysis).Prediction.ShouldBe(double.NaN);
+        first.Result(analysis).ShouldNotBeSameAs(second.Result(analysis));
+    }
+
+    [Fact]
+    public void PerformanceAnalysisRejectsAnObservationFromAnUnsupportedProblemBeforeUpdatingItsResult()
+    {
+        var evaluator = new ProblemEvaluator<int>();
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([evaluator]);
+        var scope = ResolutionScope.Create();
+        scope.AddAspect(scope.Results.Aspect(analysis));
+        var space = new IntegerSearchSpace();
+        var problem = FuncProblem.Create((int candidate) => candidate, space, SingleObjective.Minimize);
+        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator);
+
+        var error = Should.Throw<InvalidOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1), space, problem));
+
+        error.Message.ShouldContain(nameof(IntegerDynamicProblem));
+        scope.Results.Result(analysis).BestBeforeChange.ShouldBeEmpty();
+        scope.Results.Result(analysis).Performance.ShouldBe(double.NaN);
     }
 
     /// <summary>

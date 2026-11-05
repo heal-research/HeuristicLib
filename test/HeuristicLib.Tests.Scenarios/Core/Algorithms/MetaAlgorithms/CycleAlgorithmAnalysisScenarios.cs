@@ -67,7 +67,7 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0), setup: setup => setup.AddAspect(evaluationTrace1).AddAspect(evaluationTrace2).AddAspect(interceptionTrace));
+        var run = cycleAlgorithm.Advised(evaluationTrace1, evaluationTrace2, interceptionTrace).CreateRun(problem, RandomNumberGenerator.Create(0));
         var finalState = run.Complete();
 
         return new CycleRunResult(

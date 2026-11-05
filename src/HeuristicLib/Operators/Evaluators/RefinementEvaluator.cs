@@ -23,7 +23,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
-/// way. Observation uses evaluator configuration identity. Cache and allowance sharing require explicit resource handles.
+/// way. Observation uses evaluator configuration identity. Share the evaluator configuration explicitly to share its cache or allowance.
 /// </para>
 /// </remarks>
 public sealed record RefinementEvaluator<TCandidate>

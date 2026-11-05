@@ -137,9 +137,9 @@ public class NumericParameterFittingSpecs
     {
         var problem = CreateProblem();
         var sharedEvaluator = new ProblemEvaluator<ExpressionTree>();
-        var sharedCounting = Aspect.CountCandidates(sharedEvaluator, out var sharedCounter);
+        var sharedCounter = sharedEvaluator.Invocations.CountCandidates();
         var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>();
-        var ownCounting = Aspect.CountCandidates(algorithmEvaluator, out var ownCounter);
+        var ownCounter = algorithmEvaluator.Invocations.CountCandidates();
 
         var sharing = CreateAlgorithm(problem) with
         {
@@ -152,12 +152,14 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
-        sharing.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(sharedCounting)).Complete(cancellationToken: TestContext.Current.CancellationToken);
-        notSharing.CreateRun(problem, RandomNumberGenerator.Create(42), setup: setup => setup.AddAspect(ownCounting)).Complete(cancellationToken: TestContext.Current.CancellationToken);
+        var sharedRun = sharing.Advised(sharedCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
+        sharedRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        var ownRun = notSharing.Advised(ownCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
+        ownRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.
         // The private one saw only the algorithm's, over the very same search.
-        sharedCounter.CurrentCount.ShouldBeGreaterThan(ownCounter.CurrentCount);
+        sharedRun.Result(sharedCounter).CurrentCount.ShouldBeGreaterThan(ownRun.Result(ownCounter).CurrentCount);
     }
 
     private static GeneticAlgorithm<ExpressionTree> CreateAlgorithm(

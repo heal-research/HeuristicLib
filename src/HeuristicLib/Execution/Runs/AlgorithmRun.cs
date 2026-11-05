@@ -17,10 +17,6 @@ public abstract class AlgorithmRun
         this.scope = scope;
     }
 
-    /// <summary>Returns this run's resource, creating its default instance lazily when it has not been requested yet.</summary>
-    /// <remarks>Supplied resources remain caller owned. The returned resource defines how concurrent reads and writes are supported.</remarks>
-    public TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class => scope.Resource(handle);
-
     /// <summary>Returns this run's result of the instrument, creating it when the run has not looked it up yet.</summary>
     /// <remarks>
     /// The result can be read before, during and after execution, also after a failure. Each result type states how it
@@ -81,26 +77,12 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     public IRandomNumberGenerator Random { get; }
 
-    public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random,
-        Action<AlgorithmRunSetup<TCandidate, TSearchState>>? setup = null)
-        : this(algorithm, problem, random, CreateScope(algorithm, setup))
-    {
-    }
-
-    internal AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random, ResolutionScope scope)
-        : base(scope)
+    public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
+        : base(ResolutionScope.Create())
     {
         Algorithm = algorithm;
         Problem = problem;
         Random = random;
-    }
-
-    private static ResolutionScope CreateScope(IAlgorithm<TCandidate, TSearchState> algorithm,
-        Action<AlgorithmRunSetup<TCandidate, TSearchState>>? configure)
-    {
-        var setup = new AlgorithmRunSetup<TCandidate, TSearchState>(algorithm);
-        configure?.Invoke(setup);
-        return setup.BuildScope();
     }
 
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>

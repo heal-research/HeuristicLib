@@ -51,7 +51,7 @@ Reduction changes what the author declares, not where the operator fits. **Candi
 
 The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration _is_ the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
 
-`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They forward `Fits` and candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and initialize private data on the executor. Obtain explicit resources through `scope.Resource(handle)`.
+`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They forward `Fits` and candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and initialize private data on the executor. Read run-bound instruments through `scope.Results.Result(instrument)`; share configurations explicitly to retain their executors across child scopes.
 
 Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerInvocation` chooses one child per call and exposes no controls. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
 
@@ -78,7 +78,7 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Two resolutions of one configuration construct independent fields. Get controls from the same advised executor that performs the operation.
 
-Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Resource handles remain only for the counters that counting and timing aspects write for `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator`; the resource is created once per handle per run, or supplied explicitly during preparation.
+Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are instrument definitions. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` read their run-bound results.
 
 The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Resources must not retain contextual children or advice. Authors own concurrency correctness across all participants. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned.
 
@@ -106,7 +106,7 @@ private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inne
 }
 ```
 
-Resolve declared child operators inside `CreateExecutor`. Initialize private counters and helper data in executor fields. Obtain explicitly shared resources through handles. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
+Resolve declared child operators inside `CreateExecutor`. Initialize private counters and helper data in executor fields. Read run-bound results through instrument definitions; share configurations to retain their executors. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
 
 Return the most concrete accessible executor type that is useful to callers. A private nested executor is returned through its role specific executor base.
 
@@ -124,7 +124,7 @@ Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient:
 
 ## Wrapping and multi operators
 
-Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep private data in executor fields, expose explicit handles for shared resources and resolve current children inside `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
+Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep private data in executor fields, declare instrument definitions for run-bound results and resolve current children inside `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
 
 When a child plays a specific part in the operation, derive from `Operator<TOperation, TCandidate>` and declare that child yourself. This configuration excerpt omits the executor body:
 
@@ -194,15 +194,14 @@ An agent will not settle a concern's semantics for you. Implement and review the
 - Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.
 - Keep randomness, the search space and the problem explicit in operation calls.
 - Store private mutable data in executor fields and explicitly shared data in resources.
-- Share a typed resource handle when several executors intentionally share resource data.
-- Each construction has independent executor fields. `With` shares run resources. Use separate root scopes for independent default resources.
+- Use `Sharing` when child scopes should retain a selected configuration's executor and its data.
+- Each scope keeps one executor per configuration reference. Child scopes create independent executors except for explicitly shared configurations; all child scopes use the root's run-bound results. Separate roots have independent results.
 - Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.
 
 ## Roslyn analyzer guardrails
 
 The `OperatorAuthoringAnalyzer` Roslyn analyzer assists with common mistakes across operator roles:
 
-- `HLib0002` reports execution graph dependencies in resource handles or requested resources and direct resolution of another configuration's observation point.
 - `HLib0003` reports direct mutation of configuration members outside construction, in operators, algorithms and consumer-defined roles alike.
 
 These diagnostics are guardrails, not a proof that every invariant is satisfied. They cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate.

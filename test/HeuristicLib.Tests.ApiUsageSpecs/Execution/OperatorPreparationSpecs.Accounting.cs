@@ -68,27 +68,19 @@ public sealed partial class OperatorPreparationSpecs
     {
         var source = new CountingSource();
         var mutator = (IOperator<Mutation, RealVector>)source;
-        var counting = mutator.CountInvocations(out var counter);
-        counter.CurrentCount.ShouldBe(0);
+        var counter = mutator.Invocations.Count();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var run = new TwoOperationAlgorithm(source).CreateRun(problem, RandomNumberGenerator.Create(1),
-            setup => setup.AddAspect(counting));
+        var run = new TwoOperationAlgorithm(source).Advised(counter).CreateRun(problem, RandomNumberGenerator.Create(1));
+        run.Result(counter).CurrentCount.ShouldBe(0);
 
         run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(4);
-        counter.CurrentCount.ShouldBe(4);
+        run.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
     public void FluentCandidateMetricRejectsUnsupportedOperations()
     {
         var source = new CountingSource();
-        var counter = new CountAccumulator();
-        var counting = ((IOperator<ReadValue, RealVector>)source).CountCandidates(counter);
-        var root = ResolutionScope.Create();
-        root.AddAspect(counting);
-        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-
-        Should.Throw<InvalidOperationException>(() => Read(scope, source)).Message.ShouldContain("reports none");
-        counter.CurrentCount.ShouldBe(0);
+        Should.Throw<InvalidOperationException>(() => ReadSource(source).CountCandidates()).Message.ShouldContain("candidate work");
     }
 }

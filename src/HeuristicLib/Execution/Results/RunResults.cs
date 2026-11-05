@@ -17,8 +17,7 @@ namespace HEAL.HeuristicLib.Execution;
 public sealed class RunResults
 {
     private readonly Lock sync = new();
-    // Instruments and the remaining resource handles share the run's one table, both keyed by reference.
-    private readonly Dictionary<object, object> table;
+    private readonly Dictionary<Instrument, Entry> table = new(ReferenceEqualityComparer.Instance);
     private readonly HashSet<Instrument> creating = new(ReferenceEqualityComparer.Instance);
     private readonly TimeProvider timeProvider;
     private readonly Lock elapsedSync = new();
@@ -26,9 +25,8 @@ public sealed class RunResults
     private long activeSince;
     private TimeSpan elapsed;
 
-    internal RunResults(IEnumerable<KeyValuePair<object, object>> supplied, TimeProvider timeProvider)
+    internal RunResults(TimeProvider timeProvider)
     {
-        table = new(supplied, ReferenceEqualityComparer.Instance);
         this.timeProvider = timeProvider;
     }
 
@@ -50,18 +48,6 @@ public sealed class RunResults
         {
             lock (elapsedSync)
                 return activeCalls == 0 ? elapsed : elapsed + timeProvider.GetElapsedTime(activeSince);
-        }
-    }
-
-    internal TResource Resource<TResource>(ResourceHandle<TResource> handle) where TResource : class
-    {
-        lock (sync)
-        {
-            if (table.TryGetValue(handle, out var resource))
-                return (TResource)resource;
-            var created = handle.CreateResource();
-            table.Add(handle, created);
-            return created;
         }
     }
 
@@ -89,7 +75,7 @@ public sealed class RunResults
         lock (sync)
         {
             if (table.TryGetValue(instrument, out var existing))
-                return (Entry)existing;
+                return existing;
             if (!creating.Add(instrument))
                 throw new InvalidOperationException($"Creating the result of {instrument.GetType().Name} requires that result itself. " +
                     "An instrument may build on other instruments, but not on itself.");

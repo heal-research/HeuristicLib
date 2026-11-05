@@ -552,7 +552,7 @@ public class DynamicEvaluationCacheTests
         var source = evaluator.Cached(problem, DummyGenotypeValueCacheKeySelector.Instance);
         var calls = new CountAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(evaluator, calls));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice<Evaluation, DummyGenotype>(calls, OperatorCountMetric.Invocations)));
         scope.Share(source);
         var outer = scope.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var inner = scope.CreateChildScope().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
@@ -588,7 +588,7 @@ public class DynamicEvaluationCacheTests
         var outer = root.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
         var calls = new CountAccumulator();
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(evaluator, calls));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice<Evaluation, DummyGenotype>(calls, OperatorCountMetric.Invocations)));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem>(source);
 
         outer.Evaluate([new DummyGenotype(1)], TestRandoms.NoRandom, problem.SearchSpace, problem);
@@ -615,7 +615,7 @@ public class DynamicEvaluationCacheTests
         var independent = ResolutionScope.Create().Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var calls = new CountAccumulator();
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(evaluator, calls));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice<Evaluation, DummyGenotype>(calls, OperatorCountMetric.Invocations)));
         var inner = child.Resolve<DummyGenotype, DummySearchSpace, DummyDynamicProblem, PopulationState<DummyGenotype>>(source);
         var state = Population.From([EvaluatedCandidate.From(new DummyGenotype(1), new ObjectiveVector(99))]).ToPopulationState();
         inner.Transform(state, null, TestRandoms.NoRandom, problem.SearchSpace, problem).ShouldBeSameAs(state);

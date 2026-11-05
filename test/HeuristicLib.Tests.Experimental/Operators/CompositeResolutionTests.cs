@@ -23,7 +23,7 @@ public class CompositeResolutionTests
         var outer = root.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
         var calls = new CountAccumulator();
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.CountInvocations(left, calls));
+        child.AddAspect(Aspect.Observe(left.Invocations, _ => calls.IncrementBy(1)));
         var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
 
         outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));

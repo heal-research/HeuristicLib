@@ -21,13 +21,10 @@ public class AnalysisSpecs
         var problem = new TestFunctionProblem(new RastriginFunction(4));
         var firstAlgorithm = CreateAlgorithm(problem);
         var secondAlgorithm = CreateAlgorithm(problem);
-        var combined = Analyzer.Trace<AlgorithmObservation<RealVector, PopulationState<RealVector>>, ObjectiveVector>(
-            [firstAlgorithm.Iterations, secondAlgorithm.Iterations],
-            () =>
-            {
-                var best = new BestSoFar();
-                return observation => best.Update(observation.State.Population.Select(candidate => candidate.ObjectiveVector), observation.Problem.Objective);
-            });
+        var combined = Analyzer.Trace(
+            new[] { firstAlgorithm.Iterations, secondAlgorithm.Iterations },
+            () => new BestSoFar(),
+            (best, observation) => best.Update(observation.State.Population.Select(candidate => candidate.ObjectiveVector), observation.Problem.Objective));
         var both = firstAlgorithm.Then(secondAlgorithm).Advised(combined);
 
         var first = both.CreateRun(problem, RandomNumberGenerator.Create(42));

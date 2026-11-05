@@ -124,7 +124,7 @@ public sealed class MutatorSelectionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = new CountAccumulator();
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.CountCandidates(source, observed));
+        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(observed, OperatorCountMetric.Candidates)));
         await using var rebound = Run(child, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await rebound.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -158,7 +158,7 @@ public sealed class MutatorSelectionTests
         IOperator<Mutation, int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
         var count = new CountAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountCandidates(source, count));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(count, OperatorCountMetric.Candidates)));
         var algorithm = Algorithm(source) with { MutationRate = rate };
         await RunToCompletion(scope, nsga ? AsNsga2(algorithm) : algorithm);
         count.CurrentCount.ShouldBe(0);

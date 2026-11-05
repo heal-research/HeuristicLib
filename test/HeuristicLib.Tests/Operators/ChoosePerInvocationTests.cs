@@ -126,10 +126,10 @@ public class ChoosePerInvocationTests
         var choice = ChoosePerInvocation.Create([first, second], [1.0, 0.0]);
         CountAccumulator firstCalls = new(), secondCalls = new(), choiceCalls = new(), choiceCandidates = new();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.CountInvocations(first, firstCalls));
-        scope.AddAspect(Aspect.CountInvocations(second, secondCalls));
-        scope.AddAspect(Aspect.CountInvocations(choice, choiceCalls));
-        scope.AddAspect(Aspect.CountCandidates(choice, choiceCandidates));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(first), new CountingOperatorAdvice(firstCalls, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(second), new CountingOperatorAdvice(secondCalls, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(choice), new CountingOperatorAdvice(choiceCalls, OperatorCountMetric.Invocations)));
+        scope.AddAspect(Aspect.Create(Pointcut.Reference(choice), new CountingOperatorAdvice(choiceCandidates, OperatorCountMetric.Candidates)));
         var executor = scope
             .For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice);
         var random = RandomNumberGenerator.Create(1);
@@ -152,7 +152,7 @@ public class ChoosePerInvocationTests
         var root = ResolutionScope.Create();
         var plain = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice);
         var countedScope = root.CreateChildScope();
-        countedScope.AddAspect(Aspect.CountInvocations(child, calls));
+        countedScope.AddAspect(Aspect.Create(Pointcut.Reference(child), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
         var counted = countedScope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice);
         var random = RandomNumberGenerator.Create(1);
 
