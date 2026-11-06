@@ -8,24 +8,31 @@ namespace HEAL.HeuristicLib.Operators;
 
 public interface IOperator : IConfigurationNode;
 
-/// <summary>A reusable operator configuration supporting the operation identified by TOperation.</summary>
-public interface IOperator<TOperation, TCandidate> : IOperator
-    where TOperation : IOperation<TOperation>
+/// <summary>The construction hook of an operator over <typeparamref name="TCandidate"/>.</summary>
+/// <remarks>
+/// The hook names no operation, so a configuration has one however many operations it performs, and the compiler rejects a
+/// second. A slot names the operation too, through <see cref="IOperator{TOperation, TCandidate}"/>.
+/// </remarks>
+public interface IOperator<TCandidate> : IOperator
 {
-    IOperatorContract<TCandidate>? CandidateContract => this as IOperatorContract<TCandidate>;
-
     /// <summary>Builds this operator's executor for the run types, resolving children through the scope.</summary>
     /// <remarks>
     /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
     /// executor. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
     /// Keep private mutable data in executor fields. The result implements the operation's executor interface for the run
-    /// types. A configuration performing several operations implements this hook once, as a public method, and its
-    /// executor serves every operation; implementing it separately per operation is rejected when it is resolved.
+    /// types. A configuration performing several operations returns an executor that serves every one of them.
     /// </remarks>
     IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState;
+}
+
+/// <summary>A reusable operator configuration supporting the operation identified by TOperation.</summary>
+public interface IOperator<TOperation, TCandidate> : IOperator<TCandidate>
+    where TOperation : IOperation<TOperation>
+{
+    IOperatorContract<TCandidate>? CandidateContract => this as IOperatorContract<TCandidate>;
 }
 
 public interface IOperatorExecutor : IExecutor;

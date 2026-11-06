@@ -30,6 +30,13 @@ public sealed record ChoosePerItem<TOperation, TCandidate> : MultiOperator<TOper
     /// </remarks>
     public ValueArray<double> Weights { get; init; }
 
+    public static Parameter<ChoosePerItem<TOperation, TCandidate>, ValueArray<double>> WeightsParameter { get; } =
+        new(nameof(Weights), static choice => choice.Weights, static (choice, value) => choice with { Weights = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [WeightsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
         TOperation.Route<TCandidate, TSearchSpace, TProblem, TSearchState>(
             new WeightedRouter<IExecutor>(WeightedChoice.ResolveChildren(ChildOperators, Weights, scope), Weights));

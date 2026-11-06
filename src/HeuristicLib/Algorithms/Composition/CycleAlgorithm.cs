@@ -10,24 +10,21 @@ namespace HEAL.HeuristicLib.Algorithms;
 /// Every turn resolves its algorithm in a new child scope, so private executor data such as terminator counts restarts
 /// each turn. Share a configuration through <c>Sharing</c> on the Cycle to keep one executor for it across turns.
 /// </remarks>
-public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
-    : Algorithm<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, TCandidate, TSearchState>
+public record CycleAlgorithm<TCandidate, TSearchState>
+    : Algorithm<CycleAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
-    public ValueArray<TAlgorithm> Algorithms { get; init; }
+    public ValueArray<IAlgorithm<TCandidate, TSearchState>> Algorithms { get; init; }
 
-    public static ListParameter<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, TAlgorithm> AlgorithmsParameter { get; } =
+    public static ListParameter<CycleAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmsParameter { get; } =
         new(nameof(Algorithms), static cycle => cycle.Algorithms, static (cycle, value) => cycle with { Algorithms = value.ToValueArray() });
 
-    public static Parameter<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, int?> MaximumCyclesParameter { get; } =
+    public static Parameter<CycleAlgorithm<TCandidate, TSearchState>, int?> MaximumCyclesParameter { get; } =
         new(nameof(MaximumCycles), static cycle => cycle.MaximumCycles, static (cycle, value) => cycle with { MaximumCycles = value });
 
     public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmsParameter, MaximumCyclesParameter];
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
-
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits([.. Algorithms]);
 
     /// <summary>
     /// Gets the cycle limit, or <see langword="null"/> for unlimited cycling. The expected value is positive.
@@ -35,7 +32,7 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     /// <remarks>A nonpositive limit runs no cycles.</remarks>
     public int? MaximumCycles { get; init; }
 
-    public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
+    public CycleAlgorithm(IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
     {
         if (algorithms.Count == 0)
             throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
@@ -48,60 +45,43 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     {
         if (Algorithms.Count == 0)
             throw new InvalidOperationException("A cycle needs at least one algorithm.");
-        return new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, MaximumCycles);
+        return new CycleAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, MaximumCycles);
     }
 }
 
 public static class CycleAlgorithm
 {
-    public static CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> Create<TAlgorithm, TCandidate, TSearchState>(
-        Algorithm<TAlgorithm, TCandidate, TSearchState> firstAlgorithm, params IReadOnlyList<TAlgorithm> followingAlgorithms)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
-        where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
-
-    public static CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> Create<TCandidate, TSearchState>(
+    public static CycleAlgorithm<TCandidate, TSearchState> Create<TCandidate, TSearchState>(
         params IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
         where TSearchState : class, ISearchState => new([.. algorithms]);
 }
 
 public static class CycleAlgorithmExtensions
 {
-    extension<TAlgorithm, TCandidate, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchState> algorithm)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
-        where TSearchState : class, ISearchState
-    {
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null) =>
-            new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles };
-
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null) =>
-            new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
-    }
-
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
+        public CycleAlgorithm<TCandidate, TSearchState> CycleWith(
             IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null) =>
             new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles };
 
-        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
+        public CycleAlgorithm<TCandidate, TSearchState> CycleWith(
             IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null) =>
             new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
     }
 }
 
-public class CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
+public class CycleAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
     private readonly ResolutionScope scope;
-    protected readonly ImmutableArray<TAlgorithm> Algorithms;
+    protected readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> Algorithms;
     protected readonly int? MaximumCycles;
 
-    public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles)
+    public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms, int? maximumCycles)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();

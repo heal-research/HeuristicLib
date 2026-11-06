@@ -22,6 +22,13 @@ public sealed record Retry<TOperation, TCandidate> : WrappingOperator<TOperation
 
     public int MaximumAttempts { get; init; }
 
+    public static Parameter<Retry<TOperation, TCandidate>, int> MaximumAttemptsParameter { get; } =
+        new(nameof(MaximumAttempts), static retry => retry.MaximumAttempts, static (retry, value) => retry with { MaximumAttempts = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MaximumAttemptsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         if (MaximumAttempts < 1)

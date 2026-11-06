@@ -24,7 +24,7 @@ public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchSt
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
     /// <summary>An interceptor returns the search state, so that one must match exactly rather than convert.</summary>
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.SearchState == typeof(TSearchState);
+    public override bool Supports(ExecutionSignature execution) => base.Supports(execution) && execution.SearchState == typeof(TSearchState);
 }
 
 public abstract record Interceptor<TCandidate, TSearchSpace, TSearchState>

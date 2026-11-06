@@ -6,6 +6,7 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
@@ -248,6 +249,43 @@ public class PreflightValidationSpecs
         // Named with the path that leads to it, from the outer algorithm down to the stage's own slot.
         failure.Message.ShouldContain(nameof(RandomBoolVectorCreator));
         failure.Message.ShouldContain("Creator");
+    }
+
+    /// <summary>
+    /// A composed operator answers for what it composes without any code of its own, so the check reaches a selector
+    /// inside an elitist selection the same way it reaches the slots of the algorithm.
+    /// </summary>
+    [Fact]
+    public void CreatingARun_ReachesAnOperatorInsideAComposedOperator()
+    {
+        var problem = ConstrainedProblem();
+        var algorithm = new GeneticAlgorithm<BoolVector>
+        {
+            Creator = new FixedCardinalityCreator(),
+            Crossover = new FirstParentCrossover(),
+            Mutator = new BitSwapMutator(),
+            Selector = new WiderSpaceSelector().CombinedWithElites(),
+            PopulationSize = 4,
+            MaximumGenerations = 1
+        };
+
+        var failure = Should.Throw<InvalidOperationException>(
+            () => algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+
+        failure.Message.ShouldContain(nameof(WiderSpaceSelector));
+        failure.Message.ShouldContain("SelectorForRemaining");
+    }
+
+    private sealed record FirstParentCrossover : SingleCandidateCrossover<BoolVector>
+    {
+        public override BoolVector CrossParents(Parents<BoolVector> parents, IRandomNumberGenerator random) => parents.Parent1;
+    }
+
+    /// <summary>A selector written for the space without the cardinality, which the constrained space does not derive from.</summary>
+    private sealed record WiderSpaceSelector : StatelessSelector<BoolVector, BoolVectorSearchSpace>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<BoolVector>> Select(IReadOnlyList<EvaluatedCandidate<BoolVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, BoolVectorSearchSpace searchSpace) =>
+            population;
     }
 
     /// <summary>A creator that really is written for the constrained space, unlike the library's bool vector creator.</summary>

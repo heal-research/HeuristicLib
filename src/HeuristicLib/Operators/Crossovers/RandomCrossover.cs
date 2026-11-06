@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -19,6 +20,13 @@ public record RandomCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>
     /// second parent, while at least one always takes the first.
     /// </remarks>
     public double Bias { get; init; } = 0.5;
+
+    public static Parameter<RandomCrossover<TCandidate>, double> BiasParameter { get; } =
+        new(nameof(Bias), static crossover => crossover.Bias, static (crossover, value) => crossover with { Bias = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [BiasParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override TCandidate CrossParents(Parents<TCandidate> parents, IRandomNumberGenerator random) => random.NextDouble() < Bias ? parents.Parent1 : parents.Parent2;
 }

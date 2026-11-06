@@ -49,6 +49,22 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>
     /// </summary>
     public long GraceCount { get; init; } = long.MaxValue;
 
+    public static Parameter<DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>, IDynamicProblem<TCandidate, TSearchSpace>> SourceProblemParameter { get; } =
+        new(nameof(SourceProblem), static evaluator => evaluator.SourceProblem, static (evaluator, value) => evaluator with { SourceProblem = value });
+
+    public static Parameter<DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>, ICacheKeySelector<TCandidate, TKey>> KeySelectorParameter { get; } =
+        new(nameof(KeySelector), static evaluator => evaluator.KeySelector, static (evaluator, value) => evaluator with { KeySelector = value });
+
+    public static Parameter<DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>, long?> SizeLimitParameter { get; } =
+        new(nameof(SizeLimit), static evaluator => evaluator.SizeLimit, static (evaluator, value) => evaluator with { SizeLimit = value });
+
+    public static Parameter<DynamicCachingEvaluator<TCandidate, TSearchSpace, TKey>, long> GraceCountParameter { get; } =
+        new(nameof(GraceCount), static evaluator => evaluator.GraceCount, static (evaluator, value) => evaluator with { GraceCount = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [SourceProblemParameter, KeySelectorParameter, SizeLimitParameter, GraceCountParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     /// <remarks>
     /// This evaluator serves exactly one problem instance, matched by identity, which <c>Evaluate</c> checks.
     /// </remarks>

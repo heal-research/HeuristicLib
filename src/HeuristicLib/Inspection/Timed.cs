@@ -18,6 +18,13 @@ public sealed record Timed<TOperation, TCandidate> : WrappingOperator<TOperation
 
     public Duration Duration { get; init; }
 
+    public static Parameter<Timed<TOperation, TCandidate>, Duration> DurationParameter { get; } =
+        new(nameof(Duration), static timed => timed.Duration, static (timed, value) => timed with { Duration = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [DurationParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
         ExplicitPlacement.Apply(scope, ChildOperator, new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(scope.Results.Result(Duration), Duration.TimeProvider));
 }

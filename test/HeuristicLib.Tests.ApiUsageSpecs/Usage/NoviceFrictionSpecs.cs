@@ -384,19 +384,17 @@ public class NoviceFrictionSpecs
     }
 
     /// <summary>
-    /// Composition adds the algorithm self type and the search state on top of the three a stage already carries.
-    /// Recorded for later; the simple cases come first.
+    /// Composition names what its stages must share, which is the candidate and the search state.
     /// </summary>
     [Fact]
-    public void ComposingAlgorithms_AddsOneFurtherTypeArgument()
+    public void ComposingAlgorithms_NamesTheCandidateAndTheSearchState()
     {
         var problem = new TravelingSalesmanProblem();
         var stage = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
         var cycled = stage.CycleWith(stage with { PopulationSize = 40 }, maximumCycles: 2);
 
-        // The composed algorithm, the candidate, and the state threaded between stages.
-        cycled.GetType().GetGenericArguments().Length.ShouldBe(3);
+        cycled.GetType().GetGenericArguments().Length.ShouldBe(2);
         cycled.Algorithms.Count.ShouldBe(2);
     }
 

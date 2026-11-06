@@ -6,22 +6,20 @@ namespace HEAL.HeuristicLib.Execution;
 public interface IConfigurationNode
 {
     /// <summary>
-    /// Whether this configuration, and everything it resolves under the same signature, was written for
-    /// <paramref name="execution"/>. A configuration that names no search space, problem or search state fits every
-    /// execution, which is the default.
+    /// Whether this configuration itself was written for <paramref name="execution"/>. A configuration that names no search
+    /// space, problem or search state supports every execution, which is the default.
     /// </summary>
     /// <remarks>
-    /// This is the rule the authoring bases apply when they bridge to an execution's types, so resolution and
-    /// pre-flight validation answer one question rather than two that resemble each other. It is decided from type
-    /// arguments alone: nothing is constructed, which is what lets validation reach children a run would only build
-    /// later.
+    /// This is the rule the authoring bases apply when they bridge to an execution's types, so resolution and pre-flight
+    /// validation answer one question rather than two that resemble each other. It is decided from type arguments alone:
+    /// nothing is constructed, which is what lets validation reach children a run would only build later.
     /// <para>
-    /// A composition that passes its signature through to its children answers for them with
-    /// <see cref="ExecutionSignature.Fits(ReadOnlySpan{IConfigurationNode})"/>. One that adapts them does
-    /// not, and needs no code to say so.
+    /// It answers for this configuration alone. <see cref="ExecutionSignature.Supports(IConfigurationNode)"/> asks the
+    /// declared children too, so a composition writes no code to answer for them. One that runs a child under other types
+    /// states them through <see cref="Parameter{TOwner, TValue}.ChildExecution"/>.
     /// </para>
     /// </remarks>
-    bool Fits(ExecutionSignature execution) => true;
+    bool Supports(ExecutionSignature execution) => true;
 
     /// <summary>The parameters this configuration declares, including inherited ones.</summary>
     /// <remarks>

@@ -75,7 +75,7 @@ public sealed class MixedOperatorResolutionTests
         public int Preparations { get; private set; }
 
         // Each executor owns its live value.
-        IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             Preparations++;
@@ -96,13 +96,13 @@ public sealed class MixedOperatorResolutionTests
 
     private sealed record ForwardedCrossover(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>
     {
-        IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(Child);
     }
 
     private sealed record CurrentForward(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>
     {
-        IExecutor IOperator<Crossover, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => scope.Resolve(Child);
     }
 }

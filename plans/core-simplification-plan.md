@@ -166,7 +166,43 @@ Exit: the [evidence](#evidence-required) is collected and the developer decides.
 
 ### Phase 2: parameter contract everywhere
 
-Declarations on every configuration node in core, Experimental and PythonInterop, about 240 records by a rough count, with whatever completeness check D2's detailed design selects. First consumers, with no behavior change: the reflection walk in `SearchConfigurationValidation` and the hand-written `Fits` child lists (idea 9; `Fits(` appears in 26 source files). `Fits` is renamed to `Supports` here, because its overrides are rewritten anyway. Composites that run children under other types remain a declared boundary. `CycleAlgorithm` and `PipelineAlgorithm` also lose `TAlgorithm` here (D10).
+Declarations on every configuration node in core, Experimental and PythonInterop, about 240 records by a rough count. A check for forgotten declarations is [out of scope for this branch](#decided-in-round-19). First consumers: the reflection walk in `SearchConfigurationValidation` and the hand-written `Fits` child lists (idea 9; `Fits(` appears in 26 source files), with no behavior change beyond [D47](#decided-in-round-19). `Fits` is renamed to `Supports` here, because its overrides are rewritten anyway. Composites that run children under other types state the execution of the child on its slot ([D48](#decided-in-round-19)). `CycleAlgorithm` and `PipelineAlgorithm` also lose `TAlgorithm` here (D10).
+
+Progress on 2026-11-06: `TAlgorithm` is gone, and every record with a stored property in the three libraries declares its parameters. Three notes:
+
+- `OperatorCounter.Metric` stays undeclared, because the old counter is a class with no `with` and goes in phase 6.
+- The old budgets declare their targets as reference lists, because they name operators that live elsewhere in the graph, and keep their hand-written check until phase 3. The single target is a one-entry list, which saves a new parameter class.
+- `Neighborhood` gains a virtual `GetParameters`, like `Operator` and `Algorithm`, and racing's `StateMerger` gains `init`.
+
+The consumers and the rename followed on the same day. `SearchConfigurationValidation` walks declared parameters, `ExecutionSignature.Supports(node)` replaces the child lists, and `Fits` is gone from code and docs. Seven records state a forward: the three composite operators of `CompositeSearchSpace`, racing, `ReevaluationInterceptor`, and the two PythonInterop records that resolve `ChildRefiner`. A throwaway check over the sources finds only `OperatorCounter.Metric` undeclared, so forgotten declarations are absent today, though nothing guards them after this branch.
+
+Differences beyond D47, each expected:
+
+- A child that a configuration does not declare is a leaf to validation, where the reflection walk followed any property. This applies to external configurations, so the guide now says to declare children, and its `SingleCreateAlgorithm` does.
+- Diagnostics follow declaration order, inherited parameters first, rather than the order reflection gave. A node reached twice is therefore reported under whichever path comes first in that order.
+- A reference list entry is still visited for invariants and blame, but `Supports` does not ask it. The old budgets keep their hand-written check for their targets until phase 3.
+
+Other changes the plan did not name: `ISlotRewriter.Reference` gains the entry's name, so validation can report its path.
+
+A review of the staged change by a second agent, on the same day, confirmed two defects and found none in the other areas it covered. Both are fixed:
+
+- `ReevaluationInterceptor` was pass-through on the reasoning that an evaluator has no state check, but a consumer's evaluator can have one. It resolves under `ISearchState`, so an evaluator supporting only that was falsely rejected. It now states the forward, and a scan of the sources found no other unstated resolve.
+- `PredefinedCandidatesCreator` threw at `GetParameters()` when its candidate is itself a configuration, because `Parameter` decides on the closed type and rejected `ValueArray<TCandidate>` as a list of configurations. Candidates are data, so the parameter is now a `SettingParameter` ([D50](#decided-in-round-20)).
+
+The test for the first defect showed a third problem the review did not report. Since D47, a resolve that failed on a child blamed the parent, saying the parent "is written for its declared signature" without naming the child, where the child's own resolve used to name it. An operator that is itself written for the run now reports through `SearchConfigurationValidation.Mismatch`, as algorithms already do. An operator that is not keeps its existing message.
+
+Cost, from a throwaway Stopwatch program against this working tree and commit `8603b3ef`, medians of 9 rounds across three process runs on one machine. It is not in the repository. Allocations count the measuring thread only.
+
+| Measured                             | Before        | After           | Allocated before | Allocated after |
+| ------------------------------------ | ------------- | --------------- | ---------------- | --------------- |
+| The question over one GA             | 125 to 128 ns | 222 to 242 ns   | 0 B              | 1,088 B         |
+| The question over a cycle of two GAs | 65 to 109 ns  | 501 to 551 ns   | 40 B             | 2,384 B         |
+| Resolving one GA in a new scope      | 5.1 to 5.2 µs | 3.3 µs          | 3,944 B          | 5,512 B         |
+| Validating one GA                    | 2.3 to 2.4 µs | 0.6 to 0.7 µs   | 2,530 B          | 4,360 B         |
+| Completing a two candidate GA        | 13.4 to 18 µs | 11.5 to 12.9 µs | 8.8 to 9.2 KB    | 12.2 to 12.5 KB |
+| Completing a cycle of 1,000 stages   | 5.2 to 6.6 ms | 5.5 to 5.6 ms   | not comparable   | not comparable  |
+
+The walk makes the question slower and allocating, because `GetParameters()` builds a list on each call, and it is asked once per resolve. A complete run is not slower, even when a cycle resolves its stages again on every turn, because the question stays small next to a resolve and validation no longer uses reflection. No cache is needed for now. The resolve row is not a gain from this phase alone: its baseline ranged widely across rounds.
 
 ### Phase 3: replace interception
 
@@ -420,6 +456,8 @@ Decided by the developer on 2026-11-06, after the pilot's report.
 
 Decided by the developer on 2026-11-06.
 
+- **D45. One parameter class per value.** The declared value type says what a parameter is, as the developer pointed out. `Parameter<TOwner, TValue>` covers settings, children, optional children and delegates, and `ListParameter<TOwner, TChild>` and `ReferenceListParameter<TOwner>` stay. A list needs its element type to rebuild it, which would take reflection to get out of `TValue`. A reference list has the same type as a list of children and only names nodes elsewhere, so the type cannot tell them apart. The declared type decides rather than the value, so an instrument that also happens to be a node, such as an old counter in `Observed`, stays a setting. `Parameter` rejects a list of configurations when it is declared, because a walk would otherwise skip it silently. Required and optional children no longer differ, because nullability does not exist at runtime; nothing reads the difference today. Delegates now need `with` like everything else, so racing's `AlgBuilder` and `EvaluatorSelector` gain `init`.
+
 ### Decided in round 16
 
 Decided by the developer on 2026-11-06.
@@ -439,9 +477,32 @@ A review of the staged pilot on 2026-11-06 found these in the new code. It found
 - **D29, what a read does.** A read of a run result does not count as resolving it. The review proposed that it should, but `run.Result(budget.Counter)` before `Complete` would then make a budget at the root fail with "cannot be shared", and a read must not break a run. The accepted consequence is that an external run result with children, read before a root-level `Share`, keeps the executor it was first built with instead of one in its own child scope. An accumulator has no children, so it is unaffected. The developer accepted this.
 - **Not changed.** A cold read whose hook catches a nested construction failure can still publish its result. Results of a failed run stay readable by design, and nothing resolves through that result afterwards.
 
+### Decided in round 18
+
+Decided by the developer on 2026-11-06.
+
+- **D46. A Roslyn analyzer catches forgotten parameter declarations,** which settles D2's completeness check. A forgotten child makes a walk treat the node as a leaf, so a selection by type or predicate skips that subtree without an error. The analyzer reports a configuration property with no declared parameter, for the library's records and external authors' alike, as D2 requires. It has to ship in the NuGet package, and today's analyzer projects do not, because `HeuristicLib.csproj` references them with `PrivateAssets="all"`. [Round 19](#decided-in-round-19) moves this out of the branch.
+
+### Decided in round 19
+
+Decided by the developer on 2026-11-06.
+
+- **D46 moves out of this branch.** The analyzer and its packaging are out of scope for the simplification, so they get [a backlog item](developer-backlog.md#optional-capabilities-and-packaging) and their own issue and branch afterwards, which also decides how best to do them. This reopens D2's completeness check and leaves the [declaration cost](#what-does-not-simply-disappear) as it stands. The packaging was tried and reverted, because its output paths depend on the folder layout. No analyzer guards phase 2.
+- **D47. `Supports` answers for the node alone, and one walk asks the children.** `execution.Supports(node)` asks the node and then its declared children, which replaces the hand-written lists. Composites that resolve children under their own signature but do not forward `Fits` today, such as `EliteSelector`, therefore start to forward. A mismatch below them is reported earlier and appears in `Validate`, which the developer accepts as the defect idea 9 removes.
+- **D48. A parameter says what execution its child runs under.** This is how a composite that runs a child under other types is declared. The developer proposed it in place of a flag that would only skip those children, because a forward still checks them against the types they really run under. `Parameter.ChildExecution` maps the owner's `ExecutionSignature` to the child's. It is pass-through when left out, so regular parameters write nothing. The delegate sits on the static parameter, which is metadata per type, so configurations stay data. `ListParameter` gets it when a list crosses such a boundary, and `ReferenceListParameter` never does, because a walk does not ask its entries. Accepted costs: the inner types are stated twice, in `CreateExecutor` and on the slot, and the compiler cannot connect them, while `Resolve` still decides for the children it resolves; and a mismatch below these nodes fails in pre-flight rather than at build.
+
+### Decided in round 20
+
+Decided by the developer on 2026-11-06.
+
+- **D49. `CreateExecutor` moves to a new `IOperator<TCandidate>`.** The hook names no operation, so `IOperator<TOperation, TCandidate>` inherits it, and a configuration has one however many operations it performs. Separate hooks per operation become compile errors, CS0539 for explicit ones and CS8705 for inherited defaults, which replaces the run-time check in `ConstructionHooks` and its inspection of a type's interfaces and methods. Slots keep naming the operation. Accepted costs: authors see a compiler error rather than the library's explanation, explicit hooks change their syntax, and a configuration can again implement one hook per candidate. `Resolve` rejects a second candidate its executor does not serve, but an executor serving both is built by whichever candidate is requested first, with no error. A derived type adding an operation to its base's hook compiles too, and fails at resolution if that executor does not serve the operation.
+- **Reflection stays out of program logic.** The developer does not want code that inspects types and lists their methods or interfaces. `typeof` of a concrete type and `IsAssignableTo` are fine, and so is reflection that only builds a better exception message, which keeps `ProducedSearchStates` and `ExecutionSignature.Name`.
+
+- **D50. `SettingParameter<TOwner, TValue>` amends D45.** `Parameter` decides on the closed type, so a value typed by a type parameter is read as a child, or rejected as a list, when it closes over a configuration, although it is data. A terminator stopping at a target candidate is a legitimate case of this. `SettingParameter` is never entered and never reported, whatever its type closes over. It is used where a value is typed by a type parameter, so 3 declarations use it: `PredefinedCandidates` and the two `SourceProblem` values. The other declarations stay `Parameter`, so a concrete setting can be written either way. Accepted limits: `Parameter<X, TCandidate>` still compiles and is silently a child when closed over a configuration, which the later analyzer is to report, and a delegate in a `SettingParameter` is not reported as a boundary.
+- **A record never holds or declares an `IEnumerable`, generic or not.** A sequence has no value semantics, which breaks the idea of a record. The developer rejected `IEnumerable<TCandidate>` as the declared value of `PredefinedCandidates`, and the rule is in the [developer guidelines](../docs/contributing/developer-guidelines.md).
+
 ### Decided later
 
-- **D45. One parameter class per value.** The developer suggests that the value type already says what a parameter is. Proposed: one `Parameter<TOwner, TValue>` covering settings, children, optional children and delegates, with separate classes only for lists of children and reference lists. Waiting for the developer's decision.
 - **D5. Problem-bound executors (idea 5).** Bind an executor to one problem object at construction, and model a changing problem as a mutable problem instance, as `DynamicProblem` already does. The direction is favored, and the [phase 4b spike](#phase-4b-problem-binding-spike) settles it. See [the conditions](#problem-bound-executor-conditions).
 - **D11. Untyped multi-target budgets.** `LimitedToInvocations(IReadOnlyList<IOperator>, n)` cannot build a typed wrapper from `IOperator` without a dispatch. Options are a small dispatch member on `IOperator`, or typed targets sharing one counter. In-repo usage alone is not a reason to remove it. Decide in phase 3; the pilot uses one typed target.
 - **D15. Does a definition keep its source?** A definition names a source that explicit placement ignores. Decide in phase 6.

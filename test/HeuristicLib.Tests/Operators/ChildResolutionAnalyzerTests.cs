@@ -152,7 +152,7 @@ public class ChildResolutionAnalyzerTests
             file sealed record BridgingCrossover : IOperator<Crossover, int>
             {
                 public required IOperator<Crossover, int> Child { get; init; }
-                IExecutor IOperator<Crossover, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
                     Child.CreateExecutor(scope);
             }
             """);
@@ -166,7 +166,7 @@ public class ChildResolutionAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed record BridgingCrossover : ChildCrossover, IOperator<Crossover, int>
             {
-                IExecutor IOperator<Crossover, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
                     CreateExecutor(scope);
             }
             """);

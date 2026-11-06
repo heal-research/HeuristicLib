@@ -13,7 +13,7 @@ public class PipelineAlgorithmTests
         var first = new AdditiveStepAlgorithm(1);
         var second = new AdditiveStepAlgorithm(2);
         var algorithms = new List<AdditiveStepAlgorithm> { first, second };
-        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>(algorithms);
+        var pipeline = new PipelineAlgorithm<int, PopulationState<int>>(algorithms);
 
         algorithms.Clear();
 
@@ -24,7 +24,7 @@ public class PipelineAlgorithmTests
     public void PipelineAlgorithm_RequiresAtLeastOneAlgorithm()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>([]));
+            new PipelineAlgorithm<int, PopulationState<int>>([]));
 
         exception.ParamName.ShouldBe("algorithms");
     }

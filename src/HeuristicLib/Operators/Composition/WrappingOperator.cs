@@ -21,8 +21,6 @@ public abstract record WrappingOperator<TOperation, TCandidate> : Operator<TOper
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    public override bool Fits(ExecutionSignature execution) => execution.Fits(ChildOperator);
-
     public virtual bool? Ensures(ICandidateInvariant<TCandidate> invariant) => OperatorContractComposition.Ensures([ChildOperator], invariant);
 
     public virtual IReadOnlyList<ICandidateInvariant<TCandidate>> Requires => OperatorContractComposition.Requires<TCandidate>([ChildOperator]);

@@ -20,11 +20,16 @@ public partial class ResolutionScope
         where TSearchState : class, ISearchState
     {
         node.Tree.ThrowIfFailed();
-        if (!source.Fits(ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>()))
-            throw ExecutionSignature.Mismatch(source,
-                source is Operator<TOperation, TCandidate> authored ? authored.SupportedExecutionDescription : "its declared signature",
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)));
-        ConstructionHooks.RequireOne(source);
+        var execution = ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>();
+        if (!execution.Supports(source))
+        {
+            // When the operator itself is written for this run, a child is responsible, so the failure names the child.
+            throw source.Supports(execution)
+                ? SearchConfigurationValidation.Mismatch(source, execution)
+                : ExecutionSignature.Mismatch(source,
+                    source is Operator<TOperation, TCandidate> authored ? authored.SupportedExecutionDescription : "its declared signature",
+                    ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)));
+        }
         using var building = node.Tree.Enter(source);
         var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
 

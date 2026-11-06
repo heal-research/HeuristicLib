@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Random;
@@ -31,6 +32,13 @@ public record AlphaBetaBlendCrossover : SingleCandidateCrossover<RealVector, Bou
     // };
 
     public double Alpha { get; init; } = 0.7;
+
+    public static Parameter<AlphaBetaBlendCrossover, double> AlphaParameter { get; } =
+        new(nameof(Alpha), static crossover => crossover.Alpha, static (crossover, value) => crossover with { Alpha = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [AlphaParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
     public double Beta => 1 - Alpha;
 
     public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>

@@ -16,6 +16,16 @@ public record PredefinedCandidatesCreator<TCandidate>
 
     public ValueArray<TCandidate> PredefinedCandidates { get; init; }
 
+    public static Parameter<PredefinedCandidatesCreator<TCandidate>, IOperator<Creation, TCandidate>> CreatorForRemainingCandidatesParameter { get; } =
+        new(nameof(CreatorForRemainingCandidates), static creator => creator.CreatorForRemainingCandidates, static (creator, value) => creator with { CreatorForRemainingCandidates = value });
+
+    public static SettingParameter<PredefinedCandidatesCreator<TCandidate>, ValueArray<TCandidate>> PredefinedCandidatesParameter { get; } =
+        new(nameof(PredefinedCandidates), static creator => creator.PredefinedCandidates, static (creator, value) => creator with { PredefinedCandidates = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [CreatorForRemainingCandidatesParameter, PredefinedCandidatesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, IOperator<Creation, TCandidate> creatorForRemainingCandidates)
     {
         PredefinedCandidates = predefinedCandidates.ToValueArray();

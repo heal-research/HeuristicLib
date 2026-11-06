@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -29,6 +30,16 @@ public record UniformDistributedCreator : SingleCandidateCreator<RealVector, Bou
     /// space bounds. See <see cref="Ensures"/> for the bounds that keep candidates inside a given search space.
     /// </summary>
     public RealVector? Maximum { get; init; }
+
+    public static Parameter<UniformDistributedCreator, RealVector?> MinimumParameter { get; } =
+        new(nameof(Minimum), static creator => creator.Minimum, static (creator, value) => creator with { Minimum = value });
+
+    public static Parameter<UniformDistributedCreator, RealVector?> MaximumParameter { get; } =
+        new(nameof(Maximum), static creator => creator.Maximum, static (creator, value) => creator with { Maximum = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MinimumParameter, MaximumParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     /// <summary>
     /// Length comes from the search space. Bounds do too, unless both are overridden, in which case the override must

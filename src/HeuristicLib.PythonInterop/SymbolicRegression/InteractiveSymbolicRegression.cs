@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Data;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
@@ -34,6 +35,13 @@ public class InteractiveSymRegParameters
 public sealed record VisualizationCallbackEvaluator(Func<ExpressionTree[], ObjectiveVector[], double[][]> PopulationCallback)
     : StatelessEvaluator<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
 {
+    public static Parameter<VisualizationCallbackEvaluator, Func<ExpressionTree[], ObjectiveVector[], double[][]>> PopulationCallbackParameter { get; } =
+        new(nameof(PopulationCallback), static evaluator => evaluator.PopulationCallback, static (evaluator, value) => evaluator with { PopulationCallback = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [PopulationCallbackParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<ExpressionTree> candidates, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, SymbolicRegressionProblem problem)
     {
         var objectives = problem.Evaluate(candidates, random);

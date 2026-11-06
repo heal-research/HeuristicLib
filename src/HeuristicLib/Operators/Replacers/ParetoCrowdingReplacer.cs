@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
@@ -10,6 +11,13 @@ public sealed record ParetoCrowdingReplacer<TCandidate>
     : StatelessReplacer<TCandidate>
 {
     public bool DominateOnEqualities { get; init; }
+
+    public static Parameter<ParetoCrowdingReplacer<TCandidate>, bool> DominateOnEqualitiesParameter { get; } =
+        new(nameof(DominateOnEqualities), static replacer => replacer.DominateOnEqualities, static (replacer, value) => replacer with { DominateOnEqualities = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [DominateOnEqualitiesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public ParetoCrowdingReplacer(bool dominateOnEqualities)
     {

@@ -332,7 +332,7 @@ public sealed class InstrumentPlacementTests
     // Returns 1, 2, 3, ... on its calls.
     private sealed record IncrementingChecksum : IOperator<Checksum, int>
     {
-        IExecutor IOperator<Checksum, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
 
         private sealed class Executor : IChecksumExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>

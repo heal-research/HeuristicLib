@@ -24,6 +24,13 @@ public sealed record IteratedRefiner<TCandidate>
     /// </summary>
     public int Iterations { get; init; }
 
+    public static Parameter<IteratedRefiner<TCandidate>, int> IterationsParameter { get; } =
+        new(nameof(Iterations), static refiner => refiner.Iterations, static (refiner, value) => refiner with { Iterations = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [IterationsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public IteratedRefiner(IOperator<Refinement, TCandidate> childRefiner, int iterations)
         : base(childRefiner)
     {

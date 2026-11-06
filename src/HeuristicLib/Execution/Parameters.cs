@@ -19,6 +19,9 @@ public interface IParameter
     /// <summary>The configurations this parameter holds as places in the graph, which a setting, a delegate and a reference list do not.</summary>
     IReadOnlyList<IConfigurationNode> GetChildren(IConfigurationNode owner);
 
+    /// <summary>The execution this parameter's children run under, given the execution of the owner.</summary>
+    ExecutionSignature ChildExecution(ExecutionSignature execution) => execution;
+
     // Returns the owner with this parameter's slots passed through the rewriter, or the same instance when none changed.
     internal IConfigurationNode Rewrite(IConfigurationNode owner, ISlotRewriter rewriter);
 }
@@ -30,7 +33,7 @@ internal interface ISlotRewriter
     IConfigurationNode Slot(IConfigurationNode owner, string name, Type slotType, IConfigurationNode child);
 
     // Returns the node a reference list entry should name now.
-    IConfigurationNode Reference(IConfigurationNode entry);
+    IConfigurationNode Reference(string name, IConfigurationNode entry);
 
     // Records a delegate the walk cannot look into.
     void Boundary(IConfigurationNode owner, string name);
@@ -41,6 +44,10 @@ internal interface ISlotRewriter
 /// A value typed by a configuration, such as a mutator, is a place in the graph, and a null value is an empty place. A
 /// delegate is reported, because a walk cannot look into what it creates. Everything else is a setting. A list of
 /// configurations is a <see cref="ListParameter{TOwner, TChild}"/> or a <see cref="ReferenceListParameter{TOwner}"/>.
+/// <para>
+/// This is decided on the closed type. A value typed by a type parameter, such as a candidate, can close over a
+/// configuration and is still data, so declare it with a <see cref="SettingParameter{TOwner, TValue}"/>.
+/// </para>
 /// </remarks>
 public sealed class Parameter<TOwner, TValue> : IParameter
     where TOwner : class, IConfigurationNode
@@ -54,7 +61,7 @@ public sealed class Parameter<TOwner, TValue> : IParameter
     {
         // A list of configurations would otherwise pass as a setting, and a walk would silently skip what it holds.
         if (typeof(TValue).IsAssignableTo(typeof(IReadOnlyList<IConfigurationNode>)))
-            throw new ArgumentException($"{name} holds a list of configurations, so declare it with ListParameter, or with ReferenceListParameter when it names configurations that live elsewhere.", nameof(name));
+            throw new ArgumentException($"{name} holds a list of configurations, so declare it with ListParameter, with ReferenceListParameter when it names configurations that live elsewhere, or with SettingParameter when they are data, such as candidates.", nameof(name));
         Name = name;
         this.get = get;
         this.with = with;
@@ -64,6 +71,13 @@ public sealed class Parameter<TOwner, TValue> : IParameter
 
     public Type ValueType => typeof(TValue);
 
+    /// <summary>
+    /// Maps the owner's execution to the one a child in this slot runs under, for a composite that resolves the child over
+    /// other types. Leave it out for a child that runs under the owner's execution, which is the usual case.
+    /// </summary>
+    /// <remarks>State the same types the owner passes when it resolves the child.</remarks>
+    public Func<ExecutionSignature, ExecutionSignature>? ChildExecution { get; init; }
+
     public TValue Get(TOwner owner) => get(owner);
 
     public TOwner With(TOwner owner, TValue value) => with(owner, value);
@@ -72,6 +86,8 @@ public sealed class Parameter<TOwner, TValue> : IParameter
 
     public IReadOnlyList<IConfigurationNode> GetChildren(IConfigurationNode owner) =>
         holdsConfiguration && get((TOwner)owner) is IConfigurationNode child ? [child] : [];
+
+    ExecutionSignature IParameter.ChildExecution(ExecutionSignature execution) => ChildExecution is { } forward ? forward(execution) : execution;
 
     IConfigurationNode IParameter.Rewrite(IConfigurationNode owner, ISlotRewriter rewriter)
     {
@@ -85,6 +101,31 @@ public sealed class Parameter<TOwner, TValue> : IParameter
         var slot = rewriter.Slot(owner, Name, typeof(TValue), child);
         return ReferenceEquals(slot, child) ? owner : with(typed, (TValue)(object)slot);
     }
+}
+
+/// <summary>One value of the configuration type <typeparamref name="TOwner"/> that is data whatever its type is.</summary>
+/// <remarks>
+/// A walk neither enters it nor reports it, even when <typeparamref name="TValue"/> closes over a configuration or a
+/// delegate. Use it for a value typed by a type parameter, such as a candidate. A value of a concrete setting type needs
+/// only a <see cref="Parameter{TOwner, TValue}"/>, and a delegate that creates configurations should stay one, so that a
+/// substitution can report it.
+/// </remarks>
+public sealed class SettingParameter<TOwner, TValue>(string name, Func<TOwner, TValue> get, Func<TOwner, TValue, TOwner> with) : IParameter
+    where TOwner : class, IConfigurationNode
+{
+    public string Name { get; } = name;
+
+    public Type ValueType => typeof(TValue);
+
+    public TValue Get(TOwner owner) => get(owner);
+
+    public TOwner With(TOwner owner, TValue value) => with(owner, value);
+
+    public object? GetValue(IConfigurationNode owner) => get((TOwner)owner);
+
+    public IReadOnlyList<IConfigurationNode> GetChildren(IConfigurationNode owner) => [];
+
+    IConfigurationNode IParameter.Rewrite(IConfigurationNode owner, ISlotRewriter rewriter) => owner;
 }
 
 /// <summary>An ordered list of configurations, declared on the configuration type <typeparamref name="TOwner"/>.</summary>
@@ -148,7 +189,7 @@ public sealed class ReferenceListParameter<TOwner>(string name, Func<TOwner, IRe
         IConfigurationNode[]? rewritten = null;
         for (var index = 0; index < entries.Count; index++)
         {
-            var entry = rewriter.Reference(entries[index]);
+            var entry = rewriter.Reference($"{Name}[{index}]", entries[index]);
             if (ReferenceEquals(entry, entries[index]))
                 continue;
             rewritten ??= [.. entries];

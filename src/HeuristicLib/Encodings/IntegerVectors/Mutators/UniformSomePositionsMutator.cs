@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.Vectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 
@@ -14,6 +15,16 @@ public record UniformSomePositionsMutator
     public double Probability { get; init; } = 0.05;
 
     public bool AtLeastOnce { get; init; } = true;
+
+    public static Parameter<UniformSomePositionsMutator, double> ProbabilityParameter { get; } =
+        new(nameof(Probability), static mutator => mutator.Probability, static (mutator, value) => mutator with { Probability = value });
+
+    public static Parameter<UniformSomePositionsMutator, bool> AtLeastOnceParameter { get; } =
+        new(nameof(AtLeastOnce), static mutator => mutator.AtLeastOnce, static (mutator, value) => mutator with { AtLeastOnce = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [ProbabilityParameter, AtLeastOnceParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override IntegerVector MutateCandidate(IntegerVector parent, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
         Mutate(parent, random, searchSpace, Probability, AtLeastOnce);

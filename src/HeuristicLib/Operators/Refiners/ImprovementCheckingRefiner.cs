@@ -63,6 +63,19 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     /// </remarks>
     public IImprovementCriterion Criterion { get; init; } = ImprovementChecking.Default;
 
+    public static Parameter<ImprovementCheckingRefiner<TCandidate>, IOperator<Refinement, TCandidate>> RefinerParameter { get; } =
+        new(nameof(Refiner), static refiner => refiner.Refiner, static (refiner, value) => refiner with { Refiner = value });
+
+    public static Parameter<ImprovementCheckingRefiner<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static refiner => refiner.Evaluator, static (refiner, value) => refiner with { Evaluator = value });
+
+    public static Parameter<ImprovementCheckingRefiner<TCandidate>, IImprovementCriterion> CriterionParameter { get; } =
+        new(nameof(Criterion), static refiner => refiner.Criterion, static (refiner, value) => refiner with { Criterion = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [RefinerParameter, EvaluatorParameter, CriterionParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {

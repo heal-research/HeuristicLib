@@ -548,7 +548,7 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IOperator<Mutation, TCandidate>` do not acquire a `Node` suffix.
 
-`IOperator<TOperation, TCandidate>` builds its executor through one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` hook. The hook resolves children and looks up run-bound results through the typed scope. Multi-operation configurations implement the hook once and use one executor per scope. Wrapping and multi bases expose `ChildOperator` and `ChildOperators`.
+`IOperator<TOperation, TCandidate>` builds its executor through one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` hook, which it inherits from `IOperator<TCandidate>`. The hook resolves children and looks up run-bound results through the typed scope. Multi-operation configurations implement the hook once and use one executor per scope. Wrapping and multi bases expose `ChildOperator` and `ChildOperators`.
 
 Algorithms and consumer-defined roles build the same way. An algorithm's `CreateExecutor<TSearchSpace, TProblem>(scope)` receives a scope typed to the run and its search state; an algorithm bound to a search space and problem overrides a `CreateExecutor` typed to them instead. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope scope)`. The hook is runtime machinery, not a configuration value strategy.
 

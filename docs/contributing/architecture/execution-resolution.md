@@ -28,7 +28,7 @@ A scope holds shared executors by configuration reference. The nearest ancestor 
 
 ### Operation-parameterized operators
 
-An `IOperator<TOperation, TCandidate>` exposes one construction hook for its operation and run types. A multi-operation configuration implements that hook once and shares its executor and private fields across those operation views within the scope. Resolution checks the built and wrapped executors through the requested operation's `IsExecutor`.
+An `IOperator<TOperation, TCandidate>` inherits one construction hook from `IOperator<TCandidate>`, for the run types. The hook names no operation, so a multi-operation configuration can only implement it once, and it shares its executor and private fields across those operation views within the scope. Resolution checks the built and wrapped executors through the requested operation's `IsExecutor`.
 
 Operators, algorithms and consumer defined roles use the same run results, aspect chain and configuration reference construction guard. Every operation resolves through the generic path.
 

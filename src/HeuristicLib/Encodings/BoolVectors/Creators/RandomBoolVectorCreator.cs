@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -17,6 +18,13 @@ public record RandomBoolVectorCreator : SingleCandidateCreator<BoolVector, BoolV
     /// Gets the probability that an element is set. The expected value is in <c>[0, 1]</c>.
     /// </summary>
     public double SetProbability { get; init; } = 0.5;
+
+    public static Parameter<RandomBoolVectorCreator, double> SetProbabilityParameter { get; } =
+        new(nameof(SetProbability), static creator => creator.SetProbability, static (creator, value) => creator with { SetProbability = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [SetProbabilityParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {

@@ -303,7 +303,7 @@ public sealed class OperatorOwnershipTests
 
     private sealed class MixedCycle : IOperator<Mutation, RealVector>
     {
-        IExecutor IOperator<Mutation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             _ = scope.Resolve(new Bridge(this));

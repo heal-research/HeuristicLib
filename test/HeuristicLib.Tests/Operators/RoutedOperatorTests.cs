@@ -814,7 +814,7 @@ public class RoutedOperatorTests
         public int ExecutionsCreated { get; private set; }
 
         // Each executor owns its call count.
-        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;
@@ -842,7 +842,7 @@ public class RoutedOperatorTests
     private sealed record CallbackExecutionMutator(MutationCallback Callback)
         : IOperator<Mutation, int>
     {
-        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => CreateBoundExecutor();
 
         private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecutor() =>

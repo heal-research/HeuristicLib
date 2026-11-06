@@ -196,7 +196,7 @@ A setting has one input path.
 
 Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor` and throw `InvalidOperationException` before execution begins. Bound bases validate run-type compatibility before calling the hook. Do not add a separate validation API.
 
-For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before requesting resources. `Fits` supplies preflight metadata and resolution checks each executor against its requested interface. Advice rejects unsupported operators in `Check` before raw construction and child work. A construction failure ends the scope tree while retaining published results.
+For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before requesting resources. `Supports` supplies preflight metadata and resolution checks each executor against its requested interface. Advice rejects unsupported operators in `Check` before raw construction and child work. A construction failure ends the scope tree while retaining published results.
 
 Instrument result creation must not depend on a requesting executor or its children. Its hooks receive only `RunResults`. Failed creation publishes no result or aspect; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
 
@@ -311,7 +311,7 @@ Choose collection types by meaning and ownership.
 | Collection held by an executor                         | `ImmutableArray<T>`                                   |
 | Lazy or sequence oriented API                          | `IEnumerable<T>`                                      |
 
-`ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on executors, where structural equality is unnecessary.
+A record never holds or declares an `IEnumerable`, generic or not, because a sequence has no value semantics and would break what a record promises. `ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on executors, where structural equality is unnecessary.
 
 ### § 5.5 Construct value arrays without accidental nesting
 

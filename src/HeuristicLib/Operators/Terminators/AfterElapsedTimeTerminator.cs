@@ -21,6 +21,16 @@ public sealed record AfterElapsedTimeTerminator<TCandidate>
 
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
+    public static Parameter<AfterElapsedTimeTerminator<TCandidate>, TimeSpan> MaximumElapsedTimeParameter { get; } =
+        new(nameof(MaximumElapsedTime), static terminator => terminator.MaximumElapsedTime, static (terminator, value) => terminator with { MaximumElapsedTime = value });
+
+    public static Parameter<AfterElapsedTimeTerminator<TCandidate>, TimeProvider> TimeProviderParameter { get; } =
+        new(nameof(TimeProvider), static terminator => terminator.TimeProvider, static (terminator, value) => terminator with { TimeProvider = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [MaximumElapsedTimeParameter, TimeProviderParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) => new Executor(MaximumElapsedTime, TimeProvider);
 
     private sealed class Executor(TimeSpan maximumElapsedTime, TimeProvider timeProvider) : TerminationExecutor<TCandidate>

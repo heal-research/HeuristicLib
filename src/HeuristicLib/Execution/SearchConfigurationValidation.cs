@@ -1,4 +1,3 @@
-using System.Reflection;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -46,13 +45,13 @@ public sealed record ValidationReport(ImmutableArray<ValidationDiagnostic> Diagn
 /// up front rather than when the algorithm first reaches it.
 /// </summary>
 /// <remarks>
-/// The walk is by reflection over configuration properties, so it covers algorithms and operators written outside the
-/// library, and runs once per validation, never during a run.
+/// The walk goes over declared parameters, so it reaches what a configuration declares, including configurations written
+/// outside the library, and it runs once per validation, never during a run.
 /// <para>
 /// Two independent questions are asked of each node. Whether it declares an invariant contract the search space
 /// contradicts, which is skipped when it declares none; and, when the run's types are supplied, whether it was
-/// written for them at all. The second is the same <see cref="IConfigurationNode.Fits"/> the
-/// authoring bases apply when they bridge, so validation and execution decide by one rule. Because the walk asks each
+/// written for them at all. The second is the same <see cref="ExecutionSignature.Supports(IConfigurationNode)"/> resolution
+/// asks before it builds, so validation and execution decide by one rule. Because the walk asks each
 /// node directly rather than building anything, it also reaches children a run would only resolve later, such as the
 /// stages inside a cycling algorithm.
 /// </para>
@@ -91,7 +90,7 @@ public static class SearchConfigurationValidation
     }
 
     /// <summary>
-    /// The failure resolution reports when <paramref name="configuration"/> does not fit <paramref name="execution"/>,
+    /// The failure resolution reports when <paramref name="configuration"/> does not support <paramref name="execution"/>,
     /// listing the configurations responsible rather than only the one being resolved.
     /// </summary>
     internal static InvalidOperationException Mismatch(IConfigurationNode configuration, ExecutionSignature execution)
@@ -119,7 +118,7 @@ public static class SearchConfigurationValidation
             return reported;
         }
 
-        foreach (var (child, childPath) in Children(node, path))
+        foreach (var (child, childPath, _) in Children(node, path))
         {
             reported.UnionWith(Walk(child, childPath, searchSpace, visited, diagnostics));
         }
@@ -151,22 +150,20 @@ public static class SearchConfigurationValidation
     /// <paramref name="execution"/>, and returns whether it was responsible at all.
     /// </summary>
     /// <remarks>
-    /// A composition that passes the run to its children answers for its whole subtree, so a subtree that answers yes
-    /// is not descended into at all. Descending only into a subtree that answered no is also what keeps a composition
-    /// which adapts its children out of the report: such a composition does not forward, so it answers for itself, and
-    /// its children are never asked about a run they were never going to see.
+    /// A subtree that answers yes is not descended into at all. Each child is asked about the execution its parameter says
+    /// it runs under, so a composition that runs a child under other types reports the child against those types.
     /// </remarks>
     private static bool ReportMismatch(IConfigurationNode node, string path, ExecutionSignature execution, ImmutableArray<ValidationDiagnostic>.Builder diagnostics)
     {
-        if (node.Fits(execution))
+        if (execution.Supports(node))
         {
             return false;
         }
 
         var blamedAChild = false;
-        foreach (var (child, childPath) in Children(node, path))
+        foreach (var (child, childPath, parameter) in Children(node, path))
         {
-            blamedAChild |= ReportMismatch(child, childPath, execution, diagnostics);
+            blamedAChild |= ReportMismatch(child, childPath, parameter.ChildExecution(execution), diagnostics);
         }
 
         if (!blamedAChild)
@@ -178,54 +175,33 @@ public static class SearchConfigurationValidation
     }
 
     /// <summary>
-    /// Yields the configuration children of a node: any property value, or element of an enumerable property, that is
-    /// itself a configuration.
+    /// The configurations a node's parameters hold or name, each with its path and the parameter that declares it.
     /// </summary>
-    private static IEnumerable<(IConfigurationNode Child, string Path)> Children(IConfigurationNode node, string path)
+    private static List<(IConfigurationNode Child, string Path, IParameter Parameter)> Children(IConfigurationNode node, string path)
     {
-        foreach (var property in node.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        var found = new List<(IConfigurationNode, string, IParameter)>();
+        foreach (var parameter in node.GetParameters())
+            parameter.Rewrite(node, new ChildCollector(found, path, parameter));
+        return found;
+    }
+
+    // Visits each slot of one parameter and leaves it as it is, so the walk reuses what a substitution sees.
+    private sealed class ChildCollector(List<(IConfigurationNode, string, IParameter)> found, string path, IParameter parameter) : ISlotRewriter
+    {
+        public IConfigurationNode Slot(IConfigurationNode owner, string name, Type slotType, IConfigurationNode child)
         {
-            if (!property.CanRead || property.GetIndexParameters().Length > 0)
-            {
-                continue;
-            }
+            found.Add((child, $"{path}.{name}", parameter));
+            return child;
+        }
 
-            object? value;
-            try
-            {
-                value = property.GetValue(node);
-            }
-            catch (TargetInvocationException)
-            {
-                continue;
-            }
+        public IConfigurationNode Reference(string name, IConfigurationNode entry)
+        {
+            found.Add((entry, $"{path}.{name}", parameter));
+            return entry;
+        }
 
-            if (value is null)
-            {
-                continue;
-            }
-
-            if (value is IConfigurationNode child)
-            {
-                yield return (child, $"{path}.{property.Name}");
-                continue;
-            }
-
-            if (value is not System.Collections.IEnumerable elements || value is string)
-            {
-                continue;
-            }
-
-            var index = 0;
-            foreach (var element in elements)
-            {
-                if (element is IConfigurationNode nestedChild)
-                {
-                    yield return (nestedChild, $"{path}.{property.Name}[{index}]");
-                }
-
-                index++;
-            }
+        public void Boundary(IConfigurationNode owner, string name)
+        {
         }
     }
 }

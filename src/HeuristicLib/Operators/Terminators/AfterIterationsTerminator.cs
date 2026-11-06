@@ -19,6 +19,13 @@ public sealed record AfterIterationsTerminator<TCandidate>
     /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
     public int MaximumIterations { get; init; }
 
+    public static Parameter<AfterIterationsTerminator<TCandidate>, int> MaximumIterationsParameter { get; } =
+        new(nameof(MaximumIterations), static terminator => terminator.MaximumIterations, static (terminator, value) => terminator with { MaximumIterations = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [MaximumIterationsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) => new Executor(MaximumIterations);
 
     private sealed class Executor(int maximumIterations) : TerminationExecutor<TCandidate>

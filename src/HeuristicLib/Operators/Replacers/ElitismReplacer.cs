@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
@@ -17,6 +18,13 @@ public sealed record ElitismReplacer<TCandidate>
     /// count, so a value above that count is capped and leaves no places for offspring.
     /// </remarks>
     public int Elites { get; init; }
+
+    public static Parameter<ElitismReplacer<TCandidate>, int> ElitesParameter { get; } =
+        new(nameof(Elites), static replacer => replacer.Elites, static (replacer, value) => replacer with { Elites = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ElitesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public ElitismReplacer(int elites)
     {

@@ -48,7 +48,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var algorithm = new ProbeAlgorithm();
         var equal = algorithm with { };
         equal.ShouldBe(algorithm);
-        var cycle = new CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([algorithm, equal]) { MaximumCycles = 2 }
+        var cycle = new CycleAlgorithm<int, ProbeState>([algorithm, equal]) { MaximumCycles = 2 }
             .Sharing(algorithm, equal);
         var root = ResolutionScope.Create();
         var executor = Resolve(root, cycle);
@@ -78,7 +78,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var shared = new CountingMutations();
         var first = new ProbeAlgorithm { Mutator = shared };
         var second = first with { };
-        var fresh = new CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([first, second]) { MaximumCycles = 2 };
+        var fresh = new CycleAlgorithm<int, ProbeState>([first, second]) { MaximumCycles = 2 };
         IAlgorithm<int, ProbeState> cycle = mode ? fresh.Sharing(first, second) : fresh;
         var root = ResolutionScope.Create();
         var states = await Run(Resolve(root, cycle));
@@ -139,7 +139,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var first = new ProbeAlgorithm { Mutator = mutator };
         var equal = first with { };
         equal.ShouldBe(first);
-        var cycle = new CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([first, first, equal]) { MaximumCycles = 2 }
+        var cycle = new CycleAlgorithm<int, ProbeState>([first, first, equal]) { MaximumCycles = 2 }
             .Sharing(first, equal);
         var root = ResolutionScope.Create();
         var observations = new List<string>();
@@ -202,7 +202,7 @@ public sealed class DeferredAlgorithmResolutionTests
     public async Task Pipeline_StagesAreFreshAndDoNotPublishStateToTheirParent()
     {
         var algorithm = new ProbeAlgorithm();
-        var pipeline = new PipelineAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([algorithm, algorithm]);
+        var pipeline = new PipelineAlgorithm<int, ProbeState>([algorithm, algorithm]);
         var root = ResolutionScope.Create();
         var executor = Resolve(root, pipeline);
         var forks = new List<string>();
@@ -230,7 +230,7 @@ public sealed class DeferredAlgorithmResolutionTests
     {
         var algorithm = new ProbeAlgorithm();
         IAlgorithm<int, ProbeState> source = cycle ? Cycle(algorithm, reset)
-            : new PipelineAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([algorithm, algorithm]);
+            : new PipelineAlgorithm<int, ProbeState>([algorithm, algorithm]);
         var root = ResolutionScope.Create();
         var original = Resolve(root, source);
         await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
@@ -437,7 +437,7 @@ public sealed class DeferredAlgorithmResolutionTests
 
     private static IAlgorithm<int, ProbeState> Cycle(ProbeAlgorithm algorithm, bool reset)
     {
-        var cycle = new CycleAlgorithm<IAlgorithm<int, ProbeState>, int, ProbeState>([algorithm, algorithm]) { MaximumCycles = 2 };
+        var cycle = new CycleAlgorithm<int, ProbeState>([algorithm, algorithm]) { MaximumCycles = 2 };
         return reset ? cycle : cycle.Sharing(algorithm);
     }
 

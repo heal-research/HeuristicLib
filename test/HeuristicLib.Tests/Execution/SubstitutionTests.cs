@@ -58,6 +58,53 @@ public class SubstitutionTests
             .Message.ShouldContain(nameof(ListParameter<,>));
     }
 
+    [Fact]
+    public void Parameter_ForAListOfConfigurations_NamesTheParameterForData()
+    {
+        Should.Throw<ArgumentException>(() => new Parameter<Holder, IReadOnlyList<IOperator<Mutation, int>>>("List", static _ => [], static (holder, _) => holder))
+            .Message.ShouldContain(nameof(SettingParameter<,>));
+    }
+
+    // A candidate can be a configuration, and it is still data to whatever holds it.
+    [Fact]
+    public void SettingParameter_ANodeItHoldsIsNotEntered()
+    {
+        var holder = new SettingHolder<IOperator<Mutation, int>>(Mutator);
+
+        SettingHolder<IOperator<Mutation, int>>.TargetParameter.GetChildren(holder).ShouldBeEmpty();
+        Should.Throw<InvalidOperationException>(() => holder.Substitute(Mutator, mutator => mutator.Named("a")));
+    }
+
+    [Fact]
+    public void SettingParameter_ADelegateItHoldsIsNotReportedAsABoundary()
+    {
+        var hidden = new Stub<Evaluation>("elsewhere");
+        var holder = new SettingHolder<Func<int>>(static () => 1);
+
+        Should.Throw<InvalidOperationException>(() => holder.Substitute(hidden, evaluator => evaluator.Named("a")))
+            .Message.ShouldNotContain($">.{nameof(SettingHolder<>.Target)}");
+    }
+
+    [Fact]
+    public void SettingParameter_ReadsAndVariesItsValue()
+    {
+        var holder = new SettingHolder<int>(1);
+        var parameter = SettingHolder<int>.TargetParameter;
+
+        parameter.Get(holder).ShouldBe(1);
+        parameter.GetValue(holder).ShouldBe(1);
+        parameter.With(holder, 2).Target.ShouldBe(2);
+        parameter.ValueType.ShouldBe(typeof(int));
+    }
+
+    private sealed record SettingHolder<TValue>(TValue Target) : IConfigurationNode
+    {
+        public static SettingParameter<SettingHolder<TValue>, TValue> TargetParameter { get; } =
+            new(nameof(Target), static holder => holder.Target, static (holder, value) => holder with { Target = value });
+
+        public IReadOnlyList<IParameter> GetParameters() => [TargetParameter];
+    }
+
     private sealed record Holder(int Size, IOperator<Mutation, int> Child, IOperator<Mutation, int>? Optional, Func<int> Build, object Setting) : IConfigurationNode
     {
         public static Parameter<Holder, int> SizeParameter { get; } =
@@ -227,23 +274,23 @@ public class SubstitutionTests
     public void AConcretelyTypedSlot_ThatCannotHoldTheReplacement_IsAnErrorNamingTheSlot()
     {
         var ga = Ga();
-        var cycle = new CycleAlgorithm<GeneticAlgorithm<int>, int, PopulationState<int>>([ga]);
+        var holder = new HoldingAConcreteAlgorithm(ga);
 
         var error = Should.Throw<InvalidOperationException>(() =>
-            cycle.Substitute(Substitution.Of<IAlgorithm<int, PopulationState<int>>>(ga, algorithm => algorithm.Named("a"))));
+            holder.Substitute(Substitution.Of<IAlgorithm<int, PopulationState<int>>>(ga, algorithm => algorithm.Named("a"))));
 
-        error.Message.ShouldContain("Algorithms[0]");
+        error.Message.ShouldContain(nameof(HoldingAConcreteAlgorithm.Inner));
     }
 
     [Fact]
     public void AConcretelyTypedSlot_ThatCanHoldTheReplacement_KeepsItsType()
     {
         var ga = Ga();
-        var cycle = new CycleAlgorithm<GeneticAlgorithm<int>, int, PopulationState<int>>([ga]);
+        var holder = new HoldingAConcreteAlgorithm(ga);
 
-        var substituted = cycle.Substitute(ga.Mutator, mutator => mutator.Named("a"));
+        var substituted = holder.Substitute(ga.Mutator, mutator => mutator.Named("a"));
 
-        substituted.Algorithms[0].Mutator.ShouldBe(Mutator.Named("a"));
+        substituted.Inner.Mutator.ShouldBe(Mutator.Named("a"));
     }
 
     [Fact]
@@ -657,6 +704,17 @@ public class SubstitutionTests
 
     private sealed record Hiding(IOperator<Mutation, int> Hidden) : Operator<Mutation, int>
     {
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed record HoldingAConcreteAlgorithm(GeneticAlgorithm<int> Inner) : Operator<Mutation, int>
+    {
+        private static Parameter<HoldingAConcreteAlgorithm, GeneticAlgorithm<int>> InnerParameter { get; } =
+            new(nameof(Inner), static holder => holder.Inner, static (holder, value) => holder with { Inner = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), InnerParameter];
+
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
             throw new NotSupportedException();
     }

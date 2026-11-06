@@ -10,7 +10,7 @@ public partial class ResolutionScope
 {
     /// <summary>Builds an algorithm's executor for the run's types and applies the matching algorithm advice.</summary>
     /// <remarks>
-    /// The algorithm must produce the requested search state and fit the run, which it answers for its children too. A
+    /// The algorithm and its declared children must support the run, and the algorithm must produce the requested search state. A
     /// mismatch names every configuration responsible, such as an operator written for another search space. An algorithm
     /// resolved at the root scope outside any construction is the run's root: the time spent advancing its executor counts
     /// toward <see cref="RunResults.Elapsed"/>.
@@ -25,7 +25,7 @@ public partial class ResolutionScope
             throw new InvalidOperationException($"{ExecutionSignature.Name(source.GetType())} produces {ProducedSearchStates(source)}, " +
                 $"and cannot run producing {ExecutionSignature.Name(typeof(TSearchState))}.");
         var execution = ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>();
-        if (!algorithm.Fits(execution))
+        if (!execution.Supports(algorithm))
             throw SearchConfigurationValidation.Mismatch(algorithm, execution);
         using var building = node.Tree.Enter(algorithm);
         var root = node.Parent is null && node.Tree.EnteredOutsideConstruction;

@@ -21,6 +21,13 @@ public sealed record StagnationTerminator<TCandidate>
     /// <remarks>A zero or negative threshold terminates on the first checked produced search state.</remarks>
     public int StagnationThreshold { get; init; } = 20;
 
+    public static Parameter<StagnationTerminator<TCandidate>, int> StagnationThresholdParameter { get; } =
+        new(nameof(StagnationThreshold), static terminator => terminator.StagnationThreshold, static (terminator, value) => terminator with { StagnationThreshold = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [StagnationThresholdParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> CreateExecutor(ResolutionScope scope) => new Executor(StagnationThreshold);
 
     private sealed class Executor(int threshold)

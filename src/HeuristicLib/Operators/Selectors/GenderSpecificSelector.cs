@@ -27,6 +27,16 @@ public record GenderSpecificSelector<TCandidate>
 
     public IOperator<Selection, TCandidate> MaleSelector { get; init; }
 
+    public static Parameter<GenderSpecificSelector<TCandidate>, IOperator<Selection, TCandidate>> FemaleSelectorParameter { get; } =
+        new(nameof(FemaleSelector), static selector => selector.FemaleSelector, static (selector, value) => selector with { FemaleSelector = value });
+
+    public static Parameter<GenderSpecificSelector<TCandidate>, IOperator<Selection, TCandidate>> MaleSelectorParameter { get; } =
+        new(nameof(MaleSelector), static selector => selector.MaleSelector, static (selector, value) => selector with { MaleSelector = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [FemaleSelectorParameter, MaleSelectorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {

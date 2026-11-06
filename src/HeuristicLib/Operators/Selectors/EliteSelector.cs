@@ -35,6 +35,16 @@ public record EliteSelector<TCandidate>
     /// </remarks>
     public int Elites { get; init; } = 1;
 
+    public static Parameter<EliteSelector<TCandidate>, IOperator<Selection, TCandidate>> SelectorForRemainingParameter { get; } =
+        new(nameof(SelectorForRemaining), static selector => selector.SelectorForRemaining, static (selector, value) => selector with { SelectorForRemaining = value });
+
+    public static Parameter<EliteSelector<TCandidate>, int> ElitesParameter { get; } =
+        new(nameof(Elites), static selector => selector.Elites, static (selector, value) => selector with { Elites = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [SelectorForRemainingParameter, ElitesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {

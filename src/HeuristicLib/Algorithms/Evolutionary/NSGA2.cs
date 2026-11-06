@@ -29,13 +29,45 @@ public record NSGA2<TCandidate>
     /// </remarks>
     public double MutationRate { get; init; } = NSGA2Defaults.MutationRate;
     public IOperator<Refinement, TCandidate>? Refiner { get; init; }
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Selector, Replacer, Evaluator, Refiner);
-
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; } = NSGA2Defaults.MaximumGenerations;
+
+    public static Parameter<NSGA2<TCandidate>, int> PopulationSizeParameter { get; } =
+        new(nameof(PopulationSize), static a2 => a2.PopulationSize, static (a2, value) => a2 with { PopulationSize = value });
+
+    public static Parameter<NSGA2<TCandidate>, IOperator<Creation, TCandidate>> CreatorParameter { get; } =
+        new(nameof(Creator), static a2 => a2.Creator, static (a2, value) => a2 with { Creator = value });
+
+    public static Parameter<NSGA2<TCandidate>, IOperator<Crossover, TCandidate>> CrossoverParameter { get; } =
+        new(nameof(Crossover), static a2 => a2.Crossover, static (a2, value) => a2 with { Crossover = value });
+
+    public static Parameter<NSGA2<TCandidate>, IOperator<Mutation, TCandidate>> MutatorParameter { get; } =
+        new(nameof(Mutator), static a2 => a2.Mutator, static (a2, value) => a2 with { Mutator = value });
+
+    public static Parameter<NSGA2<TCandidate>, IOperator<Selection, TCandidate>> SelectorParameter { get; } =
+        new(nameof(Selector), static a2 => a2.Selector, static (a2, value) => a2 with { Selector = value });
+
+    public static Parameter<NSGA2<TCandidate>, IOperator<Replacement, TCandidate>> ReplacerParameter { get; } =
+        new(nameof(Replacer), static a2 => a2.Replacer, static (a2, value) => a2 with { Replacer = value });
+
+    public static Parameter<NSGA2<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static a2 => a2.Evaluator, static (a2, value) => a2 with { Evaluator = value });
+
+    public static Parameter<NSGA2<TCandidate>, double> MutationRateParameter { get; } =
+        new(nameof(MutationRate), static a2 => a2.MutationRate, static (a2, value) => a2 with { MutationRate = value });
+
+    public static Parameter<NSGA2<TCandidate>, IOperator<Refinement, TCandidate>?> RefinerParameter { get; } =
+        new(nameof(Refiner), static a2 => a2.Refiner, static (a2, value) => a2 with { Refiner = value });
+
+    public static Parameter<NSGA2<TCandidate>, int?> MaximumGenerationsParameter { get; } =
+        new(nameof(MaximumGenerations), static a2 => a2.MaximumGenerations, static (a2, value) => a2 with { MaximumGenerations = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [PopulationSizeParameter, CreatorParameter, CrossoverParameter, MutatorParameter, SelectorParameter, ReplacerParameter, EvaluatorParameter, MutationRateParameter, RefinerParameter, MaximumGenerationsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)

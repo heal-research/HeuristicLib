@@ -17,6 +17,19 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; }
     public TProblem SourceProblem { get; init; }
 
+    public static Parameter<ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static interceptor => interceptor.Evaluator, static (interceptor, value) => interceptor with { Evaluator = value })
+        {
+            ChildExecution = static _ => ExecutionSignature.For<TSearchSpace, TProblem, ISearchState>()
+        };
+
+    public static SettingParameter<ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem> SourceProblemParameter { get; } =
+        new(nameof(SourceProblem), static interceptor => interceptor.SourceProblem, static (interceptor, value) => interceptor with { SourceProblem = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [EvaluatorParameter, SourceProblemParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public ReevaluationInterceptor(IOperator<Evaluation, TCandidate> evaluator, TProblem sourceProblem)
     {
         Evaluator = evaluator;

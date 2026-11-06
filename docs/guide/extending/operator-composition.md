@@ -435,6 +435,8 @@ Derive from `Operator<TOperation, TCandidate>` when a composition coordinates di
 
 The authored executor holds resolved children and private mutable fields. The configuration owns parameters and child configurations.
 
+The two bases declare their children. A composition deriving from `Operator<TOperation, TCandidate>` declares its own, as [the validation guide](/guide/fundamentals/invariants-and-validation#a-composition-answers-for-what-it-resolves) shows, because pre-flight validation and substitution reach a child only through its declaration.
+
 ### A complete stateful composition
 
 This `RoundRobinMutator` sends each complete batch to the next child in a fixed order. Unlike weighted selection, it remembers which child should run next. Its cursor advances only after a successful child call, including a successful empty batch.

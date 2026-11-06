@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -9,6 +10,13 @@ public record MutationNeighborhood<TG, TS, TP>(StatelessMutator<TG, TS, TP> muta
     where TS : class, ISearchSpace<TG>
     where TP : class, IProblem<TG, TS>
 {
+    public static Parameter<MutationNeighborhood<TG, TS, TP>, StatelessMutator<TG, TS, TP>> MutatorParameter { get; } =
+        new(nameof(mutator), static neighborhood => neighborhood.mutator, static (neighborhood, value) => neighborhood with { mutator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [MutatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override TG Apply(TG candidate, int move, IRandomNumberGenerator random, TS searchSpace, TP problem) =>
         mutator.Mutate([candidate], random.Fork(move), searchSpace, problem)[0];
 

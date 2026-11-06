@@ -21,8 +21,6 @@ public abstract record MultiOperator<TOperation, TCandidate> : Operator<TOperati
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    public override bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildOperators]);
-
     public virtual bool? Ensures(ICandidateInvariant<TCandidate> invariant) => OperatorContractComposition.Ensures(ChildOperators, invariant);
 
     public virtual IReadOnlyList<ICandidateInvariant<TCandidate>> Requires => OperatorContractComposition.Requires<TCandidate>(ChildOperators);

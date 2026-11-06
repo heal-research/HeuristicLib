@@ -47,6 +47,19 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
 
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
+    public static SettingParameter<DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>, TProblem> SourceProblemParameter { get; } =
+        new(nameof(SourceProblem), static evaluator => evaluator.SourceProblem, static (evaluator, value) => evaluator with { SourceProblem = value });
+
+    public static Parameter<DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem>> BestKnownProviderParameter { get; } =
+        new(nameof(BestKnownProvider), static evaluator => evaluator.BestKnownProvider, static (evaluator, value) => evaluator with { BestKnownProvider = value });
+
+    public static Parameter<DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>, RelativeQualityZeroBestKnownPolicy> ZeroBestKnownPolicyParameter { get; } =
+        new(nameof(ZeroBestKnownPolicy), static evaluator => evaluator.ZeroBestKnownPolicy, static (evaluator, value) => evaluator with { ZeroBestKnownPolicy = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [SourceProblemParameter, BestKnownProviderParameter, ZeroBestKnownPolicyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public DynamicRelativeQualityEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider)
         : base(childEvaluator)
     {

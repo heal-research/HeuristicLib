@@ -27,6 +27,16 @@ public sealed record RelativeQualityEvaluator<TCandidate>
 
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
+    public static Parameter<RelativeQualityEvaluator<TCandidate>, ObjectiveVector> BestKnownParameter { get; } =
+        new(nameof(BestKnown), static evaluator => evaluator.BestKnown, static (evaluator, value) => evaluator with { BestKnown = value });
+
+    public static Parameter<RelativeQualityEvaluator<TCandidate>, RelativeQualityZeroBestKnownPolicy> ZeroBestKnownPolicyParameter { get; } =
+        new(nameof(ZeroBestKnownPolicy), static evaluator => evaluator.ZeroBestKnownPolicy, static (evaluator, value) => evaluator with { ZeroBestKnownPolicy = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [BestKnownParameter, ZeroBestKnownPolicyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public RelativeQualityEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ObjectiveVector bestKnown)
         : base(childEvaluator)
     {

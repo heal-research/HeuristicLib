@@ -31,6 +31,16 @@ public sealed record SingleCreateAlgorithm
 
     public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
+    public static Parameter<SingleCreateAlgorithm, IOperator<Creation, RealVector>> CreatorParameter { get; } =
+        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+    public static Parameter<SingleCreateAlgorithm, IOperator<Evaluation, RealVector>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [CreatorParameter, EvaluatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IterativeAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope)
     {
@@ -61,6 +71,10 @@ public sealed record SingleCreateAlgorithm
     }
 }
 ```
+
+### Why the configuration declares its properties
+
+Pre-flight validation and substitution reach a child only through its declared parameter, so an undeclared child is not checked before the run and cannot be replaced. `GetParameters` adds the inherited parameters, here the interceptor of the iterative base.
 
 ### Why the configuration names only the candidate
 

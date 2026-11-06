@@ -53,7 +53,7 @@ public class HillClimberTests
         : IOperator<Creation, int>,
         ICreationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        IExecutor IOperator<Creation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
 
         public IReadOnlyList<int> Create(
@@ -68,7 +68,7 @@ public class HillClimberTests
         : IOperator<Mutation, int>,
         IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
 
         public IReadOnlyList<int> Mutate(

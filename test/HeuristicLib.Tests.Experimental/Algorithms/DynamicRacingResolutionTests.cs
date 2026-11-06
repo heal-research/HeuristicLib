@@ -290,6 +290,77 @@ public sealed class DynamicRacingResolutionTests
             exception.ShouldBeSameAs(failure);
     }
 
+    // The meta creator runs over the meta search space, so the racing run's types say nothing about it.
+    [Fact]
+    public void MetaOperators_AreAskedAboutTheMetaSearchSpaceRatherThanTheRun()
+    {
+        var execution = ExecutionSignature.For<UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>();
+        var valid = Racing(new CreatorForMetaSpace());
+        var invalid = Racing(new CreatorForAnotherMetaSpace());
+
+        execution.Supports(valid).ShouldBeTrue();
+        execution.Supports(invalid).ShouldBeFalse();
+        var diagnostic = SearchConfigurationValidation.Validate(invalid, UnrestrictedSearchSpace<int>.Instance, execution).Diagnostics.ShouldHaveSingleItem();
+        diagnostic.Path.ShouldEndWith(".Creator");
+        diagnostic.Message.ShouldContain(nameof(CreatorForAnotherMetaSpace));
+
+        static DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm> Racing(IOperator<Creation, MetaCandidate> creator) =>
+            new(new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+                creator, new MetaMutator(), new BestPopulationStateMerger<int>(),
+                _ => new LifetimeProbeAlgorithm { BeforeMove = static () => { }, Started = static () => { }, Disposed = static () => { } }, algorithm => algorithm.Evaluator)
+            {
+                NoRacers = 2
+            };
+    }
+
+    // The interceptor builds its evaluator without the run's search state, so the walk asks about what the resolve asks.
+    [Fact]
+    public void ReevaluationInterceptor_AsksItsEvaluatorAboutTheExecutionItResolves()
+    {
+        using var problem = new EpochProblem(epochLength: 10_000);
+        var execution = ExecutionSignature.For<UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>();
+        var valid = Interceptor(new EvaluatorUnder<ISearchState>());
+        var invalid = Interceptor(new EvaluatorUnder<PopulationState<int>>());
+        var scope = ResolutionScope.Create().For<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>();
+
+        execution.Supports(valid).ShouldBeTrue();
+        SearchConfigurationValidation.Validate(valid, UnrestrictedSearchSpace<int>.Instance, execution).IsValid.ShouldBeTrue();
+        scope.Resolve(valid).ShouldNotBeNull();
+
+        execution.Supports(invalid).ShouldBeFalse();
+        var diagnostic = SearchConfigurationValidation.Validate(invalid, UnrestrictedSearchSpace<int>.Instance, execution).Diagnostics.ShouldHaveSingleItem();
+        diagnostic.Path.ShouldEndWith(".Evaluator");
+        Should.Throw<InvalidOperationException>(() => scope.Resolve(invalid)).Message.ShouldContain("EvaluatorUnder");
+
+        ReevaluationInterceptor<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>> Interceptor(IOperator<Evaluation, int> evaluator) =>
+            new(evaluator, problem);
+    }
+
+    // Written for one search state, as a consumer's evaluator can be.
+    private sealed record EvaluatorUnder<TRequired> : Operator<Evaluation, int>
+        where TRequired : class, ISearchState
+    {
+        public override bool Supports(ExecutionSignature execution) => execution.SearchState == typeof(TRequired);
+
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+            scope.Resolve(new ProblemEvaluator<int>());
+    }
+
+    private sealed class AnotherMetaSpace : ISearchSpace<MetaCandidate>
+    {
+        public bool Contains(MetaCandidate candidate) => true;
+    }
+
+    private sealed record CreatorForMetaSpace : StatelessCreator<MetaCandidate, MetaSpace>
+    {
+        public override IReadOnlyList<MetaCandidate> Create(int count, IRandomNumberGenerator random, MetaSpace searchSpace) => new MetaCandidate[count];
+    }
+
+    private sealed record CreatorForAnotherMetaSpace : StatelessCreator<MetaCandidate, AnotherMetaSpace>
+    {
+        public override IReadOnlyList<MetaCandidate> Create(int count, IRandomNumberGenerator random, AnotherMetaSpace searchSpace) => new MetaCandidate[count];
+    }
+
     private sealed record LifetimeProbeAlgorithm : Algorithm<LifetimeProbeAlgorithm, int, PopulationState<int>>
     {
         public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator<int>();

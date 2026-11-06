@@ -15,11 +15,34 @@ public record HillClimber<TCandidate>
     public required IOperator<Mutation, TCandidate> Mutator { get; init; }
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = HillClimberDefaults.Evaluator<TCandidate>();
     public IOperator<Refinement, TCandidate>? Refiner { get; init; }
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Mutator, Evaluator, Refiner);
-
     public LocalSearchDirection Direction { get; init; } = HillClimberDefaults.Direction;
     public int MaxNeighbors { get; init; } = HillClimberDefaults.MaxNeighbors;
     public int BatchSize { get; init; } = HillClimberDefaults.BatchSize;
+
+    public static Parameter<HillClimber<TCandidate>, IOperator<Creation, TCandidate>> CreatorParameter { get; } =
+        new(nameof(Creator), static climber => climber.Creator, static (climber, value) => climber with { Creator = value });
+
+    public static Parameter<HillClimber<TCandidate>, IOperator<Mutation, TCandidate>> MutatorParameter { get; } =
+        new(nameof(Mutator), static climber => climber.Mutator, static (climber, value) => climber with { Mutator = value });
+
+    public static Parameter<HillClimber<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static climber => climber.Evaluator, static (climber, value) => climber with { Evaluator = value });
+
+    public static Parameter<HillClimber<TCandidate>, IOperator<Refinement, TCandidate>?> RefinerParameter { get; } =
+        new(nameof(Refiner), static climber => climber.Refiner, static (climber, value) => climber with { Refiner = value });
+
+    public static Parameter<HillClimber<TCandidate>, LocalSearchDirection> DirectionParameter { get; } =
+        new(nameof(Direction), static climber => climber.Direction, static (climber, value) => climber with { Direction = value });
+
+    public static Parameter<HillClimber<TCandidate>, int> MaxNeighborsParameter { get; } =
+        new(nameof(MaxNeighbors), static climber => climber.MaxNeighbors, static (climber, value) => climber with { MaxNeighbors = value });
+
+    public static Parameter<HillClimber<TCandidate>, int> BatchSizeParameter { get; } =
+        new(nameof(BatchSize), static climber => climber.BatchSize, static (climber, value) => climber with { BatchSize = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [CreatorParameter, MutatorParameter, EvaluatorParameter, RefinerParameter, DirectionParameter, MaxNeighborsParameter, BatchSizeParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> scope)

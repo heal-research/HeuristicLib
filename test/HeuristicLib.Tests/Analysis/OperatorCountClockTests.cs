@@ -78,7 +78,7 @@ public class OperatorCountClockTests
     {
         public int Builds { get; private set; }
 
-        IExecutor IOperator<Checksum, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
             Builds++;
@@ -93,7 +93,7 @@ public class OperatorCountClockTests
 
     private sealed record LengthScorer : IOperator<Scoring, int>
     {
-        IExecutor IOperator<Scoring, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
 
         private sealed class Executor : IScoringExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>

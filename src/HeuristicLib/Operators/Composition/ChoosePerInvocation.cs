@@ -27,6 +27,13 @@ public sealed record ChoosePerInvocation<TOperation, TCandidate> : MultiOperator
     /// </remarks>
     public ValueArray<double> Weights { get; init; }
 
+    public static Parameter<ChoosePerInvocation<TOperation, TCandidate>, ValueArray<double>> WeightsParameter { get; } =
+        new(nameof(Weights), static choice => choice.Weights, static (choice, value) => choice with { Weights = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [WeightsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var children = WeightedChoice.ResolveChildren(ChildOperators, Weights, scope);

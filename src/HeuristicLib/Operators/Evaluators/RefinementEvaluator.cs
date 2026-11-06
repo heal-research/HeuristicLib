@@ -49,7 +49,15 @@ public sealed record RefinementEvaluator<TCandidate>
     /// </remarks>
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
-    public override bool Fits(ExecutionSignature execution) => execution.Fits(Evaluator, Refiner);
+    public static Parameter<RefinementEvaluator<TCandidate>, IOperator<Refinement, TCandidate>> RefinerParameter { get; } =
+        new(nameof(Refiner), static evaluator => evaluator.Refiner, static (evaluator, value) => evaluator with { Refiner = value });
+
+    public static Parameter<RefinementEvaluator<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static evaluator => evaluator.Evaluator, static (evaluator, value) => evaluator with { Evaluator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [RefinerParameter, EvaluatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)

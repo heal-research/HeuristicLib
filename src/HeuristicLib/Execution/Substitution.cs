@@ -221,7 +221,7 @@ internal sealed class SubstitutionCall
 
         // An entry keeps naming its configuration, or the copy made of it, while the replacement still contains it. Otherwise
         // it follows the replacement.
-        public IConfigurationNode Reference(IConfigurationNode entry)
+        public IConfigurationNode Reference(string name, IConfigurationNode entry)
         {
             var replaced = Visit(entry).Replaced;
             if (ReferenceEquals(replaced, entry))

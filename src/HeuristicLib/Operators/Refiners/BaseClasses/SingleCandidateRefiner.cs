@@ -12,6 +12,13 @@ public abstract record SingleCandidateRefiner<TCandidate, TSearchSpace, TProblem
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateRefiner<TCandidate, TSearchSpace, TProblem>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static refiner => refiner.Concurrency, static (refiner, value) => refiner with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract TCandidate RefineCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public sealed override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
@@ -29,6 +36,13 @@ public abstract record SingleCandidateRefiner<TCandidate, TSearchSpace>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateRefiner<TCandidate, TSearchSpace>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static refiner => refiner.Concurrency, static (refiner, value) => refiner with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract TCandidate RefineCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     public sealed override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
@@ -44,6 +58,13 @@ public abstract record SingleCandidateRefiner<TCandidate>
     : StatelessRefiner<TCandidate>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
+
+    public static Parameter<SingleCandidateRefiner<TCandidate>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static refiner => refiner.Concurrency, static (refiner, value) => refiner with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public abstract TCandidate RefineCandidate(TCandidate candidate, IRandomNumberGenerator random);
 

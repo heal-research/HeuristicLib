@@ -927,7 +927,7 @@ public class OperatorInspectionTests
     private sealed class CallbackMutator(MutateCallback callback)
         : IOperator<Mutation, int>
     {
-        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => CreateBoundExecutor();
 
         private IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundExecutor() =>

@@ -2,6 +2,7 @@ using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.MetaOptimization;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using CompositeCandidate = HEAL.HeuristicLib.Encodings.Composite.CompositeGenotype<string, string>;
 using CompositeSpace = HEAL.HeuristicLib.Encodings.Composite.CompositeSearchSpace<string, HEAL.HeuristicLib.Tests.TestSupport.Mocks.UnrestrictedSearchSpace<string>, string, HEAL.HeuristicLib.Tests.TestSupport.Mocks.UnrestrictedSearchSpace<string>>;
@@ -40,6 +41,34 @@ public class CompositeResolutionTests
         var searchSpace = new CompositeSpace(UnrestrictedSearchSpace<string>.Instance, UnrestrictedSearchSpace<string>.Instance);
         var source = searchSpace.CombineCreators(new FallbackCreator(), new FallbackCreator());
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<CompositeCandidate, UnrestrictedSearchSpace<CompositeCandidate>, IProblem<CompositeCandidate, UnrestrictedSearchSpace<CompositeCandidate>>>(source));
+    }
+
+    // A part is written for the search space of its side, which is not the composite's, so the outer execution would reject it.
+    [Fact]
+    public void CompositeCreator_AsksEachPartAboutTheSearchSpaceOfItsSide()
+    {
+        var searchSpace = new CompositeSpace(UnrestrictedSearchSpace<string>.Instance, UnrestrictedSearchSpace<string>.Instance);
+        var execution = ExecutionSignature.For<CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>, ISearchState>();
+        var valid = searchSpace.CombineCreators(new FallbackCreator(), new FallbackCreator());
+        var invalid = searchSpace.CombineCreators(new FallbackCreator(), new CreatorForAnotherSpace());
+
+        execution.Supports(valid).ShouldBeTrue();
+        SearchConfigurationValidation.Validate(valid, searchSpace, execution).IsValid.ShouldBeTrue();
+        execution.Supports(invalid).ShouldBeFalse();
+        var diagnostic = SearchConfigurationValidation.Validate(invalid, searchSpace, execution).Diagnostics.ShouldHaveSingleItem();
+        diagnostic.Path.ShouldEndWith(".Operator2");
+        diagnostic.Message.ShouldContain(nameof(CreatorForAnotherSpace));
+        diagnostic.Message.ShouldContain(nameof(UnrestrictedSearchSpace<>));
+    }
+
+    private sealed class AnotherSpace : ISearchSpace<string>
+    {
+        public bool Contains(string candidate) => true;
+    }
+
+    private sealed record CreatorForAnotherSpace : StatelessCreator<string, AnotherSpace>
+    {
+        public override IReadOnlyList<string> Create(int count, IRandomNumberGenerator random, AnotherSpace searchSpace) => new string[count];
     }
 
     private sealed record FallbackCreator : StatelessCreator<string, UnrestrictedSearchSpace<string>, IProblem<string, UnrestrictedSearchSpace<string>>>

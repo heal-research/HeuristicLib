@@ -125,7 +125,7 @@ public sealed partial class OperatorPreparationSpecs
 
     private sealed record ValueSource(int Value) : IOperator<ReadValue, RealVector>
     {
-        IExecutor IOperator<ReadValue, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Value);
 
         private sealed class Executor(int value)
@@ -161,9 +161,12 @@ public sealed partial class OperatorPreparationSpecs
     private sealed record Forward<TOperation, TCandidate>(IOperator<TOperation, TCandidate> ChildOperator)
         : IOperator<TOperation, TCandidate> where TOperation : IOperation<TOperation>
     {
-        public bool Fits(ExecutionSignature execution) => ChildOperator.Fits(execution);
+        private static Parameter<Forward<TOperation, TCandidate>, IOperator<TOperation, TCandidate>> ChildOperatorParameter { get; } =
+            new(nameof(ChildOperator), static forward => forward.ChildOperator, static (forward, value) => forward with { ChildOperator = value });
+
+        public IReadOnlyList<IParameter> GetParameters() => [ChildOperatorParameter];
         public IOperatorContract<TCandidate>? CandidateContract => ChildOperator.CandidateContract;
-        IExecutor IOperator<TOperation, TCandidate>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<TCandidate>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 

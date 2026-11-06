@@ -15,6 +15,16 @@ namespace HEAL.HeuristicLib.Operators;
 public record TransformedCrossover<TCandidate>(IOperator<Crossover, TCandidate> SourceCrossover, IOperator<Mutation, TCandidate> TransformationMutator)
     : Operator<Crossover, TCandidate>
 {
+    public static Parameter<TransformedCrossover<TCandidate>, IOperator<Crossover, TCandidate>> SourceCrossoverParameter { get; } =
+        new(nameof(SourceCrossover), static crossover => crossover.SourceCrossover, static (crossover, value) => crossover with { SourceCrossover = value });
+
+    public static Parameter<TransformedCrossover<TCandidate>, IOperator<Mutation, TCandidate>> TransformationMutatorParameter { get; } =
+        new(nameof(TransformationMutator), static crossover => crossover.TransformationMutator, static (crossover, value) => crossover with { TransformationMutator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [SourceCrossoverParameter, TransformationMutatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {

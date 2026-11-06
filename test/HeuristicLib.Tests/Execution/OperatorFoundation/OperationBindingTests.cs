@@ -4,6 +4,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
@@ -279,27 +280,33 @@ public sealed class OperationBindingTests
         child.Log.Preparations.ShouldBe(0);
     }
 
-    // A scope keeps one executor per configuration, so the executor must not depend on which operation is requested first.
+    // The one hook's executor must serve each operation requested, and resolution says so whichever comes first.
     [Theory]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    public void SeparateConstructionHooksPerOperation_AreRejectedWhicheverOperationIsRequestedFirst(bool defaultInterfaceHooks, bool evaluationFirst)
+    [InlineData(false)]
+    [InlineData(true)]
+    public void AnOperationTheHooksExecutorDoesNotServe_IsRejected(bool unservedFirst)
     {
-        IOperator<Mutation, RealVector> source = defaultInterfaceHooks ? new DefaultInterfaceHooks() : new SeparateHooks();
+        var source = new MutatorAddingEvaluation();
         var typed = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        Action mutation = () => typed.Resolve(source);
-        Action evaluation = () => typed.Resolve((IOperator<Evaluation, RealVector>)source);
+        Action served = () => typed.Resolve((IOperator<Mutation, RealVector>)source);
+        Action unserved = () => typed.Resolve((IOperator<Evaluation, RealVector>)source);
 
-        Action[] requests = evaluationFirst ? [evaluation, mutation] : [mutation, evaluation];
-        foreach (var request in requests)
-            Should.Throw<InvalidOperationException>(request).Message.ShouldContain("implements CreateExecutor separately");
+        if (!unservedFirst)
+            served();
+        Should.Throw<InvalidOperationException>(unserved).Message.ShouldContain(nameof(MutatorAddingEvaluation));
+    }
 
-        // The rejection precedes construction, so the scope stays usable.
-        var single = new SharedOperations(new ProbeLog());
-        typed.Resolve((IOperator<Mutation, RealVector>)single).ShouldNotBeNull();
-        single.Log.Constructions.ShouldBe(1);
+    // A scope holds one executor per configuration, so a second candidate must be one the first request's executor serves.
+    [Fact]
+    public void ACandidateTheBuiltExecutorDoesNotServe_IsRejected()
+    {
+        var source = new TwoCandidateMutator();
+        var scope = ResolutionScope.Create();
+        scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve((IOperator<Mutation, RealVector>)source);
+
+        Should.Throw<InvalidOperationException>(() =>
+            scope.For<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>().Resolve((IOperator<Mutation, int>)source))
+            .Message.ShouldContain(nameof(TwoCandidateMutator));
     }
 
     private static IExecutor ResolveOperation(ResolutionScope scope, AllOperations source, int operation)
@@ -474,24 +481,27 @@ public sealed class OperationBindingTests
         public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) => executor;
     }
 
-    // Implements CreateExecutor separately for two operations; resolution rejects it before either hook runs.
-    private sealed class SeparateHooks : IOperator<Mutation, RealVector>, IOperator<Evaluation, RealVector>
+    // Inherits its mutator's hook, whose executor performs no evaluation.
+    private sealed record MutatorAddingEvaluation : StatelessMutator<RealVector>, IOperator<Evaluation, RealVector>
     {
-        IExecutor IOperator<Mutation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => throw new UnreachableException();
-
-        IExecutor IOperator<Evaluation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => throw new UnreachableException();
+        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) => parents;
     }
 
-    // Inherits a separate default CreateExecutor for each operation from two constructions of one generic interface.
-    private sealed class DefaultInterfaceHooks : IDefaultHook<Mutation>, IDefaultHook<Evaluation>;
-
-    private interface IDefaultHook<TOperation> : IOperator<TOperation, RealVector>
-        where TOperation : IOperation<TOperation>
+    // Implements the hook once per candidate, and each executor serves its own candidate only.
+    private sealed class TwoCandidateMutator : IOperator<Mutation, RealVector>, IOperator<Mutation, int>
     {
-        IExecutor IOperator<TOperation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => throw new UnreachableException();
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor<RealVector, TSearchSpace, TProblem>();
+
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor<int, TSearchSpace, TProblem>();
+
+        private sealed class Executor<TCandidate, TSearchSpace, TProblem> : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
+            where TSearchSpace : class, ISearchSpace<TCandidate>
+            where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        {
+            public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => parents;
+        }
     }
 
     private sealed class AllOperations : IOperator<Creation, RealVector>, IOperator<Crossover, RealVector>,

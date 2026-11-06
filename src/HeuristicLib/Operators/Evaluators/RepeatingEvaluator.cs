@@ -22,6 +22,19 @@ public sealed record RepeatingEvaluator<TCandidate>
 
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<RepeatingEvaluator<TCandidate>, int> RepetitionsParameter { get; } =
+        new(nameof(Repetitions), static evaluator => evaluator.Repetitions, static (evaluator, value) => evaluator with { Repetitions = value });
+
+    public static Parameter<RepeatingEvaluator<TCandidate>, IObjectiveVectorAggregator> AggregatorParameter { get; } =
+        new(nameof(Aggregator), static evaluator => evaluator.Aggregator, static (evaluator, value) => evaluator with { Aggregator = value });
+
+    public static Parameter<RepeatingEvaluator<TCandidate>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static evaluator => evaluator.Concurrency, static (evaluator, value) => evaluator with { Concurrency = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [RepetitionsParameter, AggregatorParameter, ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public RepeatingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, int repetitions)
         : base(childEvaluator)
     {

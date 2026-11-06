@@ -18,6 +18,13 @@ public record NoSameMatesSelector<TCandidate>
 
     public int MaxAttempts { get; init; }
 
+    public static Parameter<NoSameMatesSelector<TCandidate>, int> MaxAttemptsParameter { get; } =
+        new(nameof(MaxAttempts), static selector => selector.MaxAttempts, static (selector, value) => selector with { MaxAttempts = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MaxAttemptsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {

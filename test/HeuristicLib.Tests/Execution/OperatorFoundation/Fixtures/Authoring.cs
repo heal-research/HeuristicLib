@@ -15,11 +15,11 @@ public abstract record LeafOperator<TOperation, TCandidate, TSearchSpace, TProbl
     where TExecutor : class, IExecutor
 {
     // Explicit owner entry: authors implement only the protected construction hook.
-    IExecutor IOperator<TOperation, TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+    IExecutor IOperator<TCandidate>.CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope);
     protected abstract TExecutor CreateExecutor(ResolutionScope scope);
 
-    public bool Fits(ExecutionSignature execution) =>
+    public bool Supports(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 }
 

@@ -23,6 +23,22 @@ public record OperatorCountBudgetAlgorithm<TCandidate, TSearchState>
     /// <remarks>Candidate counting rejects a selected operation without candidate work when it is resolved.</remarks>
     public OperatorCountMetric Metric { get; init; } = OperatorCountMetric.Invocations;
 
+    public static Parameter<OperatorCountBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
+
+    public static Parameter<OperatorCountBudgetAlgorithm<TCandidate, TSearchState>, int> MaximumCountParameter { get; } =
+        new(nameof(MaximumCount), static algorithm => algorithm.MaximumCount, static (algorithm, value) => algorithm with { MaximumCount = value });
+
+    public static Parameter<OperatorCountBudgetAlgorithm<TCandidate, TSearchState>, OperatorCountMetric> MetricParameter { get; } =
+        new(nameof(Metric), static algorithm => algorithm.Metric, static (algorithm, value) => algorithm with { Metric = value });
+
+    public static ReferenceListParameter<OperatorCountBudgetAlgorithm<TCandidate, TSearchState>> ObservedOperatorsParameter { get; } =
+        new(nameof(ObservedOperators), static algorithm => algorithm.ObservedOperators, static (algorithm, value) => algorithm with { ObservedOperators = value.Cast<IOperator>().ToValueArray() });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, ObservedOperatorsParameter, MaximumCountParameter, MetricParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public OperatorCountBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IReadOnlyList<IOperator> observedOperators, int maximumCount)
     {
         Algorithm = algorithm;
@@ -30,8 +46,8 @@ public record OperatorCountBudgetAlgorithm<TCandidate, TSearchState>
         MaximumCount = maximumCount;
     }
 
-    public override bool Fits(ExecutionSignature execution) =>
-        base.Fits(execution) && execution.Fits(Algorithm) && ObservedOperators.All(source => source.Fits(execution));
+    public override bool Supports(ExecutionSignature execution) =>
+        base.Supports(execution) && ObservedOperators.All(source => execution.Supports(source));
 
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -75,14 +91,28 @@ public record OperatorCountBudgetAlgorithm<TOperation, TCandidate, TSearchState>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public int MaximumCount { get; init; }
 
+    public static Parameter<OperatorCountBudgetAlgorithm<TOperation, TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
+
+    public static Parameter<OperatorCountBudgetAlgorithm<TOperation, TCandidate, TSearchState>, OperatorCountMetric> MetricParameter { get; } =
+        new(nameof(Metric), static algorithm => algorithm.Metric, static (algorithm, value) => algorithm with { Metric = value });
+
+    public static Parameter<OperatorCountBudgetAlgorithm<TOperation, TCandidate, TSearchState>, int> MaximumCountParameter { get; } =
+        new(nameof(MaximumCount), static algorithm => algorithm.MaximumCount, static (algorithm, value) => algorithm with { MaximumCount = value });
+
+    public static ReferenceListParameter<OperatorCountBudgetAlgorithm<TOperation, TCandidate, TSearchState>> ObservedOperatorParameter { get; } =
+        new(nameof(ObservedOperator), static algorithm => [algorithm.ObservedOperator], static (algorithm, value) => algorithm with { ObservedOperator = (IOperator<TOperation, TCandidate>)value[0] });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, ObservedOperatorParameter, MetricParameter, MaximumCountParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public OperatorCountBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IOperator<TOperation, TCandidate> observedOperator, int maximumCount)
     {
         Algorithm = algorithm;
         ObservedOperator = observedOperator;
         MaximumCount = maximumCount;
     }
-
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <remarks>Each executor has its own accumulator and contextual counting advice.</remarks>
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(

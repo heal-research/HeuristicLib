@@ -24,7 +24,7 @@ public sealed class RoleContractArityTests
     [Fact]
     public void EveryRole_SharesTheConfigurationContractAndDeclaresItsExecution()
     {
-        RolesDerivedFrom(typeof(IOperator)).ShouldBe([typeof(IOperator<,>)]);
+        RolesDerivedFrom(typeof(IOperator)).ShouldBe([typeof(IOperator<>), typeof(IOperator<,>)]);
         RoleExecutions.Count.ShouldBe(9);
     }
 
@@ -34,7 +34,8 @@ public sealed class RoleContractArityTests
         var contract = typeof(IOperator<,>);
         contract.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TOperation", "TCandidate"]);
         contract.GetInterfaces().ShouldContain(typeof(IOperator));
-        var hook = contract.GetMethod("CreateExecutor")!;
+        contract.GetMethod("CreateExecutor").ShouldBeNull();
+        var hook = typeof(IOperator<>).GetMethod("CreateExecutor")!;
         hook.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TSearchSpace", "TProblem", "TSearchState"]);
         hook.GetParameters().ShouldHaveSingleItem().ParameterType.GetGenericTypeDefinition().ShouldBe(typeof(ResolutionScope<,,,>));
         hook.ReturnType.ShouldBe(typeof(IExecutor));

@@ -17,7 +17,7 @@ public class CycleAlgorithmTests
     public void CycleAlgorithm_RequiresAtLeastOneAlgorithm()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new CycleAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>([]));
+            new CycleAlgorithm<int, PopulationState<int>>([]));
 
         exception.ParamName.ShouldBe("algorithms");
     }

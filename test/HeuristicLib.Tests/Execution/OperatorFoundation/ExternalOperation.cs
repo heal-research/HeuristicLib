@@ -78,7 +78,10 @@ public sealed record Forward<TOperation, TCandidate>(IOperator<TOperation, TCand
     : IOperator<TOperation, TCandidate> where TOperation : IOperation<TOperation>
 {
     public IOperatorContract<TCandidate>? CandidateContract => ChildOperator.CandidateContract;
-    public bool Fits(ExecutionSignature execution) => ChildOperator.Fits(execution);
+    private static Parameter<Forward<TOperation, TCandidate>, IOperator<TOperation, TCandidate>> ChildOperatorParameter { get; } =
+        new(nameof(ChildOperator), static forward => forward.ChildOperator, static (forward, value) => forward with { ChildOperator = value });
+
+    public IReadOnlyList<IParameter> GetParameters() => [ChildOperatorParameter];
     public IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

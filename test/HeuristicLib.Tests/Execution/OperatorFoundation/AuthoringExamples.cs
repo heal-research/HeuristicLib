@@ -118,7 +118,7 @@ public sealed class OtherState : ISearchState;
 
 public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception<ProbeState>, RealVector>
 {
-    IExecutor IOperator<Interception<ProbeState>, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+    IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
     {
         Log.Preparations++;

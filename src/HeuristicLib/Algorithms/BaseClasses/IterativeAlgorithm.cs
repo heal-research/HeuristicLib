@@ -27,8 +27,6 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
-
     /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
     protected abstract override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
@@ -59,8 +57,6 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
     public static IReadOnlyList<IParameter> Parameters { get; } = [InterceptorParameter];
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
-
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 
     /// <summary>Builds this algorithm's executor for the types it is written for, resolving the interceptor and other children through the scope.</summary>
     /// <remarks>

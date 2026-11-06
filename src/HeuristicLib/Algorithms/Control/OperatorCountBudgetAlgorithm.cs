@@ -49,8 +49,6 @@ public sealed record OperatorCountBudgetAlgorithm<TCandidate, TSearchState>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm);
-
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {

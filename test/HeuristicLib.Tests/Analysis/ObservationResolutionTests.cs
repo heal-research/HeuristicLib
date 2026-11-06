@@ -337,7 +337,7 @@ List<string> events,
 
     private sealed record RecordingChecksum(List<string> Events, int Value) : IOperator<Checksum, int>
     {
-        IExecutor IOperator<Checksum, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(this);
 
         private sealed class Executor(RecordingChecksum source) : IChecksumExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>

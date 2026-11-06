@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.Vectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -19,6 +20,16 @@ public record PolynomialMutator : SingleCandidateMutator<RealVector, BoundedReal
     public double Eta { get; init; } = 20;
 
     public bool AtLeastOnce { get; init; }
+
+    public static Parameter<PolynomialMutator, double> EtaParameter { get; } =
+        new(nameof(Eta), static mutator => mutator.Eta, static (mutator, value) => mutator with { Eta = value });
+
+    public static Parameter<PolynomialMutator, bool> AtLeastOnceParameter { get; } =
+        new(nameof(AtLeastOnce), static mutator => mutator.AtLeastOnce, static (mutator, value) => mutator with { AtLeastOnce = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [EtaParameter, AtLeastOnceParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override RealVector MutateCandidate(RealVector parent, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
         Mutate(parent, random, searchSpace, Eta, AtLeastOnce);

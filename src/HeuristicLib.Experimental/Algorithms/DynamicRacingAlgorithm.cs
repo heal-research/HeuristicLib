@@ -59,29 +59,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         EmptyMetaOptProblem = new EmptyMetaOptProblem(MetaSpace);
     }
 
-    public IRacingStateMerger<TCandidate, TSearchState> StateMerger { get; }
+    public IRacingStateMerger<TCandidate, TSearchState> StateMerger { get; init; }
     public IOperator<Creation, MetaOptimizationGenotype> Creator { get; init; }
     public IOperator<Mutation, MetaOptimizationGenotype> Mutator { get; init; }
     private MetaOptimizationSearchSpace MetaSpace { get; }
     private EmptyMetaOptProblem EmptyMetaOptProblem { get; }
     public Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> AlgBuilder { get; init; }
     public Func<TAlgorithm, IOperator<Evaluation, TCandidate>> EvaluatorSelector { get; init; }
-
-    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, IOperator<Creation, MetaOptimizationGenotype>> CreatorParameter { get; } =
-        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
-
-    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, IOperator<Mutation, MetaOptimizationGenotype>> MutatorParameter { get; } =
-        new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
-
-    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm>> AlgBuilderParameter { get; } =
-        new(nameof(AlgBuilder), static algorithm => algorithm.AlgBuilder, static (algorithm, value) => algorithm with { AlgBuilder = value });
-
-    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, Func<TAlgorithm, IOperator<Evaluation, TCandidate>>> EvaluatorSelectorParameter { get; } =
-        new(nameof(EvaluatorSelector), static algorithm => algorithm.EvaluatorSelector, static (algorithm, value) => algorithm with { EvaluatorSelector = value });
-
-    public new static IReadOnlyList<IParameter> Parameters { get; } = [CreatorParameter, MutatorParameter, AlgBuilderParameter, EvaluatorSelectorParameter];
-
-    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
     public required int NoRacers { get; init; } = 2;
     public double HallOfFameStrength { get; init; } = 0.1;
     public double EarlyTerminationStrength { get; init; } = 0.1;
@@ -100,6 +84,52 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             burnInEpochs = value;
         }
     }
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, IRacingStateMerger<TCandidate, TSearchState>> StateMergerParameter { get; } =
+        new(nameof(StateMerger), static algorithm => algorithm.StateMerger, static (algorithm, value) => algorithm with { StateMerger = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, IOperator<Creation, MetaOptimizationGenotype>> CreatorParameter { get; } =
+        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value })
+        {
+            ChildExecution = static _ => ExecutionSignature.For<MetaOptimizationSearchSpace, MetaOptimizationProblem, ISearchState>()
+        };
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, IOperator<Mutation, MetaOptimizationGenotype>> MutatorParameter { get; } =
+        new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value })
+        {
+            ChildExecution = static _ => ExecutionSignature.For<MetaOptimizationSearchSpace, MetaOptimizationProblem, ISearchState>()
+        };
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm>> AlgBuilderParameter { get; } =
+        new(nameof(AlgBuilder), static algorithm => algorithm.AlgBuilder, static (algorithm, value) => algorithm with { AlgBuilder = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, Func<TAlgorithm, IOperator<Evaluation, TCandidate>>> EvaluatorSelectorParameter { get; } =
+        new(nameof(EvaluatorSelector), static algorithm => algorithm.EvaluatorSelector, static (algorithm, value) => algorithm with { EvaluatorSelector = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, int> NoRacersParameter { get; } =
+        new(nameof(NoRacers), static algorithm => algorithm.NoRacers, static (algorithm, value) => algorithm with { NoRacers = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, double> HallOfFameStrengthParameter { get; } =
+        new(nameof(HallOfFameStrength), static algorithm => algorithm.HallOfFameStrength, static (algorithm, value) => algorithm with { HallOfFameStrength = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, double> EarlyTerminationStrengthParameter { get; } =
+        new(nameof(EarlyTerminationStrength), static algorithm => algorithm.EarlyTerminationStrength, static (algorithm, value) => algorithm with { EarlyTerminationStrength = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, int> MinimumModelObservationCountParameter { get; } =
+        new(nameof(MinimumModelObservationCount), static algorithm => algorithm.MinimumModelObservationCount, static (algorithm, value) => algorithm with { MinimumModelObservationCount = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, int> ModelObservationIntervalParameter { get; } =
+        new(nameof(ModelObservationInterval), static algorithm => algorithm.ModelObservationInterval, static (algorithm, value) => algorithm with { ModelObservationInterval = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, Func<ObjectiveVector, double>> ObjectiveValueSelectorParameter { get; } =
+        new(nameof(ObjectiveValueSelector), static algorithm => algorithm.ObjectiveValueSelector, static (algorithm, value) => algorithm with { ObjectiveValueSelector = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, int> BurnInEpochsParameter { get; } =
+        new(nameof(BurnInEpochs), static algorithm => algorithm.BurnInEpochs, static (algorithm, value) => algorithm with { BurnInEpochs = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [StateMergerParameter, CreatorParameter, MutatorParameter, AlgBuilderParameter, EvaluatorSelectorParameter, NoRacersParameter, HallOfFameStrengthParameter, EarlyTerminationStrengthParameter, MinimumModelObservationCountParameter, ModelObservationIntervalParameter, ObjectiveValueSelectorParameter, BurnInEpochsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     /// <remarks>
     /// A bound algorithm: unlike the general-purpose ones it reads the problem itself, requiring a

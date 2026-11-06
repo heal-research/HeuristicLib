@@ -17,7 +17,7 @@ Configurations describe reusable settings, child configurations and instrument d
 
 Stateless leaves may use the stateless role bases and return themselves as immutable executors. Mutable operators and compositions author an executor with fields. Algorithms author executors because they coordinate operators and execution flow.
 
-An operator builds its executor in `IOperator<TOperation, TCandidate>.CreateExecutor`. Resolution calls this hook with a scope typed to the requested operation and run types. Resolve every child through that scope and pass it to the executor. Initialize private counters, cursors and adaptation values on that executor. Repeated construction of one configuration creates independent private data.
+An operator builds its executor in `IOperator<TCandidate>.CreateExecutor`. Resolution calls this hook with a scope typed to the requested operation and run types. Resolve every child through that scope and pass it to the executor. Initialize private counters, cursors and adaptation values on that executor. Repeated construction of one configuration creates independent private data.
 
 Algorithms follow the same rule in their typed `CreateExecutor` hook. Consumer defined roles implement `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Invocation local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 

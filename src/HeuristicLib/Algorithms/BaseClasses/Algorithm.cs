@@ -23,7 +23,7 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
     /// Agnostic in the search space and problem, so this base answers on the search state alone, which
     /// <see cref="IAlgorithmExecutor{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
     /// </summary>
-    public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
+    public virtual bool Supports(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
     /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
     public virtual IReadOnlyList<IParameter> GetParameters() => [];
@@ -50,8 +50,8 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public override bool Fits(ExecutionSignature execution) =>
-        base.Fits(execution)
+    public override bool Supports(ExecutionSignature execution) =>
+        base.Supports(execution)
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 

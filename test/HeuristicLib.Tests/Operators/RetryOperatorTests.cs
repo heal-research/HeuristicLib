@@ -205,7 +205,7 @@ public sealed class RetryOperatorTests
 
     private sealed record ScalarSource(Func<int> Read) : IOperator<Checksum, RealVector>
     {
-        IExecutor IOperator<Checksum, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Read);
         private sealed class Executor(Func<int> read) : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
         {

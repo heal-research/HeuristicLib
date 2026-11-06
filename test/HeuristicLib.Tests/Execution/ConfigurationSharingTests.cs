@@ -217,7 +217,7 @@ public class ConfigurationSharingTests
 
     private static void Run(IAlgorithm<int, PopulationState<int>> algorithm) => algorithm.CreateRun(Problem, Rng).Complete();
 
-    private static CycleAlgorithm<IAlgorithm<int, PopulationState<int>>, int, PopulationState<int>> Cycle(
+    private static CycleAlgorithm<int, PopulationState<int>> Cycle(
         IAlgorithm<int, PopulationState<int>> first, IAlgorithm<int, PopulationState<int>> second) =>
         CycleAlgorithm.Create(first, second) with { MaximumCycles = 2 };
 
@@ -310,7 +310,13 @@ public class ConfigurationSharingTests
     // A composite operator with two evaluator slots. Each call evaluates through both and returns the second result.
     private sealed record TwoChildEvaluator(IOperator<Evaluation, int> First, IOperator<Evaluation, int> Second) : Operator<Evaluation, int>
     {
-        public override bool Fits(ExecutionSignature execution) => execution.Fits(First, Second);
+        private static Parameter<TwoChildEvaluator, IOperator<Evaluation, int>> FirstParameter { get; } =
+            new(nameof(First), static evaluator => evaluator.First, static (evaluator, value) => evaluator with { First = value });
+
+        private static Parameter<TwoChildEvaluator, IOperator<Evaluation, int>> SecondParameter { get; } =
+            new(nameof(Second), static evaluator => evaluator.Second, static (evaluator, value) => evaluator with { Second = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), FirstParameter, SecondParameter];
 
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
             new Executor<TSearchSpace, TProblem>(scope.Resolve(First), scope.Resolve(Second));

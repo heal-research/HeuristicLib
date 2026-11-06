@@ -149,13 +149,13 @@ public class InferenceConstructionSpecs
         terminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         fluentTerminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         pipelineAlgorithm.Algorithms.Count.ShouldBe(2);
-        pipelineAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        pipelineAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         fluentPipelineAlgorithm.Algorithms.Count.ShouldBe(2);
-        fluentPipelineAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        fluentPipelineAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         cycleAlgorithm.Algorithms.Count.ShouldBe(2);
-        cycleAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        cycleAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         fluentCycleAlgorithm.Algorithms.Count.ShouldBe(2);
-        fluentCycleAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        fluentCycleAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         interfacePipelineAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage.Algorithm);
     }
 

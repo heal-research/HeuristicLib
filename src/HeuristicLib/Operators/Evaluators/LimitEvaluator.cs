@@ -29,6 +29,19 @@ public sealed record LimitEvaluator<TCandidate>
     /// </summary>
     public bool EnforceLimitWithinBatch { get; init; }
 
+    public static Parameter<LimitEvaluator<TCandidate>, int> MaxEvaluationsParameter { get; } =
+        new(nameof(MaxEvaluations), static evaluator => evaluator.MaxEvaluations, static (evaluator, value) => evaluator with { MaxEvaluations = value });
+
+    public static Parameter<LimitEvaluator<TCandidate>, ObjectiveVector?> FallbackObjectiveVectorParameter { get; } =
+        new(nameof(FallbackObjectiveVector), static evaluator => evaluator.FallbackObjectiveVector, static (evaluator, value) => evaluator with { FallbackObjectiveVector = value });
+
+    public static Parameter<LimitEvaluator<TCandidate>, bool> EnforceLimitWithinBatchParameter { get; } =
+        new(nameof(EnforceLimitWithinBatch), static evaluator => evaluator.EnforceLimitWithinBatch, static (evaluator, value) => evaluator with { EnforceLimitWithinBatch = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MaxEvaluationsParameter, FallbackObjectiveVectorParameter, EnforceLimitWithinBatchParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public LimitEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, int maxEvaluations)
         : base(childEvaluator)
     {

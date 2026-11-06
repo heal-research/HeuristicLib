@@ -31,6 +31,16 @@ public sealed record AdvisedAlgorithm<TCandidate, TSearchState> : WrappingAlgori
 
     public ValueArray<Aspect> Aspects { get; init; }
 
+    public static Parameter<AdvisedAlgorithm<TCandidate, TSearchState>, ValueArray<Instrument>> InstrumentsParameter { get; } =
+        new(nameof(Instruments), static algorithm => algorithm.Instruments, static (algorithm, value) => algorithm with { Instruments = value });
+
+    public static Parameter<AdvisedAlgorithm<TCandidate, TSearchState>, ValueArray<Aspect>> AspectsParameter { get; } =
+        new(nameof(Aspects), static algorithm => algorithm.Aspects, static (algorithm, value) => algorithm with { Aspects = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [InstrumentsParameter, AspectsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     // A scope wraps the aspect added last closest, so both lists are added last to first, and the instruments last.
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)

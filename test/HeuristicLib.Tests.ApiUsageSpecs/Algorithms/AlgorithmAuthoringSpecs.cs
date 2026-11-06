@@ -130,6 +130,16 @@ public class AlgorithmAuthoringSpecs
         public required IOperator<Creation, RealVector> Creator { get; init; }
         public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
 
+        public static Parameter<SingleCreateAlgorithm, IOperator<Creation, RealVector>> CreatorParameter { get; } =
+            new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+        public static Parameter<SingleCreateAlgorithm, IOperator<Evaluation, RealVector>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+        public new static IReadOnlyList<IParameter> Parameters { get; } = [CreatorParameter, EvaluatorParameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
         protected override IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutor(
             ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> scope) =>
             new Executor(scope.ResolveOptional(Interceptor), scope.Resolve(Creator), scope.Resolve(Evaluator));
@@ -155,6 +165,16 @@ public class AlgorithmAuthoringSpecs
     {
         public required IOperator<Creation, RealVector> Creator { get; init; }
         public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
+
+        public static Parameter<DoubleCreateAlgorithm, IOperator<Creation, RealVector>> CreatorParameter { get; } =
+            new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+        public static Parameter<DoubleCreateAlgorithm, IOperator<Evaluation, RealVector>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+        public new static IReadOnlyList<IParameter> Parameters { get; } = [CreatorParameter, EvaluatorParameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
         protected override IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutor(
             ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> scope) =>
@@ -228,7 +248,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionsCreated { get; private set; }
         public int CreateCalls { get; private set; }
 
-        IExecutor IOperator<Creation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;
@@ -254,7 +274,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionsCreated { get; private set; }
         public int EvaluateCalls { get; private set; }
 
-        IExecutor IOperator<Evaluation, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;
@@ -282,7 +302,7 @@ public class AlgorithmAuthoringSpecs
         public int ExecutionsCreated { get; private set; }
         public int TransformCalls { get; private set; }
 
-        IExecutor IOperator<Interception<SingleSolutionState<RealVector>>, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             ExecutionsCreated++;

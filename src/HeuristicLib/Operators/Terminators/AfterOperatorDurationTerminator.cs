@@ -25,6 +25,16 @@ public sealed record AfterOperatorDurationTerminator<TCandidate> : Terminator<TC
 
     public TimeSpan MaximumDuration { get; init; }
 
+    public static Parameter<AfterOperatorDurationTerminator<TCandidate>, Duration> DurationParameter { get; } =
+        new(nameof(Duration), static terminator => terminator.Duration, static (terminator, value) => terminator with { Duration = value });
+
+    public static Parameter<AfterOperatorDurationTerminator<TCandidate>, TimeSpan> MaximumDurationParameter { get; } =
+        new(nameof(MaximumDuration), static terminator => terminator.MaximumDuration, static (terminator, value) => terminator with { MaximumDuration = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [DurationParameter, MaximumDurationParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) =>
         new Executor(scope.Results.Result(Duration), MaximumDuration);
 

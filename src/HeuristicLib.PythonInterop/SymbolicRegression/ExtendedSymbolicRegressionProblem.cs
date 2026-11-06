@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
@@ -15,6 +16,13 @@ public sealed record EquationScoringEvaluator(
     Func<ExpressionTree[], ObjectiveVector[], double[][]> PythonCallback)
     : StatelessEvaluator<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
 {
+    public static Parameter<EquationScoringEvaluator, Func<ExpressionTree[], ObjectiveVector[], double[][]>> PythonCallbackParameter { get; } =
+        new(nameof(PythonCallback), static evaluator => evaluator.PythonCallback, static (evaluator, value) => evaluator with { PythonCallback = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [PythonCallbackParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<ExpressionTree> candidates, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
     {
         var normalObjectives = problem.Evaluate(candidates, random);
@@ -36,6 +44,16 @@ public class ExtendedSymbolicRegressionProblem(
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
         : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
     {
+        public static Parameter<InnerProblemParameterFittingRefiner, NumericParameterFittingRefiner> ChildRefinerParameter { get; } =
+            new(nameof(ChildRefiner), static refiner => refiner.ChildRefiner, static (refiner, value) => refiner with { ChildRefiner = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<ExpressionTreeSearchSpace, SymbolicRegressionProblem, ISearchState>()
+            };
+
+        public new static IReadOnlyList<IParameter> Parameters { get; } = [ChildRefinerParameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
         public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem) =>
             ChildRefiner.RefineCandidate(candidate, random, searchSpace, problem.InnerProblem);
     }

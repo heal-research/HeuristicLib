@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -19,6 +20,13 @@ public record BitFlipMutator : SingleCandidateMutator<BoolVector, BoolVectorSear
     /// The default scales with the candidate, so a longer vector is not disrupted more than a shorter one.
     /// </remarks>
     public double? FlipProbability { get; init; }
+
+    public static Parameter<BitFlipMutator, double?> FlipProbabilityParameter { get; } =
+        new(nameof(FlipProbability), static mutator => mutator.FlipProbability, static (mutator, value) => mutator with { FlipProbability = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [FlipProbabilityParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     /// <remarks>
     /// Length survives a flip and cardinality does not, so this operator is refused over a search space that

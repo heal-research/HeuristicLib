@@ -19,6 +19,13 @@ public sealed record CountedAlgorithm<TCandidate, TSearchState> : WrappingAlgori
 
     public AlgorithmCounter Counter { get; init; }
 
+    public static Parameter<CountedAlgorithm<TCandidate, TSearchState>, AlgorithmCounter> CounterParameter { get; } =
+        new(nameof(Counter), static algorithm => algorithm.Counter, static (algorithm, value) => algorithm with { Counter = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [CounterParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {

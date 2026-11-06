@@ -231,7 +231,7 @@ public class ChoosePerInvocationTests
 
     private sealed record ControlledMutator : IOperator<Mutation, int>
     {
-        IExecutor IOperator<Mutation, int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
 
         private sealed class Executor : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>, ILevelControl
@@ -245,7 +245,7 @@ public class ChoosePerInvocationTests
 
     private sealed record ChecksumValue(int Value) : IOperator<Checksum, RealVector>
     {
-        IExecutor IOperator<Checksum, RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Value);
 
         private sealed class Executor(int value) : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>

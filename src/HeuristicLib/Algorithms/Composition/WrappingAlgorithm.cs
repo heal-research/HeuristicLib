@@ -17,7 +17,7 @@ public abstract record WrappingAlgorithm<TCandidate, TSearchState>(IAlgorithm<TC
     /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
     public virtual IReadOnlyList<IParameter> GetParameters() => Parameters;
 
-    public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState) && execution.Fits(ChildAlgorithm);
+    public virtual bool Supports(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
     IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => CreateExecutor(scope);

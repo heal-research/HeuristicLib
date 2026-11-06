@@ -31,6 +31,16 @@ public record GaussianMutator
 
     public double MutationStrength { get; init; }
 
+    public static Parameter<GaussianMutator, double> MutationRateParameter { get; } =
+        new(nameof(MutationRate), static mutator => mutator.MutationRate, static (mutator, value) => mutator with { MutationRate = value });
+
+    public static Parameter<GaussianMutator, double> MutationStrengthParameter { get; } =
+        new(nameof(MutationStrength), static mutator => mutator.MutationStrength, static (mutator, value) => mutator with { MutationStrength = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [MutationRateParameter, MutationStrengthParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     /// <summary>
     /// The raw execution offers <see cref="IMutationStrengthControl"/> over its persistent strength.
     /// Algorithms project this control during resolution and invoke mutation through the wrapped execution.

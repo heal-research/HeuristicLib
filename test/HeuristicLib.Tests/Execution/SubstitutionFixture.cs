@@ -18,7 +18,7 @@ internal static class SubstitutionFixture
 
     internal static void Run(IAlgorithm<int, PopulationState<int>> algorithm) => algorithm.CreateRun(Problem, Rng).Complete(cancellationToken: Ct);
 
-    internal static CycleAlgorithm<IAlgorithm<int, PopulationState<int>>, int, PopulationState<int>> Cycle(
+    internal static CycleAlgorithm<int, PopulationState<int>> Cycle(
         IAlgorithm<int, PopulationState<int>> first, IAlgorithm<int, PopulationState<int>> second) =>
         CycleAlgorithm.Create(first, second) with { MaximumCycles = 2 };
 

@@ -23,6 +23,22 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
     public TimeSpan MaximumDuration { get; init; }
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
+
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
+        new(nameof(MaximumDuration), static algorithm => algorithm.MaximumDuration, static (algorithm, value) => algorithm with { MaximumDuration = value });
+
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeProvider> TimeProviderParameter { get; } =
+        new(nameof(TimeProvider), static algorithm => algorithm.TimeProvider, static (algorithm, value) => algorithm with { TimeProvider = value });
+
+    public static ReferenceListParameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>> ObservedOperatorsParameter { get; } =
+        new(nameof(ObservedOperators), static algorithm => algorithm.ObservedOperators, static (algorithm, value) => algorithm with { ObservedOperators = value.Cast<IOperator>().ToValueArray() });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, ObservedOperatorsParameter, MaximumDurationParameter, TimeProviderParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IReadOnlyList<IOperator> observedOperators, TimeSpan maximumDuration)
     {
         Algorithm = algorithm;
@@ -30,8 +46,8 @@ public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
         MaximumDuration = maximumDuration;
     }
 
-    public override bool Fits(ExecutionSignature execution) =>
-        base.Fits(execution) && execution.Fits(Algorithm) && ObservedOperators.All(source => source.Fits(execution));
+    public override bool Supports(ExecutionSignature execution) =>
+        base.Supports(execution) && ObservedOperators.All(source => execution.Supports(source));
 
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -71,14 +87,28 @@ public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchSta
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
+    public static Parameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
+
+    public static Parameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TimeProvider> TimeProviderParameter { get; } =
+        new(nameof(TimeProvider), static algorithm => algorithm.TimeProvider, static (algorithm, value) => algorithm with { TimeProvider = value });
+
+    public static Parameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
+        new(nameof(MaximumDuration), static algorithm => algorithm.MaximumDuration, static (algorithm, value) => algorithm with { MaximumDuration = value });
+
+    public static ReferenceListParameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>> ObservedOperatorParameter { get; } =
+        new(nameof(ObservedOperator), static algorithm => [algorithm.ObservedOperator], static (algorithm, value) => algorithm with { ObservedOperator = (IOperator<TOperation, TCandidate>)value[0] });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, ObservedOperatorParameter, TimeProviderParameter, MaximumDurationParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
     {
         Algorithm = algorithm;
         ObservedOperator = observedOperator;
         MaximumDuration = maximumDuration;
     }
-
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
 
     /// <remarks>Each executor has its own accumulator and contextual timing advice.</remarks>
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(

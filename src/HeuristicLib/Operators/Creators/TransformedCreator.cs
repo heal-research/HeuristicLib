@@ -12,6 +12,16 @@ namespace HEAL.HeuristicLib.Operators;
 public record TransformedCreator<TCandidate>(IOperator<Creation, TCandidate> SourceCreator, IOperator<Mutation, TCandidate> TransformationMutator)
     : Operator<Creation, TCandidate>
 {
+    public static Parameter<TransformedCreator<TCandidate>, IOperator<Creation, TCandidate>> SourceCreatorParameter { get; } =
+        new(nameof(SourceCreator), static creator => creator.SourceCreator, static (creator, value) => creator with { SourceCreator = value });
+
+    public static Parameter<TransformedCreator<TCandidate>, IOperator<Mutation, TCandidate>> TransformationMutatorParameter { get; } =
+        new(nameof(TransformationMutator), static creator => creator.TransformationMutator, static (creator, value) => creator with { TransformationMutator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [SourceCreatorParameter, TransformationMutatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {

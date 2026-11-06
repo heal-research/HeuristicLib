@@ -9,17 +9,17 @@ namespace HEAL.HeuristicLib.Operators;
 public abstract record Operator<TOperation, TCandidate> : IOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
 {
-    IExecutor IOperator<TOperation, TCandidate>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+    IExecutor IOperator<TCandidate>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => CreateExecutor(scope);
 
     internal virtual string SupportedExecutionDescription => "its declared signature";
 
-    public virtual bool Fits(ExecutionSignature execution) => true;
+    public virtual bool Supports(ExecutionSignature execution) => true;
 
     /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
     public virtual IReadOnlyList<IParameter> GetParameters() => [];
 
-    /// <inheritdoc cref="IOperator{TOperation, TCandidate}.CreateExecutor{TSearchSpace, TProblem, TSearchState}"/>
+    /// <inheritdoc cref="IOperator{TCandidate}.CreateExecutor{TSearchSpace, TProblem, TSearchState}"/>
     protected abstract IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -35,7 +35,7 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
 {
     internal override string SupportedExecutionDescription => ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem));
 
-    public override bool Fits(ExecutionSignature execution) =>
+    public override bool Supports(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
     // The call reaches the leaf hook, because overload resolution prefers the hook this class declares.
@@ -65,7 +65,7 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
 {
     internal override string SupportedExecutionDescription => ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState));
 
-    public override bool Fits(ExecutionSignature execution) =>
+    public override bool Supports(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem))
         && execution.SearchState.IsAssignableTo(typeof(TSearchState));

@@ -12,7 +12,6 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm);
     public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
     /// <summary>
@@ -20,6 +19,19 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
     /// </summary>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
+
+    public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
+
+    public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeProvider> TimeProviderParameter { get; } =
+        new(nameof(TimeProvider), static algorithm => algorithm.TimeProvider, static (algorithm, value) => algorithm with { TimeProvider = value });
+
+    public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
+        new(nameof(MaximumDuration), static algorithm => algorithm.MaximumDuration, static (algorithm, value) => algorithm with { MaximumDuration = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, TimeProviderParameter, MaximumDurationParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -40,6 +41,22 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Creator(IOperator<Creation, T1> Operator1, IOperator<Creation, T2> Operator2)
         : Operator<Creation, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, ICreationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>>
     {
+        public static Parameter<Creator, IOperator<Creation, T1>> Operator1Parameter { get; } =
+            new(nameof(Operator1), static creator => creator.Operator1, static (creator, value) => creator with { Operator1 = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
+            };
+
+        public static Parameter<Creator, IOperator<Creation, T2>> Operator2Parameter { get; } =
+            new(nameof(Operator2), static creator => creator.Operator2, static (creator, value) => creator with { Operator2 = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<TS2, IProblem<T2, TS2>, ISearchState>()
+            };
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [Operator1Parameter, Operator2Parameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
         protected override ICreationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutor(ResolutionScope scope)
         {
             var creator1 = scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1);
@@ -68,6 +85,22 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public record Crossover(IOperator<HEAL.HeuristicLib.Operators.Crossover, T1> Operator1, IOperator<HEAL.HeuristicLib.Operators.Crossover, T2> Operator2)
         : Operator<HEAL.HeuristicLib.Operators.Crossover, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, ICrossoverExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>>
     {
+        public static Parameter<Crossover, IOperator<HEAL.HeuristicLib.Operators.Crossover, T1>> Operator1Parameter { get; } =
+            new(nameof(Operator1), static crossover => crossover.Operator1, static (crossover, value) => crossover with { Operator1 = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
+            };
+
+        public static Parameter<Crossover, IOperator<HEAL.HeuristicLib.Operators.Crossover, T2>> Operator2Parameter { get; } =
+            new(nameof(Operator2), static crossover => crossover.Operator2, static (crossover, value) => crossover with { Operator2 = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<TS2, IProblem<T2, TS2>, ISearchState>()
+            };
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [Operator1Parameter, Operator2Parameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
         protected override ICrossoverExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutor(ResolutionScope scope)
         {
             var crossover1 = scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1);
@@ -100,6 +133,25 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
         : Operator<Mutation, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, IMutationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>>
     {
         public bool All { get; init; } = true;
+
+        public static Parameter<Mutator, IOperator<Mutation, T1>> Operator1Parameter { get; } =
+            new(nameof(Operator1), static mutator => mutator.Operator1, static (mutator, value) => mutator with { Operator1 = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
+            };
+
+        public static Parameter<Mutator, IOperator<Mutation, T2>> Operator2Parameter { get; } =
+            new(nameof(Operator2), static mutator => mutator.Operator2, static (mutator, value) => mutator with { Operator2 = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<TS2, IProblem<T2, TS2>, ISearchState>()
+            };
+
+        public static Parameter<Mutator, bool> AllParameter { get; } =
+            new(nameof(All), static mutator => mutator.All, static (mutator, value) => mutator with { All = value });
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [Operator1Parameter, Operator2Parameter, AllParameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
         protected override IMutationExecutor<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>> CreateExecutor(ResolutionScope scope)
         {

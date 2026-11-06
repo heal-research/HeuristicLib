@@ -388,8 +388,8 @@ public sealed class RoleResolutionTests
         : Algorithm<TwoStateAlgorithm, RealVector, SingleSolutionState<RealVector>>, IAlgorithm<RealVector, PopulationState<RealVector>>
     {
         // Resolution checks the fit before it builds, so a configuration producing two states declares both.
-        public override bool Fits(ExecutionSignature execution) =>
-            base.Fits(execution) || execution.SearchState == typeof(PopulationState<RealVector>);
+        public override bool Supports(ExecutionSignature execution) =>
+            base.Supports(execution) || execution.SearchState == typeof(PopulationState<RealVector>);
 
         protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope) =>
