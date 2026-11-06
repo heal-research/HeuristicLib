@@ -20,6 +20,13 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 {
     public IOperator<Interception<TSearchState>, TCandidate>? Interceptor { get; init; }
 
+    public static Parameter<IterativeAlgorithm<TSelf, TCandidate, TSearchState>, IOperator<Interception<TSearchState>, TCandidate>?> InterceptorParameter { get; } =
+        new(nameof(Interceptor), static algorithm => algorithm.Interceptor, static (algorithm, value) => algorithm with { Interceptor = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [InterceptorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 
     /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
@@ -45,6 +52,13 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
     where TSearchState : class, ISearchState
 {
     public IOperator<Interception<TSearchState>, TCandidate>? Interceptor { get; init; }
+
+    public static Parameter<IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>, IOperator<Interception<TSearchState>, TCandidate>?> InterceptorParameter { get; } =
+        new(nameof(Interceptor), static algorithm => algorithm.Interceptor, static (algorithm, value) => algorithm with { Interceptor = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [InterceptorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
 

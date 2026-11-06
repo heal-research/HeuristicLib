@@ -22,6 +22,13 @@ public interface IConfigurationNode
     /// </para>
     /// </remarks>
     bool Fits(ExecutionSignature execution) => true;
+
+    /// <summary>The parameters this configuration declares, including inherited ones.</summary>
+    /// <remarks>
+    /// A walk over a configuration graph reaches a child only through its declaration, so a configuration that declares
+    /// nothing is a leaf to it, which is the default. See <see cref="IParameter"/> for the form of a declaration.
+    /// </remarks>
+    IReadOnlyList<IParameter> GetParameters() => [];
 }
 
 /// <summary>

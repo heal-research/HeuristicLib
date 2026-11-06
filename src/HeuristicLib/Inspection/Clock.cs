@@ -11,6 +11,9 @@ namespace HEAL.HeuristicLib.Inspection;
 /// </remarks>
 public interface IClock
 {
+    /// <summary>The substitutions that keep this clock current, which a trace lists after its own, so that they sit closer to the node.</summary>
+    IReadOnlyList<Substitution> Substitutions { get; }
+
     // Binds the clock to one run: the reader a trace samples at each entry, and the aspect that keeps the clock current.
     internal (Func<object> Read, Aspect Aspect) Bind(RunResults results);
 }
@@ -56,6 +59,8 @@ public static class Clock
 
     private sealed class ElapsedClock : Clock<TimeSpan, RunResults>
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         protected override RunResults CreateResult(RunResults results) => results;
 
         protected override TimeSpan Read(RunResults result) => result.Elapsed;

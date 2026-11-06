@@ -12,6 +12,8 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
+using HEAL.HeuristicLib.Inspection.Obsolete;
+
 // An instrument attached with advice and the same instrument placed explicitly with a wrapper configuration collect
 // the same data into the run's one result. Each theory runs both paths over equivalent boundaries.
 public sealed class InstrumentPlacementTests
@@ -344,6 +346,8 @@ public sealed class InstrumentPlacementTests
     // A counter of the executors resolved for every algorithm, written outside the library.
     private sealed class AllAlgorithmResolutions : Counter
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
             Aspect.Create(Pointcut.OfType<IAlgorithm<int, PopulationState<int>>>(), new ResolutionCounting(result));
 
@@ -361,6 +365,8 @@ public sealed class InstrumentPlacementTests
     // Logs its label after each evaluation, so the order of the log is the order of the wrappers from the inside out.
     private sealed class Logging(IOperator<Evaluation, int> evaluator, string label, List<string> log) : Instrument<List<string>>
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         protected override List<string> CreateResult(RunResults results) => log;
 
         protected override Aspect CreateAspect(List<string> result, RunResults results) =>

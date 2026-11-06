@@ -9,6 +9,8 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
+using HEAL.HeuristicLib.Algorithms.Obsolete;
+
 public class OperatorCountBudgetAlgorithmTests
 {
     [Fact]

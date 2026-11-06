@@ -29,6 +29,10 @@ public abstract class ObservationSource<TObservation>
     /// <summary>The observed configuration, matched by reference: a configuration with equal settings is observed separately.</summary>
     public abstract IConfigurationNode Configuration { get; }
 
+    /// <summary>Creates the substitution that records this source's observations into the instrument, wherever a graph holds the configuration.</summary>
+    /// <remarks>Each call creates a new substitution.</remarks>
+    public abstract Substitution RecordingInto(IObservationInstrument<TObservation> instrument);
+
     // Creates an aspect that passes each observation of the configuration to the callback.
     internal abstract Aspect Observe(Action<TObservation> callback);
 }
@@ -42,11 +46,14 @@ public sealed class InvocationSource<TOperation, TCandidate, TObservation> : Obs
     where TOperation : IOperation<TOperation>
 {
     private readonly Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> advise;
+    private readonly Func<IObservationInstrument<TObservation>, Substitution>? recordingInto;
 
-    internal InvocationSource(IOperator<TOperation, TCandidate> source, Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> advise)
+    internal InvocationSource(IOperator<TOperation, TCandidate> source, Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> advise,
+        Func<IObservationInstrument<TObservation>, Substitution>? recordingInto = null)
     {
         Operator = source;
         this.advise = advise;
+        this.recordingInto = recordingInto;
     }
 
     /// <summary>The observed operator.</summary>
@@ -70,8 +77,11 @@ public sealed class InvocationSource<TOperation, TCandidate, TObservation> : Obs
     public OperatorDuration Duration(TimeProvider? timeProvider = null) =>
         new OperatorDuration<TOperation, TCandidate>(Operator, timeProvider ?? TimeProvider.System);
 
-    // The advice whose wrapper passes each observation to the callback; explicit placement applies it directly.
-    internal OperatorAdvice<TOperation, TCandidate> Advise(Action<TObservation> callback) => advise(callback);
+    public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
+        recordingInto is null
+            ? throw new InvalidOperationException($"This source of {Operator.GetType().Name} was created from an advice factory, so it can only be attached with Advised. " +
+                $"Create it from a record implementing {nameof(IInvocationObservation<,,>)} to place it.")
+            : recordingInto(instrument);
 
     internal override Aspect Observe(Action<TObservation> callback) =>
         Aspect.Create(Pointcut.Reference(Operator), advise(callback));
@@ -80,6 +90,14 @@ public sealed class InvocationSource<TOperation, TCandidate, TObservation> : Obs
 public static class ObservationSource
 {
     /// <summary>Creates the source of an operator's observations for one operation, as each operation does for its <c>Invocations</c>.</summary>
+    /// <param name="configuration">The observed operator, matched by reference.</param>
+    public static InvocationSource<TOperation, TCandidate, TObservation> Create<TOperation, TCandidate, TObservation>(IOperator<TOperation, TCandidate> configuration)
+        where TOperation : IOperation<TOperation>
+        where TObservation : IInvocationObservation<TOperation, TCandidate, TObservation> =>
+        new(configuration, static observe => new ObservationAdvice<TOperation, TCandidate, TObservation>(observe),
+            instrument => Substitution.Of<IOperator<TOperation, TCandidate>>(configuration, node => new Observed<TOperation, TCandidate, TObservation>(node, instrument)));
+
+    /// <summary>Creates a source that only attaching with <c>Advised</c> can use, observing any value.</summary>
     /// <param name="configuration">The observed operator, matched by reference.</param>
     /// <param name="observe">
     /// Creates the advice whose wrapper passes each observation of a call to the given callback. Observation through
@@ -110,6 +128,10 @@ public static class ObservationSource
         where TExecutor : class, IExecutor
     {
         public override IConfigurationNode Configuration => configuration;
+
+        // An own role has no wrapper the library could create; phase 3 settles how its author supplies one.
+        public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
+            throw new InvalidOperationException($"A source of the role {typeof(TConfiguration).Name} can only be attached with Advised for now.");
 
         internal override Aspect Observe(Action<TObservation> callback) =>
             Aspect.Create(Pointcut.Reference(configuration), observe(callback));

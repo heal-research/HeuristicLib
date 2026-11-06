@@ -9,6 +9,14 @@ public abstract record WrappingAlgorithm<TCandidate, TSearchState>(IAlgorithm<TC
     : IAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
+    public static Parameter<WrappingAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> ChildAlgorithmParameter { get; } =
+        new(nameof(ChildAlgorithm), static algorithm => algorithm.ChildAlgorithm, static (algorithm, value) => algorithm with { ChildAlgorithm = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ChildAlgorithmParameter];
+
+    /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
+    public virtual IReadOnlyList<IParameter> GetParameters() => Parameters;
+
     public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState) && execution.Fits(ChildAlgorithm);
 
     IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(

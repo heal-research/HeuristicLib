@@ -33,7 +33,7 @@ public partial class ResolutionScope
         var existing = Existing(owner, algorithm, static executor => executor is IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
         var applicable = MatchingAdvice(algorithm);
         // This scope's advice for the algorithm is fixed from here on, also for its own construction.
-        node.Advised.Add(algorithm);
+        node.MarkResolved(algorithm);
         try
         {
             // The resolver is the one place that constructs executors; the delegate only chooses the constructing scope.

@@ -14,6 +14,13 @@ public abstract record MultiOperator<TOperation, TCandidate> : Operator<TOperati
 
     public ValueArray<IOperator<TOperation, TCandidate>> ChildOperators { get; init; }
 
+    public static ListParameter<MultiOperator<TOperation, TCandidate>, IOperator<TOperation, TCandidate>> ChildOperatorsParameter { get; } =
+        new(nameof(ChildOperators), static multi => multi.ChildOperators, static (multi, value) => multi with { ChildOperators = value.ToValueArray() });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ChildOperatorsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override bool Fits(ExecutionSignature execution) => execution.Fits([.. ChildOperators]);
 
     public virtual bool? Ensures(ICandidateInvariant<TCandidate> invariant) => OperatorContractComposition.Ensures(ChildOperators, invariant);

@@ -25,16 +25,12 @@ public sealed record AlgorithmObservation<TCandidate, TSearchState>(
     TSearchState? PreviousState,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
-    where TSearchState : class, ISearchState;
-
-file sealed class AlgorithmObservationAdvice<TCandidate, TSearchState>(
-    Action<AlgorithmObservation<TCandidate, TSearchState>> observe) : AlgorithmAdvice<TCandidate, TSearchState>
+    : IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>
     where TSearchState : class, ISearchState
 {
-    public override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-        IAlgorithm<TCandidate, TSearchState> source) =>
-        new Executor<TSearchSpace, TProblem>(executor, source, observe);
+    static IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmObservation<TCandidate, TSearchState>> record) =>
+        new Executor<TSearchSpace, TProblem>(executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(
         IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm,
@@ -67,12 +63,12 @@ public static class AlgorithmObservations
     {
         /// <summary>The observations of the search states this algorithm yields.</summary>
         public AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> Iterations =>
-            new(algorithm, Advise<TCandidate, TSearchState>);
+            new(algorithm);
 
         /// <summary>Records the search states this algorithm yields into the instrument, wherever this configuration is placed.</summary>
         public ObservedAlgorithm<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> Observed(
             IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>> instrument) =>
-            new(algorithm.Iterations, instrument);
+            new(algorithm, instrument);
     }
 
     extension<TCandidate, TSearchState>(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> iterations)
@@ -86,5 +82,5 @@ public static class AlgorithmObservations
     internal static AlgorithmAdvice<TCandidate, TSearchState> Advise<TCandidate, TSearchState>(
         Action<AlgorithmObservation<TCandidate, TSearchState>> observe)
         where TSearchState : class, ISearchState =>
-        new AlgorithmObservationAdvice<TCandidate, TSearchState>(observe);
+        new AlgorithmObservationAdvice<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>(observe);
 }

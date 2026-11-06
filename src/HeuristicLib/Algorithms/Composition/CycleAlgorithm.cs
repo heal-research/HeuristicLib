@@ -13,9 +13,19 @@ namespace HEAL.HeuristicLib.Algorithms;
 public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     : Algorithm<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
+    where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
-    public ValueArray<TAlgorithm> Algorithms { get; }
+    public ValueArray<TAlgorithm> Algorithms { get; init; }
+
+    public static ListParameter<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, TAlgorithm> AlgorithmsParameter { get; } =
+        new(nameof(Algorithms), static cycle => cycle.Algorithms, static (cycle, value) => cycle with { Algorithms = value.ToValueArray() });
+
+    public static Parameter<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, int?> MaximumCyclesParameter { get; } =
+        new(nameof(MaximumCycles), static cycle => cycle.MaximumCycles, static (cycle, value) => cycle with { MaximumCycles = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmsParameter, MaximumCyclesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits([.. Algorithms]);
 
@@ -34,9 +44,12 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     }
 
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, MaximumCycles);
-
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        if (Algorithms.Count == 0)
+            throw new InvalidOperationException("A cycle needs at least one algorithm.");
+        return new CycleAlgorithmExecutor<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, MaximumCycles);
+    }
 }
 
 public static class CycleAlgorithm

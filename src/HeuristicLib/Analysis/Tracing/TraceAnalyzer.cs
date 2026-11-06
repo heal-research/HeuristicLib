@@ -40,6 +40,10 @@ public sealed class TraceAnalyzer<TObservation, TValue> : Instrument<Trace<TObse
         this.createValue = createValue;
     }
 
+    /// <summary>Records at the trace's sources, with its clocks closer to the nodes, so an entry reads clocks that already include its call.</summary>
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
+        [.. sources.Select(source => source.RecordingInto(this)), .. clocks.SelectMany(static clock => clock.Substitutions)];
+
     /// <summary>Creates the callback that records one observation into this run's trace.</summary>
     public Action<TObservation> CreateRecorder(RunResults results) => results.Result(this).Record;
 

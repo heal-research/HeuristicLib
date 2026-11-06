@@ -16,13 +16,12 @@ public sealed record CrossoverObservation<TCandidate>(
     IReadOnlyList<Parents<TCandidate>> Parents,
     IReadOnlyList<TCandidate> Offspring,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class CrossoverObservationAdvice<TCandidate>(Action<CrossoverObservation<TCandidate>> observe) : CrossoverAdvice<TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>
 {
-    protected override ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
-        ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> executor, IOperator<Crossover, TCandidate> crossover) =>
-        new Executor<TSearchSpace, TProblem>(executor, crossover, observe);
+    static IExecutor IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Crossover, TCandidate> source, Action<CrossoverObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Crossover, TCandidate> crossover, Action<CrossoverObservation<TCandidate>> observe)
@@ -47,10 +46,10 @@ public static class CrossoverObservations
     {
         /// <summary>The observations of this crossover's successful calls.</summary>
         public InvocationSource<Crossover, TCandidate, CrossoverObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(crossover, (Action<CrossoverObservation<TCandidate>> observe) => new CrossoverObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Crossover, TCandidate, CrossoverObservation<TCandidate>>(crossover);
 
         /// <summary>Records this crossover's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Crossover, TCandidate, CrossoverObservation<TCandidate>> Observed(IObservationInstrument<CrossoverObservation<TCandidate>> instrument) =>
-            new(crossover.Invocations, instrument);
+            new(crossover, instrument);
     }
 }

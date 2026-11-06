@@ -40,6 +40,20 @@ public class CycleAlgorithmTests
     }
 
     [Fact]
+    public void CycleAlgorithm_WithoutAlgorithms_IsReportedWhenBuilt()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var cycle = CycleAlgorithm.Create(new AdditiveStepAlgorithm(1)) with
+        {
+            Algorithms = []
+        };
+
+        Should.Throw<InvalidOperationException>(() =>
+                cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList())
+            .Message.ShouldContain("at least one algorithm");
+    }
+
+    [Fact]
     public void CycleAlgorithm_RetriesCyclesWithoutProgressUntilMaximumCycles()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();

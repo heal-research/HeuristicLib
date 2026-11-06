@@ -107,6 +107,8 @@ public class InstrumentSpecs
     private sealed class OffspringSizes(IOperator<Mutation, RealVector> mutator)
         : Instrument<Dictionary<int, int>>, IObservationInstrument<MutationObservation<RealVector>>
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [mutator.Invocations.RecordingInto(this)];
+
         public Action<MutationObservation<RealVector>> CreateRecorder(RunResults results) => Recorder(results.Result(this));
 
         protected override Dictionary<int, int> CreateResult(RunResults results) => [];

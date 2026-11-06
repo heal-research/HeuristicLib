@@ -14,6 +14,13 @@ public sealed record Named<TOperation, TCandidate> : WrappingOperator<TOperation
 
     public string Name { get; init; }
 
+    public static Parameter<Named<TOperation, TCandidate>, string> NameParameter { get; } =
+        new(nameof(Name), static named => named.Name, static (named, value) => named with { Name = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [NameParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
         scope.ResolveOperator(ChildOperator);
 }

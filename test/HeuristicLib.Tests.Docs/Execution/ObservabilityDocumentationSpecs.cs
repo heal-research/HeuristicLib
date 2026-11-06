@@ -18,12 +18,19 @@ namespace HEAL.HeuristicLib.Tests.Docs.Execution;
 
 #region observability-accumulating-analyzer
 public sealed class CandidateSummaryAnalyzer<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
-    : Instrument<CandidateSummary<TCandidate>>
+    : Instrument<CandidateSummary<TCandidate>>, IObservationInstrument<EvaluationObservation<TCandidate>>
 {
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() => [evaluator.Invocations.RecordingInto(this)];
+
+    public Action<EvaluationObservation<TCandidate>> CreateRecorder(RunResults results) => Record(results.Result(this));
+
     protected override CandidateSummary<TCandidate> CreateResult(RunResults results) => new();
 
     protected override Aspect CreateAspect(CandidateSummary<TCandidate> result, RunResults results) =>
-        Aspect.Observe(evaluator.Invocations, observation => result.Add(observation.Candidates));
+        Aspect.Observe(evaluator.Invocations, Record(result));
+
+    private static Action<EvaluationObservation<TCandidate>> Record(CandidateSummary<TCandidate> result) =>
+        observation => result.Add(observation.Candidates);
 }
 
 public sealed class CandidateSummary<TCandidate>

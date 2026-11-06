@@ -11,7 +11,19 @@ namespace HEAL.HeuristicLib.Execution;
 /// </remarks>
 public abstract class Instrument
 {
+    private IReadOnlyList<Substitution>? substitutions;
+
     private protected Instrument() { }
+
+    /// <summary>The substitutions that place this instrument in a configuration graph, such as <c>ga.Substitute(trace.Substitutions)</c>.</summary>
+    /// <remarks>
+    /// Each read returns the same instances, also under concurrent first reads, so that listing the substitutions of two
+    /// instruments that build on a third applies the third's once, closest to the node.
+    /// </remarks>
+    public IReadOnlyList<Substitution> Substitutions => LazyInitializer.EnsureInitialized(ref substitutions, CreateSubstitutions);
+
+    /// <summary>Creates the substitutions that place this instrument. An instrument that needs no placement, such as a clock that only reads something, returns an empty list.</summary>
+    protected abstract IReadOnlyList<Substitution> CreateSubstitutions();
 
     // Creates this run's result and the aspect that places the instrument at its source, which the run publishes together.
     internal abstract (object Result, Aspect? Aspect) Create(RunResults results);

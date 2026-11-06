@@ -15,18 +15,28 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public sealed record AfterOperatorCountTerminator<TCandidate> : Terminator<TCandidate>
 {
-    public AfterOperatorCountTerminator(Counter counter, int maximumCount)
+    public AfterOperatorCountTerminator(IConfigurationNode<CountAccumulator> counter, int maximumCount)
     {
         Counter = counter;
         MaximumCount = maximumCount;
     }
 
-    public Counter Counter { get; init; }
+    public IConfigurationNode<CountAccumulator> Counter { get; init; }
 
     public int MaximumCount { get; init; }
 
+    public static Parameter<AfterOperatorCountTerminator<TCandidate>, IConfigurationNode<CountAccumulator>> CounterParameter { get; } =
+        new(nameof(Counter), static terminator => terminator.Counter, static (terminator, value) => terminator with { Counter = value });
+
+    public static Parameter<AfterOperatorCountTerminator<TCandidate>, int> MaximumCountParameter { get; } =
+        new(nameof(MaximumCount), static terminator => terminator.MaximumCount, static (terminator, value) => terminator with { MaximumCount = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [CounterParameter, MaximumCountParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) =>
-        new Executor(scope.Results.Result(Counter), MaximumCount);
+        new Executor(scope.Resolve(Counter), MaximumCount);
 
     private sealed class Executor(CountAccumulator counter, int maximumCount) : TerminationExecutor<TCandidate>
     {
@@ -36,5 +46,5 @@ public sealed record AfterOperatorCountTerminator<TCandidate> : Terminator<TCand
 
 public static class AfterOperatorCountTerminator
 {
-    public static AfterOperatorCountTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, Counter counter, int maximumCount) => new(counter, maximumCount);
+    public static AfterOperatorCountTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, IConfigurationNode<CountAccumulator> counter, int maximumCount) => new(counter, maximumCount);
 }

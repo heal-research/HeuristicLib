@@ -17,15 +17,12 @@ public sealed record TerminationObservation<TCandidate>(
     ISearchState State,
     bool IsTerminal,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class TerminationObservationAdvice<TCandidate>(Action<TerminationObservation<TCandidate>> observe) : TerminatorAdvice<TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>
 {
-    protected override ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-        Wrap<TSearchSpace, TProblem, TSearchState>(
-            ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-            IOperator<Termination, TCandidate> terminator) =>
-        new Executor<TSearchSpace, TProblem, TSearchState>(executor, terminator, observe);
+    static IExecutor IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Termination, TCandidate> source, Action<TerminationObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem, TSearchState>((ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
         IOperator<Termination, TCandidate> terminator, Action<TerminationObservation<TCandidate>> observe)
@@ -51,10 +48,10 @@ public static class TerminationObservations
     {
         /// <summary>The observations of this terminator's successful calls.</summary>
         public InvocationSource<Termination, TCandidate, TerminationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(terminator, (Action<TerminationObservation<TCandidate>> observe) => new TerminationObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Termination, TCandidate, TerminationObservation<TCandidate>>(terminator);
 
         /// <summary>Records this terminator's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Termination, TCandidate, TerminationObservation<TCandidate>> Observed(IObservationInstrument<TerminationObservation<TCandidate>> instrument) =>
-            new(terminator.Invocations, instrument);
+            new(terminator, instrument);
     }
 }

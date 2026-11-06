@@ -21,6 +21,8 @@ public sealed class EpochClock<TCandidate, TSearchSpace>(IDynamicProblem<TCandid
 {
     public IDynamicProblem<TCandidate, TSearchSpace> Problem { get; } = problem;
 
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
     // The problem keeps the version itself, so every run reads it directly.
     protected override IDynamicProblem<TCandidate, TSearchSpace> CreateResult(RunResults results) => Problem;
 

@@ -87,7 +87,7 @@ Retention runs after a trace's function reads an observation. It controls stored
 
 ## Accumulating analyzers
 
-Some analysis produces one mutable summary rather than a history. Derive the definition from `Instrument<TResult>`, create the accumulator in `CreateResult` and its observations in `CreateAspect`. Put synchronization on the run-created result or collector:
+Some analysis produces one mutable summary rather than a history. Derive the definition from `Instrument<TResult>`, create the accumulator in `CreateResult` and its observations in `CreateAspect`, and name the substitutions that place it in `CreateSubstitutions`. Put synchronization on the run-created result or collector:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-accumulating-analyzer{csharp}
 

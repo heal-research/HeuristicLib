@@ -434,7 +434,7 @@ public sealed class LayerDependencyTests
                 "OperatorContractVerification" or "SearchSpaceCompatibility"),
             _ when InNamespace(ns, "Objectives") || InNamespace(ns, "Random") || InNamespace(ns, "Collections") ||
                    InNamespace(ns, "Numerics") => true,
-            "HEAL.HeuristicLib.Inspection" => type.Name is "CountAccumulator" or "DurationAccumulator",
+            "HEAL.HeuristicLib.Inspection" => type.Name is "DurationAccumulator",
             "HEAL.HeuristicLib.Execution" => type.Name is "ExecutionConcurrency" or "ExecutionConcurrencyKind" or "BatchExecution",
             "HEAL.HeuristicLib.Problems" => type.Name is "IProblem" or "IStochasticProblem" or "Problem" or "SingleSolutionProblem",
             _ => false,

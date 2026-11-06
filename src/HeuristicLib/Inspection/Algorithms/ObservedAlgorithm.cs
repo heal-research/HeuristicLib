@@ -3,29 +3,31 @@ using HEAL.HeuristicLib.Execution;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>Records each call or each yielded state of its child algorithm into an instrument, through its source's observation wrapper.</summary>
+/// <summary>Records each call or each yielded state of its child algorithm into an instrument, such as a trace.</summary>
 /// <remarks>
-/// This is the explicit placement of an observation: it records what attaching the instrument with <c>Advised</c>
-/// records at the source, through the same wrapper, into the same run result. An algorithm offers it as
-/// <c>Observed</c>, taking an instrument of its iterations or of its calls.
+/// <typeparamref name="TObservation"/> says which boundary is observed. An algorithm offers this wrapper as <c>Observed</c>,
+/// taking an instrument of its iterations or of its calls.
 /// </remarks>
 public sealed record ObservedAlgorithm<TCandidate, TSearchState, TObservation> : WrappingAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
+    where TObservation : IAlgorithmObservation<TCandidate, TSearchState, TObservation>
 {
-    // The source supplies only the observation wrapper; the child it observes is ChildAlgorithm.
-    private readonly AlgorithmSource<TCandidate, TSearchState, TObservation> source;
-
-    /// <summary>Observes the algorithm of <paramref name="source"/> through the source's observation wrapper.</summary>
-    public ObservedAlgorithm(AlgorithmSource<TCandidate, TSearchState, TObservation> source, IObservationInstrument<TObservation> instrument)
-        : base(source.Algorithm)
+    public ObservedAlgorithm(IAlgorithm<TCandidate, TSearchState> childAlgorithm, IObservationInstrument<TObservation> instrument)
+        : base(childAlgorithm)
     {
-        this.source = source;
         Instrument = instrument;
     }
 
     public IObservationInstrument<TObservation> Instrument { get; init; }
 
+    public static Parameter<ObservedAlgorithm<TCandidate, TSearchState, TObservation>, IObservationInstrument<TObservation>> InstrumentParameter { get; } =
+        new(nameof(Instrument), static observed => observed.Instrument, static (observed, value) => observed with { Instrument = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [InstrumentParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        source.Advise(Instrument.CreateRecorder(scope.Results)).Wrap(scope.Resolve(ChildAlgorithm), ChildAlgorithm);
+        TObservation.Wrap(scope.Resolve(ChildAlgorithm), ChildAlgorithm, Instrument.CreateRecorder(scope.Results));
 }

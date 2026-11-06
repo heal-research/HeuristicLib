@@ -81,11 +81,16 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 
     private static void AnalyzeAssignment(SyntaxNodeAnalysisContext context, INamedTypeSymbol? configurationContract)
     {
-        if (context.Node is AssignmentExpressionSyntax assignment)
+        if (context.Node is AssignmentExpressionSyntax assignment && !SetsMemberOfNewInstance(assignment))
         {
             AnalyzeMutationTarget(context, assignment.Left, configurationContract);
         }
     }
+
+    // A top-level assignment in an object or with initializer sets a member of the instance that expression creates.
+    // Array initializers and nested member initializers can still reach the current instance.
+    private static bool SetsMemberOfNewInstance(AssignmentExpressionSyntax assignment) =>
+        assignment.Parent is InitializerExpressionSyntax { Parent: BaseObjectCreationExpressionSyntax or WithExpressionSyntax };
 
     private static void AnalyzeIncrementOrDecrement(SyntaxNodeAnalysisContext context, INamedTypeSymbol? configurationContract)
     {

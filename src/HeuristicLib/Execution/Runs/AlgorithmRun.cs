@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -22,7 +23,13 @@ public abstract class AlgorithmRun
     /// The result can be read before, during and after execution, also after a failure. Each result type states how it
     /// may be read while the run writes to it, such as a trace through its snapshots.
     /// </remarks>
+    [OverloadResolutionPriority(1)]
     public TResult Result<TResult>(Instrument<TResult> instrument) where TResult : class => scope.Results.Result(instrument);
+
+    /// <summary>Returns this run's result of the configuration, such as the accumulator of a counter.</summary>
+    /// <remarks>It can be read before, during and after execution, also after a failure.</remarks>
+    public TResult Result<TResult>(IConfigurationNode<TResult> configuration) where TResult : class, IRunResult =>
+        scope.RunResult(configuration);
 
     protected ResolutionScope? BeginExecutionSegment()
     {

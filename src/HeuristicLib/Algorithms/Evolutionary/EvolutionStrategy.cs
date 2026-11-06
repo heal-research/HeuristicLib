@@ -34,6 +34,40 @@ public record EvolutionStrategy<TCandidate>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; } = EvolutionStrategyDefaults.MaximumGenerations;
 
+    public static Parameter<EvolutionStrategy<TCandidate>, int> PopulationSizeParameter { get; } =
+        new(nameof(PopulationSize), static algorithm => algorithm.PopulationSize, static (algorithm, value) => algorithm with { PopulationSize = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, int> NumberOfChildrenParameter { get; } =
+        new(nameof(NumberOfChildren), static algorithm => algorithm.NumberOfChildren, static (algorithm, value) => algorithm with { NumberOfChildren = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, EvolutionStrategyType> StrategyParameter { get; } =
+        new(nameof(Strategy), static algorithm => algorithm.Strategy, static (algorithm, value) => algorithm with { Strategy = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Creation, TCandidate>> CreatorParameter { get; } =
+        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Mutation, TCandidate>> MutatorParameter { get; } =
+        new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Crossover, TCandidate>?> CrossoverParameter { get; } =
+        new(nameof(Crossover), static algorithm => algorithm.Crossover, static (algorithm, value) => algorithm with { Crossover = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Selection, TCandidate>> SelectorParameter { get; } =
+        new(nameof(Selector), static algorithm => algorithm.Selector, static (algorithm, value) => algorithm with { Selector = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Refinement, TCandidate>?> RefinerParameter { get; } =
+        new(nameof(Refiner), static algorithm => algorithm.Refiner, static (algorithm, value) => algorithm with { Refiner = value });
+
+    public static Parameter<EvolutionStrategy<TCandidate>, int?> MaximumGenerationsParameter { get; } =
+        new(nameof(MaximumGenerations), static algorithm => algorithm.MaximumGenerations, static (algorithm, value) => algorithm with { MaximumGenerations = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [PopulationSizeParameter, NumberOfChildrenParameter, StrategyParameter, CreatorParameter, MutatorParameter, CrossoverParameter, EvaluatorParameter, SelectorParameter, RefinerParameter, MaximumGenerationsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
     {

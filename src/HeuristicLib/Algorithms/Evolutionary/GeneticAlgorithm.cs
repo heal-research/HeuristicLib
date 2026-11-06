@@ -36,6 +36,44 @@ public record GeneticAlgorithm<TCandidate>
     public double MutationRate { get; init; } = GeneticAlgorithmDefaults.MutationRate;
 
     public IOperator<Selection, TCandidate> Selector { get; init; } = GeneticAlgorithmDefaults.Selector<TCandidate>();
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, int> PopulationSizeParameter { get; } =
+        new(nameof(PopulationSize), static algorithm => algorithm.PopulationSize, static (algorithm, value) => algorithm with { PopulationSize = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, IOperator<Creation, TCandidate>> CreatorParameter { get; } =
+        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, IOperator<Crossover, TCandidate>> CrossoverParameter { get; } =
+        new(nameof(Crossover), static algorithm => algorithm.Crossover, static (algorithm, value) => algorithm with { Crossover = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, IOperator<Mutation, TCandidate>> MutatorParameter { get; } =
+        new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, IOperator<Termination, TCandidate>?> TerminatorParameter { get; } =
+        new(nameof(Terminator), static algorithm => algorithm.Terminator, static (algorithm, value) => algorithm with { Terminator = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, IOperator<Refinement, TCandidate>?> RefinerParameter { get; } =
+        new(nameof(Refiner), static algorithm => algorithm.Refiner, static (algorithm, value) => algorithm with { Refiner = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, int?> MaximumGenerationsParameter { get; } =
+        new(nameof(MaximumGenerations), static algorithm => algorithm.MaximumGenerations, static (algorithm, value) => algorithm with { MaximumGenerations = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, int> ElitesParameter { get; } =
+        new(nameof(Elites), static algorithm => algorithm.Elites, static (algorithm, value) => algorithm with { Elites = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, double> MutationRateParameter { get; } =
+        new(nameof(MutationRate), static algorithm => algorithm.MutationRate, static (algorithm, value) => algorithm with { MutationRate = value });
+
+    public static Parameter<GeneticAlgorithm<TCandidate>, IOperator<Selection, TCandidate>> SelectorParameter { get; } =
+        new(nameof(Selector), static algorithm => algorithm.Selector, static (algorithm, value) => algorithm with { Selector = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [PopulationSizeParameter, CreatorParameter, CrossoverParameter, MutatorParameter, TerminatorParameter, EvaluatorParameter, RefinerParameter, MaximumGenerationsParameter, ElitesParameter, MutationRateParameter, SelectorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
 
     protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(

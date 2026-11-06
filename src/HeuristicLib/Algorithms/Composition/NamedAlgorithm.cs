@@ -15,6 +15,13 @@ public sealed record NamedAlgorithm<TCandidate, TSearchState> : WrappingAlgorith
 
     public string Name { get; init; }
 
+    public static Parameter<NamedAlgorithm<TCandidate, TSearchState>, string> NameParameter { get; } =
+        new(nameof(Name), static named => named.Name, static (named, value) => named with { Name = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [NameParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
         scope.Resolve(ChildAlgorithm);

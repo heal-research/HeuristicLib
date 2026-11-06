@@ -60,12 +60,28 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     }
 
     public IRacingStateMerger<TCandidate, TSearchState> StateMerger { get; }
-    public IOperator<Creation, MetaOptimizationGenotype> Creator { get; }
-    public IOperator<Mutation, MetaOptimizationGenotype> Mutator { get; }
+    public IOperator<Creation, MetaOptimizationGenotype> Creator { get; init; }
+    public IOperator<Mutation, MetaOptimizationGenotype> Mutator { get; init; }
     private MetaOptimizationSearchSpace MetaSpace { get; }
     private EmptyMetaOptProblem EmptyMetaOptProblem { get; }
-    public Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> AlgBuilder { get; }
-    public Func<TAlgorithm, IOperator<Evaluation, TCandidate>> EvaluatorSelector { get; }
+    public Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm> AlgBuilder { get; init; }
+    public Func<TAlgorithm, IOperator<Evaluation, TCandidate>> EvaluatorSelector { get; init; }
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, IOperator<Creation, MetaOptimizationGenotype>> CreatorParameter { get; } =
+        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, IOperator<Mutation, MetaOptimizationGenotype>> MutatorParameter { get; } =
+        new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, Func<MetaOptimizationGenotype, TAlgorithm?, TAlgorithm>> AlgBuilderParameter { get; } =
+        new(nameof(AlgBuilder), static algorithm => algorithm.AlgBuilder, static (algorithm, value) => algorithm with { AlgBuilder = value });
+
+    public static Parameter<DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, Func<TAlgorithm, IOperator<Evaluation, TCandidate>>> EvaluatorSelectorParameter { get; } =
+        new(nameof(EvaluatorSelector), static algorithm => algorithm.EvaluatorSelector, static (algorithm, value) => algorithm with { EvaluatorSelector = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [CreatorParameter, MutatorParameter, AlgBuilderParameter, EvaluatorSelectorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
     public required int NoRacers { get; init; } = 2;
     public double HallOfFameStrength { get; init; } = 0.1;
     public double EarlyTerminationStrength { get; init; } = 0.1;

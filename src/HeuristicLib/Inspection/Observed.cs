@@ -3,28 +3,31 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>Records each successful call of its child into an instrument, such as a trace, through its source's observation wrapper.</summary>
+/// <summary>Records each successful call of its child into an instrument, such as a trace.</summary>
 /// <remarks>
-/// This is the explicit placement of an observation: it records what attaching the instrument with <c>Advised</c>
-/// records at the source, through the same wrapper, into the same run result. Each operation offers it as
-/// <c>Observed</c> beside its <c>Invocations</c>, such as <c>mutator.Observed(trace)</c>.
+/// Each call produces one <typeparamref name="TObservation"/> with the call's inputs and outputs, and the instrument
+/// receives it. Each operation offers this wrapper as <c>Observed</c> beside its <c>Invocations</c>, such as
+/// <c>mutator.Observed(trace)</c>.
 /// </remarks>
 public sealed record Observed<TOperation, TCandidate, TObservation> : WrappingOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
+    where TObservation : IInvocationObservation<TOperation, TCandidate, TObservation>
 {
-    // The source supplies only the observation wrapper; the child it observes is ChildOperator.
-    private readonly InvocationSource<TOperation, TCandidate, TObservation> source;
-
-    /// <summary>Observes the operator of <paramref name="source"/> through the source's observation wrapper.</summary>
-    public Observed(InvocationSource<TOperation, TCandidate, TObservation> source, IObservationInstrument<TObservation> instrument)
-        : base(source.Operator)
+    public Observed(IOperator<TOperation, TCandidate> childOperator, IObservationInstrument<TObservation> instrument)
+        : base(childOperator)
     {
-        this.source = source;
         Instrument = instrument;
     }
 
     public IObservationInstrument<TObservation> Instrument { get; init; }
 
+    public static Parameter<Observed<TOperation, TCandidate, TObservation>, IObservationInstrument<TObservation>> InstrumentParameter { get; } =
+        new(nameof(Instrument), static observed => observed.Instrument, static (observed, value) => observed with { Instrument = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [InstrumentParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        ExplicitPlacement.Apply(scope, ChildOperator, source.Advise(Instrument.CreateRecorder(scope.Results)));
+        TObservation.Wrap<TSearchSpace, TProblem, TSearchState>(scope.ResolveOperator(ChildOperator), ChildOperator, Instrument.CreateRecorder(scope.Results));
 }

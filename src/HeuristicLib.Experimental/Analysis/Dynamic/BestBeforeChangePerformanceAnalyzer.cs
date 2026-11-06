@@ -10,7 +10,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <summary>Defines the completed-epoch performance analysis of the observed evaluators.</summary>
 /// <remarks>Each run owns a separate result. The problem is read from each evaluation observation.</remarks>
 public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace, TProblem>
-    : Instrument<BestBeforeChangePerformance<TCandidate>>
+    : Instrument<BestBeforeChangePerformance<TCandidate>>, IObservationInstrument<EvaluationObservation<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IDynamicProblem<TCandidate, TSearchSpace>
 {
@@ -30,22 +30,28 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
 
     public int PredictionEpochMultiplier { get; }
 
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() => [.. evaluators.Select(evaluator => evaluator.Invocations.RecordingInto(this))];
+
+    Action<EvaluationObservation<TCandidate>> IObservationInstrument<EvaluationObservation<TCandidate>>.CreateRecorder(RunResults results) => Record(results.Result(this));
+
     protected override BestBeforeChangePerformance<TCandidate> CreateResult(RunResults results) =>
         new(objectiveValueSelector, PredictionEpochMultiplier);
 
     protected override Aspect CreateAspect(BestBeforeChangePerformance<TCandidate> result, RunResults results) =>
         new Collection(evaluators, result);
 
+    private static Action<EvaluationObservation<TCandidate>> Record(BestBeforeChangePerformance<TCandidate> result) => observation =>
+    {
+        if (observation.Problem is not TProblem problem)
+            throw new InvalidOperationException($"The performance analysis requires {typeof(TProblem).Name}, but the evaluation used {observation.Problem.GetType().Name}.");
+        result.ReadBatch(observation, problem.CurrentEpoch, problem.Objective.TotalOrderComparer);
+    };
+
     private sealed class Collection : Aspect
     {
         public Collection(IReadOnlyList<IOperator<Evaluation, TCandidate>> evaluators, BestBeforeChangePerformance<TCandidate> result)
         {
-            Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Invocations, observation =>
-            {
-                if (observation.Problem is not TProblem problem)
-                    throw new InvalidOperationException($"The performance analysis requires {typeof(TProblem).Name}, but the evaluation used {observation.Problem.GetType().Name}.");
-                result.ReadBatch(observation, problem.CurrentEpoch, problem.Objective.TotalOrderComparer);
-            }))];
+            Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Invocations, Record(result)))];
         }
     }
 }

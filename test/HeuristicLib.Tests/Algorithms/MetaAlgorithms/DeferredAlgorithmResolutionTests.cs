@@ -9,6 +9,9 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
+using HEAL.HeuristicLib.Algorithms.Obsolete;
+using HEAL.HeuristicLib.Inspection.Obsolete;
+
 public sealed class DeferredAlgorithmResolutionTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
@@ -515,6 +518,8 @@ public sealed class DeferredAlgorithmResolutionTests
 
     private sealed class MutationCallClock(IOperator<Mutation, int> mutator) : Counter
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
             Aspect.Observe(mutator.Invocations, _ => result.IncrementBy(1));
     }

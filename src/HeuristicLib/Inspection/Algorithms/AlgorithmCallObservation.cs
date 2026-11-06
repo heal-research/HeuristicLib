@@ -39,16 +39,15 @@ public sealed record AlgorithmCallObservation<TCandidate, TSearchState>(
     long Iterations,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
-    where TSearchState : class, ISearchState;
-
-file sealed class AlgorithmCallAdvice<TCandidate, TSearchState>(
-    Action<AlgorithmCallObservation<TCandidate, TSearchState>> observe) : AlgorithmAdvice<TCandidate, TSearchState>
+    : IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>
     where TSearchState : class, ISearchState
 {
-    public override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-        IAlgorithm<TCandidate, TSearchState> source) =>
-        new Executor<TSearchSpace, TProblem>(executor, source, observe);
+    // A call reports its start and its end, and counts once.
+    bool IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Counts => Event == AlgorithmCallEvent.Started;
+
+    static IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmCallObservation<TCandidate, TSearchState>> record) =>
+        new Executor<TSearchSpace, TProblem>(executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(
         IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm,
@@ -132,12 +131,12 @@ public static class AlgorithmCalls
     {
         /// <summary>The start and end of each call of this algorithm's executor, such as each turn of a cycle.</summary>
         public AlgorithmSource<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>> Calls =>
-            new(algorithm, Advise<TCandidate, TSearchState>);
+            new(algorithm);
 
         /// <summary>Records the start and end of each call of this algorithm into the instrument, wherever this configuration is placed.</summary>
         public ObservedAlgorithm<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>> Observed(
             IObservationInstrument<AlgorithmCallObservation<TCandidate, TSearchState>> instrument) =>
-            new(algorithm.Calls, instrument);
+            new(algorithm, instrument);
     }
 
     extension<TCandidate, TSearchState>(AlgorithmSource<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>> calls)
@@ -151,5 +150,5 @@ public static class AlgorithmCalls
     internal static AlgorithmAdvice<TCandidate, TSearchState> Advise<TCandidate, TSearchState>(
         Action<AlgorithmCallObservation<TCandidate, TSearchState>> observe)
         where TSearchState : class, ISearchState =>
-        new AlgorithmCallAdvice<TCandidate, TSearchState>(observe);
+        new AlgorithmObservationAdvice<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>(observe);
 }

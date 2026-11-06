@@ -1,6 +1,8 @@
+using HEAL.HeuristicLib.Execution;
+
 namespace HEAL.HeuristicLib.Inspection;
 
-public sealed class CountAccumulator
+public sealed class CountAccumulator : IRunResult
 {
     private long currentCount;
 

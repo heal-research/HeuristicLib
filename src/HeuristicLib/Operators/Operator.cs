@@ -16,6 +16,9 @@ public abstract record Operator<TOperation, TCandidate> : IOperator<TOperation, 
 
     public virtual bool Fits(ExecutionSignature execution) => true;
 
+    /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
+    public virtual IReadOnlyList<IParameter> GetParameters() => [];
+
     /// <inheritdoc cref="IOperator{TOperation, TCandidate}.CreateExecutor{TSearchSpace, TProblem, TSearchState}"/>
     protected abstract IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>

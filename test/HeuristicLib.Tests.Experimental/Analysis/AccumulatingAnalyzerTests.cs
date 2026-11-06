@@ -33,6 +33,21 @@ public class AccumulatingAnalyzerTests
     }
 
     [Fact]
+    public void OneAccumulator_MergesEverySourceItsSubstitutionsPlace()
+    {
+        var first = new SketchEvaluator();
+        var second = new SketchEvaluator();
+        var analyzer = new ParetoFrontAnalyzer<int>(TwoMinimized, new ObjectiveVector(100, 100), first, second);
+        var scope = ResolutionScope.Create();
+
+        var placed = new TwoEvaluators(first, second).Substitute(analyzer.Substitutions);
+        Evaluate(scope, placed.First, 1, 9);
+        Evaluate(scope, placed.Second, 3, 7);
+
+        scope.Results.Result(analyzer).Points.Select(evaluated => evaluated.Candidate).ShouldBe([1, 3, 7, 9], ignoreOrder: true);
+    }
+
+    [Fact]
     public async Task ConcurrentRunsOfOneFrontDefinitionHaveIndependentAccumulators()
     {
         var evaluator = new SketchEvaluator();
@@ -80,6 +95,29 @@ public class AccumulatingAnalyzerTests
         first.Result(ranks).Graph.ShouldNotBeSameAs(second.Result(ranks).Graph);
     }
 
+    // Hooks on operators and on the algorithm holding them, one of which must see the graph its siblings built.
+    [Fact]
+    public async Task GenealogyAndRank_RecordTheSameThroughTheirSubstitutionsAsThroughAdvice()
+    {
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        IAlgorithm<RealVector, PopulationState<RealVector>> algorithm = GeneticAlgorithm.For(problem, creator: new UniformDistributedCreator(problem.SearchSpace),
+            crossover: new AlphaBetaBlendCrossover(), mutator: new GaussianMutator(1, 0.1),
+            populationSize: 4, maximumGenerations: 3, mutationRate: 1);
+        var ga = (GeneticAlgorithm<RealVector>)algorithm;
+        var genealogy = Analyzer.Genealogy(ga.Crossover, ga.Mutator, algorithm);
+        var ranks = Analyzer.Rank(ga.Crossover, ga.Mutator, algorithm);
+
+        var attached = algorithm.Advised(genealogy, ranks).CreateRun(problem, RandomNumberGenerator.Create(1));
+        await attached.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+        var placed = algorithm.Substitute([.. genealogy.Substitutions, .. ranks.Substitutions]).CreateRun(problem, RandomNumberGenerator.Create(1));
+        await placed.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        placed.Result(genealogy).GenerationCount.ShouldBe(attached.Result(genealogy).GenerationCount);
+        placed.Result(ranks).Graph.GenerationCount.ShouldBe(4);
+        placed.Result(ranks).Ranks.Count.ShouldBe(2);
+        placed.Result(ranks).Ranks.Select(row => row.ToArray()).ShouldBe(attached.Result(ranks).Ranks.Select(row => row.ToArray()));
+    }
+
     private static ResolutionScope Install(params Instrument[] analyzers)
     {
         var scope = ResolutionScope.Create();
@@ -88,7 +126,18 @@ public class AccumulatingAnalyzerTests
         return scope;
     }
 
-    private static void Evaluate(ResolutionScope scope, SketchEvaluator evaluator, params int[] candidates) =>
+    private sealed record TwoEvaluators(IOperator<Evaluation, int> First, IOperator<Evaluation, int> Second) : IConfigurationNode
+    {
+        public static Parameter<TwoEvaluators, IOperator<Evaluation, int>> FirstParameter { get; } =
+            new(nameof(First), static node => node.First, static (node, value) => node with { First = value });
+
+        public static Parameter<TwoEvaluators, IOperator<Evaluation, int>> SecondParameter { get; } =
+            new(nameof(Second), static node => node.Second, static (node, value) => node with { Second = value });
+
+        public IReadOnlyList<IParameter> GetParameters() => [FirstParameter, SecondParameter];
+    }
+
+    private static void Evaluate(ResolutionScope scope, IOperator<Evaluation, int> evaluator, params int[] candidates) =>
         scope.Resolve<int, SketchSearchSpace, SketchProblem>(evaluator)
              .Evaluate(candidates, RandomNumberGenerator.Create(1), SketchSearchSpace.Instance, SketchProblem.Instance);
 

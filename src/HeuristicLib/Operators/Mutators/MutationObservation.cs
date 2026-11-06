@@ -16,13 +16,12 @@ public sealed record MutationObservation<TCandidate>(
     IReadOnlyList<TCandidate> Parents,
     IReadOnlyList<TCandidate> Offspring,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class MutationObservationAdvice<TCandidate>(Action<MutationObservation<TCandidate>> observe) : MutatorAdvice<TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>
 {
-    protected override IMutationExecutor<TCandidate, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor, IOperator<Mutation, TCandidate> mutator) =>
-        new Executor<TSearchSpace, TProblem>(executor, mutator, observe);
+    static IExecutor IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Mutation, TCandidate> source, Action<MutationObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((IMutationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Mutation, TCandidate> mutator, Action<MutationObservation<TCandidate>> observe)
@@ -47,10 +46,10 @@ public static class MutationObservations
     {
         /// <summary>The observations of this mutator's successful calls.</summary>
         public InvocationSource<Mutation, TCandidate, MutationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(mutator, (Action<MutationObservation<TCandidate>> observe) => new MutationObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Mutation, TCandidate, MutationObservation<TCandidate>>(mutator);
 
         /// <summary>Records this mutator's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Mutation, TCandidate, MutationObservation<TCandidate>> Observed(IObservationInstrument<MutationObservation<TCandidate>> instrument) =>
-            new(mutator.Invocations, instrument);
+            new(mutator, instrument);
     }
 }

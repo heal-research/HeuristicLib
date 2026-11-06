@@ -15,6 +15,16 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
     public required IOperator<Termination, TCandidate> Terminator { get; init; }
 
+    public static Parameter<StateTerminatedAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
+
+    public static Parameter<StateTerminatedAlgorithm<TCandidate, TSearchState>, IOperator<Termination, TCandidate>> TerminatorParameter { get; } =
+        new(nameof(Terminator), static algorithm => algorithm.Terminator, static (algorithm, value) => algorithm with { Terminator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, TerminatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
 
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(

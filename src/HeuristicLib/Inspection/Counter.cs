@@ -3,20 +3,31 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>A clock that counts, such as the evaluations of a run; its result in each run is a <see cref="CountAccumulator"/>.</summary>
+/// <summary>A count that wrappers add to and terminators read, such as the calls of a mutator; its executor is a <see cref="CountAccumulator"/>.</summary>
 /// <remarks>
-/// Create counters from the source they count, such as <c>evaluator.Invocations.Count()</c>. Each call creates a new
-/// counter with its own result, so keep the variable: <c>run.Result(counter).CurrentCount</c> reads it, and a terminator
-/// such as <c>AfterOperatorCountTerminator</c> checks it. A counter of your own derives from this type and places its
-/// advice through <see cref="Instrument{TResult}.CreateAspect"/>.
+/// It stays in the configuration graph, so the wrapper, the terminator and a <c>Sharing</c> entry that hold it show who
+/// uses which counter. It is a link rather than a value: two counters are different counters, and copies of a configuration
+/// keep the link to the same one. The count itself belongs to the run, as its executor, so runs of such copies count
+/// separately. The count spans the run, unless a scope narrows it with <see cref="ResolutionScope.Share"/>, as a budget does
+/// to restart it each time it is built. Keep the variable, and read it with <c>run.Result(counter).CurrentCount</c>.
 /// </remarks>
-public abstract class Counter : Clock<long, CountAccumulator>
+public sealed class Counter : IConfigurationNode<CountAccumulator>, IClock<long>
 {
-    protected Counter() { }
+    public CountAccumulator CreateExecutor(ResolutionScope scope) => new();
 
-    protected sealed override CountAccumulator CreateResult(RunResults results) => new();
+    // The call that created this counter placed its wrapper.
+    IReadOnlyList<Substitution> IClock.Substitutions => [];
 
-    protected sealed override long Read(CountAccumulator result) => result.CurrentCount;
+    (Func<object> Read, Aspect Aspect) IClock.Bind(RunResults results)
+    {
+        var accumulator = results.Result(this);
+        return (() => accumulator.CurrentCount, PlacedInTheGraph.Instance);
+    }
+
+    private sealed class PlacedInTheGraph : Aspect
+    {
+        public static readonly PlacedInTheGraph Instance = new();
+    }
 }
 
 /// <summary>Counts the successful calls of one operator, or their candidate work.</summary>
@@ -24,7 +35,7 @@ public abstract class Counter : Clock<long, CountAccumulator>
 /// Attached with <c>Advised</c>, it counts every call of its operator's configuration reference. Placed explicitly with
 /// <c>Counted</c>, it counts the calls of the configuration it wraps.
 /// </remarks>
-public abstract class OperatorCounter : Counter
+public abstract class OperatorCounter : Obsolete.Counter
 {
     private protected OperatorCounter(OperatorCountMetric metric)
     {
@@ -39,6 +50,9 @@ internal sealed class OperatorCounter<TOperation, TCandidate>(IOperator<TOperati
     : OperatorCounter(metric)
     where TOperation : IOperation<TOperation>
 {
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
+        [Substitution.Of<IOperator<TOperation, TCandidate>>(source, node => node.Counted(this))];
+
     protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
         Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice<TOperation, TCandidate>(result, Metric));
 }
@@ -77,13 +91,24 @@ internal sealed class OperatorDuration<TOperation, TCandidate>(IOperator<TOperat
     : OperatorDuration(timeProvider)
     where TOperation : IOperation<TOperation>
 {
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
+        [Substitution.Of<IOperator<TOperation, TCandidate>>(source, node => node.Timed(this))];
+
     protected override Aspect CreateAspect(DurationAccumulator result, RunResults results) =>
         Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(result, TimeProvider));
 }
 
 // Counts the observations of one source, such as the cycles an observation point reports.
-internal sealed class ObservationCounter<TObservation>(ObservationSource<TObservation> source) : Counter
+internal sealed class ObservationCounter<TObservation>(ObservationSource<TObservation> source) : Obsolete.Counter, IObservationInstrument<TObservation>
 {
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() => [source.RecordingInto(this)];
+
+    public Action<TObservation> CreateRecorder(RunResults results)
+    {
+        var count = results.Result(this);
+        return _ => count.IncrementBy(1);
+    }
+
     protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
         Aspect.Observe(source, _ => result.IncrementBy(1));
 }

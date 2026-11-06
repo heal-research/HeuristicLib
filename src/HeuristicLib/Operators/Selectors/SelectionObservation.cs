@@ -19,13 +19,12 @@ public sealed record SelectionObservation<TCandidate>(
     int Count,
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Selected,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class SelectionObservationAdvice<TCandidate>(Action<SelectionObservation<TCandidate>> observe) : SelectorAdvice<TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>
 {
-    protected override ISelectionExecutor<TCandidate, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
-        ISelectionExecutor<TCandidate, TSearchSpace, TProblem> executor, IOperator<Selection, TCandidate> selector) =>
-        new Executor<TSearchSpace, TProblem>(executor, selector, observe);
+    static IExecutor IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Selection, TCandidate> source, Action<SelectionObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((ISelectionExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Selection, TCandidate> selector, Action<SelectionObservation<TCandidate>> observe)
@@ -51,10 +50,10 @@ public static class SelectionObservations
     {
         /// <summary>The observations of this selector's successful calls.</summary>
         public InvocationSource<Selection, TCandidate, SelectionObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(selector, (Action<SelectionObservation<TCandidate>> observe) => new SelectionObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Selection, TCandidate, SelectionObservation<TCandidate>>(selector);
 
         /// <summary>Records this selector's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Selection, TCandidate, SelectionObservation<TCandidate>> Observed(IObservationInstrument<SelectionObservation<TCandidate>> instrument) =>
-            new(selector.Invocations, instrument);
+            new(selector, instrument);
     }
 }

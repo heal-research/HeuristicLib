@@ -36,7 +36,7 @@ public partial class ResolutionScope
         var owner = Owner(source);
         var existing = Existing(owner, source, TOperation.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
         // The checks passed, so this scope's advice for the operator is fixed from here on.
-        node.Advised.Add(source);
+        node.MarkResolved(source);
         try
         {
             var executor = existing;

@@ -25,6 +25,13 @@ public sealed record SharingAlgorithm<TCandidate, TSearchState> : WrappingAlgori
 
     public ValueArray<IConfigurationNode> Shared { get; init; }
 
+    public static ReferenceListParameter<SharingAlgorithm<TCandidate, TSearchState>> SharedParameter { get; } =
+        new(nameof(Shared), static sharing => sharing.Shared, static (sharing, value) => sharing with { Shared = value.ToValueArray() });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [SharedParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {

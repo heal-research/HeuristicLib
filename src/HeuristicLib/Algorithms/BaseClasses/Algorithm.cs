@@ -25,6 +25,9 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
     /// </summary>
     public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
+    /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
+    public virtual IReadOnlyList<IParameter> GetParameters() => [];
+
     /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
     protected abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)

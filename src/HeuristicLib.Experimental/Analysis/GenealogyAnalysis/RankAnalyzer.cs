@@ -19,7 +19,10 @@ public abstract class RankAnalyzer<TCandidate> : Instrument<RankState<TCandidate
 /// Each run creates its own graph and rank history. Genealogy observations update that graph before rank recording.
 /// Both observations share the same explicit objective ordering.
 /// </remarks>
-public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandidate>
+public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandidate>,
+    IObservationInstrument<CrossoverObservation<TCandidate>>,
+    IObservationInstrument<MutationObservation<TCandidate>>,
+    IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>>
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
@@ -55,6 +58,26 @@ public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandi
     private readonly IEqualityComparer<TCandidate> equality;
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; }
+
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() => genealogy.Recording(this, this, this);
+
+    Action<CrossoverObservation<TCandidate>> IObservationInstrument<CrossoverObservation<TCandidate>>.CreateRecorder(RunResults results) =>
+        GenealogyAnalyzer<TCandidate, TSearchState>.RecordCrossovers(results.Result(this).Graph);
+
+    Action<MutationObservation<TCandidate>> IObservationInstrument<MutationObservation<TCandidate>>.CreateRecorder(RunResults results) =>
+        GenealogyAnalyzer<TCandidate, TSearchState>.RecordMutations(results.Result(this).Graph);
+
+    // The graph contains this generation before its ranks are read.
+    Action<AlgorithmObservation<TCandidate, TSearchState>> IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>>.CreateRecorder(RunResults results)
+    {
+        var result = results.Result(this);
+        var closeGeneration = genealogy.RecordGenerations(result.Graph);
+        return observation =>
+        {
+            closeGeneration(observation);
+            result.RecordRanks();
+        };
+    }
 
     protected override RankState<TCandidate> CreateResult(RunResults results) => new(new GenealogyGraph<TCandidate>(equality));
 

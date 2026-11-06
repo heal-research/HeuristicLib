@@ -498,6 +498,8 @@ public class TraceCompositionTests
     private sealed class CrossoverCallClock(IOperator<Crossover, RealVector> crossover)
         : Clock<long, CountAccumulator>
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         protected override CountAccumulator CreateResult(RunResults results) => new();
 
         protected override long Read(CountAccumulator result) => result.CurrentCount;

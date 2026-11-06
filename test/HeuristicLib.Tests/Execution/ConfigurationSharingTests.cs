@@ -6,6 +6,8 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Execution;
 
+using HEAL.HeuristicLib.Algorithms.Obsolete;
+
 // A scope holds one executor per configuration reference, and sharing lets child scopes, such as Cycle turns, use the
 // executor of the scope that shares it. See plans/operator-state-lifetimes.md.
 public class ConfigurationSharingTests

@@ -16,13 +16,12 @@ public sealed record RefinementObservation<TCandidate>(
     IReadOnlyList<TCandidate> Candidates,
     IReadOnlyList<TCandidate> Refined,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class RefinementObservationAdvice<TCandidate>(Action<RefinementObservation<TCandidate>> observe) : RefinerAdvice<TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>
 {
-    protected override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
-        IRefinementExecutor<TCandidate, TSearchSpace, TProblem> executor, IOperator<Refinement, TCandidate> refiner) =>
-        new Executor<TSearchSpace, TProblem>(executor, refiner, observe);
+    static IExecutor IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Refinement, TCandidate> source, Action<RefinementObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((IRefinementExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Refinement, TCandidate> refiner, Action<RefinementObservation<TCandidate>> observe)
@@ -47,10 +46,10 @@ public static class RefinementObservations
     {
         /// <summary>The observations of this refiner's successful calls.</summary>
         public InvocationSource<Refinement, TCandidate, RefinementObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(refiner, (Action<RefinementObservation<TCandidate>> observe) => new RefinementObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Refinement, TCandidate, RefinementObservation<TCandidate>>(refiner);
 
         /// <summary>Records this refiner's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Refinement, TCandidate, RefinementObservation<TCandidate>> Observed(IObservationInstrument<RefinementObservation<TCandidate>> instrument) =>
-            new(refiner.Invocations, instrument);
+            new(refiner, instrument);
     }
 }

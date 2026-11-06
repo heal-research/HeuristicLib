@@ -16,13 +16,12 @@ public sealed record CreationObservation<TCandidate>(
     int Count,
     IReadOnlyList<TCandidate> Candidates,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class CreationObservationAdvice<TCandidate>(Action<CreationObservation<TCandidate>> observe) : CreatorAdvice<TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Creation, TCandidate, CreationObservation<TCandidate>>
 {
-    protected override ICreationExecutor<TCandidate, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
-        ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor, IOperator<Creation, TCandidate> creator) =>
-        new Executor<TSearchSpace, TProblem>(executor, creator, observe);
+    static IExecutor IInvocationObservation<Creation, TCandidate, CreationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Creation, TCandidate> source, Action<CreationObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((ICreationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Creation, TCandidate> creator, Action<CreationObservation<TCandidate>> observe)
@@ -47,10 +46,10 @@ public static class CreationObservations
     {
         /// <summary>The observations of this creator's successful calls.</summary>
         public InvocationSource<Creation, TCandidate, CreationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(creator, (Action<CreationObservation<TCandidate>> observe) => new CreationObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Creation, TCandidate, CreationObservation<TCandidate>>(creator);
 
         /// <summary>Records this creator's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Creation, TCandidate, CreationObservation<TCandidate>> Observed(IObservationInstrument<CreationObservation<TCandidate>> instrument) =>
-            new(creator.Invocations, instrument);
+            new(creator, instrument);
     }
 }

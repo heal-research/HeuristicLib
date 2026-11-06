@@ -180,6 +180,51 @@ public sealed class DynamicRacingResolutionTests
         mutations.CurrentCount.ShouldBe(racers - 1);
     }
 
+    // D3: a substitution stops at the delegate, so an outer one reports it, and whoever writes the delegate places the trace
+    // inside it, where every contender then records into the run's one trace as an outer trace does through advice.
+    [Fact]
+    public async Task ATraceOfContenders_IsPlacedInTheBuilderAndRecordsWhatAnOuterTraceRecords()
+    {
+        var contender = new LifetimeProbeAlgorithm { Started = static () => { }, Disposed = static () => { } };
+        var trace = contender.Evaluator.Invocations.Trace(_ => 1);
+
+        var outer = Racing(_ => contender);
+        Should.Throw<InvalidOperationException>(() => outer.Substitute(trace.Substitutions)).Message.ShouldContain("AlgBuilder");
+
+        using var outerProblem = new EpochProblem(epochLength: 10_000);
+        outerProblem.UpdateOnce();
+        var withAdvice = ResolutionScope.Create();
+        withAdvice.AddAspect(withAdvice.Results.Aspect(trace));
+        await Steps(withAdvice, outer, outerProblem);
+
+        using var innerProblem = new EpochProblem(epochLength: 10_000);
+        innerProblem.UpdateOnce();
+        var placed = ResolutionScope.Create();
+        await Steps(placed, Racing(_ => contender.Substitute(trace.Substitutions)), innerProblem);
+
+        withAdvice.Results.Result(trace).SampleCount.ShouldBeGreaterThan(0);
+        placed.Results.Result(trace).SampleCount.ShouldBe(withAdvice.Results.Result(trace).SampleCount);
+
+        static DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm> Racing(
+            Func<MetaCandidate, LifetimeProbeAlgorithm> build) =>
+            new(new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+                new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
+                (genotype, _) => build(genotype), algorithm => algorithm.Evaluator)
+            {
+                NoRacers = 2,
+                BurnInEpochs = 0,
+                EarlyTerminationStrength = 0,
+                HallOfFameStrength = 0
+            };
+
+        static async Task Steps(ResolutionScope scope, IAlgorithm<int> racing, EpochProblem problem)
+        {
+            await using var stream = Run(scope, racing, problem).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+            for (var step = 0; step < 3; step++)
+                (await stream.MoveNextAsync()).ShouldBeTrue();
+        }
+    }
+
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm, EpochProblem problem) =>
         scope.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(algorithm)
             .RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
@@ -247,7 +292,13 @@ public sealed class DynamicRacingResolutionTests
 
     private sealed record LifetimeProbeAlgorithm : Algorithm<LifetimeProbeAlgorithm, int, PopulationState<int>>
     {
-        public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator<int>();
+        public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator<int>();
+
+        public static Parameter<LifetimeProbeAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
+
         public Action BeforeMove { get; init; } = static () => { };
         public Action Built { get; init; } = static () => { };
         public required Action Started { get; init; }

@@ -187,6 +187,19 @@ public class DynamicAnalysisTests
     }
 
     [Fact]
+    public void BestBeforeChangePerformanceAnalyzer_RecordsTheSameThroughItsSubstitutions()
+    {
+        var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([algorithm.Evaluator], predictionEpochMultiplier: 2);
+
+        var run = algorithm.Substitute(analysis.Substitutions).CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(0));
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.Result(analysis).BestBeforeChange.Select(entry => (entry.Candidate, entry.ObjectiveValue, entry.Epoch)).ShouldBe([(3, 3.0, 0), (1, 1.0, 1)]);
+        run.Result(analysis).Performance.ShouldBe(2.0);
+    }
+
+    [Fact]
     public async Task ReusingPerformanceDefinitionReadsEachRunsProblemAndCreatesFreshPredictionState()
     {
         var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
@@ -290,7 +303,12 @@ public class DynamicAnalysisTests
     private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
         : Algorithm<BatchEvaluationAlgorithm, int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
     {
-        public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator();
+        public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator();
+
+        public static Parameter<BatchEvaluationAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
 
         protected override IAlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>> CreateExecutor(
             ResolutionScope<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>> scope) =>

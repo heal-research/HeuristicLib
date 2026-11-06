@@ -22,16 +22,12 @@ public sealed record InterceptionObservation<TCandidate, TSearchState>(
     TSearchState State,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
-    where TSearchState : class, ISearchState;
-
-file sealed class InterceptionObservationAdvice<TCandidate, TSearchState>(Action<InterceptionObservation<TCandidate, TSearchState>> observe)
-    : InterceptorAdvice<TCandidate, TSearchState>
+    : IInvocationObservation<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>
     where TSearchState : class, ISearchState
 {
-    protected override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-        Wrap<TSearchSpace, TProblem>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-            IOperator<Interception<TSearchState>, TCandidate> interceptor) =>
-        new Executor<TSearchSpace, TProblem>(executor, interceptor, observe);
+    static IExecutor IInvocationObservation<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem, TRunSearchState>(
+        IExecutor executor, IOperator<Interception<TSearchState>, TCandidate> source, Action<InterceptionObservation<TCandidate, TSearchState>> record) =>
+        new Executor<TSearchSpace, TProblem>((IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
         IOperator<Interception<TSearchState>, TCandidate> interceptor, Action<InterceptionObservation<TCandidate, TSearchState>> observe)
@@ -58,10 +54,10 @@ public static class InterceptionObservations
     {
         /// <summary>The observations of this interceptor's successful calls.</summary>
         public InvocationSource<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>> Invocations =>
-            ObservationSource.Create(interceptor, (Action<InterceptionObservation<TCandidate, TSearchState>> observe) => new InterceptionObservationAdvice<TCandidate, TSearchState>(observe));
+            ObservationSource.Create<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>(interceptor);
 
         /// <summary>Records this interceptor's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>> Observed(IObservationInstrument<InterceptionObservation<TCandidate, TSearchState>> instrument) =>
-            new(interceptor.Invocations, instrument);
+            new(interceptor, instrument);
     }
 }

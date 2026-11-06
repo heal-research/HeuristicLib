@@ -38,7 +38,8 @@ public sealed class OperationInfo
     public IExecutor Wrap<TWrapper>(IExecutor executor, TWrapper wrapper) where TWrapper : struct, IInvocationWrapper =>
         members.Wrap(executor, wrapper);
 
-    internal static OperationInfo For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>()
+    /// <summary>Describes the operation for one run's types, for a wrapper that builds its executor itself.</summary>
+    public static OperationInfo For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>()
         where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>

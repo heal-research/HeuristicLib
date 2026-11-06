@@ -175,11 +175,11 @@ Resolution extensions cast the resolved executor to the operation's interface. `
 
 ### Make the operation observable
 
-An operation is observable once it declares three parts beside the operation, as each built-in operation does: an observation record, advice that builds the record from the typed call, and a `Invocations` source. The record carries the call's inputs and outputs together with its search space and problem, so a trace can rank by that problem's objective:
+An operation is observable once it declares two parts beside the operation, as each built-in operation does: an observation record, which implements `IInvocationObservation<TOperation, TCandidate, TSelf>` to make an executor report it, and an `Invocations` source. The record carries the call's inputs and outputs together with its search space and problem, so a trace can rank by that problem's objective:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
 
-`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `Aspect.Observe(estimator.Invocations, …)` then work as they do for built-in operations. The advice casts because `OperatorAdvice<TOperation, TCandidate>` receives the executor untyped; a role advice base such as `MutatorAdvice<TCandidate>` removes that cast for its operation.
+`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `Aspect.Observe(estimator.Invocations, …)` then work as they do for built-in operations. `Wrap` casts because it receives the executor untyped, and resolution has already checked that the executor performs the operation.
 
 ## Scaffolding roles and cross-cutting concerns
 

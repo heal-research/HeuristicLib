@@ -84,6 +84,72 @@ public class OperatorAuthoringAnalyzerTests
     }
 
     [Fact]
+    public async Task OperatorConfiguration_AllowsWithExpressionsOfItsOwnType()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record ValidMutator(int Offset) : StatelessMutator<int>
+          {
+              public static System.Func<ValidMutator, int, ValidMutator> WithOffset { get; } = static (mutator, value) => mutator with { Offset = value };
+
+              public ValidMutator Shifted => this with { Offset = Offset + 1 };
+
+              public override IReadOnlyList<int> Mutate(
+                  IReadOnlyList<int> parents,
+                  IRandomNumberGenerator random) => parents;
+          }
+          """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ConfigurationMutationRule_CoversAssignmentsInArrayInitializers()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record InvalidMutator : StatelessMutator<int>
+          {
+              private int calls;
+
+              public override IReadOnlyList<int> Mutate(
+                  IReadOnlyList<int> parents,
+                  IRandomNumberGenerator random)
+              {
+                  var values = new[] { calls = 7 };
+                  return parents;
+              }
+          }
+          """);
+
+        diagnostics.ShouldHaveSingleItem().GetMessage().ShouldContain("calls");
+    }
+
+    [Fact]
+    public async Task ConfigurationMutationRule_CoversNestedMemberInitializers()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+          file sealed record InvalidMutator : StatelessMutator<int>
+          {
+              private sealed class Holder(InvalidMutator current)
+              {
+                  public InvalidMutator Current { get; } = current;
+              }
+
+              public int Value { get; set; }
+
+              public override IReadOnlyList<int> Mutate(
+                  IReadOnlyList<int> parents,
+                  IRandomNumberGenerator random)
+              {
+                  var holder = new Holder(this) { Current = { Value = 7 } };
+                  return parents;
+              }
+          }
+          """);
+
+        diagnostics.ShouldHaveSingleItem().GetMessage().ShouldContain("Value");
+    }
+
+    [Fact]
     public async Task StatelessOperatorRule_UsesAuthoringShapeWithoutKnownBase()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """

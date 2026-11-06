@@ -11,6 +11,8 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
+using HEAL.HeuristicLib.Algorithms.Obsolete;
+
 public sealed partial class OperatorPreparationSpecs
 {
     [Fact]

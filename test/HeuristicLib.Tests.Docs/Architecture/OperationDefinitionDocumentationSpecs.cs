@@ -92,14 +92,12 @@ public sealed record EstimationObservation<TCandidate>(
     IReadOnlyList<TCandidate> Candidates,
     IReadOnlyList<double> Estimates,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class EstimationObservationAdvice<TCandidate>(Action<EstimationObservation<TCandidate>> observe)
-    : OperatorAdvice<Estimation, TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>
 {
-    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
-        IOperator<Estimation, TCandidate> source) =>
-        new Executor<TSearchSpace, TProblem>((IEstimationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, observe);
+    static IExecutor IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Estimation, TCandidate> source, Action<EstimationObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((IEstimationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(IEstimationExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Estimation, TCandidate> estimator, Action<EstimationObservation<TCandidate>> observe)
@@ -123,10 +121,10 @@ public static class EstimationObservations
     extension<TCandidate>(IOperator<Estimation, TCandidate> estimator)
     {
         public InvocationSource<Estimation, TCandidate, EstimationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(estimator, (Action<EstimationObservation<TCandidate>> observe) => new EstimationObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Estimation, TCandidate, EstimationObservation<TCandidate>>(estimator);
 
         public Observed<Estimation, TCandidate, EstimationObservation<TCandidate>> Observed(IObservationInstrument<EstimationObservation<TCandidate>> instrument) =>
-            new(estimator.Invocations, instrument);
+            new(estimator, instrument);
     }
 }
 #endregion operation-observation

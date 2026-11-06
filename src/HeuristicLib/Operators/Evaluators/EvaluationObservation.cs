@@ -17,13 +17,12 @@ public sealed record EvaluationObservation<TCandidate>(
     IReadOnlyList<TCandidate> Candidates,
     IReadOnlyList<ObjectiveVector> ObjectiveVectors,
     ISearchSpace<TCandidate> SearchSpace,
-    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem);
-
-file sealed class EvaluationObservationAdvice<TCandidate>(Action<EvaluationObservation<TCandidate>> observe) : EvaluatorAdvice<TCandidate>
+    IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
+    : IInvocationObservation<Evaluation, TCandidate, EvaluationObservation<TCandidate>>
 {
-    protected override IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
-        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> executor, IOperator<Evaluation, TCandidate> evaluator) =>
-        new Executor<TSearchSpace, TProblem>(executor, evaluator, observe);
+    static IExecutor IInvocationObservation<Evaluation, TCandidate, EvaluationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Evaluation, TCandidate> source, Action<EvaluationObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> executor,
         IOperator<Evaluation, TCandidate> evaluator, Action<EvaluationObservation<TCandidate>> observe)
@@ -48,10 +47,10 @@ public static class EvaluationObservations
     {
         /// <summary>The observations of this evaluator's successful calls.</summary>
         public InvocationSource<Evaluation, TCandidate, EvaluationObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(evaluator, (Action<EvaluationObservation<TCandidate>> observe) => new EvaluationObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Evaluation, TCandidate, EvaluationObservation<TCandidate>>(evaluator);
 
         /// <summary>Records this evaluator's successful calls into the instrument, wherever this configuration is placed.</summary>
         public Observed<Evaluation, TCandidate, EvaluationObservation<TCandidate>> Observed(IObservationInstrument<EvaluationObservation<TCandidate>> instrument) =>
-            new(evaluator.Invocations, instrument);
+            new(evaluator, instrument);
     }
 }

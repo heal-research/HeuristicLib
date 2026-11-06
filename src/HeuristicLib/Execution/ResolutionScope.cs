@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.CompilerServices;
 
 namespace HEAL.HeuristicLib.Execution;
 
@@ -32,8 +33,13 @@ public partial class ResolutionScope
     public static ResolutionScope Create() => Create(TimeProvider.System);
 
     // The time provider measures the root algorithm's elapsed time; tests pass a controllable one.
-    internal static ResolutionScope Create(TimeProvider timeProvider) =>
-        new(new Node(new Tree(new RunResults(timeProvider)), null));
+    internal static ResolutionScope Create(TimeProvider timeProvider)
+    {
+        var results = new RunResults(timeProvider);
+        var root = new ResolutionScope(new Node(new Tree(results), null));
+        results.Root = root;
+        return root;
+    }
 
     /// <summary>The results of the run this scope tree belongs to, one per instrument.</summary>
     /// <remarks>
@@ -80,9 +86,10 @@ public partial class ResolutionScope
     /// scope: it receives this scope's advice, while the advice its own construction adds and the children it builds stay
     /// its own. Shared configurations therefore share children only when those are shared too. Each request still
     /// applies its own scope's advice around the shared executor. The nearest scope sharing a configuration wins. Sharing
-    /// a configuration again changes nothing. Otherwise sharing is fixed before anything uses it: sharing in a scope that
-    /// already has child scopes, or sharing a configuration this scope has resolved or is still building, is an error, so
-    /// a shared configuration is always built in a child scope of its own, whatever the order of resolution.
+    /// a configuration again changes nothing. Sharing a configuration that this scope or a scope below it has resolved or
+    /// is still building is an error, so a shared configuration is always built in a child scope of its own, whatever the
+    /// order of resolution. Anything else can be shared at any time, also once the scope has child scopes. Reading a run
+    /// result does not count as resolving it, so a result read before the run keeps its executor when the run shares it.
     /// </remarks>
     public void Share(params IReadOnlyList<IConfigurationNode> configurations)
     {
@@ -90,12 +97,9 @@ public partial class ResolutionScope
         var added = configurations.Where(configuration => node.Shared?.Contains(configuration) != true).ToList();
         if (added.Count == 0)
             return;
-        if (node.HasChildScopes)
-            throw new InvalidOperationException("A resolution scope that already has child scopes cannot share more configurations. " +
-                "Share configurations before resolving anything that creates child scopes.");
-        if (added.FirstOrDefault(node.Advised.Contains) is { } resolved)
-            throw new InvalidOperationException($"{resolved.GetType().Name} cannot be shared in this resolution scope, which has already " +
-                "resolved it. Share it on a node that encloses every use, so that it is shared before it is first resolved.");
+        if (added.FirstOrDefault(configuration => node.ResolvedHereOrBelow.TryGetValue(configuration, out _)) is { } resolved)
+            throw new InvalidOperationException($"{resolved.GetType().Name} cannot be shared in this resolution scope, because this scope or a scope below it " +
+                "has already resolved it. Share it on a node that encloses every use, so that it is shared before it is first resolved.");
         (node.Shared ??= new(ReferenceEqualityComparer.Instance)).UnionWith(added);
     }
 
@@ -123,7 +127,7 @@ public partial class ResolutionScope
         var existing = Existing(owner, configuration, static executor => executor is TExecutor);
         var applicable = MatchingAdvice(configuration);
         // This scope's advice for the configuration is fixed from here on, also for its own construction.
-        node.Advised.Add(configuration);
+        node.MarkResolved(configuration);
         try
         {
             // The resolver is the one place that constructs executors; the delegate only chooses the constructing scope.
@@ -176,13 +180,35 @@ public partial class ResolutionScope
         }
     }
 
-    // The scope whose table holds the configuration's executor: the nearest one sharing it, otherwise this one.
+    // The scope whose table holds the configuration's executor: the nearest one sharing it, otherwise the root for a run
+    // result and this one for every other executor.
     private Node Owner(IConfigurationNode configuration)
     {
-        for (var scope = node; scope is not null; scope = scope.Parent)
+        var root = node;
+        for (var scope = node; scope is not null; root = scope, scope = scope.Parent)
             if (scope.Shared?.Contains(configuration) == true)
                 return scope;
-        return node;
+        return configuration is IConfigurationNode<IRunResult> ? root : node;
+    }
+
+    // What the run reads. It does not go through Resolve, because the results of a failed run stay readable, also one that
+    // was never built. A read is not a resolution, so it leaves Share free: looking at a result cannot break the run.
+    internal TResult RunResult<TResult>(IConfigurationNode<TResult> configuration)
+        where TResult : class, IRunResult
+    {
+        using var locked = node.Tree.Sync.EnterScope();
+        var root = node;
+        while (root.Parent is { } parent)
+            root = parent;
+        if (root.Executors.TryGetValue(configuration, out var existing))
+            return (TResult)existing;
+        using var building = node.Tree.Building(configuration);
+        // The resolver is the one place that constructs executors.
+#pragma warning disable HLib0001
+        var executor = configuration.CreateExecutor(new ResolutionScope(root));
+#pragma warning restore HLib0001
+        root.Executors.Add(configuration, executor);
+        return executor;
     }
 
     // Called while the construction lock is held. Returns the owner's unadvised executor of the configuration, or null if
@@ -257,7 +283,20 @@ public partial class ResolutionScope
         // sharing may change how they resolve here.
         public HashSet<IConfigurationNode> Advised { get; } = new(ReferenceEqualityComparer.Instance);
 
+        // The configurations this scope or a scope below it has started to resolve, which it can no longer share. Weak by
+        // reference, because a scope must not retain what a discarded child scope resolved.
+        public ConditionalWeakTable<IConfigurationNode, object> ResolvedHereOrBelow { get; } = [];
+
         public bool HasChildScopes { get; set; }
+
+        public void MarkResolved(IConfigurationNode configuration)
+        {
+            Advised.Add(configuration);
+            // An ancestor that already holds it got it from an earlier resolution, which marked the ones above it too.
+            var scope = this;
+            while (scope is not null && scope.ResolvedHereOrBelow.TryAdd(configuration, configuration))
+                scope = scope.Parent;
+        }
     }
 
     // What all scopes of one root share: the construction lock, the run's results and whether construction failed.
@@ -268,7 +307,7 @@ public partial class ResolutionScope
         private readonly List<IConfigurationNode> constructionStack = [];
         private volatile string? failure;
 
-        public Lock Sync { get; } = new();
+        public Lock Sync => Results.Sync;
         public RunResults Results { get; } = results;
         public bool Failed => failure is not null;
 
@@ -289,10 +328,17 @@ public partial class ResolutionScope
 
         internal IDisposable Enter(IConfigurationNode configuration)
         {
+            using var locked = Sync.EnterScope();
+            ThrowIfFailed();
+            return Building(configuration);
+        }
+
+        // Holds the lock and marks the configuration as under construction until disposed.
+        internal IDisposable Building(IConfigurationNode configuration)
+        {
             Sync.Enter();
             try
             {
-                ThrowIfFailed();
                 if (!constructing.Add(configuration))
                     throw new InvalidOperationException($"Recursive construction of {configuration.GetType().Name}.");
                 constructionStack.Add(configuration);

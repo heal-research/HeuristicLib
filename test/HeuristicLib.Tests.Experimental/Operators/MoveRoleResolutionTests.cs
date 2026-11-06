@@ -48,6 +48,55 @@ public class MoveRoleResolutionTests
         (creations.CurrentCount, applications.CurrentCount, evaluations.CurrentCount).ShouldBe((1, 1, 2));
     }
 
+    // One neighborhood performs all three operations with one executor. A substitution for one operation wraps its slot and
+    // leaves the others holding the neighborhood.
+    [Fact]
+    public void MoveOperators_AreCountedThroughSubstitutionPerOperation()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
+        INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
+        var user = new MoveUser(neighborhood.MoveCreator, neighborhood.MoveApplier, neighborhood.MoveEvaluator);
+
+        var onlyEvaluations = user.Counting(neighborhood.MoveEvaluator, out _);
+        onlyEvaluations.Creator.ShouldBeSameAs(neighborhood);
+        onlyEvaluations.Applier.ShouldBeSameAs(neighborhood);
+        onlyEvaluations.Evaluator.ShouldNotBeSameAs(neighborhood);
+
+        var counted = user
+            .Counting(neighborhood.MoveCreator, out var creations)
+            .Counting(neighborhood.MoveApplier, out var applications)
+            .Counting(neighborhood.MoveEvaluator, out var evaluations);
+        var root = ResolutionScope.Create();
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var random = RandomNumberGenerator.Create(1);
+        var candidate = new RealVector(0.0, 0.0);
+
+        var move = scope.Resolve(counted.Creator).Moves(candidate, random, SearchSpace, problem).First();
+        scope.Resolve(counted.Applier).Apply(candidate, move, random, SearchSpace, problem);
+        var evaluator = scope.Resolve(counted.Evaluator);
+        evaluator.Evaluate(new ObjectiveVector(0.0), candidate, move, random, SearchSpace, problem);
+        evaluator.Evaluate(candidate, random, SearchSpace, problem);
+
+        (root.Results.Result(creations).CurrentCount, root.Results.Result(applications).CurrentCount, root.Results.Result(evaluations).CurrentCount).ShouldBe((1, 1, 2));
+    }
+
+    private sealed record MoveUser(
+        IOperator<MoveCreation<int>, RealVector> Creator,
+        IOperator<MoveApplication<int>, RealVector> Applier,
+        IOperator<MoveEvaluation<int>, RealVector> Evaluator) : IConfigurationNode
+    {
+        public static Parameter<MoveUser, IOperator<MoveCreation<int>, RealVector>> CreatorParameter { get; } =
+            new(nameof(Creator), static user => user.Creator, static (user, value) => user with { Creator = value });
+
+        public static Parameter<MoveUser, IOperator<MoveApplication<int>, RealVector>> ApplierParameter { get; } =
+            new(nameof(Applier), static user => user.Applier, static (user, value) => user with { Applier = value });
+
+        public static Parameter<MoveUser, IOperator<MoveEvaluation<int>, RealVector>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static user => user.Evaluator, static (user, value) => user with { Evaluator = value });
+
+        public IReadOnlyList<IParameter> GetParameters() => [CreatorParameter, ApplierParameter, EvaluatorParameter];
+    }
+
     [Fact]
     public void BoundMoveOperators_ResolveOverTheirOwnSearchSpaceAndProblem()
     {

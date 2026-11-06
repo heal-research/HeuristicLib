@@ -10,13 +10,11 @@ namespace HEAL.HeuristicLib.Inspection;
 /// </remarks>
 public sealed class AlgorithmSource<TCandidate, TSearchState, TObservation> : ObservationSource<TObservation>
     where TSearchState : class, ISearchState
+    where TObservation : IAlgorithmObservation<TCandidate, TSearchState, TObservation>
 {
-    private readonly Func<Action<TObservation>, AlgorithmAdvice<TCandidate, TSearchState>> advise;
-
-    internal AlgorithmSource(IAlgorithm<TCandidate, TSearchState> algorithm, Func<Action<TObservation>, AlgorithmAdvice<TCandidate, TSearchState>> advise)
+    internal AlgorithmSource(IAlgorithm<TCandidate, TSearchState> algorithm)
     {
         Algorithm = algorithm;
-        this.advise = advise;
     }
 
     /// <summary>The observed algorithm.</summary>
@@ -24,11 +22,11 @@ public sealed class AlgorithmSource<TCandidate, TSearchState, TObservation> : Ob
 
     public override IConfigurationNode Configuration => Algorithm;
 
-    // The advice whose wrapper passes each observation to the callback; explicit placement applies it directly.
-    internal AlgorithmAdvice<TCandidate, TSearchState> Advise(Action<TObservation> callback) => advise(callback);
+    public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
+        Substitution.Of<IAlgorithm<TCandidate, TSearchState>>(Algorithm, node => new ObservedAlgorithm<TCandidate, TSearchState, TObservation>(node, instrument));
 
     internal override Aspect Observe(Action<TObservation> callback) =>
-        Aspect.Create(Pointcut.Reference(Algorithm), advise(callback));
+        Aspect.Create(Pointcut.Reference(Algorithm), new AlgorithmObservationAdvice<TCandidate, TSearchState, TObservation>(callback));
 }
 
 /// <summary>Counts what one algorithm's executor calls do, such as the states they yield or the calls that start.</summary>
@@ -36,7 +34,7 @@ public sealed class AlgorithmSource<TCandidate, TSearchState, TObservation> : Ob
 /// Attached with <c>Advised</c>, it counts at its algorithm's configuration reference. Placed explicitly with
 /// <c>Counted</c>, it counts at the algorithm it wraps.
 /// </remarks>
-public abstract class AlgorithmCounter : Counter
+public abstract class AlgorithmCounter : Obsolete.Counter
 {
     private protected AlgorithmCounter() { }
 
@@ -50,6 +48,9 @@ internal abstract class AlgorithmCounter<TObservedCandidate, TObservedSearchStat
     : AlgorithmCounter
     where TObservedSearchState : class, ISearchState
 {
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
+        [Substitution.Of<IAlgorithm<TObservedCandidate, TObservedSearchState>>(source, node => node.Counted(this))];
+
     protected sealed override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
         Aspect.Create(Pointcut.Reference(source), CreateAdvice<TObservedCandidate, TObservedSearchState>(result));
 }

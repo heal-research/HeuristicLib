@@ -298,11 +298,27 @@ public class ResolutionScopeTests
         var child = scope.CreateChildScope();
 
         Should.Throw<InvalidOperationException>(() => scope.AddAspect(Wrap(original, "late"))).Message.ShouldContain("already has child scopes");
-        Should.Throw<InvalidOperationException>(() => scope.Share(original)).Message.ShouldContain("already has child scopes");
 
         child.Resolve(original).Name.ShouldBe("original");
         scope.Resolve(original).Name.ShouldBe("original");
         original.CreateCount.ShouldBe(2);
+    }
+
+    [Fact]
+    public void SharingOnceTheScopeHasChildScopes_WorksUntilAScopeBelowResolvedTheConfiguration()
+    {
+        var late = new CountingConfiguration("late");
+        var resolvedBelow = new CountingConfiguration("resolved below");
+        var scope = ResolutionScope.Create();
+        var child = scope.CreateChildScope();
+        var grandchild = child.CreateChildScope();
+        grandchild.Resolve(resolvedBelow);
+
+        scope.Share(late);
+
+        child.Resolve(late).ShouldBeSameAs(scope.Resolve(late));
+        late.CreateCount.ShouldBe(1);
+        Should.Throw<InvalidOperationException>(() => scope.Share(resolvedBelow)).Message.ShouldContain("a scope below it");
     }
 
     [Fact]

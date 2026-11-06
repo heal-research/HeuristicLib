@@ -14,6 +14,13 @@ public abstract record WrappingOperator<TOperation, TCandidate> : Operator<TOper
 
     public IOperator<TOperation, TCandidate> ChildOperator { get; init; }
 
+    public static Parameter<WrappingOperator<TOperation, TCandidate>, IOperator<TOperation, TCandidate>> ChildOperatorParameter { get; } =
+        new(nameof(ChildOperator), static wrapper => wrapper.ChildOperator, static (wrapper, value) => wrapper with { ChildOperator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ChildOperatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override bool Fits(ExecutionSignature execution) => execution.Fits(ChildOperator);
 
     public virtual bool? Ensures(ICandidateInvariant<TCandidate> invariant) => OperatorContractComposition.Ensures([ChildOperator], invariant);

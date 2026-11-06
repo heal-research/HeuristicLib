@@ -13,7 +13,10 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// Each run creates its own graph. It combines multiple kinds of boundary into a graph with domain-specific
 /// queries. The graph is an accumulator, so read it once the run has finished.
 /// </remarks>
-public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : Instrument<GenealogyGraph<TCandidate>>
+public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : Instrument<GenealogyGraph<TCandidate>>,
+    IObservationInstrument<CrossoverObservation<TCandidate>>,
+    IObservationInstrument<MutationObservation<TCandidate>>,
+    IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>>
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
@@ -50,12 +53,53 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : Instrument<Gen
         this.saveSpace = saveSpace;
     }
 
+    protected override IReadOnlyList<Substitution> CreateSubstitutions() => Recording(this, this, this);
+
+    // The substitutions of everything this analysis observes, each recording into the given instrument.
+    internal IReadOnlyList<Substitution> Recording(
+        IObservationInstrument<CrossoverObservation<TCandidate>> crossoverInstrument,
+        IObservationInstrument<MutationObservation<TCandidate>> mutationInstrument,
+        IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>> iterationInstrument) =>
+    [
+        .. crossovers.Select(crossover => crossover.Invocations.RecordingInto(crossoverInstrument)),
+        .. mutators.Select(mutator => mutator.Invocations.RecordingInto(mutationInstrument)),
+        .. algorithms.Select(algorithm => algorithm.Iterations.RecordingInto(iterationInstrument))
+    ];
+
+    Action<CrossoverObservation<TCandidate>> IObservationInstrument<CrossoverObservation<TCandidate>>.CreateRecorder(RunResults results) =>
+        RecordCrossovers(results.Result(this));
+
+    Action<MutationObservation<TCandidate>> IObservationInstrument<MutationObservation<TCandidate>>.CreateRecorder(RunResults results) =>
+        RecordMutations(results.Result(this));
+
+    Action<AlgorithmObservation<TCandidate, TSearchState>> IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>>.CreateRecorder(RunResults results) =>
+        RecordGenerations(results.Result(this));
+
+    internal static Action<CrossoverObservation<TCandidate>> RecordCrossovers(GenealogyGraph<TCandidate> graph) => observation =>
+    {
+        foreach (var (parents, child) in observation.Parents.Zip(observation.Offspring))
+            graph.AddConnection([parents.Parent1, parents.Parent2], child);
+    };
+
+    internal static Action<MutationObservation<TCandidate>> RecordMutations(GenealogyGraph<TCandidate> graph) => observation =>
+    {
+        foreach (var (parent, child) in observation.Parents.Zip(observation.Offspring))
+            graph.AddConnection([parent], child);
+    };
+
+    internal Action<AlgorithmObservation<TCandidate, TSearchState>> RecordGenerations(GenealogyGraph<TCandidate> graph) => observation =>
+    {
+        var ordered = observation.State.Population.OrderBy(x => x.ObjectiveVector,
+            observation.Problem.Objective.RequireTotalOrder(ObjectiveComparer));
+        graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
+    };
+
     protected override GenealogyGraph<TCandidate> CreateResult(RunResults results) => new(equality);
 
     protected override Aspect CreateAspect(GenealogyGraph<TCandidate> result, RunResults results) => Observe(result);
 
     internal Aspect Observe(GenealogyGraph<TCandidate> graph) =>
-        new Collection(graph, crossovers, mutators, algorithms, saveSpace, ObjectiveComparer);
+        new Collection(graph, crossovers, mutators, algorithms, RecordGenerations(graph));
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
 
@@ -65,26 +109,13 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : Instrument<Gen
             IReadOnlyList<IOperator<Crossover, TCandidate>> crossovers,
             IReadOnlyList<IOperator<Mutation, TCandidate>> mutators,
             IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms,
-            bool saveSpace, IComparer<ObjectiveVector>? objectiveComparer)
+            Action<AlgorithmObservation<TCandidate, TSearchState>> recordGenerations)
         {
             Advices =
             [
-                .. crossovers.SelectMany(crossover => Aspect.Observe(crossover.Invocations, observation =>
-                {
-                    foreach (var (parents, child) in observation.Parents.Zip(observation.Offspring))
-                        graph.AddConnection([parents.Parent1, parents.Parent2], child);
-                })),
-                .. mutators.SelectMany(mutator => Aspect.Observe(mutator.Invocations, observation =>
-                {
-                    foreach (var (parent, child) in observation.Parents.Zip(observation.Offspring))
-                        graph.AddConnection([parent], child);
-                })),
-                .. algorithms.SelectMany(algorithm => Aspect.Observe(algorithm.Iterations, observation =>
-                {
-                    var ordered = observation.State.Population.OrderBy(x => x.ObjectiveVector,
-                        observation.Problem.Objective.RequireTotalOrder(objectiveComparer));
-                    graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
-                }))
+                .. crossovers.SelectMany(crossover => Aspect.Observe(crossover.Invocations, RecordCrossovers(graph))),
+                .. mutators.SelectMany(mutator => Aspect.Observe(mutator.Invocations, RecordMutations(graph))),
+                .. algorithms.SelectMany(algorithm => Aspect.Observe(algorithm.Iterations, recordGenerations))
             ];
         }
     }

@@ -13,8 +13,8 @@ internal sealed class CountingOperatorAdvice(CountAccumulator counter, OperatorC
 
     public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
         metric == OperatorCountMetric.Invocations
-            ? operation.Wrap(executor, new InvocationCounter(counter))
-            : operation.Wrap(executor, new CandidateCounter(counter));
+            ? operation.Wrap(executor, new InvocationCountingWrapper(counter))
+            : operation.Wrap(executor, new CandidateCountingWrapper(counter));
 }
 
 /// <summary>Counts successful invocations or their candidate work for the selected operation.</summary>
@@ -35,12 +35,12 @@ public sealed class CountingOperatorAdvice<TOperation, TCandidate>(CountAccumula
     public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
         IOperator<TOperation, TCandidate> source) =>
         Metric == OperatorCountMetric.Invocations
-            ? operation.Wrap(executor, new InvocationCounter(Counter))
-            : operation.Wrap(executor, new CandidateCounter(Counter));
+            ? operation.Wrap(executor, new InvocationCountingWrapper(Counter))
+            : operation.Wrap(executor, new CandidateCountingWrapper(Counter));
 }
 
 /// <summary>Counts each successful invocation.</summary>
-file readonly struct InvocationCounter(CountAccumulator counter) : IInvocationWrapper
+internal readonly struct InvocationCountingWrapper(CountAccumulator counter) : IInvocationWrapper
 {
     public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
     {
@@ -51,7 +51,7 @@ file readonly struct InvocationCounter(CountAccumulator counter) : IInvocationWr
 }
 
 /// <summary>Counts the candidate work of each successful invocation.</summary>
-file readonly struct CandidateCounter(CountAccumulator counter) : IInvocationWrapper
+internal readonly struct CandidateCountingWrapper(CountAccumulator counter) : IInvocationWrapper
 {
     public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
     {

@@ -196,8 +196,91 @@ public sealed class RunResultsTests
         return states;
     }
 
+    // One side creates a result that reads a counter, while the other builds a configuration that reads that result.
+    [Fact]
+    public async Task ReadingAResult_AndBuildingAConfigurationThatReadsIt_DoNotDeadlock()
+    {
+        using var creating = new ManualResetEventSlim();
+        using var building = new ManualResetEventSlim();
+        var definition = new ReadsACounter(new Counter(), () =>
+        {
+            creating.Set();
+            building.Wait(TimeSpan.FromMilliseconds(500), TestContext.Current.CancellationToken);
+        });
+        var scope = ResolutionScope.Create();
+
+        var read = Task.Run(() => scope.Results.Result(definition), TestContext.Current.CancellationToken);
+        var build = Task.Run(() =>
+        {
+            creating.Wait(TestContext.Current.CancellationToken);
+            return scope.Resolve(new ReadsAResult(definition, building.Set));
+        }, TestContext.Current.CancellationToken);
+
+        await Task.WhenAll(read, build).WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+    }
+
+    // The configuration decides who owns its result, whatever type a caller holds it by.
+    [Fact]
+    public void ACounterHeldByAWiderType_StillCountsForTheRun()
+    {
+        var counter = new Counter();
+        IConfigurationNode<IExecutor> widened = counter;
+        var root = ResolutionScope.Create();
+
+        ((CountAccumulator)root.CreateChildScope().Resolve(widened)).IncrementBy(1);
+
+        root.Results.Result(counter).CurrentCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public void AConfigurationReadingItsOwnResult_IsAnErrorInsteadOfAStackOverflow()
+    {
+        var node = new ReadsItself();
+
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Results.Result(node)).Message.ShouldContain("Recursive construction");
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve(node)).Message.ShouldContain("Recursive construction");
+    }
+
+    // Nothing has built this counter, and its result is readable all the same.
+    [Fact]
+    public void AResultOfAFailedRun_StaysReadableEvenIfNeverBuilt()
+    {
+        var scope = ResolutionScope.Create();
+        Should.Throw<InvalidOperationException>(() => scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new FailingEvaluator()));
+
+        scope.Results.Result(new Counter()).CurrentCount.ShouldBe(0);
+    }
+
+    private sealed record ReadsItself : IConfigurationNode<CountAccumulator>
+    {
+        public CountAccumulator CreateExecutor(ResolutionScope scope) => scope.Results.Result(this);
+    }
+
+    private sealed class ReadsACounter(Counter counter, Action creating) : Instrument<object>
+    {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
+        protected override object CreateResult(RunResults results)
+        {
+            creating();
+            return results.Result(counter);
+        }
+    }
+
+    private sealed record ReadsAResult(Instrument<object> Definition, Action Building) : IConfigurationNode<CountAccumulator>
+    {
+        public CountAccumulator CreateExecutor(ResolutionScope scope)
+        {
+            Building();
+            scope.Results.Result(Definition);
+            return new CountAccumulator();
+        }
+    }
+
     private sealed class CreationCountingInstrument : Instrument<object>
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         public int Created { get; private set; }
 
         protected override object CreateResult(RunResults results)
@@ -209,6 +292,8 @@ public sealed class RunResultsTests
 
     private sealed class FailsFirstCreation(bool failAspect) : Instrument<object>
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         public int Attempts { get; private set; }
 
         protected override object CreateResult(RunResults results)
@@ -229,6 +314,8 @@ public sealed class RunResultsTests
 
     private sealed class SelfReferencingInstrument : Instrument<object>
     {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
         protected override object CreateResult(RunResults results) => results.Result(this);
     }
 
