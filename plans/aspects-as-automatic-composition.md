@@ -2,6 +2,8 @@
 
 Status: architectural direction accepted by the developer on 2026-11-03. This document records the intended contract and work to address later. It does not claim that the current implementation satisfies the contract or approve a particular public API or implementation design.
 
+Update on 2026-11-05: the developer selected substitution in the configuration graph instead of runtime advice as the direction. The [core simplification plan](core-simplification-plan.md#relation-to-the-aspects-plan) states which parts of this plan stay, which are fulfilled by construction and which are superseded once that plan's phase 3 is implemented.
+
 Related work: [operator state lifetimes](operator-state-lifetimes.md), [operator unification system spec](operator-unification-system-spec.md) and [operator rework section 11](operator-role-parameterization-rework.md#11-aspect-configuration-rework-and-independent-review). This decision governs the responsibility of aspects when those proposals are resumed. Their unresolved APIs and lifetime designs are not accepted by implication.
 
 ## Problem

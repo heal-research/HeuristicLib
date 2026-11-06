@@ -31,7 +31,7 @@ Discuss architectural changes with the developer and obtain explicit acceptance 
 
 Routine changes that follow established patterns may proceed. Before editing code, state in one line whether the change is routine or architectural.
 
-Before seeking agreement, inspect the relevant code and guidance yourself. Present the design as developer guidelines § 2.1 describes, together with unresolved risks or assumptions and a recommendation.
+Before seeking agreement, inspect the relevant code and guidance yourself, and try to express the scenario with existing mechanisms as developer guidelines § 2.5 requires. Present the design as § 2.1 describes, together with unresolved risks or assumptions and a recommendation.
 
 Ask only about requirements and tradeoffs, recommend an answer to each question, and challenge weak designs, including the developer's own suggestions. For designs with several open decisions, use the `grilling` skill. Resolve material objections before implementing. Record accepted decisions in the relevant plan under `plans/`; accepted decisions need no repeated approval.
 

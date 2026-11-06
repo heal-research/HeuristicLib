@@ -2,6 +2,8 @@
 
 Status: design proposal. The intended direction is runtime parameter metadata over ordinary typed configuration properties. The concrete API, serialization format and graph-update semantics need to be settled before implementation.
 
+Update on 2026-11-05: the developer selected declared parameters without reflection as a core contract of the [core simplification plan](core-simplification-plan.md), which also uses them for walks and substitution in the configuration graph. That plan builds the parameter system and in-process experiment setup. String-based configuration, including the JSON recipes below, is a [later separate task](developer-backlog.md#runs-execution-and-experiments).
+
 ## Problem
 
 Experiments need to be definable as data received through a REST API, loaded from a file or supplied by another integration. A caller must be able to describe which algorithm parameters to vary and which values to try without providing executable C# callbacks.

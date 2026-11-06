@@ -62,6 +62,14 @@ Evaluate requirements and correctness, readability, architecture, relevant secur
 - Distinguish required fixes from optional suggestions, and problems introduced by the change from pre-existing concerns. Do not invent findings; no material concern is a valid conclusion.
 - Justify useful abstractions as well as questioning unnecessary ones. A pattern name or a SOLID label alone is not evidence that a design is better.
 
+### § 2.5 Express new scenarios with existing mechanisms
+
+Write a new scenario with the existing configuration nodes and rules before proposing a mechanism. Propose one only when the scenario cannot reasonably be expressed that way, and state which existing mechanism it makes redundant. A concept that users must learn needs that justification too, and removing a concept is the better outcome (§ 2.1, § 3.1).
+
+- Add behavior through configuration nodes. A convenience produces nodes and does not behave differently from them. Do not add a new way to change an executor after construction.
+- Let the executor graph follow from the configuration graph and the problem. Do not add a dependency on anything else, such as attachment order, request context or global registration, without a recorded decision.
+- Treat a new guard or ordering rule as a sign of temporal coupling. Try to remove the coupling before adding the check. Validating configured values remains the responsibility § 4.7 describes.
+
 ## § 3 Architecture and responsibility boundaries
 
 ### § 3.1 Keep responsibilities explicit and concepts coherent
@@ -194,9 +202,16 @@ Instrument result creation must not depend on a requesting executor or its child
 
 ### § 4.8 Represent configured behavior with value strategies
 
-Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Construction hooks are runtime machinery and are not persisted configuration strategies.
+Configurations are data. Represent configured behavior with a strategy interface whose implementations are immutable values. Do not store delegates or live objects on a configuration, because a delegate's equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Construction hooks are runtime machinery and are not persisted configuration strategies.
 
-Temporary exception: analysis definitions may retain value functions and runtime callbacks, including Python callbacks, and `Advised` may attach those definitions to an algorithm configuration. Such configurations are not persistable. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
+This guideline is held very highly but is not absolute. A special case with a technical need, such as Python interoperability, may be an exception if it is documented here. A configuration that contains an exception is not persistable. Machinery that only runs over configurations, and is not stored on them, may use delegates.
+
+Current exceptions:
+
+- Analysis definitions may retain value functions and runtime callbacks, including Python callbacks, and `Advised` may attach those definitions to an algorithm configuration. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
+- `HeuristicLib.PythonInterop` operators such as `VisualizationCallbackEvaluator` hold Python-facing callbacks.
+- `DynamicRacingAlgorithm` and `DelegatingRacingStateMerger` in `HeuristicLib.Experimental` hold delegates that build, inspect and merge contenders.
+- Duration-based terminators, budgets and observations hold a replaceable `TimeProvider`.
 
 ### § 4.9 Use records only for value semantics
 

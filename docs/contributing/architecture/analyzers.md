@@ -36,7 +36,7 @@ Trace functions are runtime delegates; they are neither comparable nor serializa
 
 Retention is an immutable policy that creates a per-result decider. Best-so-far state is created by the trace's per-run state factory. Neither is an execution configuration, and neither is resolved as a child through a scope.
 
-Definitions may be reused without coupling their results. A caller's delegate may deliberately capture shared mutable state under the temporary developer-guidelines § 4.8 exception; that state remains the caller's responsibility.
+Definitions may be reused without coupling their results. A caller's delegate may deliberately capture shared mutable state under the documented developer-guidelines § 4.8 exception; that state remains the caller's responsibility.
 
 A best-so-far object keeps the running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. The first directions it receives fix it; other directions or another dimensionality throw. There is no aggregation role: summaries and accumulation are functions of the observation, and accumulation keeps its state in an object the function captures.
 
