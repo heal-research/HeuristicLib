@@ -1,6 +1,6 @@
 # Core simplification plan
 
-Status: started on 2026-11-05. This file is the one record of which simplifications HeuristicLib will make, in which order, and which decisions have been taken. The [reports](simplification/) and their review are input: nothing in them is accepted unless it is recorded here. The phases and their order are accepted. Phase 0 is applied, and code implementation has not started. All of this work is architectural under `AGENTS.md`, so design shapes marked as proposed or open still need the developer's acceptance.
+Status: started on 2026-11-05. This file is the one record of which simplifications HeuristicLib will make, in which order, and which decisions have been taken. The [reports](simplification/) and their review are input: nothing in them is accepted unless it is recorded here. The phases and their order are accepted. Phases 0 to 2 are implemented and committed. The decisions phase 3 needs are recorded in [round 21](#decided-in-round-21), and phase 3 has not started. All of this work is architectural under `AGENTS.md`, so design shapes marked as proposed or open still need the developer's acceptance.
 
 Baseline: [operator unification step 3](operator-unification-step3-migration.md), complete and committed. [Step 4](operator-state-lifetimes.md#implementation-sequence-confirmed-on-2026-11-04) and its documentation rewrite wait for phase 8, so that they describe the simplified system.
 
@@ -170,7 +170,7 @@ Declarations on every configuration node in core, Experimental and PythonInterop
 
 Progress on 2026-11-06: `TAlgorithm` is gone, and every record with a stored property in the three libraries declares its parameters. Three notes:
 
-- `OperatorCounter.Metric` stays undeclared, because the old counter is a class with no `with` and goes in phase 6.
+- `OperatorCounter.Metric` stays undeclared, because the old counter is a class with no `with` and goes in phase 3 ([D52](#decided-in-round-21)).
 - The old budgets declare their targets as reference lists, because they name operators that live elsewhere in the graph, and keep their hand-written check until phase 3. The single target is a one-entry list, which saves a new parameter class.
 - `Neighborhood` gains a virtual `GetParameters`, like `Operator` and `Algorithm`, and racing's `StateMerger` gains `init`.
 
@@ -206,17 +206,21 @@ The walk makes the question slower and allocating, because `GetParameters()` bui
 
 ### Phase 3: replace interception
 
-Delivers ideas 1, 2, 7 and 8. The analyzer's user-facing syntax is decided at the start of this phase (D25), and so is the shared clock across separate calls ([D36](#decided-in-round-14)). Concrete steps, which are also the concrete steps of idea 2:
+Delivers ideas 1, 2, 7 and 8. [Round 21](#decided-in-round-21) holds every decision the steps rely on. Each step is one commit and leaves the solution green. A step adds its new path, migrates the callers in `src`, tests and documentation, and deletes whatever has just lost its last caller. Obsolete code therefore lives as briefly as possible, and no step is only a deletion. These are also the concrete steps of idea 2:
 
-1. Budgets stop calling `scope.AddAspect`. `LimitedToInvocations` and the duration equivalents place counting and timing wrappers through a substitution (`OperatorCountBudgetAlgorithm.cs:44,94`, `OperatorDurationBudgetAlgorithm.cs:43,89`). This needs D8.
-2. `Advised` is replaced by placement through a substitution (`AdvisedAlgorithm.cs:39,41`). `Instrument<TResult>` loses `CreateAspect`.
-3. Racing tracks its contenders through a substitution instead of contender advice (`DynamicRacingAlgorithm.cs:386`). This needs D3.
-4. `ObservationSource.Create` loses its advice-factory form, so external operations keep the same path as built-in ones through their observation record ([D38](#decided-in-round-13)). This step also settles role sources, which have no placement yet.
-5. `DynamicProblem.CreateIterationUpdateAspect` (`DynamicProblem.cs:130`), which builds an aspect without calling `AddAspect`, becomes a placement. Its documentation still says to pass the aspect to run creation, which should be checked against the removed run setup.
-6. With no caller left, `AddAspect`, the scope's aspect list, `AdvisedAlgorithm`, the `Advice` family that wraps executors, the adder exemption, the advice guards and ordering rules go, and so does the temporary `.Obsolete` namespace (D23). The rule then holds by construction. Under D13, `Pointcut`, `Aspect` and the term advice also leave the API.
-7. Migrate the 138 `.Advised(` occurrences, 73 test files and 11 documentation pages that use these concepts, and add the rule to the developer guidelines.
+1. **Analyzers (D25, D36, D57).** `AnalyzedBy`, the clock rule and the read check arrive, and every `Advised(instrument)` caller moves. `Advised(Instrument)`, `Instrument.CreateAspect`, `RunResults.Aspect` and the aspect in `IClock.Bind` are deleted. Tests pinning the reach differences of D1 and D3 are rewritten here.
+2. **Counters and durations (D52, D53, D56).** `Count()`, `CountCandidates()` and `Duration()` return the `Counter` and `Duration` nodes, and `TimedAlgorithm` arrives. `OperatorCounter`, `AlgorithmCounter`, `ObservationCounter`, the old `Duration` and `OperatorDuration`, D34's adapter, `[OverloadResolutionPriority]` and `DurationMeasuringAlgorithmAdvice` are deleted. Callers move in the same commit, so no adapter is needed for the overlap. The old budgets are unaffected, because they use only the accumulators. `LayerDependencyTests.cs:30,437` and `layering.md` follow D53.
+3. **Budgets (D8, D11).** Budgets stop calling `scope.AddAspect` (`OperatorCountBudgetAlgorithm.cs:59,123` in `.Obsolete`, `OperatorDurationBudgetAlgorithm.cs`). The old budgets, the duration advice and the temporary `.Obsolete` namespaces (D23) are deleted.
+4. **Racing and the remaining observation paths (D3, D51, D54, D55).** `Observing` and `ApplyingIterationUpdates` arrive, racing is ported, and role sources get their placement. The advice-factory form of `ObservationSource.Create`, `CreateIterationUpdateAspect`, `Aspect.Observe` and racing's contender advice are deleted. [The migration notes](#migration-notes-for-origindynamic-racing) go to the racing branch before this commit.
+5. **Custom advice (D56).** Each advice base is checked for a wrapper equivalent open to external authors, and the remaining users move to wrappers or bundled substitutions. `AddAspect`, the scope's aspect list, `AdvisedAlgorithm`, the `Advice` family that wraps executors, the adder exemption, the advice guards and ordering rules, `Pointcut` and `Aspect` are deleted. The rule then holds by construction and is added to the developer guidelines.
 
-Those seven `AddAspect` sites in four files are all production callers. Idea 2 is therefore the end of this phase, not an independent quick win: budgets cannot stop adding advice before something else places their counters.
+Inventory on 2026-11-08: `.Advised(` appears 126 times in 31 test files, twice in `src` and once in `samples/TravelingSalesman/Program.cs:17`, and advice terms appear on 15 documentation pages. PythonInterop's `AttachTo` returns `AdvisedAlgorithm` (`PythonGenealogyAnalysis.cs`), and developer guidelines § 4.8 names `Advised`.
+
+Test policy: tests whose subject is advice itself are deleted, keeping any scenario still needed. Tests that use advice only as a probe are ported with their assertions unchanged. Tests pinning the D1 and D3 reach differences are rewritten. Every changed assertion is listed in the report.
+
+Documentation policy: this phase fixes only what would become wrong. `writing-advice.md` becomes a page on writing wrappers, and the glossary marks aspect, advice and pointcut as legacy terms. The tiered rewrite stays in phase 8. Selection shortcuts (D14, D20) are not built up front: count the patterns after migrating.
+
+The `AddAspect` sites in `src` are all production callers. Idea 2 is therefore the end of this phase, not an independent quick win: budgets cannot stop adding advice before something else places their counters.
 
 `scope.Share` remains as a scope change made during construction, with its order guard (D12).
 
@@ -224,11 +228,13 @@ Those seven `AddAspect` sites in four files are all production callers. Idea 2 i
 
 Today `ResolutionScope` holds: the executor table, the child scope tree, the sharing set, the aspect list with ordering and duplicate rules, guards, the construction lock and stack, the failure state, the result table reference, root detection for elapsed time, and signature checks.
 
-- Phase 3 removes the aspect list and its guards, and the failure state whose stated reason is an executor left with part of its advice.
+- Phase 3 removes the aspect list and its guards. The failure state stays through phase 3: besides an executor left with part of its advice, it also stops a failed composite's already built children from being reused (`ExecutorResolutionTests.cs:157`). This phase reassesses whether that reason needs the whole state.
 - Root detection and `ElapsedTimeExecutor` move to the run, which owns elapsed time.
 - Signature checking moves to the generic walk of phase 2. `TryResolve` stays public.
 
-What remains is the executor table, the child scope tree and sharing, plus the result table reference and a lock. Typed scope views stay until D5 is decided.
+What remains is the executor table, the child scope tree and sharing, plus the result table reference and a lock, and the failure state if it is still needed. Typed scope views stay until D5 is decided.
+
+The reduced scope must not rule out the scope forking on `origin/dynamic-Racing` (`CreateForkedScope`, `WithContext`, `ExecutionFactory.Forkable`). Copying entries of the executor table fits "executor table plus child scopes", and this phase checks that it still does.
 
 ### Phase 4b: problem-binding spike
 
@@ -240,7 +246,7 @@ Accepted (D4). See [the proposal](#executor-control-proposal). `IExecutionNode` 
 
 ### Phase 6: simplify observation
 
-Delivers ideas 10 and 14. Today's concepts are sources, observation records, instruments, traces, value functions, retention, clocks, counters, durations, accumulating results and `IObservationInstrument`. Proposed model: an instrument creates a per-run result and records one observation into it, and `Observed` places it. A trace, a best-so-far curve, a Pareto front and a genealogy are then all such folds, and retention is a setting of the trace. Counting and timing keep their dedicated wrappers, because they allocate no observation and timing must include failed calls. A detailed inventory comes when this phase starts, and it must not close custom clocks or external collectors. `Instrument` is retired no later than this phase, with `Analyzer` as the surviving name. `Instrument` keeps its name until then, with no separate rename. The non-generic base and the static `Analyzer` factory class cannot both use that name, so one of them needs another name or home.
+Delivers ideas 10 and 14. Today's concepts are sources, observation records, instruments, traces, value functions, retention, clocks, counters, durations, accumulating results and `IObservationInstrument`. Proposed model: an instrument creates a per-run result and records one observation into it, and `Observed` places it. A trace, a best-so-far curve, a Pareto front and a genealogy are then all such folds, and retention is a setting of the trace. Counting and timing keep their dedicated wrappers, because they allocate no observation and timing must include failed calls. A detailed inventory comes when this phase starts, and it must not close custom clocks or external collectors. A custom accumulating analyzer still needs a class with three overrides after phase 3, which this phase should reduce. `Instrument` is retired no later than this phase, with `Analyzer` as the surviving name. `Instrument` keeps its name until then, with no separate rename. The non-generic base and the static `Analyzer` factory class cannot both use that name, so one of them needs another name or home.
 
 ### Phase 7: experiments on the parameter system
 
@@ -248,7 +254,25 @@ Grids can vary parameters through metadata in-process, and trials get explicit i
 
 ### Phase 8: documentation and merge
 
-Step 4's architecture and guide rewrite, the tiered glossary with fundamental concepts first, the naming decisions applied, and the merge. `origin/dynamic-Racing` must be coordinated before phase 3 at the latest (D3).
+Step 4's architecture and guide rewrite, the tiered glossary with fundamental concepts first, the naming decisions applied, and the merge. `origin/dynamic-Racing` is the longer-lived branch and merges this one, not the other way round. It receives [the migration notes](#migration-notes-for-origindynamic-racing) before phase 3 step 4 is committed.
+
+## Migration notes for `origin/dynamic-Racing`
+
+The branch merges these changes itself. This branch ports racing as it stands at HEAD and tests a per-contender tracker that survives restarts and per-contender iteration updates, so that the merge has a working example.
+
+| The branch uses                                                                                         | Replacement                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Aspect.Observe(evaluator, performance.Observe)` for each contender                                     | `Observing(performance.Observe)` placed on the contender's evaluator, in a graph racing builds for that race and never persists            |
+| `problem.CreateIterationUpdateAspect(algorithm)`                                                        | `ApplyingIterationUpdates()` around the algorithm                                                                                          |
+| `Scope.With(aspects)`                                                                                   | No replacement needed: the graph already holds the wrappers before it is resolved                                                          |
+| `.AddAspect(qualityCurve).AddAspect(bbcp)` on a shared evaluator (`AutoEcPaperScenarioExecution.cs:63`) | `var analyzed = evaluator.AnalyzedBy(qualityCurve, bbcp)` with `evaluator` typed by its interface, before `AlgBuilder` captures `analyzed` |
+| `CreateForkedScope`, `WithContext`, `ExecutionFactory.Forkable`                                         | The branch's own feature, which the merge moves onto the [reduced scope](#phase-4-reduce-the-scope)                                        |
+
+What the merge has to keep in mind:
+
+- **Lifetimes differ.** HEAD keeps a contender's performance across iterator restarts, and the branch creates a new `ContenderPerformance` for each race. A new performance object means a new graph, and a restart reuses the graph it has.
+- **`AlgBuilder` keeps getting the unsubstituted algorithm.** Challengers are built from `entries[0].Algorithm` (`DynamicRacingAlgorithm.cs:189`), which would otherwise leak the incumbent's tracking into them. A test pins this.
+- **An outer analyzer does not reach contenders (D3).** A reference target reports the delegate by name. A selection by type or predicate passes over contenders without an error. The author of `AlgBuilder` substitutes inside it, or analyzes a shared operator before capturing it, as in the table.
 
 ## Relation to the aspects plan
 
@@ -271,12 +295,12 @@ Step 4's architecture and guide rewrite, the tiered glossary with fundamental co
 
 The reports describe this design as removing rules. These stay in another form:
 
-- **A clock ticks once, and before the observations that read it.** Today this is advice deduplication with closest-occurrence ordering. Placing at the original reference would be wrong for a second trace on the same target: it would sit inside the first trace's counter and read the clock before that call was counted. The placement helper must wrap outside the existing instrument wrappers on that target and skip a counter already placed. That is one local rule with a visible result, but it is still a rule. Within one call D28 settles it through the listed order, and the helper is only needed across separate calls.
+- **A clock ticks once, and before the observations that read it.** Today this is advice deduplication with closest-occurrence ordering. Placing at the original reference would be wrong for a second trace on the same target: it would sit inside the first trace's counter and read the clock before that call was counted. Analyzer placement therefore wraps outside the clock wrappers already on that target and skips a clock already placed ([D36](#decided-in-round-21)). That is one local rule with a visible result, but it is still a rule. Within one call D28 settles it through the listed order, and the rule is only needed across separate calls.
 - **Persistence.** A substituted graph is persistable only if the wrappers it adds are data. `Trace(observation => ...)` holds a delegate and `OperatorDuration` a `TimeProvider`, so instrumented graphs stay under the documented exception until [value strategies](developer-backlog.md#runs-execution-and-experiments) exist for them. The configuration before placement stays clean, and a substitution can be reapplied after loading. Instruments and shared nodes also still need an identity in a persisted form.
 - **Reach.** Advice reaches anything resolved below it, including configurations a delegate creates at run time. A substitution reaches only declared children (D3). It also changes only the graph it returns. Today a budget counts every call of its operator in its scope and child scopes, including a direct request for the original algorithm (`DeferredAlgorithmResolutionTests.cs:294`), and the budget and that request use one algorithm executor (`ConfigurationSharingTests.cs:118`). With eager substitution the budget holds a copy of the algorithm, so a direct request for the original neither counts nor shares that executor. This follows from D1.
 - **Declaration cost.** Avoiding reflection means every configuration author declares parameters, and a declaration can be forgotten. Analyzers in `analyzers/` are `IsPackable=false` with `PrivateAssets=all`, and the project files contain no packing entry, so external authors do not get a completeness analyzer today (D2). The developer accepts this for now. Its overhead is to be measured, and the mechanism designed in more detail, before the choice is final.
 
-The clock rule above is accepted provisionally and is discussed again when placement is implemented.
+The clock rule above was settled in [round 21](#decided-in-round-21).
 
 ## Evidence required
 
@@ -501,12 +525,54 @@ Decided by the developer on 2026-11-06.
 - **D50. `SettingParameter<TOwner, TValue>` amends D45.** `Parameter` decides on the closed type, so a value typed by a type parameter is read as a child, or rejected as a list, when it closes over a configuration, although it is data. A terminator stopping at a target candidate is a legitimate case of this. `SettingParameter` is never entered and never reported, whatever its type closes over. It is used where a value is typed by a type parameter, so 3 declarations use it: `PredefinedCandidates` and the two `SourceProblem` values. The other declarations stay `Parameter`, so a concrete setting can be written either way. Accepted limits: `Parameter<X, TCandidate>` still compiles and is silently a child when closed over a configuration, which the later analyzer is to report, and a delegate in a `SettingParameter` is not reported as a boundary.
 - **A record never holds or declares an `IEnumerable`, generic or not.** A sequence has no value semantics, which breaks the idea of a record. The developer rejected `IEnumerable<TCandidate>` as the declared value of `PredefinedCandidates`, and the rule is in the [developer guidelines](../docs/contributing/developer-guidelines.md).
 
+### Decided in round 21
+
+Decided by the developer on 2026-11-08, after two independent reviews of the draft and a further review of how analyzers are used. It replaces the seven-step list of phase 3, so earlier references to step 6 now mean the deletions spread over steps 1 to 5.
+
+Analysis:
+
+- **Why placement had traps.** Each separate `Substitute` call is its own rewrite, with its own wrapper order and its own copies of the graph. Advice never had this, because it was matched once at resolution. Analysis therefore happens in one rewrite where it can, and several rewrites are made safe rather than relied on. A substitution stays a pure function of the graph and its arguments.
+- **D25. One form for every measurement: define on the source, attach once, read from the run.** This replaces the two-protocol draft in which counters could only come from `Counting(..., out)`.
+
+  ```csharp
+  var evaluations = ga.Evaluator.Invocations.CountCandidates();
+  var best = ga.Evaluator.Invocations.TraceBestSoFar(clocks: [evaluations]);
+  var quality = ga.Iterations.TracePopulationQuality(clocks: [evaluations]);
+
+  var run = ga.AnalyzedBy(best, quality).CreateRun(problem, random);
+
+  run.Result(quality).By(evaluations);
+  run.Result(evaluations).CurrentCount;
+  ```
+
+  `AnalyzedBy(params)` is one `Substitute` call, so every target is matched against the graph that call received, and nothing named on that graph can go stale within the call ([D58](#decided-in-round-21) covers an earlier rewrite). A trace attaches its clocks itself, listed after its own placement so that they sit closer to the node. One object stamps, is read and can be limited. `Counting(target, out c)` stays as the same thing in one step, returns the same `Counter`, and serves count-only use and terminators, where it cannot be forgotten. `Trace*` stays on sources. This settles D15: a definition keeps its source, because that is how it places itself. A `Counter` stays a sealed class (D39). One created from a source holds its placement privately, outside its declared parameters, under the analysis exception of § 4.8. Custom clocks keep working through `IClock.Substitutions`. The cost is the two-step form the developer doubted, which D57 makes safe.
+
+- **D58. One operation means one `AnalyzedBy` call, made first.** The existing form stays: one call taking several substitutions, applied one after another (D17, D28). A budget or `Counting` before it copies `ga`, so `ga.Iterations` then gives D32's error, while `ga.AnalyzedBy(best, quality).LimitedToInvocations(ga.Mutator, 100)` works because the mutator's reference survives. The documentation says "analyze first, then budget", and D32's error names that route. A generalized call that also takes budgets and wrappers is a [backlog item](developer-backlog.md#runs-execution-and-experiments), and steps 1 and 3 count how often budget-then-analyze occurs as its trigger. A simultaneous pass that orders wrappers by kind is [rejected](developer-backlog.md#analyzer-placement-alternatives-rejected-on-2026-11-08).
+- **D36. The clock rule.** Plain `Substitute` keeps "one call, one replacement unit". Analyzer placement additionally goes outside clock wrappers already around its exact target, and a clock already on the target is not placed again. A shared clock across separate `AnalyzedBy` calls therefore ticks once and before the observations that read it, and a trace on the original `m` after `Counting(m, out c)` gives `T(C(O))`. Clock wrappers declare themselves through a public interface (working name `IClockWrapper`), so an external one takes part the same way. A wrapper that is not a clock, such as `Retry`, ends the look-through. The rule reads only the graph it was given, and the target still matches by exact reference, so this is not the rejected "wherever it is now". A reference an earlier call copied stays D32's error. Observers commute under the observation contract, so most `Advised(a, b)` order reversals (D28) change no assertion.
+- **D57. Forgetting to attach is an error on read.** `run.Result(x)`, for a definition that knows a placement, walks the run's declared graph for a parameter holding `x` by reference, through `GetParameters` and `GetValue`, so authors declare nothing beyond their parameters. If there is none and the walk crossed no delegate slot, it throws. An unvisited Cycle branch is still found and reads 0, which is true. A closure such as AutoEC's sits behind a delegate and is not checked. Failed runs behave the same. A discarded `AnalyzedBy` result is caught as well. Internal lookups, as from a trace's `CreateResult`, are not checked. Known limits: an undeclared child is a leaf, and a terminator holding a never-attached counter still never stops, so the documentation uses `Counting(..., out)` there. Instrument analyzers need no node form for this.
+
+Counters, durations and budgets:
+
+- **D52. The old counter types go in phase 3.** `OperatorCounter`, `AlgorithmCounter`, `ObservationCounter`, the old `Duration` and `OperatorDuration`, D34's adapter and `[OverloadResolutionPriority]` go. `Count()`, `CountCandidates()` and `Duration()` stay on sources and return the new nodes. This corrects the phase 2 note that said phase 6.
+- **D53. Duration is a node.** A sealed class whose execution node is `DurationAccumulator`, which moves from L0 to L3 as `CountAccumulator` did (this amends D35). `Timed`, the duration budgets and `AfterOperatorDurationTerminator` use it. `TimeProvider` stays on the node as a documented exception, and taking time from the run is a [backlog item](developer-backlog.md#runs-execution-and-experiments).
+- **D11. A multi-target budget owns its counter.** `ga.LimitedToInvocations(100, (g, calls) => g.Counting(g.Mutator, calls).Counting(g.Crossover, calls))`, and the same for candidates and `LimitedToDuration`. The lambda runs during the call and is not stored. It needs `Counting(target, existingCounter)` and `Timing(target, existingDuration)`. The narrowed counter, which reads 0 at the root, is never handed out, and the wrappers are inside the limited algorithm by construction. An untyped `IReadOnlyList<IOperator>` is rejected, because a dispatch member on `IOperator` with default implementations per operation is ambiguous (CS8705) for multi-operation nodes. `Counting(m, c)` written twice places two wrappers and counts twice. Counting every operation of a node takes one substitution per operation.
+
+Observation:
+
+- **D51. Racing tracks contenders with a callback analyzer.** Racing places `Observing(performance.Observe)` on each contender's evaluator, in a graph it builds itself and never persists, under the analysis bullet of § 4.8. No tracker node, `Share`, `Resolve` or reset is needed.
+- **D54. Sources and callbacks.** The advice-factory overload of `ObservationSource.Create` goes. New roles are recommended to be operations and get `Observed`, `Counted`, `Timed` and `Retry`. A plain node role writes its own wrapper record and passes a replacement `(node, instrument) => new ObservedSchedule(node, instrument)`. The documentation shows it with an interface-typed argument, because a concrete type hits D10. That delegate stays reachable through the trace, so § 4.8's analysis bullet is extended to it. `Observing(callback)` (working name) replaces `Aspect.Observe`, for PythonInterop too (`PythonGenealogyAnalysis.cs:297`). Every API taking a callback documents that it produces a non-serializable graph.
+- **D55. Iteration updates are a wrapper.** `ApplyingIterationUpdates()` (working name) takes the problem from the call it wraps and completes the iteration before each state is yielded, as the observer does today (`AlgorithmObservation.cs:51-53`). `Supports` requires a dynamic problem. Tests cover pausing, disposal and racing's epoch loop.
+
+Advice replacement and naming:
+
+- **D56. Wrappers replace custom advice.** The forms are `WrappingOperator` with `operation.Wrap` and an `IInvocationWrapper`, `WrappingAlgorithm`, or bundled substitutions. Before deletion, every advice base's capabilities, including its `Check` hook, are checked for a wrapper equivalent open to external authors. `TimedAlgorithm`, `Timing(ga.Iterations, ...)` and `ga.Iterations.Duration()` replace `DurationMeasuringAlgorithmAdvice`.
+- **D13, wrapper stays.** The glossary defines it structurally, and the documentation mentions "decorator" as a bridge. `Substitute` remains the mechanism, because it does not say whether the replacement wraps the original or replaces it outright.
+
+Racing: [the migration notes](#migration-notes-for-origindynamic-racing) hold what the merge needs. An outer trace does not reach contenders, which is provisional.
+
 ### Decided later
 
 - **D5. Problem-bound executors (idea 5).** Bind an executor to one problem object at construction, and model a changing problem as a mutable problem instance, as `DynamicProblem` already does. The direction is favored, and the [phase 4b spike](#phase-4b-problem-binding-spike) settles it. See [the conditions](#problem-bound-executor-conditions).
-- **D11. Untyped multi-target budgets.** `LimitedToInvocations(IReadOnlyList<IOperator>, n)` cannot build a typed wrapper from `IOperator` without a dispatch. Options are a small dispatch member on `IOperator`, or typed targets sharing one counter. In-repo usage alone is not a reason to remove it. Decide in phase 3; the pilot uses one typed target.
-- **D15. Does a definition keep its source?** A definition names a source that explicit placement ignores. Decide in phase 6.
-- **D25. The analyzer's user-facing syntax.** Decided at the start of phase 3. The pilot only needs the mechanism, so `ga.Substitute(analyzer.Substitutions)` is enough for it, and `AnalyzedBy` stays provisional. The developer doubts the two-step form. `ga.Mutator.Invocations.Count()` returns an `OperatorCounter`, a definition holding its source and metric, and changes nothing in the graph (`ObservationSource.cs:58`). If a user never installs it, `run.Result` still returns a result, because the first lookup creates one (`RunResults.cs:33-35`). The count then reads 0 with no error, and a terminator reading it never stops. Requirements: getting a count or another analysis must be simple, and forgetting to install must not be silent. Candidates: one call that creates and installs, such as `ga.Counting(ga.Mutator, out var calls)`, and a read that fails for an analyzer the run's graph does not contain, which eager substitution makes possible because that graph can be walked. The developer favors the one-call form: `calls` can report the current count or be passed to a terminator. `calls` must be a configuration node, an immutable record with an execution node holding the count, in the form of `MutationStrength` ([D30](#decided-in-round-8)).
 
 ## Proposals behind the open decisions
 
