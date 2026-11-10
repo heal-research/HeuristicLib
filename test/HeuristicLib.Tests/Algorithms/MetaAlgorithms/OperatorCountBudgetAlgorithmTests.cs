@@ -644,7 +644,7 @@ public class OperatorCountBudgetAlgorithmTests
         var analyzer = new EvaluationObservingAnalyzer(algorithm.Evaluator);
 
         algorithm.LimitedToCandidates(algorithm.Evaluator, maximumCandidates: 1000)
-                 .Advised(analyzer).CreateRun(problem, RandomNumberGenerator.Create(42))
+                 .AnalyzedBy(analyzer).CreateRun(problem, RandomNumberGenerator.Create(42))
                  .Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         analyzer.ObservedCandidates.ShouldBeGreaterThan(0);
@@ -722,14 +722,18 @@ public class OperatorCountBudgetAlgorithmTests
     /// when a budget algorithm wraps the same evaluator.
     /// </summary>
     private sealed class EvaluationObservingAnalyzer
-        : Aspect
+        : ISubstitutionBundle
     {
+        private readonly Instrument observing;
+
         public int ObservedCandidates { get; private set; }
 
         public EvaluationObservingAnalyzer(IOperator<Evaluation, RealVector> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
+            observing = evaluator.Invocations.Observing(Record);
         }
+
+        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
 
         public void Record(EvaluationObservation<RealVector> observation) =>
             ObservedCandidates += observation.ObjectiveVectors.Count;

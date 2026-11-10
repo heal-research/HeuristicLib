@@ -17,20 +17,6 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Analysis;
 public class IterationObservationSpecs
 {
     [Fact]
-    public async Task ModulesAndAnalyzers_ObserveInAttachmentOrder()
-    {
-        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
-        var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 1);
-        var callbacks = new List<string>();
-
-        var run = algorithm.Advised(new RecordingModule(algorithm, () => callbacks.Add("first module")), new RecordingAnalyzer(algorithm, () => callbacks.Add("analyzer")), new RecordingModule(algorithm, () => callbacks.Add("last module"))).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
-
-        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-
-        callbacks.ShouldBe(["first module", "analyzer", "last module"]);
-    }
-
-    [Fact]
     public async Task QualityCurve_IsAStatefulAnalysis()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
@@ -113,24 +99,6 @@ public class IterationObservationSpecs
         var qualityCurve = run.Result(qualityAnalyzer).Snapshot();
 
         qualityCurve.Count.ShouldBe(streamedStates.Count);
-    }
-
-    private sealed class RecordingModule
-        : Aspect
-    {
-        public RecordingModule(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
-        {
-            Advices = [.. Aspect.Observe(source.Iterations, _ => observed())];
-        }
-    }
-
-    private sealed class RecordingAnalyzer
-        : Aspect
-    {
-        public RecordingAnalyzer(IAlgorithm<RealVector, PopulationState<RealVector>> source, Action observed)
-        {
-            Advices = [.. Aspect.Observe(source.Iterations, _ => observed())];
-        }
     }
 
     private static GeneticAlgorithm<RealVector> CreateGeneticAlgorithm(

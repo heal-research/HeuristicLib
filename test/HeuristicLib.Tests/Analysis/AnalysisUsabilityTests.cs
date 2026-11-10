@@ -143,11 +143,11 @@ public class AnalysisUsabilityTests
         var firstEvaluator = new ManualEvaluator();
         var secondEvaluator = new ManualEvaluator();
         var analyzer = new SeparateEvaluatorAnalyzer(firstEvaluator, secondEvaluator);
+        var placed = new TwoEvaluators(firstEvaluator, secondEvaluator).Substitute(analyzer);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(analyzer);
 
-        Evaluate(scope, firstEvaluator, 1, 2);
-        Evaluate(scope, secondEvaluator, 3, 4, 5);
+        Evaluate(scope, placed.First, 1, 2);
+        Evaluate(scope, placed.Second, 3, 4, 5);
 
         analyzer.FirstCandidates.ShouldBe(2);
         analyzer.SecondCandidates.ShouldBe(3);
@@ -222,17 +222,19 @@ public class AnalysisUsabilityTests
     private static void Evaluate(ResolutionScope scope, IOperator<Evaluation, int> evaluator, params int[] candidates) =>
         scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
 
-    private sealed class SeparateEvaluatorAnalyzer : Aspect
+    private sealed class SeparateEvaluatorAnalyzer : ISubstitutionBundle
     {
         public int FirstCandidates { get; private set; }
         public int SecondCandidates { get; private set; }
 
+        public IReadOnlyList<Substitution> Substitutions { get; }
+
         public SeparateEvaluatorAnalyzer(ManualEvaluator first, ManualEvaluator second)
         {
-            Advices =
+            Substitutions =
             [
-                .. Aspect.Observe(first.Invocations, observation => FirstCandidates += observation.Candidates.Count),
-                .. Aspect.Observe(second.Invocations, observation => SecondCandidates += observation.Candidates.Count)
+                .. first.Invocations.Observing(observation => FirstCandidates += observation.Candidates.Count).Substitutions,
+                .. second.Invocations.Observing(observation => SecondCandidates += observation.Candidates.Count).Substitutions
             ];
         }
     }

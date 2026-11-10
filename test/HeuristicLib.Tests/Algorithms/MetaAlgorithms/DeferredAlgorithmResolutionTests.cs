@@ -131,7 +131,7 @@ public sealed class DeferredAlgorithmResolutionTests
     }
 
     [Fact]
-    public async Task Cycle_SharedExecutorsKeepTheirChildrenAndReceiveTheCyclesAdvice()
+    public async Task Cycle_SharedExecutorsKeepTheirChildrenAndTheObservationOfTheirGraph()
     {
         var mutator = new CountingMutations();
         var first = new ProbeAlgorithm { Mutator = mutator };
@@ -142,16 +142,14 @@ public sealed class DeferredAlgorithmResolutionTests
         var root = ResolutionScope.Create();
         var observations = new List<string>();
         var originalScope = root.CreateChildScope();
-        originalScope.AddAspect(Aspect.Observe(mutator.Invocations, _ => observations.Add("original")));
-        var original = Resolve(originalScope, cycle);
+        var original = Resolve(originalScope, cycle.AnalyzedBy(mutator.Invocations.Observing(_ => observations.Add("original"))));
         var before = await Run(original);
         before.Select(state => state.Call).ShouldBe([1, 2, 1, 3, 4, 2]);
         before[0].Data.ShouldBeSameAs(before[1].Data);
         before[0].Data.ShouldNotBeSameAs(before[2].Data);
 
         var rebuiltScope = root.CreateChildScope();
-        rebuiltScope.AddAspect(Aspect.Observe(mutator.Invocations, _ => observations.Add("rebuilt")));
-        var rebuilt = Resolve(rebuiltScope, cycle);
+        var rebuilt = Resolve(rebuiltScope, cycle.AnalyzedBy(mutator.Invocations.Observing(_ => observations.Add("rebuilt"))));
         var after = await Run(rebuilt);
         after.Select(state => state.Call).ShouldBe([1, 2, 1, 3, 4, 2]);
         after[0].Data.ShouldNotBeSameAs(before[0].Data);
@@ -189,10 +187,9 @@ public sealed class DeferredAlgorithmResolutionTests
     private static WeakReference RunUnderTemporaryObserver(ResolutionScope root,
         IAlgorithm<int, ProbeState> cycle, IOperator<Mutation, int> mutator)
     {
-        var observer = Aspect.Observe(mutator.Invocations, _ => { });
+        var observer = mutator.Invocations.Observing(_ => { });
         var scope = root.CreateChildScope();
-        scope.AddAspect(observer);
-        Run(Resolve(scope, cycle)).GetAwaiter().GetResult();
+        Run(Resolve(scope, cycle.AnalyzedBy(observer))).GetAwaiter().GetResult();
         return new WeakReference(observer);
     }
 
@@ -371,9 +368,8 @@ public sealed class DeferredAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = 0;
         var sibling = root.CreateChildScope();
-        sibling.AddAspect(Aspect.Observe(algorithm.Mutator.Invocations, _ => observed++));
 
-        (await Run(Resolve(sibling, budget))).Count.ShouldBe(3);
+        (await Run(Resolve(sibling, budget.AnalyzedBy(algorithm.Mutator.Invocations.Observing(_ => observed++))))).Count.ShouldBe(3);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeFalse();

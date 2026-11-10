@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Analysis;
@@ -36,26 +35,5 @@ public static class AnalysisPlacement
         /// <exception cref="InvalidOperationException">This operator does not hold something an analyzer observes.</exception>
         public IOperator<TOperation, TCandidate> AnalyzedBy(params IReadOnlyList<ISubstitutionBundle> analyzers) =>
             @operator.Substitute(analyzers);
-    }
-
-    extension<TObservation>(ObservationSource<TObservation> source)
-    {
-        /// <summary>Creates an analyzer that passes each observation of this source to the callback.</summary>
-        /// <remarks>
-        /// The callback runs on the thread that made the observation. A configuration holding it is not serializable,
-        /// as with every analyzer that holds a delegate.
-        /// </remarks>
-        public Instrument Observing(Action<TObservation> callback) => new CallbackAnalyzer<TObservation>(source, callback);
-    }
-
-    // Passes each observation of a source to a callback; it collects no result.
-    private sealed class CallbackAnalyzer<TObservation>(ObservationSource<TObservation> source, Action<TObservation> callback)
-        : Instrument<Action<TObservation>>, IObservationInstrument<TObservation>
-    {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [source.RecordingInto(this)];
-
-        public Action<TObservation> CreateRecorder(RunResults results) => callback;
-
-        protected override Action<TObservation> CreateResult(RunResults results) => callback;
     }
 }

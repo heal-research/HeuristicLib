@@ -30,9 +30,9 @@ public class OperatorAuthoringSpecs
         var gaussian = new GaussianMutator(1.0, 3.0);
         IOperator<Mutation, RealVector> mutator = gaussian;
         var observedCalls = 0;
+        var observed = mutator.AnalyzedBy(mutator.Invocations.Observing(_ => observedCalls++));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Observe(mutator.Invocations, _ => observedCalls++));
-        var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator, out IMutationStrengthControl? strength);
+        var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(observed, out IMutationStrengthControl? strength);
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 0.0;
 

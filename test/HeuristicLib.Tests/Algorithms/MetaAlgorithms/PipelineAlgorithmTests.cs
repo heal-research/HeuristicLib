@@ -65,7 +65,7 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.Advised(analysis).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = pipeline.AnalyzedBy(analysis).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
@@ -101,15 +101,20 @@ public class PipelineAlgorithmTests
         }
     }
 
+    // An analyzer of its own, built on Observing.
     private sealed class EvaluationCountAnalysis
-        : Aspect
+        : ISubstitutionBundle
     {
+        private readonly Instrument observing;
+
         public Result AnalysisResult { get; } = new();
 
         public EvaluationCountAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
+            observing = evaluator.Invocations.Observing(Record);
         }
+
+        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
 
         public void Record(EvaluationObservation<int> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;

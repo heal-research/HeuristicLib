@@ -43,7 +43,7 @@ Observation sources match configurations by reference. A copied configuration is
 
 ### Sources and `IObservable<T>`
 
-A source resembles a cold `IObservable<T>`: it describes observations without producing any until something subscribes. Here, an analyzer such as `Analyzer.Trace` or `Observing` subscribes when `AnalyzedBy` places it in the configuration. The library implements neither `IObservable<T>` nor Rx-style operators. A callback can feed observations into Rx, for example into a subject:
+A source resembles a cold `IObservable<T>`: it describes observations without producing any until something subscribes. Here, a trace from `Analyzer.Trace` or a callback from `Observing` subscribes when `AnalyzedBy` places it in the configuration. The library implements neither `IObservable<T>` nor Rx-style operators. A callback can feed observations into Rx, for example into a subject:
 
 ```csharp
 var subject = new Subject<CrossoverObservation<RealVector>>();
@@ -149,7 +149,7 @@ Attach analysis definitions to the algorithms before constructing an experiment,
 
 ## Observe an operation of your own
 
-An operation you define becomes observable when it declares an observation record, the advice that builds it, and an `Invocations` source, as each built-in operation does. Its source then works with `Analyzer.Trace` and `Observing` like any other. An observation that carries the problem of the invocation it observed lets a trace rank by that problem's objective. See [Make the operation observable](/contributing/architecture/operator-implementation#make-the-operation-observable) for a complete example.
+An operation you define becomes observable when it declares an observation record and an `Invocations` source, as each built-in operation does. Its source then works with `Analyzer.Trace` and `Observing` like any other. An observation that carries the problem of the invocation it observed lets a trace rank by that problem's objective. See [Make the operation observable](/contributing/architecture/operator-implementation#make-the-operation-observable) for a complete example.
 
 ## Count, time and observe an operator
 

@@ -139,12 +139,12 @@ public sealed class DynamicRacingResolutionTests
         };
         var creations = new CountAccumulator();
         var mutations = new CountAccumulator();
+        var creatorObservation = metaCreator.Invocations.Observing(_ => creations.IncrementBy(1));
+        var mutatorObservation = metaMutator.Invocations.Observing(_ => mutations.IncrementBy(1));
         var parent = ResolutionScope.Create();
-        parent.AddAspect(Aspect.Observe(metaCreator.Invocations, _ => creations.IncrementBy(1)));
-        parent.AddAspect(Aspect.Observe(metaMutator.Invocations, _ => mutations.IncrementBy(1)));
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
         _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender);
-        await using var paused = Run(parent, racing, problem).GetAsyncEnumerator();
+        await using var paused = Run(parent, racing.AnalyzedBy(creatorObservation, mutatorObservation), problem).GetAsyncEnumerator();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(1);
         mutations.CurrentCount.ShouldBe(0);
@@ -152,10 +152,12 @@ public sealed class DynamicRacingResolutionTests
 
         var evaluations = new CountAccumulator();
         var interceptions = new CountAccumulator();
+        // D3: the builder's contenders are out of the substitution's reach, so the builder observes their evaluator.
+        var observedContender = contender.Substitute(contender.Evaluator.Invocations.Observing(_ => evaluations.IncrementBy(1)));
+        var observedRacing = (racing with { AlgBuilder = (_, source) => { sources.Add(source); return observedContender; } })
+            .AnalyzedBy(creatorObservation, mutatorObservation, interceptor.Invocations.Observing(_ => interceptions.IncrementBy(1)));
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Observe(contender.Evaluator.Invocations, _ => evaluations.IncrementBy(1)));
-        child.AddAspect(Aspect.Observe(interceptor.Invocations, _ => interceptions.IncrementBy(1)));
-        await using var observed = Run(child, racing, problem).GetAsyncEnumerator();
+        await using var observed = Run(child, observedRacing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         sources[1].ShouldBeNull();
         creations.CurrentCount.ShouldBe(2);
@@ -172,8 +174,7 @@ public sealed class DynamicRacingResolutionTests
 
         var independentSourceIndex = sources.Count;
         var independent = ResolutionScope.Create();
-        independent.AddAspect(Aspect.Observe(metaCreator.Invocations, _ => creations.IncrementBy(1)));
-        await using var fresh = Run(independent, racing, problem).GetAsyncEnumerator();
+        await using var fresh = Run(independent, racing.AnalyzedBy(creatorObservation), problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(3);
         sources[independentSourceIndex].ShouldBeNull();
@@ -216,6 +217,131 @@ public sealed class DynamicRacingResolutionTests
             for (var step = 0; step < 3; step++)
                 (await stream.MoveNextAsync()).ShouldBeTrue();
         }
+    }
+
+    // An entry resolves the graph it built once at every restart, so its tracker spans the restarts: the incumbent's best
+    // evaluation comes before its restarts, and only a tracker that kept it lets the incumbent win.
+    [Fact]
+    public async Task AContendersTracker_SpansItsRestarts()
+    {
+        using var problem = new EpochProblem(epochLength: 10_000);
+        var moves = 0;
+        var incumbentEvaluations = 0;
+        var incumbentStarts = 0;
+        // Each race ends after six moves, which alternate between the two contenders.
+        Action beforeMove = () =>
+        {
+            if (++moves % 6 == 0)
+                problem.UpdateOnce();
+        };
+        var incumbent = new LifetimeProbeAlgorithm
+        {
+            Steps = 1,
+            Candidate = () => incumbentEvaluations++ == 0 ? 0 : 10,
+            BeforeMove = beforeMove,
+            Started = () => incumbentStarts++,
+            Disposed = static () => { }
+        };
+        var challenger = new LifetimeProbeAlgorithm { Candidate = static () => 5, BeforeMove = beforeMove, Started = static () => { }, Disposed = static () => { } };
+        var sources = new List<LifetimeProbeAlgorithm?>();
+        var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm>(
+            new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+            new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
+            (_, source) =>
+            {
+                sources.Add(source);
+                return sources.Count == 1 ? incumbent : challenger;
+            }, algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = 0,
+            EarlyTerminationStrength = 0,
+            HallOfFameStrength = 0
+        };
+        await using var stream = Run(ResolutionScope.Create(), racing, problem).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+
+        incumbentStarts.ShouldBe(3);
+        sources[2].ShouldBeSameAs(incumbent);
+    }
+
+    // Under an update policy that waits for iterations, only contenders that end their iterations on the problem let the
+    // race's epoch end, and the builder is where they are wrapped.
+    [Fact]
+    public async Task ContendersApplyingIterationUpdates_EndTheRacesEpoch()
+    {
+        using var problem = new EpochProblem(epochLength: 3, updatePolicy: UpdatePolicy.AfterEachIteration);
+        var moves = 0;
+        var contender = new LifetimeProbeAlgorithm
+        {
+            BeforeMove = () =>
+            {
+                if (++moves > 100)
+                    throw new InvalidOperationException("The race did not end its epoch.");
+            },
+            Started = static () => { },
+            Disposed = static () => { }
+        };
+        var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, IAlgorithm<int, PopulationState<int>>>(
+            new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+            new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
+            _ => contender.ApplyingIterationUpdates(), _ => contender.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = 0,
+            EarlyTerminationStrength = 0,
+            HallOfFameStrength = 0
+        };
+        await using var stream = Run(ResolutionScope.Create(), racing, problem).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+
+        moves.ShouldBe(3);
+        problem.CurrentEpoch.ShouldBe(1);
+    }
+
+    // The tracker is placed on a graph the entry keeps to itself, so a challenger is built from what the builder returned.
+    [Fact]
+    public async Task TheBuilder_ReceivesTheAlgorithmItReturnedWithoutTheTracker()
+    {
+        using var problem = new EpochProblem(epochLength: 10_000);
+        var moves = 0;
+        var contender = new LifetimeProbeAlgorithm
+        {
+            BeforeMove = () =>
+            {
+                if (++moves % 2 == 0)
+                    problem.UpdateOnce();
+            },
+            Started = static () => { },
+            Disposed = static () => { }
+        };
+        var sources = new List<LifetimeProbeAlgorithm?>();
+        var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm>(
+            new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
+            new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
+            (_, source) =>
+            {
+                sources.Add(source);
+                return contender;
+            }, algorithm => algorithm.Evaluator)
+        {
+            NoRacers = 2,
+            BurnInEpochs = 0,
+            EarlyTerminationStrength = 0,
+            HallOfFameStrength = 0
+        };
+        await using var stream = Run(ResolutionScope.Create(), racing, problem).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+
+        sources.Count.ShouldBe(4);
+        sources[0].ShouldBeNull();
+        sources.Skip(1).ShouldAllBe(source => ReferenceEquals(source, contender));
+        sources[1]!.Evaluator.ShouldBeOfType<ProblemEvaluator<int>>();
     }
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm, EpochProblem problem) =>
@@ -365,6 +491,8 @@ public sealed class DynamicRacingResolutionTests
 
         public Action BeforeMove { get; init; } = static () => { };
         public Action Built { get; init; } = static () => { };
+        public int Steps { get; init; } = 10;
+        public Func<int> Candidate { get; init; } = static () => 0;
         public required Action Started { get; init; }
         public required Action Disposed { get; init; }
 
@@ -372,10 +500,11 @@ public sealed class DynamicRacingResolutionTests
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Built();
-            return new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), BeforeMove, Started, Disposed);
+            return new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), Steps, Candidate, BeforeMove, Started, Disposed);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, Action beforeMove, Action started, Action disposed)
+        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, int steps, Func<int> candidate,
+            Action beforeMove, Action started, Action disposed)
             : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
@@ -385,11 +514,11 @@ public sealed class DynamicRacingResolutionTests
                 started();
                 try
                 {
-                    for (var step = 0; step < 10; step++)
+                    for (var step = 0; step < steps; step++)
                     {
                         ct.ThrowIfCancellationRequested();
                         beforeMove();
-                        int[] candidates = [0];
+                        int[] candidates = [candidate()];
                         var qualities = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
                         yield return Population.From(candidates.ToEvaluated(qualities)).ToPopulationState();
                         await Task.CompletedTask;
@@ -403,9 +532,10 @@ public sealed class DynamicRacingResolutionTests
         }
     }
 
-    private sealed class EpochProblem(ObjectiveDirections? objective = null, int epochLength = 3) : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
-        objective ?? SingleObjective.Minimize, UnrestrictedSearchSpace<int>.Instance, RandomNumberGenerator.Create(0),
-        new EvaluationCountSchedule(epochLength), UpdatePolicy.AfterEachBatchEvaluation)
+    private sealed class EpochProblem(ObjectiveDirections? objective = null, int epochLength = 3, UpdatePolicy updatePolicy = UpdatePolicy.AfterEachBatchEvaluation)
+        : DynamicProblem<EpochProblem, int, UnrestrictedSearchSpace<int>>(
+            objective ?? SingleObjective.Minimize, UnrestrictedSearchSpace<int>.Instance, RandomNumberGenerator.Create(0),
+            new EvaluationCountSchedule(epochLength), updatePolicy)
     {
         protected override ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random, int epoch) => new(candidate);
         protected override void Update() { }

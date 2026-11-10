@@ -526,9 +526,9 @@ Discussed on 2026-10-21. A descriptor `IOperationDescriptor<TSelf, TIn, TOut>` c
 
 ### IObservable and Rx-style observation operators
 
-Discussed on 2026-10-21. Observation sources resemble cold observables: `Calls` describes a stream of calls, readings resemble `Select`, best-so-far resembles `Scan`, and `Analyzer.Trace` and `Aspect.Observe` resemble `Subscribe`. The library uses this only to explain the design.
+Discussed on 2026-10-21. Observation sources resemble cold observables: `Calls` describes a stream of calls, readings resemble `Select`, best-so-far resembles `Scan`, and `Analyzer.Trace` and `Observing` resemble `Subscribe`. The library uses this only to explain the design.
 
-Implementing `IObservable<T>` was rejected. Observation attaches through aspects when a run builds executors, and a `Subscribe` returning `IDisposable` would be a second way to attach to the same boundary; see parallel observation systems above. Rx's contract does not fit either. There is no completion, because runs pause and resume and one aspect can serve several runs. Failed calls are not observed. Delivery is synchronous, inside the call and after the clocks advance, which schedulers would break. A general operator set would add public surface and a delegate call per element on hot paths. `Aspect.Observe(calls, subject.OnNext)` feeds an Rx subject without a library dependency. Reopen only for a concrete need that handles cannot express, such as combining sources over time.
+Implementing `IObservable<T>` was rejected. Observation attaches through wrappers placed in the configuration before a run builds executors, and a `Subscribe` returning `IDisposable` would be a second way to attach to the same boundary; see parallel observation systems above. Rx's contract does not fit either. There is no completion, because runs pause and resume and one instrument can serve several runs. Failed calls are not observed. Delivery is synchronous, inside the call and after the clocks advance, which schedulers would break. A general operator set would add public surface and a delegate call per element on hot paths. `calls.Observing(subject.OnNext)` feeds an Rx subject without a library dependency. Reopen only for a concrete need that handles cannot express, such as combining sources over time.
 
 ### Measurements as separate strategies
 

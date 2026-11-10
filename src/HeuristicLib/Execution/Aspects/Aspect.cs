@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// <summary>The list of pointcut/advice pairs woven into the executions they select.</summary>
 /// <remarks>
 /// Derived constructors assign <see cref="Advices"/>, and an aspect that builds on others lists their pairs, as in
-/// <c>Advices = [.. Aspect.Observe(evaluator.Invocations, Record)]</c>. One advice instance may pair with several pointcuts,
+/// <c>Advices = [.. Aspect.Create(Pointcut.Reference(evaluator), advice)]</c>. One advice instance may pair with several pointcuts,
 /// and aspects may share advice instances. A resolution scope applies each advice instance at most once to a configuration,
 /// at the occurrence closest to the executor whose pointcut matches; data that outlives one executor belongs to the advice
 /// object.

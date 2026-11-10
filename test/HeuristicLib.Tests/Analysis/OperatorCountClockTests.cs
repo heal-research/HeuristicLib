@@ -160,13 +160,12 @@ public static class ScoringResolutionExtensions
 }
 
 // The external operation's source, which is what its counters come from, declared like a built-in operation's.
-public sealed record ScoringObservation<TCandidate>(IReadOnlyList<TCandidate> Candidates, IReadOnlyList<double> Scores);
-
-file sealed class ScoringObservationAdvice<TCandidate>(Action<ScoringObservation<TCandidate>> observe) : OperatorAdvice<Scoring, TCandidate>
+public sealed record ScoringObservation<TCandidate>(IReadOnlyList<TCandidate> Candidates, IReadOnlyList<double> Scores)
+    : IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>
 {
-    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
-        IOperator<Scoring, TCandidate> source) =>
-        new Executor<TSearchSpace, TProblem>((IScoringExecutor<TCandidate, TSearchSpace, TProblem>)executor, observe);
+    static IExecutor IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
+        IExecutor executor, IOperator<Scoring, TCandidate> source, Action<ScoringObservation<TCandidate>> record) =>
+        new Executor<TSearchSpace, TProblem>((IScoringExecutor<TCandidate, TSearchSpace, TProblem>)executor, record);
 
     private sealed class Executor<TSearchSpace, TProblem>(IScoringExecutor<TCandidate, TSearchSpace, TProblem> executor,
         Action<ScoringObservation<TCandidate>> observe) : IScoringExecutor<TCandidate, TSearchSpace, TProblem>
@@ -187,6 +186,6 @@ public static class ScoringObservations
     extension<TCandidate>(IOperator<Scoring, TCandidate> scorer)
     {
         public InvocationSource<Scoring, TCandidate, ScoringObservation<TCandidate>> Invocations =>
-            ObservationSource.Create(scorer, (Action<ScoringObservation<TCandidate>> observe) => new ScoringObservationAdvice<TCandidate>(observe));
+            ObservationSource.Create<Scoring, TCandidate, ScoringObservation<TCandidate>>(scorer);
     }
 }

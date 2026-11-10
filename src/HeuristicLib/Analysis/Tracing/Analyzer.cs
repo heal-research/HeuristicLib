@@ -15,6 +15,9 @@ namespace HEAL.HeuristicLib.Analysis;
 /// A trace observes each boundary once, by its configuration and observation type, so a source given twice counts once.
 /// Sources of different operations of one configuration are each observed.
 /// </para>
+/// <para>
+/// A trace holds its functions, so a configuration it is placed in is not serializable.
+/// </para>
 /// </remarks>
 public static class Analyzer
 {
@@ -42,6 +45,8 @@ public static class Analyzer
         }, clocks, retention);
 }
 
+/// <summary>Builds traces over the observations of one source.</summary>
+/// <remarks>A trace holds its functions, so a configuration it is placed in is not serializable.</remarks>
 public static class ObservationTraces
 {
     extension<TObservation>(ObservationSource<TObservation> source)

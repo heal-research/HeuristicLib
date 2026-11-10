@@ -618,7 +618,7 @@ See also: Advice, Configuration node, Executor, Pointcut.
 
 Status: `Canonical`
 
-An aspect is the ordered list of its pointcut/advice pairs. `Aspect.Create(pointcut, advice)` creates one pair. A derived constructor assigns its pairs to the protected `Advices` and spreads other aspects into them, as in `Advices = [.. Aspect.Observe(evaluator.Invocations, Record)]`.
+An aspect is the ordered list of its pointcut/advice pairs. `Aspect.Create(pointcut, advice)` creates one pair. A derived constructor assigns its pairs to the protected `Advices` and spreads other aspects into them, as in `Advices = [.. Aspect.Create(Pointcut.Reference(evaluator), advice)]`.
 
 Attach aspects through `Advised` before creating the run. Direct scope users call `AddAspect`. Within a scope, later added aspects wrap closer; within an aspect, pairs retain their listed order. Match pointcuts first and keep the closest occurrence of each advice instance.
 
@@ -972,7 +972,7 @@ Status: `Canonical`
 
 An observation source names the observations of one observed configuration: `Invocations` on an operator for its successful invocations, `Iterations` on an algorithm for the search states it yields, or a point the configuration publishes, such as `Cycles` and `Turns` on a cycle algorithm. `ObservationSource<TObservation>` represents it; the type name is `Provisional`. `ObservationSource.Create` creates a boundary source. An observation point is itself a source, identified by the point reference rather than its value type.
 
-A source describes observations; creating one installs nothing. `AnalyzedBy` places a wrapper recording it into the configuration graph, and `Aspect.Observe` attaches it through an aspect, which resolution weaves into the executors a run builds. In that it resembles a cold `IObservable<T>`, but the library implements neither that interface nor Rx-style operators. A trace observes each boundary once, matched by configuration reference and observation type, so two sources of one configuration and observation type record each observation once. An operator implementing several operations offers each operation's source through a view typed to that operation.
+A source describes observations; creating one installs nothing. `AnalyzedBy` places a wrapper recording it into the configuration graph, for a trace and for a callback from `Observing` alike. In that it resembles a cold `IObservable<T>`, but the library implements neither that interface nor Rx-style operators. A trace observes each boundary once, matched by configuration reference and observation type, so two sources of one configuration and observation type record each observation once. An operator implementing several operations offers each operation's source through a view typed to that operation.
 
 See also: Observation, Trace.
 

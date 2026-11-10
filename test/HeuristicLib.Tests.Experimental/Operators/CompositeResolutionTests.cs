@@ -23,9 +23,9 @@ public class CompositeResolutionTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
         var calls = new CountAccumulator();
+        var observed = source.AnalyzedBy(left.Invocations.Observing(_ => calls.IncrementBy(1)));
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.Observe(left.Invocations, _ => calls.IncrementBy(1)));
-        var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
+        var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(observed);
 
         outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));
         inner.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));

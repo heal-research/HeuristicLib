@@ -24,7 +24,4 @@ public sealed class AlgorithmSource<TCandidate, TSearchState, TObservation> : Ob
 
     public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
         Substitution.Of<IAlgorithm<TCandidate, TSearchState>>(Algorithm, node => new ObservedAlgorithm<TCandidate, TSearchState, TObservation>(node, instrument));
-
-    internal override Aspect Observe(Action<TObservation> callback) =>
-        Aspect.Create(Pointcut.Reference(Algorithm), new AlgorithmObservationAdvice<TCandidate, TSearchState, TObservation>(callback));
 }

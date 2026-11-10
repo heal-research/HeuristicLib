@@ -43,21 +43,3 @@ public interface IAlgorithmObservation<TCandidate, TSearchState, TSelf>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, Problems.IProblem<TCandidate, TSearchSpace>;
 }
-
-// Temporary: Aspect.Observe reaches the same wrappers through these until phase 3 removes advice.
-internal sealed class ObservationAdvice<TOperation, TCandidate, TObservation>(Action<TObservation> record) : OperatorAdvice<TOperation, TCandidate>
-    where TOperation : IOperation<TOperation>
-    where TObservation : IInvocationObservation<TOperation, TCandidate, TObservation>
-{
-    public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation, IOperator<TOperation, TCandidate> source) =>
-        TObservation.Wrap<TSearchSpace, TProblem, TSearchState>(executor, source, record);
-}
-
-internal sealed class AlgorithmObservationAdvice<TCandidate, TSearchState, TObservation>(Action<TObservation> record) : AlgorithmAdvice<TCandidate, TSearchState>
-    where TSearchState : class, ISearchState
-    where TObservation : IAlgorithmObservation<TCandidate, TSearchState, TObservation>
-{
-    public override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source) =>
-        TObservation.Wrap(executor, source, record);
-}

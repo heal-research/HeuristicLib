@@ -377,23 +377,27 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
     private sealed class Entry : IDisposable
     {
-        private readonly IOperator<Evaluation, TCandidate> evaluator;
         private readonly PerformanceTrackingEvaluatorObserver performanceObserver;
+        // The contender with its evaluator observed by this entry's tracker. It is built once, so a restart resolves the
+        // same graph and the tracker spans restarts; it is never persisted or handed out.
+        private readonly IAlgorithm<TCandidate, TSearchState> tracked;
         private IEnumerator<TSearchState>? running;
 
         public Entry(TAlgorithm algorithm, IOperator<Evaluation, TCandidate> evaluator, MetaOptimizationGenotype candidate, TProblem problem, IRandomNumberGenerator random,
                      TSearchState? initialState, CancellationToken ct, ResolutionScope parentRegistry, int modelObservationInterval, Func<ObjectiveVector, double> objectiveValueSelector)
         {
             Algorithm = algorithm;
-            this.evaluator = evaluator;
             ParentRegistry = parentRegistry;
             performanceObserver = new PerformanceTrackingEvaluatorObserver(modelObservationInterval, objectiveValueSelector);
+            tracked = ((IAlgorithm<TCandidate, TSearchState>)algorithm).Substitute(evaluator.Invocations.Observing(performanceObserver.AfterEvaluation));
             Candidate = candidate;
             LastState = initialState;
             running = CreateEnumerator(problem, random, initialState, ct);
         }
 
         public MetaOptimizationGenotype Candidate { get; }
+
+        /// <summary>What the builder returned, without the tracker, so a challenger built from it does not inherit the tracking.</summary>
         public TAlgorithm Algorithm { get; }
         private ResolutionScope ParentRegistry { get; }
         public TSearchState? LastState { get; private set; }
@@ -426,49 +430,13 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             current?.Dispose();
         }
 
-        private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
-        {
-            var contenderScope = ParentRegistry.CreateChildScope();
-            contenderScope.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new PerformanceTrackingEvaluatorAdvice(performanceObserver)));
-            return contenderScope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm).Stream(problem, random, initialState, ct).GetEnumerator();
-        }
+        // Each restart builds fresh executors in a child scope of its own, from the graph this entry built once.
+        private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct) =>
+            ParentRegistry.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(tracked)
+                .Stream(problem, random, initialState, ct).GetEnumerator();
     }
 
-    /// <summary>
-    /// Reports one contender's evaluations to its own performance observer, without affecting sibling contenders.
-    /// </summary>
-    private sealed class PerformanceTrackingEvaluatorAdvice(PerformanceTrackingEvaluatorObserver observer)
-        : EvaluatorAdvice<TCandidate>
-    {
-        protected override void Check<TRunSearchSpace, TRunProblem>(IOperator<Evaluation, TCandidate> evaluator)
-        {
-            if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-                throw ExecutionSignature.Mismatch(this, ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)), ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        protected override IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>
-            Wrap<TRunSearchSpace, TRunProblem>(IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> executor,
-                IOperator<Evaluation, TCandidate> evaluator) =>
-            new PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(executor, observer);
-    }
-
-    private sealed class PerformanceTrackingEvaluationExecutor<TRunSearchSpace, TRunProblem>(
-        IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem> innerEvaluator,
-        PerformanceTrackingEvaluatorObserver observer)
-        : IEvaluationExecutor<TCandidate, TRunSearchSpace, TRunProblem>, IExecutorControlProvider
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, HEAL.HeuristicLib.Problems.IProblem<TCandidate, TRunSearchSpace>
-    {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TRunSearchSpace searchSpace, TRunProblem problem)
-        {
-            var objectiveVectors = innerEvaluator.Evaluate(candidates, random, searchSpace, problem);
-            observer.AfterEvaluation(objectiveVectors, candidates, (TProblem)(object)problem);
-            return objectiveVectors;
-        }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(innerEvaluator);
-    }
-
+    /// <summary>Tracks one contender's evaluations, without affecting sibling contenders.</summary>
     private sealed class PerformanceTrackingEvaluatorObserver
     {
         private readonly int modelObservationInterval;
@@ -489,13 +457,14 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         public int ModelObservationCount => CurveModel.ObservationCount;
         public OnlineWeibullCurveModel CurveModel { get; } = new();
 
-        public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TProblem problem)
+        public void AfterEvaluation(EvaluationObservation<TCandidate> evaluation)
         {
-            EvaluatedCandidateCount += candidates.Count;
+            var objectiveVectors = evaluation.ObjectiveVectors;
+            EvaluatedCandidateCount += evaluation.Candidates.Count;
             if (objectiveVectors.Count == 0)
                 return;
 
-            var comparer = GetComparer(problem.Objective);
+            var comparer = GetComparer(evaluation.Problem.Objective);
             var batchBest = objectiveVectors.MinBy(x => x, comparer)!;
             if (CurrentBestObjectiveVector is null || comparer.Compare(batchBest, CurrentBestObjectiveVector) < 0)
                 CurrentBestObjectiveVector = batchBest;

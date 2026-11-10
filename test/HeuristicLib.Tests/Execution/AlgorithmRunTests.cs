@@ -223,21 +223,6 @@ public class AlgorithmRunTests
     }
 
     [Fact]
-    public void AnAnalyzerWrappingDirectly_ObservesInTheOrderItWasAttached()
-    {
-        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var algorithm = new AdditiveStepAlgorithm(1);
-        var observed = new List<string>();
-
-        _ = algorithm.Advised(new ObservingAnalyzer(algorithm.Evaluator, () => observed.Add("first")), new WrappingAnalyzer(algorithm.Evaluator, () => observed.Add("second"))).CreateRun(problem, RandomNumberGenerator.Create(42))
-                     .Complete(cancellationToken: TestContext.Current.CancellationToken);
-
-        // Both bind as modules, so the one attached first sits innermost and observes first. Recorded as
-        // configuration, the direct wrapper would sit inside every module whatever the attachment order.
-        observed.ShouldBe(["first", "second"]);
-    }
-
-    [Fact]
     public void TheSameAspectAddedTwice_ChecksItsAdviceOnce()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
@@ -281,43 +266,6 @@ public class AlgorithmRunTests
         public CheckCountingAspect()
         {
             Advices = [(Pointcut.OfType<IOperator<Evaluation, int>>(), new CheckingEvaluatorAdvice(() => CheckCount++))];
-        }
-    }
-
-    private sealed class ObservingAnalyzer : Aspect
-    {
-        public ObservingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
-        {
-            Advices = [.. Aspect.Observe(evaluator.Invocations, _ => observed())];
-        }
-    }
-
-    private sealed class WrappingAnalyzer : Aspect
-    {
-        public WrappingAnalyzer(IOperator<Evaluation, int> evaluator, Action observed)
-        {
-            Advices = [(Pointcut.Reference(evaluator), new ObservingEvaluatorAdvice(observed))];
-        }
-    }
-
-    private sealed class ObservingEvaluatorAdvice(Action observed) : EvaluatorAdvice<int>
-    {
-        protected override IEvaluationExecutor<int, TSearchSpace, TProblem> Wrap<TSearchSpace, TProblem>(
-            IEvaluationExecutor<int, TSearchSpace, TProblem> executor, IOperator<Evaluation, int> evaluator) =>
-            new Executor<TSearchSpace, TProblem>(executor, observed);
-
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> executor, Action observed)
-            : IEvaluationExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
-        {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
-                TSearchSpace searchSpace, TProblem problem)
-            {
-                var objectiveVectors = executor.Evaluate(candidates, random, searchSpace, problem);
-                observed();
-                return objectiveVectors;
-            }
         }
     }
 

@@ -32,9 +32,6 @@ public abstract class ObservationSource<TObservation>
     /// <summary>Creates the substitution that records this source's observations into the instrument, wherever a graph holds the configuration.</summary>
     /// <remarks>Each call creates a new substitution.</remarks>
     public abstract Substitution RecordingInto(IObservationInstrument<TObservation> instrument);
-
-    // Creates an aspect that passes each observation of the configuration to the callback.
-    internal abstract Aspect Observe(Action<TObservation> callback);
 }
 
 /// <summary>The observations of one operator's successful calls for one operation, such as <c>mutator.Invocations</c>.</summary>
@@ -46,14 +43,11 @@ public abstract class ObservationSource<TObservation>
 public sealed class InvocationSource<TOperation, TCandidate, TObservation> : ObservationSource<TObservation>
     where TOperation : IOperation<TOperation>
 {
-    private readonly Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> advise;
-    private readonly Func<IObservationInstrument<TObservation>, Substitution>? recordingInto;
+    private readonly Func<IObservationInstrument<TObservation>, Substitution> recordingInto;
 
-    internal InvocationSource(IOperator<TOperation, TCandidate> source, Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> advise,
-        Func<IObservationInstrument<TObservation>, Substitution>? recordingInto = null)
+    internal InvocationSource(IOperator<TOperation, TCandidate> source, Func<IObservationInstrument<TObservation>, Substitution> recordingInto)
     {
         Operator = source;
-        this.advise = advise;
         this.recordingInto = recordingInto;
     }
 
@@ -78,14 +72,7 @@ public sealed class InvocationSource<TOperation, TCandidate, TObservation> : Obs
     public Duration Duration(TimeProvider? timeProvider = null) =>
         new(timeProvider, duration => Substitution.Of(Operator, node => node.Timed(duration)));
 
-    public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
-        recordingInto is null
-            ? throw new InvalidOperationException($"This source of {Operator.GetType().Name} was created from an advice factory, so only Aspect.Observe can use it. " +
-                $"Create it from a record implementing {nameof(IInvocationObservation<,,>)} to place it.")
-            : recordingInto(instrument);
-
-    internal override Aspect Observe(Action<TObservation> callback) =>
-        Aspect.Create(Pointcut.Reference(Operator), advise(callback));
+    public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) => recordingInto(instrument);
 }
 
 public static class ObservationSource
@@ -95,21 +82,19 @@ public static class ObservationSource
     public static InvocationSource<TOperation, TCandidate, TObservation> Create<TOperation, TCandidate, TObservation>(IOperator<TOperation, TCandidate> configuration)
         where TOperation : IOperation<TOperation>
         where TObservation : IInvocationObservation<TOperation, TCandidate, TObservation> =>
-        new(configuration, static observe => new ObservationAdvice<TOperation, TCandidate, TObservation>(observe),
+        new(configuration,
             instrument => Substitution.Of<IOperator<TOperation, TCandidate>>(configuration, node => new Observed<TOperation, TCandidate, TObservation>(node, instrument)));
 
-    /// <summary>Creates a source that only <c>Aspect.Observe</c> can use, observing any value.</summary>
-    /// <param name="configuration">The observed operator, matched by reference.</param>
-    /// <param name="observe">Creates the advice whose wrapper passes each observation of a call to the given callback.</param>
-    public static InvocationSource<TOperation, TCandidate, TObservation> Create<TOperation, TCandidate, TObservation>(
-        IOperator<TOperation, TCandidate> configuration, Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> observe)
-        where TOperation : IOperation<TOperation> =>
-        new(configuration, observe);
-
     /// <summary>Creates the source of the observations of a role of your own, such as a cooling schedule.</summary>
+    /// <remarks>
+    /// An operation is the recommended form of a new role, because it gets <c>Invocations</c>, <c>Observed</c>,
+    /// <c>Counted</c>, <c>Timed</c> and <c>Retry</c>. A trace over this source holds the placement function, so a
+    /// configuration it is placed in is not serializable.
+    /// </remarks>
     /// <typeparam name="TConfiguration">
     /// The type of the slots holding the configuration. Use the role's interface, because the wrapper must fit the slot.
     /// </typeparam>
+    /// <typeparam name="TObservation">What the role's wrapper records.</typeparam>
     /// <param name="configuration">The observed configuration, matched by reference.</param>
     /// <param name="place">
     /// Creates the role's own observation wrapper around a configuration, recording into the instrument through
@@ -129,9 +114,35 @@ public static class ObservationSource
 
         public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
             Substitution.Of(configuration, node => place(node, instrument));
+    }
+}
 
-        internal override Aspect Observe(Action<TObservation> callback) =>
-            throw new InvalidOperationException($"A source of the role {typeof(TConfiguration).Name} is placed with AnalyzedBy or Observing, not with Aspect.Observe.");
+/// <summary>Passes the observations of a source to a callback.</summary>
+/// <remarks>
+/// It belongs to inspection rather than analysis, because it derives and publishes nothing, so content such as a meta
+/// algorithm that tracks its contenders can use it.
+/// </remarks>
+public static class ObservationCallbacks
+{
+    extension<TObservation>(ObservationSource<TObservation> source)
+    {
+        /// <summary>Creates an instrument that passes each observation of this source to the callback.</summary>
+        /// <remarks>
+        /// Place it with <c>AnalyzedBy</c> or <c>Substitute</c>. The callback runs on the thread that made the observation.
+        /// A configuration holding it is not serializable, as with every instrument that holds a delegate.
+        /// </remarks>
+        public Instrument Observing(Action<TObservation> callback) => new CallbackInstrument<TObservation>(source, callback);
+    }
+
+    // Passes each observation of a source to a callback; it collects no result.
+    private sealed class CallbackInstrument<TObservation>(ObservationSource<TObservation> source, Action<TObservation> callback)
+        : Instrument<Action<TObservation>>, IObservationInstrument<TObservation>
+    {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [source.RecordingInto(this)];
+
+        public Action<TObservation> CreateRecorder(RunResults results) => callback;
+
+        protected override Action<TObservation> CreateResult(RunResults results) => callback;
     }
 }
 
@@ -145,18 +156,4 @@ public interface IObservationInstrument<in TObservation>
 {
     /// <summary>Creates the callback that records one observation into this run's result.</summary>
     Action<TObservation> CreateRecorder(RunResults results);
-}
-
-public static class ObservationSourceExtensions
-{
-    extension(Aspect)
-    {
-        /// <summary>Passes each observation of the source to the callback.</summary>
-        /// <remarks>
-        /// The callback runs on the thread that made the observation: after the observed invocation returned, after the
-        /// algorithm yielded, or where the configuration published.
-        /// </remarks>
-        public static Aspect Observe<TObservation>(ObservationSource<TObservation> source, Action<TObservation> observe) =>
-            source.Observe(observe);
-    }
 }

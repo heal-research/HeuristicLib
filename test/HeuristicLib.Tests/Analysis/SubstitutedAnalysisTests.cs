@@ -479,16 +479,6 @@ public class SubstitutedAnalysisTests
         run.Result(iterations).CurrentCount.ShouldBe(4);
     }
 
-    // A source that only advice can use says so instead of placing nothing.
-    [Fact]
-    public void ASourceFromAnAdviceFactory_ReportsThatItCannotBePlaced()
-    {
-        var (_, m) = NewMutator();
-        var source = ObservationSource.Create(m, (Action<int> _) => new NoAdvice());
-
-        Should.Throw<InvalidOperationException>(() => source.Trace(value => value).Substitutions).Message.ShouldContain("Aspect.Observe");
-    }
-
     private static List<string> States(IAlgorithm<RealVector, PopulationState<RealVector>> algorithm, TestFunctionProblem problem) =>
         [.. Enumerable.Select(algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: Ct),
             static state => string.Join(";", state.Population.Select(static member => $"{member.Candidate}|{member.ObjectiveVector}")))];
@@ -538,10 +528,5 @@ public class SubstitutedAnalysisTests
 
             public int Read(IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => ++value;
         }
-    }
-
-    private sealed class NoAdvice : OperatorAdvice<Evaluation, int>
-    {
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation, IOperator<Evaluation, int> source) => executor;
     }
 }

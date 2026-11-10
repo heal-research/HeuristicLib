@@ -23,7 +23,7 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.Advised(analysis1, analysis2).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.AnalyzedBy(analysis1, analysis2).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -54,9 +54,17 @@ public class CycleAlgorithmAnalysisTests
     {
         public int Candidate { get; }
 
-        public IOperator<Evaluation, int> Evaluator { get; }
+        public IOperator<Evaluation, int> Evaluator { get; init; }
 
-        public IOperator<Interception<PopulationState<int>>, int> Interceptor { get; }
+        public IOperator<Interception<PopulationState<int>>, int> Interceptor { get; init; }
+
+        public static Parameter<SingleStepAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+        public static Parameter<SingleStepAlgorithm, IOperator<Interception<PopulationState<int>>, int>> InterceptorParameter { get; } =
+            new(nameof(Interceptor), static algorithm => algorithm.Interceptor, static (algorithm, value) => algorithm with { Interceptor = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter, InterceptorParameter];
 
         public SingleStepAlgorithm(int candidate, IOperator<Evaluation, int> evaluator, IOperator<Interception<PopulationState<int>>, int> interceptor)
         {
@@ -93,15 +101,20 @@ public class CycleAlgorithmAnalysisTests
         }
     }
 
+    // An analyzer of its own, built on Observing.
     private sealed class EvaluationTraceAnalysis
-        : Aspect
+        : ISubstitutionBundle
     {
+        private readonly Instrument observing;
+
         public State Result { get; } = new();
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
+            observing = evaluator.Invocations.Observing(Record);
         }
+
+        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
 
         public void Record(EvaluationObservation<int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);

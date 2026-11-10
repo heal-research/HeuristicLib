@@ -82,20 +82,21 @@ public sealed partial class OperatorPreparationSpecs
         ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> scope, IOperator<ReadValue, RealVector> source) =>
         (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(source);
 
-    private static InvocationSource<ReadValue, RealVector, int> ReadSource(CountingSource source) =>
-        ObservationSource.Create((IOperator<ReadValue, RealVector>)source, (Action<int> observe) => new ReadObservationAdvice(observe));
+    private static InvocationSource<ReadValue, RealVector, ReadObservation> ReadSource(CountingSource source) =>
+        ObservationSource.Create<ReadValue, RealVector, ReadObservation>(source);
 
-    private sealed class ReadObservationAdvice(Action<int> observe) : OperatorAdvice<ReadValue, RealVector>
+    private sealed record ReadObservation : IInvocationObservation<ReadValue, RealVector, ReadObservation>
     {
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, OperationInfo operation,
-            IOperator<ReadValue, RealVector> source) => operation.Wrap(executor, new Reporter(observe));
+        static IExecutor IInvocationObservation<ReadValue, RealVector, ReadObservation>.Wrap<TSearchSpace, TProblem, TSearchState>(
+            IExecutor executor, IOperator<ReadValue, RealVector> source, Action<ReadObservation> record) =>
+            OperationInfo.For<ReadValue, RealVector, TSearchSpace, TProblem, TSearchState>().Wrap(executor, new Reporter(record));
 
-        private readonly struct Reporter(Action<int> observe) : IInvocationWrapper
+        private readonly struct Reporter(Action<ReadObservation> record) : IInvocationWrapper
         {
             public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
             {
                 var result = invocation.Proceed();
-                observe(1);
+                record(new ReadObservation());
                 return result;
             }
         }

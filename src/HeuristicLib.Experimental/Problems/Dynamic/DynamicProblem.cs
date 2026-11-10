@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -21,6 +19,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     Problem<TSelf, TCandidate, TSearchSpace>,
     IDynamicProblem<TCandidate, TSearchSpace>,
     IUpdateRequestable,
+    IIterationUpdatable,
     IDisposable
     where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -120,18 +119,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// </summary>
     protected abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, int epoch);
 
-    /// <summary>
-    /// Creates the module that applies deferred updates at an algorithm's iteration boundary. Pass it to run creation.
-    /// </summary>
-    /// <remarks>
-    /// Only <see cref="UpdatePolicy.AfterEachIteration"/> needs this, because an iteration belongs to an algorithm
-    /// rather than to the problem. Every other policy needs nothing installed.
-    /// </remarks>
-    public Aspect CreateIterationUpdateAspect<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
-        where TSearchState : class, ISearchState =>
-        Aspect.Observe(algorithm.Iterations, _ => CompleteIteration());
-
-    internal void CompleteIteration()
+    void IIterationUpdatable.CompleteIteration()
     {
         if (updatePolicy == UpdatePolicy.AfterEachIteration)
         {
@@ -250,4 +238,17 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
 internal interface IUpdateRequestable
 {
     void RequestUpdate(int expectedEpoch);
+}
+
+/// <summary>
+/// Lets <see cref="IterationUpdatingAlgorithm{TCandidate, TSearchState}"/> end an iteration on the dynamic problem of the
+/// call it wraps, which it knows only by the run's problem type.
+/// </summary>
+/// <remarks>
+/// Internal, because an iteration ends when the algorithm yields a state, not when a caller says so.
+/// </remarks>
+internal interface IIterationUpdatable
+{
+    /// <summary>Applies the pending updates if the update policy waits for the end of an iteration.</summary>
+    void CompleteIteration();
 }

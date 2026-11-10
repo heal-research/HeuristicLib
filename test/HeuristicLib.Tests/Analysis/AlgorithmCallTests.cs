@@ -16,7 +16,7 @@ public sealed class AlgorithmCallTests
     {
         var algorithm = new ScriptedAlgorithm(States: 2);
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
-        var executor = Resolve(ObservingCalls(algorithm, events), algorithm);
+        var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
         await using var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
@@ -38,7 +38,7 @@ public sealed class AlgorithmCallTests
         var algorithm = new ScriptedAlgorithm(States: 1, Failure: new InvalidOperationException("Step failed."));
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
 
-        await Should.ThrowAsync<InvalidOperationException>(() => Run(Resolve(ObservingCalls(algorithm, events), algorithm)));
+        await Should.ThrowAsync<InvalidOperationException>(() => Run(Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events))));
 
         events.Select(call => (call.Event, call.Iterations)).ShouldBe([(AlgorithmCallEvent.Started, 0L), (AlgorithmCallEvent.Failed, 1L)]);
     }
@@ -49,7 +49,7 @@ public sealed class AlgorithmCallTests
         var algorithm = new ScriptedAlgorithm(States: 1, Failure: new OperationCanceledException());
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
 
-        await Should.ThrowAsync<OperationCanceledException>(() => Run(Resolve(ObservingCalls(algorithm, events), algorithm)));
+        await Should.ThrowAsync<OperationCanceledException>(() => Run(Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events))));
 
         events.Select(call => call.Event).ShouldBe([AlgorithmCallEvent.Started, AlgorithmCallEvent.Stopped]);
     }
@@ -59,7 +59,7 @@ public sealed class AlgorithmCallTests
     {
         var algorithm = new ScriptedAlgorithm(States: 3);
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
-        var executor = Resolve(ObservingCalls(algorithm, events), algorithm);
+        var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
 
         await using (var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
                          .GetAsyncEnumerator(TestContext.Current.CancellationToken))
@@ -170,7 +170,7 @@ public sealed class AlgorithmCallTests
         var algorithm = new FailingToStartAlgorithm();
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
 
-        await Should.ThrowAsync<InvalidOperationException>(() => Run(Resolve(ObservingCalls(algorithm, events), algorithm)));
+        await Should.ThrowAsync<InvalidOperationException>(() => Run(Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events))));
 
         events.Select(call => call.Event).ShouldBe([AlgorithmCallEvent.Started, AlgorithmCallEvent.Failed]);
     }
@@ -180,7 +180,7 @@ public sealed class AlgorithmCallTests
     {
         var algorithm = new FailingDisposalAlgorithm();
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
-        var executor = Resolve(ObservingCalls(algorithm, events), algorithm);
+        var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
         var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await states.MoveNextAsync()).ShouldBeTrue();
@@ -190,12 +190,8 @@ public sealed class AlgorithmCallTests
         events.Select(call => call.Event).ShouldBe([AlgorithmCallEvent.Started, AlgorithmCallEvent.Stopped]);
     }
 
-    private static ResolutionScope ObservingCalls(IAlgorithm<int, PopulationState<int>> algorithm, List<AlgorithmCallObservation<int, PopulationState<int>>> events)
-    {
-        var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Observe(algorithm.Calls, events.Add));
-        return scope;
-    }
+    private static IAlgorithm<int, PopulationState<int>> ObservingCalls(IAlgorithm<int, PopulationState<int>> algorithm, List<AlgorithmCallObservation<int, PopulationState<int>>> events) =>
+        algorithm.AnalyzedBy(algorithm.Calls.Observing(events.Add));
 
     private static IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Resolve(
         ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm) =>

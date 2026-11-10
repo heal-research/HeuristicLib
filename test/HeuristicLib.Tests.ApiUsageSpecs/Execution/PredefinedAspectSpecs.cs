@@ -55,21 +55,16 @@ public sealed class PredefinedAspectSpecs
             (refiner, refiner.Invocations.CountCandidates()),
             (selector, selector.Invocations.CountCandidates()),
             (replacer, replacer.Invocations.CountCandidates()),
-            (algorithm, algorithm.Iterations.Count())
-        ];
-        (IConfigurationNode Source, Aspect Aspect)[] aspects =
-        [
-            (algorithm, Aspect.Observe(algorithm.Iterations, _ => { })),
-            (crossover, Aspect.Observe(crossover.Invocations, _ => { })),
-            (evaluator, Aspect.Observe(evaluator.Invocations, _ => { })),
-            (mutator, Aspect.Observe(mutator.Invocations, _ => { })),
-            (interceptor, Aspect.Observe(interceptor.Invocations, _ => { }))
+            (algorithm, algorithm.Iterations.Count()),
+            (algorithm, algorithm.Iterations.Observing(_ => { })),
+            (crossover, crossover.Invocations.Observing(_ => { })),
+            (evaluator, evaluator.Invocations.Observing(_ => { })),
+            (mutator, mutator.Invocations.Observing(_ => { })),
+            (interceptor, interceptor.Invocations.Observing(_ => { }))
         ];
 
         foreach (var (source, analyzer) in analyzers)
             source.Substitute(analyzer).ShouldNotBeSameAs(source);
-        foreach (var (source, aspect) in aspects)
-            aspect.ShouldHaveSingleItem().Pointcut.Matches(source).ShouldBeTrue();
 
         results.Elapsed.ShouldBe(TimeSpan.Zero);
     }

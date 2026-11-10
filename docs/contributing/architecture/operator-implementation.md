@@ -179,7 +179,7 @@ An operation is observable once it declares two parts beside the operation, as e
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
 
-`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `Aspect.Observe(estimator.Invocations, …)` then work as they do for built-in operations. `Wrap` casts because it receives the executor untyped, and resolution has already checked that the executor performs the operation.
+`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `estimator.Invocations.Observing(…)` then work as they do for built-in operations. `Wrap` casts because it receives the executor untyped, and resolution has already checked that the executor performs the operation.
 
 ## Scaffolding roles and cross-cutting concerns
 

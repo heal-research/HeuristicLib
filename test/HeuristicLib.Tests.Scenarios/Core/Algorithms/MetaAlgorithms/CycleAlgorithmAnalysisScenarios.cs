@@ -67,7 +67,7 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.Advised(evaluationTrace1, evaluationTrace2, interceptionTrace).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = cycleAlgorithm.AnalyzedBy(evaluationTrace1, evaluationTrace2, interceptionTrace).CreateRun(problem, RandomNumberGenerator.Create(0));
         var finalState = run.Complete();
 
         return new CycleRunResult(
@@ -114,9 +114,17 @@ public class CycleAlgorithmAnalysisScenarios
     {
         public int Candidate { get; }
 
-        public IOperator<Evaluation, int> Evaluator { get; }
+        public IOperator<Evaluation, int> Evaluator { get; init; }
 
-        public IOperator<Interception<PopulationState<int>>, int> Interceptor { get; }
+        public IOperator<Interception<PopulationState<int>>, int> Interceptor { get; init; }
+
+        public static Parameter<SingleStepAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+        public static Parameter<SingleStepAlgorithm, IOperator<Interception<PopulationState<int>>, int>> InterceptorParameter { get; } =
+            new(nameof(Interceptor), static algorithm => algorithm.Interceptor, static (algorithm, value) => algorithm with { Interceptor = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter, InterceptorParameter];
 
         public SingleStepAlgorithm(int candidate, IOperator<Evaluation, int> evaluator, IOperator<Interception<PopulationState<int>>, int> interceptor)
         {
@@ -153,15 +161,20 @@ public class CycleAlgorithmAnalysisScenarios
         }
     }
 
+    // An analyzer of its own, built on Observing.
     private sealed class EvaluationTraceAnalysis
-        : Aspect
+        : ISubstitutionBundle
     {
+        private readonly Instrument observing;
+
         public State Result { get; } = new();
 
         public EvaluationTraceAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = [.. Aspect.Observe(evaluator.Invocations, Record)];
+            observing = evaluator.Invocations.Observing(Record);
         }
+
+        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
 
         public void Record(EvaluationObservation<int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
@@ -180,14 +193,18 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed class InterceptionTraceAnalysis
-        : Aspect
+        : ISubstitutionBundle
     {
+        private readonly Instrument observing;
+
         public State Result { get; } = new();
 
         public InterceptionTraceAnalysis(IOperator<Interception<PopulationState<int>>, int> interceptor)
         {
-            Advices = [.. Aspect.Observe(interceptor.Invocations, Record)];
+            observing = interceptor.Invocations.Observing(Record);
         }
+
+        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
 
         public void Record(InterceptionObservation<int, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);

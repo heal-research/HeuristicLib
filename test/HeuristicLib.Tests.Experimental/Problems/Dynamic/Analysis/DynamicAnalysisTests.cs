@@ -100,7 +100,7 @@ public class DynamicAnalysisTests
     }
 
     [Fact]
-    public void AfterEachIterationPolicy_UpdatesAtTheIterationBoundaryOfTheNamedAlgorithm()
+    public void AfterEachIterationPolicy_UpdatesAtTheIterationBoundaryOfTheWrappedAlgorithm()
     {
         var problem = new IntegerDynamicProblem(epochLength: 2, UpdatePolicy.AfterEachIteration);
         var algorithm = new BatchEvaluationAlgorithm([
@@ -109,12 +109,57 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.Advised(problem.CreateIterationUpdateAspect(algorithm)).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.ApplyingIterationUpdates().CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         problem.Updates.ShouldBe(2);
         problem.CurrentEpoch.ShouldBe(2);
+    }
+
+    // A caller paused on a state has seen the updates of that state's iteration; one requested while it is paused waits
+    // for the end of the next iteration, so the next batch is still scored against the old environment.
+    [Fact]
+    public void IterationUpdates_AreAppliedBeforeTheStateIsYielded()
+    {
+        var problem = new IntegerDynamicProblem(epochLength: 100, UpdatePolicy.AfterEachIteration);
+        var algorithm = new BatchEvaluationAlgorithm([[1], [2]]).ApplyingIterationUpdates();
+        using var states = algorithm.Stream(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator();
+
+        states.MoveNext().ShouldBeTrue();
+        problem.RequestUpdate();
+        problem.CurrentEpoch.ShouldBe(0);
+
+        states.MoveNext().ShouldBeTrue();
+        problem.CurrentEpoch.ShouldBe(1);
+        problem.ScoredAgainst.ShouldBe([0, 0]);
+    }
+
+    [Fact]
+    public void IterationUpdates_AreNotAppliedAfterTheStreamIsDisposed()
+    {
+        var problem = new IntegerDynamicProblem(epochLength: 100, UpdatePolicy.AfterEachIteration);
+        var algorithm = new BatchEvaluationAlgorithm([[1], [2]]).ApplyingIterationUpdates();
+        using (var states = algorithm.Stream(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator())
+        {
+            states.MoveNext().ShouldBeTrue();
+            problem.RequestUpdate();
+        }
+
+        problem.CurrentEpoch.ShouldBe(0);
+        problem.Updates.ShouldBe(0);
+    }
+
+    [Fact]
+    public void IterationUpdates_SupportOnlyDynamicProblems()
+    {
+        var algorithm = new AnyProblemAlgorithm();
+        var dynamic = ExecutionSignature.For<IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>();
+        var general = ExecutionSignature.For<IntegerSearchSpace, IProblem<int, IntegerSearchSpace>, PopulationState<int>>();
+
+        general.Supports(algorithm).ShouldBeTrue();
+        dynamic.Supports(algorithm.ApplyingIterationUpdates()).ShouldBeTrue();
+        general.Supports(algorithm.ApplyingIterationUpdates()).ShouldBeFalse();
     }
 
     [Fact]
@@ -298,6 +343,14 @@ public class DynamicAnalysisTests
                                                                 IntegerSearchSpace searchSpace,
                                                                 IntegerDynamicProblem problem) =>
             problem.Evaluate(candidates, random);
+    }
+
+    // Runs over every problem over integers, so only a wrapper restricts the problems it supports. It is never run.
+    private sealed record AnyProblemAlgorithm : Algorithm<AnyProblemAlgorithm, int, PopulationState<int>>
+    {
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            throw new NotSupportedException();
     }
 
     private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)

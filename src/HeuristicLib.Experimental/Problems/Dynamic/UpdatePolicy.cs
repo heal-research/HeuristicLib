@@ -21,8 +21,7 @@ public enum UpdatePolicy
     AfterEachBatchEvaluation,
 
     /// <summary>
-    /// After one iteration of the algorithm named by
-    /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}.CreateIterationUpdateAspect"/>, which this policy needs.
+    /// After one iteration of an algorithm wrapped by <c>ApplyingIterationUpdates()</c>, which this policy needs.
     /// </summary>
     AfterEachIteration
 }

@@ -23,7 +23,7 @@ The built in composition overview is:
 | Logical composition                  | Combines child conditions with short circuit Boolean logic                                                    | `AnyTerminator`, `AllTerminator`                                                                            | Terminators                                                  |
 | Fallback composition                 | Handles part of a request directly and delegates the remainder                                                | `PredefinedCandidatesCreator`                                                                               | Creators                                                     |
 | Specialized coordination             | Applies a policy whose meaning depends on one operator contract                                               | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                                     |
-| Inspection                           | Wraps a selected execution boundary to observe, count or measure calls                                        | `Aspect.Observe`, source counters and source durations                                                      | Role-specific observations; counting and timing across roles |
+| Inspection                           | Wraps a selected execution boundary to observe, count or measure calls                                        | `Observing`, source counters and source durations                                                           | Role-specific observations; counting and timing across roles |
 
 A missing helper usually means that the role does not provide the inputs needed by that policy or that the intermediate result has no single clear meaning. It does not prohibit authors from implementing a domain specific composition with explicit semantics.
 
@@ -389,7 +389,7 @@ These types should document their own batching, state and cardinality behavior b
 
 ## Observation and inspection boundaries
 
-Source counters, durations and analyzers, attached with `AnalyzedBy`, add `Counted`, `Timed` or `Observed` wrappers around the configurations they select. `Aspect.Observe` selects existing configurations and wraps their executors without adding a configuration to the operator graph.
+Source counters, durations, analyzers and `Observing`, attached with `AnalyzedBy`, add `Counted`, `Timed` or `Observed` wrappers around the configurations they select.
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 
