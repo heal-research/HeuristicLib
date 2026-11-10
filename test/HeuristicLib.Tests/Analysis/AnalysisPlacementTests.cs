@@ -58,6 +58,33 @@ public sealed class AnalysisPlacementTests
     }
 
     [Fact]
+    public void ReadingACounterOfASourceNeverAttached_IsAnError()
+    {
+        var algorithm = new AdditiveStepAlgorithm(1);
+        var evaluations = algorithm.Evaluator.Invocations.Count();
+        var run = algorithm.CreateRun(Problem, RandomNumberGenerator.Create(1));
+
+        Should.Throw<InvalidOperationException>(() => run.Result(evaluations)).Message.ShouldContain("AnalyzedBy");
+        algorithm.AnalyzedBy(evaluations).CreateRun(Problem, RandomNumberGenerator.Create(1)).Result(evaluations).CurrentCount.ShouldBe(0);
+    }
+
+    // AnalyzedBy is Substitute under another name, so one Substitute call may mix analyzers and plain substitutions.
+    [Fact]
+    public void Substitute_TakesAnalyzersAndSubstitutionsInOneCall()
+    {
+        var algorithm = new AdditiveStepAlgorithm(1);
+        var evaluations = algorithm.Evaluator.Invocations.Count();
+        var trace = algorithm.Evaluator.Invocations.Trace(_ => 1, [evaluations]);
+        var marks = new Counter();
+        var mark = Substitution.Of(algorithm.Evaluator, node => node.Counted(marks));
+
+        var substituted = algorithm.Substitute(trace, mark);
+
+        substituted.ShouldBe(algorithm with { Evaluator = algorithm.Evaluator.Counted(marks).Counted(evaluations).Observed(trace) });
+        algorithm.AnalyzedBy(trace, mark).ShouldBe(substituted);
+    }
+
+    [Fact]
     public void AnAttachedDefinition_IsReadableBeforeTheRunReachesIt()
     {
         var algorithm = new AdditiveStepAlgorithm(1);
@@ -68,11 +95,12 @@ public sealed class AnalysisPlacementTests
     }
 
     [Fact]
-    public void AnInstrumentThatNeedsNoPlacement_IsReadable()
+    public void ADefinitionThatNeedsNoPlacement_IsReadable()
     {
         var run = new AdditiveStepAlgorithm(1).CreateRun(Problem, RandomNumberGenerator.Create(1));
 
         run.Result(new NoPlacement()).ShouldNotBeNull();
+        run.Result(new Counter()).CurrentCount.ShouldBe(0);
     }
 
     [Fact]

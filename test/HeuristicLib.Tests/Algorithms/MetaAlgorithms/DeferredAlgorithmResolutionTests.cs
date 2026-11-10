@@ -11,7 +11,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
 using HEAL.HeuristicLib.Algorithms.Obsolete;
-using HEAL.HeuristicLib.Inspection.Obsolete;
 
 public sealed class DeferredAlgorithmResolutionTests
 {

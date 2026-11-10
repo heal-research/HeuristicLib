@@ -143,12 +143,8 @@ public static class AlgorithmCalls
         where TSearchState : class, ISearchState
     {
         /// <summary>Creates a counter of the calls that started, so a call's number is known when it begins and a stopped call counts.</summary>
-        public AlgorithmCounter Count() =>
-            new CallCounter<TCandidate, TSearchState>(calls.Algorithm);
+        public Counter Count() =>
+            new(counter => Substitution.Of(calls.Algorithm,
+                node => new CountedAlgorithm<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>(node, counter)));
     }
-
-    internal static AlgorithmAdvice<TCandidate, TSearchState> Advise<TCandidate, TSearchState>(
-        Action<AlgorithmCallObservation<TCandidate, TSearchState>> observe)
-        where TSearchState : class, ISearchState =>
-        new AlgorithmObservationAdvice<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>(observe);
 }

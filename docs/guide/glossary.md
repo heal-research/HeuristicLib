@@ -646,7 +646,7 @@ Status: `Canonical`
 
 An instrument is an immutable definition of one typed result per run and the substitutions that place what collects into it. `Instrument<TResult>` creates the result on the first lookup. Definitions use reference identity. Several placements within one run share its result; another run creates independent data.
 
-Attach instruments through `AnalyzedBy` or explicit placement such as `Observed`, `Counted` or `Timed`.
+Attach instruments through `AnalyzedBy` or explicit placement such as `Observed`.
 
 See also: Analyzer, Clock, Run result.
 
@@ -770,6 +770,16 @@ See [execution resolution](/contributing/architecture/execution-resolution#share
 
 See also: Configuration, Executor, Resolution scope.
 
+### Substitution bundle
+
+Status: `Provisional`
+
+A substitution bundle is an ordered, flat list of substitutions that belong together, such as the placement of a trace together with its clocks. `ISubstitutionBundle` represents it. A single `Substitution` is a bundle of one, and traces, counters, durations and custom clocks are bundles of the substitutions that place them. `Substitute` takes bundles and applies their substitutions one after another; `AnalyzedBy` is the same call for analysis. A substitution listed twice in one call applies once, at its last position.
+
+The type name is a working name.
+
+See also: Analyzer, Clock, Instrument.
+
 ### Wrapper chain
 
 Status: `Canonical`
@@ -840,7 +850,7 @@ See also: Executor, Run.
 
 Status: `Canonical`
 
-An analyzer is an immutable instrument definition that derives data from selected execution boundaries. Each run creates its own collector and typed result, obtained through `run.Result(analyzer)`. Attach the definition with `AnalyzedBy` or explicit observation placement.
+An analyzer is an immutable instrument definition that derives data from selected execution boundaries. Each run creates its own collector and typed result, obtained through `run.Result(analyzer)`. Attach the definition with `AnalyzedBy` or explicit observation placement. An analyzer is a [substitution bundle](#substitution-bundle) of its placement, which is what `AnalyzedBy` takes.
 
 A trace result supports live reads and immutable snapshots. An accumulating result publishes its domain accumulator and is read after execution has stopped. Reusing a definition across runs keeps their data independent.
 
@@ -902,7 +912,7 @@ Trace retention is an immutable policy that creates a separate `RetentionDecider
 
 Status: `Canonical`
 
-A clock defines one typed notion of time for a trace. `Clock<TTime, TResult>` is an instrument whose run-bound result is read as a time. Operator sources offer counters of calls or candidate work and durations; algorithm sources offer counters of iterations or started calls. `Clock.Elapsed` reads the root algorithm's active execution time. Custom clocks may read domain quantities such as dynamic-problem epochs.
+A clock defines one typed notion of time for a trace, which reads it through `IClock<TTime>`. Counters and durations are clocks. A custom clock derives from `Clock<TTime, TResult>`, an instrument whose run-bound result is read as a time. Operator sources offer counters of calls or candidate work and durations; algorithm sources offer counters of iterations or started calls and a duration of iterations. `Clock.Elapsed` reads the root algorithm's active execution time. Custom clocks may read domain quantities such as dynamic-problem epochs.
 
 A counter keeps progressing across executor activations within the run. Reusing its definition in another run creates independent state. A trace explicitly selects its clocks and is projected through those same definition references.
 

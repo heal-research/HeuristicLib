@@ -108,7 +108,7 @@ Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm
 
 Resolve the optional interceptor and every other configured child operator through the scope that `CreateExecutor` receives. Retain the resolved children on the executor. Do not call operator configurations directly from `ExecuteStep` or resolve children on every iteration.
 
-Keep private counters and adaptation data in executor fields. Keep caches in their executors; use `Sharing` to retain the executor across child scopes. Use `scope.Results.Result(instrument)` for a run-bound counter or analysis result. Keep iteration position, previous search state and invocation local values in the operation or iterator. A paused iterator retains its children, interceptor and run-bound results when another context constructs an executor. Never mutate the configuration record.
+Keep private counters and adaptation data in executor fields. Keep caches in their executors; use `Sharing` to retain the executor across child scopes. Resolve a counter or duration with `scope.Resolve(counter)`, and use `scope.Results.Result(instrument)` for an analysis result. Keep iteration position, previous search state and invocation local values in the operation or iterator. A paused iterator retains its children, interceptor and run-bound results when another context constructs an executor. Never mutate the configuration record.
 
 ## Preserve run behavior
 

@@ -31,7 +31,7 @@ public sealed class DurationMeasuringOperatorAdvice<TOperation, TCandidate> : Op
 }
 
 /// <summary>Adds the elapsed time of each call, including calls that fail, to the accumulator.</summary>
-file readonly struct DurationMeasurement(DurationAccumulator duration, TimeProvider timeProvider) : IInvocationWrapper
+internal readonly struct DurationMeasurement(DurationAccumulator duration, TimeProvider timeProvider) : IInvocationWrapper
 {
     public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
     {

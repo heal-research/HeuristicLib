@@ -75,12 +75,13 @@ public static class AlgorithmObservations
         where TSearchState : class, ISearchState
     {
         /// <summary>Creates a counter of the states the algorithm yields, which keeps counting across its calls.</summary>
-        public AlgorithmCounter Count() =>
-            new IterationCounter<TCandidate, TSearchState>(iterations.Algorithm);
-    }
+        public Counter Count() =>
+            new(counter => Substitution.Of(iterations.Algorithm,
+                node => new CountedAlgorithm<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>(node, counter)));
 
-    internal static AlgorithmAdvice<TCandidate, TSearchState> Advise<TCandidate, TSearchState>(
-        Action<AlgorithmObservation<TCandidate, TSearchState>> observe)
-        where TSearchState : class, ISearchState =>
-        new AlgorithmObservationAdvice<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>(observe);
+        /// <summary>Creates a duration adding up the time the algorithm spends advancing to each state, including failures.</summary>
+        /// <param name="timeProvider">Measures each advance. When omitted, the system clock does.</param>
+        public Duration Duration(TimeProvider? timeProvider = null) =>
+            new(timeProvider, duration => Substitution.Of(iterations.Algorithm, node => node.Timed(duration)));
+    }
 }

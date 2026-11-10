@@ -15,17 +15,17 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public sealed record AfterOperatorDurationTerminator<TCandidate> : Terminator<TCandidate>
 {
-    public AfterOperatorDurationTerminator(Duration duration, TimeSpan maximumDuration)
+    public AfterOperatorDurationTerminator(IConfigurationNode<DurationAccumulator> duration, TimeSpan maximumDuration)
     {
         Duration = duration;
         MaximumDuration = maximumDuration;
     }
 
-    public Duration Duration { get; init; }
+    public IConfigurationNode<DurationAccumulator> Duration { get; init; }
 
     public TimeSpan MaximumDuration { get; init; }
 
-    public static Parameter<AfterOperatorDurationTerminator<TCandidate>, Duration> DurationParameter { get; } =
+    public static Parameter<AfterOperatorDurationTerminator<TCandidate>, IConfigurationNode<DurationAccumulator>> DurationParameter { get; } =
         new(nameof(Duration), static terminator => terminator.Duration, static (terminator, value) => terminator with { Duration = value });
 
     public static Parameter<AfterOperatorDurationTerminator<TCandidate>, TimeSpan> MaximumDurationParameter { get; } =
@@ -36,7 +36,7 @@ public sealed record AfterOperatorDurationTerminator<TCandidate> : Terminator<TC
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) =>
-        new Executor(scope.Results.Result(Duration), MaximumDuration);
+        new Executor(scope.Resolve(Duration), MaximumDuration);
 
     private sealed class Executor(DurationAccumulator duration, TimeSpan maximumDuration) : TerminationExecutor<TCandidate>
     {
@@ -46,5 +46,5 @@ public sealed record AfterOperatorDurationTerminator<TCandidate> : Terminator<TC
 
 public static class AfterOperatorDurationTerminator
 {
-    public static AfterOperatorDurationTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, Duration duration, TimeSpan maximumDuration) => new(duration, maximumDuration);
+    public static AfterOperatorDurationTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, IConfigurationNode<DurationAccumulator> duration, TimeSpan maximumDuration) => new(duration, maximumDuration);
 }

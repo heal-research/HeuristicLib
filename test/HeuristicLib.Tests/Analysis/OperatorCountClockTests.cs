@@ -39,16 +39,15 @@ public class OperatorCountClockTests
         exception.Message.ShouldContain("reports none");
     }
 
-    // A candidate counter of another operation, placed explicitly on an operation without candidate work, fails when
-    // the wrapper is built and before its child is.
+    // Counting candidates, placed explicitly on an operation without candidate work, fails when the wrapper is built and
+    // before its child is.
     [Fact]
-    public void CountedWithACandidateCounter_RejectsAnOperationWithoutCandidateWorkBeforeBuildingIt()
+    public void CountedCandidates_RejectsAnOperationWithoutCandidateWorkBeforeBuildingIt()
     {
         var checksum = new ConstructionRecordingChecksum();
-        var candidates = new LengthScorer().Invocations.CountCandidates();
         var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
 
-        var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve(checksum.Counted(candidates)));
+        var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve(checksum.Counted(new Counter(), OperatorCountMetric.Candidates)));
 
         exception.Message.ShouldContain("reports none");
         checksum.Builds.ShouldBe(0);

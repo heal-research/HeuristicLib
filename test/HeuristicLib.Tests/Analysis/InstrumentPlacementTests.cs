@@ -13,7 +13,6 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
-using HEAL.HeuristicLib.Inspection.Obsolete;
 
 // An instrument attached with AnalyzedBy and the same instrument placed explicitly with a wrapper configuration collect
 // the same data into the run's one result. Each theory runs both paths over equivalent boundaries.
@@ -35,7 +34,7 @@ public sealed class InstrumentPlacementTests
         var scope = ResolutionScope.Create();
         var placed = attached
             ? evaluator.AnalyzedBy(invocations, candidates, duration)
-            : evaluator.Counted(invocations).Counted(candidates).Timed(duration);
+            : evaluator.Counted(invocations).Counted(candidates, OperatorCountMetric.Candidates).Timed(duration);
         var executor = Resolve(scope, placed);
 
         for (var call = 0; call < 4; call++)
@@ -82,7 +81,7 @@ public sealed class InstrumentPlacementTests
 
         var attached = algorithm.AnalyzedBy(best).CreateRun(problem, RandomNumberGenerator.Create(7));
         await attached.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var placed = (algorithm with { Evaluator = algorithm.Evaluator.Counted(evaluations).Observed(best) }).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var placed = (algorithm with { Evaluator = algorithm.Evaluator.Counted(evaluations, OperatorCountMetric.Candidates).Observed(best) }).CreateRun(problem, RandomNumberGenerator.Create(7));
         await placed.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var attachedTrace = attached.Result(best).By(evaluations);

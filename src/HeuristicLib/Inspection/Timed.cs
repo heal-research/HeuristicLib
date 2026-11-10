@@ -3,11 +3,8 @@ using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>Adds the time spent in each call of its child, including calls that fail, to the run's result of a duration.</summary>
-/// <remarks>
-/// This is the explicit placement of a duration: it measures what the duration's advice measures, through the same
-/// wrapper, but at the configuration it wraps rather than at the duration's source.
-/// </remarks>
+/// <summary>Adds the time spent in each call of its child, including calls that fail, to a duration.</summary>
+/// <remarks>A terminator reading the same duration sees this time wherever the wrapper is placed.</remarks>
 public sealed record Timed<TOperation, TCandidate> : WrappingOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
 {
@@ -25,8 +22,12 @@ public sealed record Timed<TOperation, TCandidate> : WrappingOperator<TOperation
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        ExplicitPlacement.Apply(scope, ChildOperator, new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(scope.Results.Result(Duration), Duration.TimeProvider));
+    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
+        var duration = scope.Resolve(Duration);
+        return operation.Wrap(scope.ResolveOperator(ChildOperator), new DurationMeasurement(duration, Duration.TimeProvider));
+    }
 }
 
 public static class TimedOperatorExtensions
@@ -34,7 +35,7 @@ public static class TimedOperatorExtensions
     extension<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
         where TOperation : IOperation<TOperation>
     {
-        /// <summary>Adds the time spent in this operator's calls to the run's result of the duration.</summary>
+        /// <summary>Adds the time spent in this operator's calls, including calls that fail, to the duration.</summary>
         public Timed<TOperation, TCandidate> Timed(Duration duration) => new(source, duration);
     }
 }

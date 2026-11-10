@@ -185,7 +185,7 @@ using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 ```
 
-Counters and durations are instrument definitions. They select the evaluator by reference and collect into one result per run:
+Counters and durations are configuration nodes created from the source they measure. They select the evaluator by reference and collect into one result per run:
 
 ```csharp
 var evaluator = algorithm.Evaluator;
@@ -383,7 +383,7 @@ These types should document their own batching, state and cardinality behavior b
 
 ## Observation and inspection boundaries
 
-Instruments create run-bound counting and timing advice; aspects can also attach observation callbacks. `Aspect.Observe`, source counters and source durations select existing configurations and wrap their executors; they do not add observation, counting or timing configurations to the operator graph.
+Source counters, durations and analyzers, attached with `AnalyzedBy`, add `Counted`, `Timed` or `Observed` wrappers around the configurations they select. `Aspect.Observe` selects existing configurations and wraps their executors without adding a configuration to the operator graph.
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 

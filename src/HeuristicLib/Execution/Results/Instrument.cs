@@ -2,14 +2,14 @@ using System.Runtime.CompilerServices;
 
 namespace HEAL.HeuristicLib.Execution;
 
-/// <summary>Defines one result per run, such as a counter or a trace, and where that result is collected.</summary>
+/// <summary>Defines one result per run, such as a trace, and where that result is collected.</summary>
 /// <remarks>
 /// An instrument holds immutable settings only. Each run creates its result at the first lookup and keeps it for the
 /// rest of the run, also after a failure, so every placement of the instrument in that run writes into one result.
 /// Instruments match by reference: two instruments with equal settings have separate results. Derive from
 /// <see cref="Instrument{TResult}"/>.
 /// </remarks>
-public abstract class Instrument
+public abstract class Instrument : ISubstitutionBundle
 {
     private IReadOnlyList<Substitution>? substitutions;
 
@@ -36,8 +36,8 @@ public abstract class Instrument
 /// <summary>An instrument whose result in each run has the type <typeparamref name="TResult"/>.</summary>
 /// <remarks>
 /// <see cref="CreateResult"/> creates the result, once per run at the first lookup, and must not keep run data in the
-/// instrument. The wrappers that <see cref="Instrument.Substitutions"/> places, such as <c>Counted</c> or <c>Observed</c>,
-/// look the result up when they are built.
+/// instrument. The wrappers that <see cref="Instrument.Substitutions"/> places, such as <c>Observed</c>, look the result
+/// up when they are built.
 /// </remarks>
 public abstract class Instrument<TResult> : Instrument where TResult : class
 {

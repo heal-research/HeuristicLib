@@ -27,7 +27,7 @@ public sealed class PredefinedAspectSpecs
         var algorithm = GeneticAlgorithm.Create(creator, crossover, mutator);
         var results = ResolutionScope.Create().Results;
         var timeProvider = TimeProvider.System;
-        (IConfigurationNode Source, Instrument Instrument)[] instruments =
+        (IConfigurationNode Source, ISubstitutionBundle Analyzer)[] analyzers =
         [
             (algorithm, algorithm.Calls.Count()),
             (creator, creator.Invocations.Count()),
@@ -66,8 +66,8 @@ public sealed class PredefinedAspectSpecs
             (interceptor, Aspect.Observe(interceptor.Invocations, _ => { }))
         ];
 
-        foreach (var (source, instrument) in instruments)
-            source.Substitute(instrument.Substitutions).ShouldNotBeSameAs(source);
+        foreach (var (source, analyzer) in analyzers)
+            source.Substitute(analyzer).ShouldNotBeSameAs(source);
         foreach (var (source, aspect) in aspects)
             aspect.ShouldHaveSingleItem().Pointcut.Matches(source).ShouldBeTrue();
 

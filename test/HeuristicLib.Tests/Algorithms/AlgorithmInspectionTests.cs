@@ -17,20 +17,20 @@ public sealed class AlgorithmInspectionTests
         var time = new ManualTimeProvider();
         var algorithm = new ProbeAlgorithm(time, fail);
         var count = new CountAccumulator();
-        var duration = new DurationAccumulator();
+        var duration = new Duration(time);
         var observed = new List<IAlgorithm<int, PopulationState<int>>>();
         var scope = ResolutionScope.Create();
         scope.AddAspect(Aspect.Create(Pointcut.Reference(algorithm), new CountingAlgorithmAdvice<int, PopulationState<int>>(count)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(algorithm), new DurationMeasuringAlgorithmAdvice<int, PopulationState<int>>(duration, time)));
         scope.AddAspect(Aspect.Observe(algorithm.Iterations, observation => observed.Add(observation.Algorithm)));
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>().Resolve(algorithm);
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>().Resolve(algorithm.Timed(duration));
+        var measured = scope.Results.Result(duration);
         await using var iterator = executor.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         (await iterator.MoveNextAsync()).ShouldBeTrue();
         count.CurrentCount.ShouldBe(0);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(2));
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(2));
         time.Advance(20);
         if (fail)
             await Should.ThrowAsync<InvalidOperationException>(async () => await iterator.MoveNextAsync());
@@ -42,9 +42,19 @@ public sealed class AlgorithmInspectionTests
         }
 
         count.CurrentCount.ShouldBe(fail ? 0 : 1);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(5));
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(5));
         observed.Count.ShouldBe(fail ? 1 : 2);
         observed.ShouldAllBe(source => ReferenceEquals(source, algorithm));
+    }
+
+    [Fact]
+    public void TimingTheIterations_PlacesTheTimedWrapper()
+    {
+        var algorithm = new ProbeAlgorithm(new ManualTimeProvider(), Fail: false);
+        var time = algorithm.Iterations.Duration();
+
+        algorithm.Timing(algorithm.Iterations, out var timed).ShouldBe(algorithm.Timed(timed));
+        algorithm.AnalyzedBy(time).ShouldBe(algorithm.Timed(time));
     }
 
     private sealed record ProbeAlgorithm(ManualTimeProvider Time, bool Fail) : Algorithm<ProbeAlgorithm, int, PopulationState<int>>

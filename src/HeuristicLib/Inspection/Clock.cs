@@ -5,15 +5,12 @@ namespace HEAL.HeuristicLib.Inspection;
 /// <summary>A notion of time a trace records each entry against, such as a count of evaluations or the elapsed time.</summary>
 /// <remarks>
 /// A clock is read as a time. A trace binds each of its clocks to the run, reads them at every entry and lists the
-/// clocks' own substitutions after its observations, so an entry reads clocks that already include its call. Mixed
-/// lists, such as <c>[evaluations, Clock.Elapsed]</c>, use this type. Derive a clock of your own from
-/// <see cref="Clock{TTime, TResult}"/>.
+/// clocks' own substitutions, which keep them current, after its observations, so an entry reads clocks that already
+/// include its call. Mixed lists, such as <c>[evaluations, Clock.Elapsed]</c>, use this type. Derive a clock of your own
+/// from <see cref="Clock{TTime, TResult}"/>.
 /// </remarks>
-public interface IClock
+public interface IClock : ISubstitutionBundle
 {
-    /// <summary>The substitutions that keep this clock current, which a trace lists after its own, so that they sit closer to the node.</summary>
-    IReadOnlyList<Substitution> Substitutions { get; }
-
     // Binds the clock to one run: the reader a trace samples at each entry.
     internal Func<object> Bind(RunResults results);
 }

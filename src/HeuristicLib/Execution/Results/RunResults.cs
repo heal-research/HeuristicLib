@@ -1,5 +1,3 @@
-using System.Runtime.CompilerServices;
-
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>The results of one run: one per instrument, and the time the run's root algorithm has spent executing.</summary>
@@ -38,7 +36,6 @@ public sealed class RunResults
     internal ResolutionScope? Root { get; set; }
 
     /// <summary>Returns this run's result of the instrument, creating it at the first lookup.</summary>
-    [OverloadResolutionPriority(1)]
     public TResult Result<TResult>(Instrument<TResult> instrument) where TResult : class =>
         (TResult)Lookup(instrument);
 

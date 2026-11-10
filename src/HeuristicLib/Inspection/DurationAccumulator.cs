@@ -1,6 +1,8 @@
+using HEAL.HeuristicLib.Execution;
+
 namespace HEAL.HeuristicLib.Inspection;
 
-public sealed class DurationAccumulator
+public sealed class DurationAccumulator : IRunResult
 {
     private long currentDurationTicks;
 

@@ -18,11 +18,6 @@ public sealed record Counted<TOperation, TCandidate> : WrappingOperator<TOperati
         Metric = metric;
     }
 
-    public Counted(IOperator<TOperation, TCandidate> childOperator, OperatorCounter counter)
-        : this(childOperator, counter, counter.Metric)
-    {
-    }
-
     public IConfigurationNode<CountAccumulator> Counter { get; init; }
 
     /// <summary>Whether the wrapper counts successful calls or their candidate work.</summary>
@@ -56,9 +51,6 @@ public static class CountedOperatorExtensions
     extension<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source)
         where TOperation : IOperation<TOperation>
     {
-        /// <summary>Counts this operator's successful calls, or their candidate work, into the counter.</summary>
-        public Counted<TOperation, TCandidate> Counted(OperatorCounter counter) => new(source, counter);
-
         /// <summary>Counts this operator's successful calls, or their candidate work, into the counter.</summary>
         public Counted<TOperation, TCandidate> Counted(Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations) => new(source, counter, metric);
     }

@@ -78,7 +78,7 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Two resolutions of one configuration construct independent fields. Get controls from the same advised executor that performs the operation.
 
-Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are instrument definitions. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` read their run-bound results.
+Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are configuration nodes whose executors hold the run's count or time. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` resolve them.
 
 The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Resources must not retain contextual children or advice. Authors own concurrency correctness across all participants. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned.
 

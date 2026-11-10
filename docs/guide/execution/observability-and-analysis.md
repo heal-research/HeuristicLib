@@ -35,7 +35,7 @@ Ready-made traces are extensions on sources, such as `evaluator.Invocations` or 
 
 A clock gives each recorded entry its time. `algorithm.Iterations.Count()` counts yielded states, `algorithm.Calls.Count()` counts started calls, and `source.Invocations.Count()` or `CountCandidates()` counts successful operator calls or their candidate work. `Clock.Elapsed` measures time spent advancing the root algorithm, excluding pauses and consumer work. Counts accumulate across fresh executor activations within one run.
 
-Several traces may share the same clock in one run. Its advice applies once. Use that same clock object to project the trace; constructing another clock does not identify the original axis.
+Several traces may share the same clock in one run. One `AnalyzedBy` call places it once. Use that same clock object to project the trace; constructing another clock does not identify the original axis.
 
 Candidate counts describe the selected boundary. A caching evaluator's outer boundary counts requests while its inner evaluator counts cache misses. An operation without candidate work rejects `Invocations.CountCandidates()` when the definition is created; use `Invocations.Count()` for its calls.
 
@@ -159,7 +159,7 @@ An operation you define becomes observable when it declares an observation recor
 
 Pass everything in one `AnalyzedBy` call and apply budgets afterwards, because one call resolves every target against the same configuration. Later entries sit closer to the operator, so in the example the timing finishes before the observation callback runs. A clock shared by several traces of one call ticks once and before them. Each call places what it lists, so a clock shared across separate `AnalyzedBy` calls ticks twice. Counting updates after success; timing also records failed calls.
 
-`Invocations.Count()`, `CountCandidates()` and `Duration()` create definitions. Read their accumulators through the run. `Counted` and `Timed` place the same instruments explicitly around a selected configuration.
+`Invocations.Count()`, `CountCandidates()` and `Duration()` create counters and durations. Read their accumulators through the run. `Counted` and `Timed` place a counter or duration explicitly around a selected configuration. The wrapper decides what is counted, so pass `OperatorCountMetric.Candidates` to `Counted` to count candidate work.
 
 ### Share accounting with a terminator
 

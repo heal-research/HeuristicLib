@@ -40,7 +40,8 @@ public abstract class ObservationSource<TObservation>
 /// <summary>The observations of one operator's successful calls for one operation, such as <c>mutator.Invocations</c>.</summary>
 /// <remarks>
 /// Besides tracing, the source creates the counters and durations of its operator: <see cref="Count"/>,
-/// <see cref="CountCandidates"/> and <see cref="Duration"/>. Each call creates a new instrument with its own result.
+/// <see cref="CountCandidates"/> and <see cref="Duration"/>. Each call creates a new node with its own result, which
+/// holds the substitution that places its wrapper at the operator.
 /// </remarks>
 public sealed class InvocationSource<TOperation, TCandidate, TObservation> : ObservationSource<TObservation>
     where TOperation : IOperation<TOperation>
@@ -62,20 +63,20 @@ public sealed class InvocationSource<TOperation, TCandidate, TObservation> : Obs
     public override IConfigurationNode Configuration => Operator;
 
     /// <summary>Creates a counter of the operator's successful calls.</summary>
-    public OperatorCounter Count() => new OperatorCounter<TOperation, TCandidate>(Operator, OperatorCountMetric.Invocations);
+    public Counter Count() => new(counter => Substitution.Of(Operator, node => node.Counted(counter)));
 
     /// <summary>Creates a counter of the candidate work of the operator's successful calls, such as the candidates an evaluator evaluated.</summary>
     /// <exception cref="InvalidOperationException">The operation reports no candidate work.</exception>
-    public OperatorCounter CountCandidates() =>
+    public Counter CountCandidates() =>
         TOperation.SupportsCandidateWork
-            ? new OperatorCounter<TOperation, TCandidate>(Operator, OperatorCountMetric.Candidates)
+            ? new(counter => Substitution.Of(Operator, node => node.Counted(counter, OperatorCountMetric.Candidates)))
             : throw new InvalidOperationException($"Counting candidates cannot measure candidate work for {Operator.GetType().Name}: " +
                 $"{ExecutionSignature.Name(typeof(TOperation))} reports none.");
 
     /// <summary>Creates a duration adding up the time spent in the operator's calls, including calls that fail.</summary>
     /// <param name="timeProvider">Measures each call. When omitted, the system clock does.</param>
-    public OperatorDuration Duration(TimeProvider? timeProvider = null) =>
-        new OperatorDuration<TOperation, TCandidate>(Operator, timeProvider ?? TimeProvider.System);
+    public Duration Duration(TimeProvider? timeProvider = null) =>
+        new(timeProvider, duration => Substitution.Of(Operator, node => node.Timed(duration)));
 
     public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
         recordingInto is null

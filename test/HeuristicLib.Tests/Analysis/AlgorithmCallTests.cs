@@ -150,7 +150,7 @@ public sealed class AlgorithmCallTests
             cycle = (CycleAlgorithm.Create(turn, turn) with { MaximumCycles = 2 }).AnalyzedBy(states, calls);
         else
         {
-            var placed = turn.Counted(turnCounter).Observed(calls).Observed(states);
+            var placed = new CountedAlgorithm<int, PopulationState<int>, AlgorithmCallObservation<int, PopulationState<int>>>(turn, turnCounter).Observed(calls).Observed(states);
             cycle = CycleAlgorithm.Create<int, PopulationState<int>>(placed, placed) with { MaximumCycles = 2 };
         }
         var run = cycle.CreateRun(Problem, RandomNumberGenerator.Create(1));

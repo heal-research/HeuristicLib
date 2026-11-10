@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// A substitution maps one configuration graph to another and stores nothing in the configuration it returns, so its
 /// delegates are not configuration data. The type argument of each factory says which nodes are considered.
 /// </remarks>
-public sealed class Substitution
+public sealed class Substitution : ISubstitutionBundle
 {
     private readonly Func<IConfigurationNode, bool> selects;
     private readonly Func<IConfigurationNode, IConfigurationNode> replace;
@@ -30,6 +30,8 @@ public sealed class Substitution
     internal bool Selects(IConfigurationNode node) => selects(node);
 
     internal IConfigurationNode Replace(IConfigurationNode node) => replace(node);
+
+    IReadOnlyList<Substitution> ISubstitutionBundle.Substitutions => [this];
 
     /// <summary>Replaces every node of the type <typeparamref name="TNode"/> the predicate selects.</summary>
     /// <remarks>
@@ -98,9 +100,9 @@ public static class SubstitutionExtensions
 {
     extension<TRoot>(TRoot root) where TRoot : class, IConfigurationNode
     {
-        /// <summary>Applies the substitutions one after another.</summary>
-        public TRoot Substitute(params IReadOnlyList<Substitution> substitutions) =>
-            SubstitutionCall.Apply(root, substitutions);
+        /// <summary>Applies the substitutions one after another, such as those of traces and counters.</summary>
+        public TRoot Substitute(params IReadOnlyList<ISubstitutionBundle> substitutions) =>
+            SubstitutionCall.Apply(root, [.. substitutions.SelectMany(static bundle => bundle.Substitutions)]);
 
         /// <inheritdoc cref="Substitution.Of{TNode}(Func{TNode, bool}, Func{TNode, TNode})"/>
         public TRoot Substitute<TNode>(Func<TNode, bool> selects, Func<TNode, TNode> replace)

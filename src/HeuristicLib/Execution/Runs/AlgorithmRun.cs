@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -29,19 +28,31 @@ public abstract class AlgorithmRun
     /// The instrument needs placing and the run's algorithm does not hold it, so it would read empty. What a delegate
     /// creates cannot be seen, so nothing is reported once the algorithm holds a delegate.
     /// </exception>
-    [OverloadResolutionPriority(1)]
     public TResult Result<TResult>(Instrument<TResult> instrument) where TResult : class
     {
-        if (instrument.Substitutions.Count > 0 && !MayHold(configuration, instrument))
-            throw new InvalidOperationException($"This run's algorithm does not hold the {ExecutionSignature.Name(instrument.GetType())}, so its result would stay empty. " +
-                "Attach it with algorithm.AnalyzedBy(analyzer) and create the run from the configuration that call returns.");
+        RequireHeld(instrument);
         return scope.Results.Result(instrument);
     }
 
     /// <summary>Returns this run's result of the configuration, such as the accumulator of a counter.</summary>
     /// <remarks>It can be read before, during and after execution, also after a failure.</remarks>
-    public TResult Result<TResult>(IConfigurationNode<TResult> configuration) where TResult : class, IRunResult =>
-        scope.RunResult(configuration);
+    /// <exception cref="InvalidOperationException">
+    /// The configuration holds substitutions that place it, as a counter created from a source does, and the run's
+    /// algorithm does not hold it, so it would read empty. Nothing is reported once the algorithm holds a delegate.
+    /// </exception>
+    public TResult Result<TResult>(IConfigurationNode<TResult> configuration) where TResult : class, IRunResult
+    {
+        if (configuration is ISubstitutionBundle bundle)
+            RequireHeld(bundle);
+        return scope.RunResult(configuration);
+    }
+
+    private void RequireHeld(ISubstitutionBundle bundle)
+    {
+        if (bundle.Substitutions.Count > 0 && !MayHold(configuration, bundle))
+            throw new InvalidOperationException($"This run's algorithm does not hold the {ExecutionSignature.Name(bundle.GetType())}, so its result would stay empty. " +
+                "Attach it with algorithm.AnalyzedBy(analyzer) and create the run from the configuration that call returns.");
+    }
 
     // Whether a declared parameter reachable from the root holds the value, or a delegate could have placed it unseen.
     private static bool MayHold(IConfigurationNode root, object value)
