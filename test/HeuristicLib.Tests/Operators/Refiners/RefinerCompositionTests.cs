@@ -134,16 +134,15 @@ public class RefinerCompositionTests
     [Fact]
     public void MeasureRefinerDuration_RecordsElapsedDurationWhenRefinementThrows()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration(timeProvider);
         var observed = new ThrowingRefiner();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new DurationMeasuringOperatorAdvice(duration, timeProvider)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 3));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]

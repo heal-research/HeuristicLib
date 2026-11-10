@@ -80,6 +80,14 @@ public static class TimedAlgorithmExtensions
         public IAlgorithm<TCandidate, TSearchState> Timing(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> target,
             out Duration duration, TimeProvider? timeProvider = null) =>
             algorithm.Substitute(Substitution.Timing(target, out duration, timeProvider));
+
+        /// <summary>Adds an algorithm's advances to an existing duration wherever this configuration holds it.</summary>
+        /// <param name="target">The iterations to measure. Their algorithm is matched by reference, and it is an error when this configuration does not hold it.</param>
+        /// <param name="duration">The duration to add to, such as the one <c>LimitedToDuration</c> hands to its placement. Its time provider measures each advance.</param>
+        /// <returns>The interface, because the target may be this algorithm itself, which the wrapper then replaces.</returns>
+        public IAlgorithm<TCandidate, TSearchState> Timing(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> target,
+            Duration duration) =>
+            algorithm.Substitute(Substitution.Timing(target, duration));
     }
 
     extension(Substitution)
@@ -94,7 +102,15 @@ public static class TimedAlgorithmExtensions
         {
             var created = new Duration(timeProvider);
             duration = created;
-            return Substitution.Of(target.Algorithm, node => node.Timed(created));
+            return Substitution.Timing(target, created);
         }
+
+        /// <summary>The substitution behind <c>Timing</c> into an existing duration, for one call with others.</summary>
+        /// <param name="target">The iterations to measure. Their algorithm is matched by reference, and it is an error when the configuration does not hold it.</param>
+        /// <param name="duration">The duration to add to.</param>
+        public static Substitution Timing<TCandidate, TSearchState>(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> target,
+            Duration duration)
+            where TSearchState : class, ISearchState =>
+            Substitution.Of(target.Algorithm, node => node.Timed(duration));
     }
 }

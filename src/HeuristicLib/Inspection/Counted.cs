@@ -64,6 +64,15 @@ public static class CountedOperatorExtensions
         public TRoot Counting<TOperation, TCandidate>(IOperator<TOperation, TCandidate> target, out Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations)
             where TOperation : IOperation<TOperation> =>
             root.Substitute(Substitution.Counting(target, out counter, metric));
+
+        /// <summary>Counts the operator's successful calls, or their candidate work, into an existing counter wherever this configuration holds it.</summary>
+        /// <remarks>Counting the same target twice into one counter places two wrappers, which count every call twice.</remarks>
+        /// <param name="target">The operator to count, matched by reference. It is an error when this configuration does not hold it.</param>
+        /// <param name="counter">The counter to add to, such as the one <c>LimitedToCount</c> hands to its placement.</param>
+        /// <param name="metric">Whether to count successful calls or their candidate work.</param>
+        public TRoot Counting<TOperation, TCandidate>(IOperator<TOperation, TCandidate> target, Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations)
+            where TOperation : IOperation<TOperation> =>
+            root.Substitute(Substitution.Counting(target, counter, metric));
     }
 
     extension(Substitution)
@@ -78,7 +87,15 @@ public static class CountedOperatorExtensions
         {
             var created = new Counter();
             counter = created;
-            return Substitution.Of(target, node => node.Counted(created, metric));
+            return Substitution.Counting(target, created, metric);
         }
+
+        /// <summary>The substitution behind <c>Counting</c> into an existing counter, for one call with others.</summary>
+        /// <param name="target">The operator to count, matched by reference. It is an error when the configuration does not hold it.</param>
+        /// <param name="counter">The counter to add to.</param>
+        /// <param name="metric">Whether to count successful calls or their candidate work.</param>
+        public static Substitution Counting<TOperation, TCandidate>(IOperator<TOperation, TCandidate> target, Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations)
+            where TOperation : IOperation<TOperation> =>
+            Substitution.Of(target, node => node.Counted(counter, metric));
     }
 }

@@ -18,8 +18,6 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Usage;
 
-using HEAL.HeuristicLib.Algorithms.Obsolete;
-
 public class PractitionerUsageSpecs
 {
     [Fact]

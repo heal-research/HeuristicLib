@@ -82,7 +82,7 @@ public class RefinerBatchSemanticsTests
         yield return ("choose one", ChoosePerItem.Create(noChange), null);
         yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0), null);
         yield return ("counting", noChange, Aspect.Create(Pointcut.Reference(noChange), new CountingOperatorAdvice(new CountAccumulator(), OperatorCountMetric.Candidates)));
-        yield return ("duration measuring", noChange, Aspect.Create(Pointcut.Reference(noChange), new DurationMeasuringOperatorAdvice(new DurationAccumulator(), TimeProvider.System)));
+        yield return ("duration measuring", noChange.Timed(new Duration()), null);
         yield return ("improvement checking", noChange.CheckedForImprovement(), null);
         yield return ("single candidate", new IdentityRefiner(), null);
     }

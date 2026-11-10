@@ -10,8 +10,6 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
-using HEAL.HeuristicLib.Algorithms.Obsolete;
-
 public class OperatorCountBudgetAlgorithmTests
 {
     [Fact]
@@ -19,9 +17,10 @@ public class OperatorCountBudgetAlgorithmTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 6, MutationRate = 1.0 };
-        var budget = algorithm.LimitedToInvocations([algorithm.Mutator, algorithm.Crossover, algorithm.Mutator], 3);
+        var budget = algorithm.LimitedToCount(3, (g, calls) => g.Counting(g.Mutator, calls).Counting(g.Crossover, calls));
+        var calls = budget.Counter;
         var constructed = new OperatorCountBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
-            algorithm, [algorithm.Mutator, algorithm.Crossover, algorithm.Mutator], 3);
+            algorithm with { Mutator = algorithm.Mutator.Counted(calls), Crossover = algorithm.Crossover.Counted(calls) }, calls, 3);
         constructed.ShouldBe(budget);
 
         for (var trial = 0; trial < 2; trial++)
@@ -34,10 +33,16 @@ public class OperatorCountBudgetAlgorithmTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 6, MutationRate = 1.0 };
-        var budget = algorithm.LimitedToCandidates([algorithm.Mutator, algorithm.Crossover], 6);
+        var budget = algorithm.LimitedToCount(6, (g, candidates) => g
+            .Counting(g.Mutator, candidates, OperatorCountMetric.Candidates)
+            .Counting(g.Crossover, candidates, OperatorCountMetric.Candidates));
+        var counter = budget.Counter;
         var constructed = new OperatorCountBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
-            algorithm, [algorithm.Mutator, algorithm.Crossover], 6)
-        { Metric = OperatorCountMetric.Candidates };
+            algorithm with
+            {
+                Mutator = algorithm.Mutator.Counted(counter, OperatorCountMetric.Candidates),
+                Crossover = algorithm.Crossover.Counted(counter, OperatorCountMetric.Candidates)
+            }, counter, 6);
         constructed.ShouldBe(budget);
         constructed.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
     }
@@ -48,11 +53,12 @@ public class OperatorCountBudgetAlgorithmTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 6, MutationRate = 1.0 };
         var clock = new AdvancingTimeProvider(TimeSpan.FromSeconds(2));
-        var budget = algorithm.LimitedToDuration([algorithm.Mutator, algorithm.Crossover, algorithm.Mutator], TimeSpan.FromSeconds(3), clock);
+        var budget = algorithm.LimitedToDuration(TimeSpan.FromSeconds(3), (g, time) => g.Timing(g.Mutator, time).Timing(g.Crossover, time), clock);
+        var time = budget.Duration;
         var constructed = new OperatorDurationBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
-            algorithm, [algorithm.Mutator, algorithm.Crossover, algorithm.Mutator], TimeSpan.FromSeconds(3))
-        { TimeProvider = clock };
+            algorithm with { Mutator = algorithm.Mutator.Timed(time), Crossover = algorithm.Crossover.Timed(time) }, time, TimeSpan.FromSeconds(3));
         constructed.ShouldBe(budget);
+        time.TimeProvider.ShouldBeSameAs(clock);
         budget.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
         constructed.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
     }
@@ -588,8 +594,8 @@ public class OperatorCountBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorCountBudgetAlgorithm<Evaluation, RealVector, PopulationState<RealVector>>(
-                algorithm, algorithm.Evaluator, maximumCount);
+            new OperatorCountBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
+                algorithm.Counting(algorithm.Evaluator, out var calls), calls, maximumCount);
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
@@ -603,8 +609,8 @@ public class OperatorCountBudgetAlgorithmTests
         var algorithm = CreateAlgorithm(problem);
 
         var budgeted =
-            new OperatorDurationBudgetAlgorithm<Evaluation, RealVector, PopulationState<RealVector>>(
-                algorithm, algorithm.Evaluator, TimeSpan.FromTicks(ticks));
+            new OperatorDurationBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
+                algorithm.Timing(algorithm.Evaluator, out var time), time, TimeSpan.FromTicks(ticks));
 
         budgeted.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
@@ -645,9 +651,10 @@ public class OperatorCountBudgetAlgorithmTests
     }
 
     /// <summary>
-    /// A budget measures the operator it limits, never the analyzer watching that operator. Were it the other way
-    /// round, the recording work would be charged to the budget and attaching an analyzer would shorten the run. Here
-    /// only the observation advances the clock, each time by more than the whole budget.
+    /// Analyzed first, then limited, a budget measures the operator it limits and not the analyzer watching that
+    /// operator, because the budget's wrapper sits closer to the operator. Were it the other way round, the recording
+    /// work would be charged to the budget and attaching an analyzer would shorten the run. Here only the observation
+    /// advances the clock, each time by more than the whole budget.
     /// </summary>
     [Fact]
     public void ADurationBudget_WrapsTheOperatorRatherThanTheAnalyzerObservingIt()
@@ -655,12 +662,12 @@ public class OperatorCountBudgetAlgorithmTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { MaximumGenerations = 3 };
         var clock = new ManualTimeProvider();
-        var slowObservation = Aspect.Observe(
-            algorithm.Evaluator.Invocations, _ => clock.Advance(TimeSpan.FromMinutes(1)));
+        var slowObservation = algorithm.Evaluator.Invocations.Observing(_ => clock.Advance(TimeSpan.FromMinutes(1)));
         var unbudgeted = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count();
 
-        var budgeted = algorithm.LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), clock)
-            .Advised(slowObservation).CreateRun(problem, RandomNumberGenerator.Create(42))
+        var budgeted = algorithm.AnalyzedBy(slowObservation)
+            .LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), clock)
+            .CreateRun(problem, RandomNumberGenerator.Create(42))
             .Stream(cancellationToken: TestContext.Current.CancellationToken).Count();
 
         budgeted.ShouldBe(unbudgeted);

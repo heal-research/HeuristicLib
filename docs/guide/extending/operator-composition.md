@@ -219,7 +219,7 @@ var budgeted = shared.TerminatedBy(
 var run = budgeted.AnalyzedBy(counter).CreateRun(problem, random);
 ```
 
-`shared.LimitedToCandidates(evaluator, 100_000)` owns its accumulator and adds counting advice only to the resolution context for the budgeted algorithm. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
+`shared.LimitedToCandidates(evaluator, 100_000)` places a candidate counter around the selected evaluator inside the budgeted algorithm, and stops the algorithm once that count reaches the limit. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
 
 The same budgets apply to any operator, whatever its operation:
 
@@ -228,25 +228,31 @@ var calls = shared.LimitedToInvocations(refiner, 1_000);
 var timed = shared.LimitedToDuration(evaluator, TimeSpan.FromSeconds(10));
 ```
 
-`LimitedToInvocations` counts successful calls, and `LimitedToCandidates` counts the candidates they return for an operation that reports candidate work. Timing also records failed calls. Timing accepts an explicit `TimeProvider`. Both are scoped to the budget's inner algorithm. If that algorithm never resolves the selected operator, nothing is recorded and the budget never stops it.
+`LimitedToInvocations` counts successful calls, and `LimitedToCandidates` counts the candidates they return for an operation that reports candidate work. Timing also records failed calls. Timing accepts an explicit `TimeProvider`. The operator is matched by reference, and it is an error when the algorithm does not hold it. For an operator implementing several operations, pass it through a variable of the operation's operator type. Apply budgets after `AnalyzedBy`, so that a budget measures the operator rather than the analysis observing it.
 
-Pass an operator list to combine work from several configurations in one budget:
+Pass a placement to combine work from several operators in one budget. It receives the algorithm and the budget's counter or duration, places the wrappers, and returns the algorithm to limit:
 
 ```csharp
-var combined = algorithm.LimitedToInvocations(
-    [algorithm.Mutator, algorithm.Crossover], 1_000);
-var timed = algorithm.LimitedToDuration(
-    [algorithm.Mutator, algorithm.Crossover], TimeSpan.FromSeconds(10));
-
-var constructed = new OperatorCountBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
-    algorithm, [algorithm.Mutator, algorithm.Crossover], 1_000);
+var combined = algorithm.LimitedToCount(1_000, (ga, calls) => ga
+    .Counting(ga.Mutator, calls)
+    .Counting(ga.Crossover, calls));
+var timed = algorithm.LimitedToDuration(TimeSpan.FromSeconds(10), (ga, time) => ga
+    .Timing(ga.Mutator, time)
+    .Timing(ga.Crossover, time));
 ```
 
-`OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>` likewise accepts the algorithm, operator list and duration in its constructor. The typed single operation forms of both budget families take the algorithm, observed operator and limit in their constructors too. Optional `Metric` and `TimeProvider` settings use init properties. `LimitedToCandidates` accepts the same lists, or set `Metric = OperatorCountMetric.Candidates` on the count budget constructor result. Every selected operation must report candidate work.
+The placement runs during the call and is not stored. Each `Counting` states what it counts, so `Counting(ga.Evaluator, calls, OperatorCountMetric.Candidates)` adds evaluated candidates where the default adds successful calls. Each `Counting` or `Timing` places one wrapper, so naming a target twice counts it twice, and an operator implementing several operations takes one call for each operation to count.
 
-A list selects every operation of each configuration by reference. Repeating a reference does not count it twice. The single operator overload retains its inferred operation, so it can select one operation of a configuration implementing several. Each budget executor owns one accumulator for all selected calls. Repeated runs remain independent. Duration is the sum of invocation durations, including overlapping and nested time, rather than wall clock time for the algorithm.
+The counter or duration stays inside the budget and restarts each time the budget is built, such as in each Cycle turn, while a run-bound counter from `Invocations.Count()` spans the run. Duration is the sum of invocation durations, including overlapping and nested time, rather than wall clock time for the algorithm. Repeated runs remain independent.
 
-Use a list budget to combine work from several operators. A run-bound instrument remains independent of other runs, while a private budget restarts with its executor.
+Budgets are ordinary configurations that hold their algorithm with the wrappers in place:
+
+```csharp
+var constructed = new OperatorCountBudgetAlgorithm<RealVector, PopulationState<RealVector>>(
+    algorithm.Counting(algorithm.Mutator, out var mutations), mutations, 1_000);
+```
+
+`OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>` likewise takes the algorithm, the `Duration` its wrappers add to, and the limit. Because the budget holds a copy of the algorithm, a separate run of the original algorithm neither counts against the budget nor shares its executors.
 
 Sharing the cached evaluator gives the algorithm and the improvement check one executor, and therefore one cache, which avoids the final repeated problem evaluation:
 

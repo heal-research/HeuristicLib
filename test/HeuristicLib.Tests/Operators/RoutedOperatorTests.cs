@@ -489,15 +489,11 @@ public class RoutedOperatorTests
     public void DurationWrappers_SharingAChildConfiguration_CreateIndependentExecutors()
     {
         var innerOperator = new CountingExecutionMutator();
-        var firstWrapper = Aspect.Create(Pointcut.Reference(innerOperator), new DurationMeasuringOperatorAdvice(new DurationAccumulator(), TimeProvider.System));
-        var secondWrapper = Aspect.Create(Pointcut.Reference(innerOperator), new DurationMeasuringOperatorAdvice(new DurationAccumulator(), TimeProvider.System));
+        var firstWrapper = innerOperator.Timed(new Duration());
+        var secondWrapper = innerOperator.Timed(new Duration());
         var scope = ResolutionScope.Create();
-        var firstScope = scope.CreateChildScope();
-        firstScope.AddAspect(firstWrapper);
-        var firstExecutor = firstScope.ResolveMutator(innerOperator);
-        var secondScope = scope.CreateChildScope();
-        secondScope.AddAspect(secondWrapper);
-        var secondExecutor = secondScope.ResolveMutator(innerOperator);
+        var firstExecutor = scope.CreateChildScope().ResolveMutator(firstWrapper);
+        var secondExecutor = scope.CreateChildScope().ResolveMutator(secondWrapper);
         var problem = FuncProblem.Create(
             evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,

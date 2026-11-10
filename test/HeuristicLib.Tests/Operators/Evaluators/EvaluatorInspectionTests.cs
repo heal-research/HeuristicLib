@@ -46,21 +46,17 @@ public class EvaluatorInspectionTests
     [Fact]
     public void MeasureEvaluatorDuration_AddsElapsedEvaluatorExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration(timeProvider);
         var evaluator = CreateEvaluator();
-        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new DurationMeasuringOperatorAdvice<Evaluation, int>(duration, timeProvider));
-        aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Evaluation, int>>().TimeProvider.ShouldBeSameAs(timeProvider);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration));
         var problem = CreateProblem();
 
         executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
@@ -82,17 +78,15 @@ public class EvaluatorInspectionTests
     [Fact]
     public void MeasureEvaluatorDuration_RecordsFailedCall()
     {
-        var duration = new DurationAccumulator();
+        var duration = new Duration(new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
         var evaluator = new ThrowingEvaluator();
-        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new DurationMeasuringOperatorAdvice(duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3))));
         var problem = CreateProblem();
 
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
         Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration)).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]

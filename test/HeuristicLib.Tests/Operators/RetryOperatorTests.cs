@@ -28,24 +28,22 @@ public sealed class RetryOperatorTests
                 throw new RetryableOperationException("try again");
             return input;
         });
-        var retry = leaf.Retry(3).Named("retry");
+        var clock = new TickClock();
+        var innerTime = new Duration(clock);
+        var outerTime = new Duration(clock);
+        var retry = leaf.Timed(innerTime).Retry(3).Named("retry");
         var innerCalls = new CountAccumulator();
         var outerWork = new CountAccumulator();
-        var innerTime = new DurationAccumulator();
-        var outerTime = new DurationAccumulator();
-        var clock = new TickClock();
         var scope = ResolutionScope.Create();
         scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(innerCalls, OperatorCountMetric.Invocations)));
         scope.AddAspect(Aspect.Create(Pointcut.Reference(retry), new CountingOperatorAdvice(outerWork, OperatorCountMetric.Candidates)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new DurationMeasuringOperatorAdvice(innerTime, clock)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(retry), new DurationMeasuringOperatorAdvice(outerTime, clock)));
-        var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry);
+        var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Timed(outerTime));
         executor.Mutate(parents, random, Space.Instance, Problem()).ShouldBeSameAs(parents);
         attempts.ShouldBe(failures + 1);
         innerCalls.CurrentCount.ShouldBe(1);
         outerWork.CurrentCount.ShouldBe(2);
-        innerTime.CurrentDuration.ShouldBe(TimeSpan.FromMilliseconds(failures + 1));
-        outerTime.CurrentDuration.ShouldBe(TimeSpan.FromMilliseconds(2 * (failures + 1) + 1));
+        scope.Results.Result(innerTime).CurrentDuration.ShouldBe(TimeSpan.FromMilliseconds(failures + 1));
+        scope.Results.Result(outerTime).CurrentDuration.ShouldBe(TimeSpan.FromMilliseconds(2 * (failures + 1) + 1));
         var expectedRandom = RandomNumberGenerator.Create(7);
         consumed.ShouldBe(Enumerable.Range(0, attempts).Select(_ => expectedRandom.NextInt()));
     }
@@ -142,12 +140,10 @@ public sealed class RetryOperatorTests
         var result = new UncountableList();
         var source = new CallbackMutator((_, _) => result);
         var calls = new CountAccumulator();
-        var time = new DurationAccumulator();
         var scope = ResolutionScope.Create();
         scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(time, TimeProvider.System)));
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Timed(new Duration()));
 
         executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBeSameAs(result);
         calls.CurrentCount.ShouldBe(1);
@@ -159,12 +155,10 @@ public sealed class RetryOperatorTests
         var leaf = new CallbackMutator(static (parents, _) => parents);
         var source = leaf.Retry(3).Named("inspected");
         var counter = new CountAccumulator();
-        var duration = new DurationAccumulator();
         var scope = ResolutionScope.Create();
         scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice(duration, TimeProvider.System)));
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Timed(new Duration()));
         var random = RandomNumberGenerator.Create(1);
         var problem = Problem();
         IReadOnlyList<int> input = [1];

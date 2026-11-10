@@ -10,8 +10,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 
-using HEAL.HeuristicLib.Algorithms.Obsolete;
-
 public sealed class DeferredAlgorithmResolutionTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
@@ -287,14 +285,15 @@ public sealed class DeferredAlgorithmResolutionTests
     }
 
     /// <summary>
-    /// The budget allows two calls. A direct run of the same algorithm in the budget's scope uses the same executor and
-    /// makes four calls, which count against the budget, so the budgeted run stops after its first state. A run in a child
-    /// scope of the budget's scope uses executors of its own, and its calls count against the budget as well.
+    /// The budget allows two calls and holds a copy of the algorithm with its wrapper in place (D1 of the core
+    /// simplification plan). A direct run of the original algorithm, in the budget's scope or a child scope, uses an
+    /// executor of its own, and its four calls do not count against the budget. Building the original first changes
+    /// nothing either, because the budget does not change how the original is built.
     /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task Budget_CountsEveryCallOfItsOperatorInItsScopeAndItsChildScopes(bool measureDuration)
+    public async Task Budget_CountsOnlyTheCallsOfTheAlgorithmItHolds(bool measureDuration)
     {
         var clock = new ManualClock();
         var algorithm = new ProbeAlgorithm { Mutator = new AdvancingMutator(clock), Steps = 4 };
@@ -306,23 +305,21 @@ public sealed class DeferredAlgorithmResolutionTests
         var direct = await Run(Resolve(root, algorithm));
         direct.Select(state => state.Call).ShouldBe([1, 2, 3, 4]);
         var throughBudget = await Run(limited);
-        throughBudget.Select(state => state.Call).ShouldBe([5]);
-        throughBudget[0].Data.ShouldBeSameAs(direct[0].Data);
+        throughBudget.Select(state => state.Call).ShouldBe([1, 2]);
+        throughBudget[0].Data.ShouldNotBeSameAs(direct[0].Data);
         (await Run(Resolve(ResolutionScope.Create(), budget))).Select(state => state.Call).ShouldBe([1, 2]);
 
-        // A child scope builds its own executors, and their calls count against the budget too.
         var parent = ResolutionScope.Create();
         var limitedInParent = Resolve(parent, budget);
         var inChild = await Run(Resolve(parent.CreateChildScope(), algorithm));
         inChild.Select(state => state.Call).ShouldBe([1, 2, 3, 4]);
         var afterChild = await Run(limitedInParent);
-        afterChild.Select(state => state.Call).ShouldBe([1]);
+        afterChild.Select(state => state.Call).ShouldBe([1, 2]);
         afterChild[0].Data.ShouldNotBeSameAs(inChild[0].Data);
 
-        // Built first, the operator would escape the budget's counting, so adding the budget's advice is an error.
         var builtFirst = ResolutionScope.Create();
         _ = Resolve(builtFirst, algorithm);
-        Should.Throw<InvalidOperationException>(() => Resolve(builtFirst, budget)).Message.ShouldContain("already resolved");
+        (await Run(Resolve(builtFirst, budget))).Select(state => state.Call).ShouldBe([1, 2]);
     }
 
     [Fact]
@@ -348,8 +345,8 @@ public sealed class DeferredAlgorithmResolutionTests
     }
 
     /// <summary>
-    /// The child observation advances the clock by 20 seconds per call. The budgeted run still reaching its third call
-    /// shows that the budget does not measure the observation.
+    /// The trace advances the clock by 10 seconds per call. The budgeted runs still reaching their third call show that
+    /// the budget, placed after the analysis, does not measure the observation.
     /// </summary>
     [Theory]
     [InlineData(false)]
@@ -374,11 +371,7 @@ public sealed class DeferredAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = 0;
         var sibling = root.CreateChildScope();
-        sibling.AddAspect(Aspect.Observe(algorithm.Mutator.Invocations, _ =>
-        {
-            observed++;
-            clock.Advance(20);
-        }));
+        sibling.AddAspect(Aspect.Observe(algorithm.Mutator.Invocations, _ => observed++));
 
         (await Run(Resolve(sibling, budget))).Count.ShouldBe(3);
         (await paused.MoveNextAsync()).ShouldBeTrue();

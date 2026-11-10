@@ -7,8 +7,6 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Execution;
 
-using HEAL.HeuristicLib.Algorithms.Obsolete;
-
 // A scope holds one executor per configuration reference, and sharing lets child scopes, such as Cycle turns, use the
 // executor of the scope that shares it. See plans/operator-state-lifetimes.md.
 public class ConfigurationSharingTests
@@ -75,20 +73,6 @@ public class ConfigurationSharingTests
         box.Calls.ShouldBe(2);                     // one cache: only candidates 1 and 2 are ever evaluated
     }
 
-    // The detail confirmed on 2026-11-03: sharing M shares M, not the counting a budget adds around it.
-    [Fact]
-    public void SharedOperator_StillReceivesEachRequestersAdvice()
-    {
-        var (box, m) = Mutator();
-        var cycle = Cycle(NewCaller("A", 3, 3, m, box).LimitedToInvocations(m, 5), NewCaller("B", 2, 1, m, box)).Sharing(m);
-
-        Run(cycle);
-
-        box.Yields.ShouldBe("A1 A2 B1 A1 A2 B1"); // identical to S6 version 1 without sharing
-        box.Calls.ShouldBe(16);
-        box.Builds.ShouldBe(1);
-    }
-
     [Fact]
     public void SharingAChildAlgorithm_KeepsOnlyThatChildAcrossTurns()
     {
@@ -116,16 +100,17 @@ public class ConfigurationSharingTests
         box.Builds.ShouldBe(4); // A's two slots share one M within each A turn; B and the next A turn get new ones
     }
 
-    // A wrapper such as a budget resolves its child in its own scope, so it opens no sharing boundary.
+    // A wrapper such as a budget resolves its child in its own scope, so it opens no sharing boundary. The budget holds a
+    // copy of A with its counter in place, so the direct request names that copy.
     [Fact]
     public void AlgorithmWrappers_ResolveInTheScopeOfWhatTheyWrap()
     {
         var (box, m) = Mutator();
-        var a = NewCaller("A", 3, 1, m, box);
+        var budget = NewCaller("A", 3, 1, m, box).LimitedToInvocations(m, 5);
         var scope = ResolutionScope.Create();
 
-        var limited = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a.LimitedToInvocations(m, 5));
-        var bare = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a);
+        var limited = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(budget);
+        var bare = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(budget.Algorithm);
 
         limited.ShouldNotBeSameAs(bare);
         box.Log.ShouldBe("build A"); // the budget and the direct request use one A executor
@@ -164,25 +149,6 @@ public class ConfigurationSharingTests
 
         box.Builds.ShouldBe(1);
         box.LastPrivateCount.ShouldBe(16); // A's turns call M twice per call, B's once: (6 + 2) * 2
-    }
-
-    // A shared executor is built once, where it is shared. Advice placed below that point wraps the shared
-    // configuration itself on every request, but does not reach what is constructed inside it.
-    [Fact]
-    public void AdviceBelowTheSharingPoint_DoesNotReachInsideTheSharedExecutor()
-    {
-        var (box, m) = Mutator();
-        var cached = m.Cached();
-        var countsInside = Cycle(NewCaller("A", 3, 3, cached, box).LimitedToInvocations(m, 2), NewCaller("B", 2, 1, cached, box)).Sharing(cached);
-        var countsShared = Cycle(NewCaller("A", 3, 3, cached, box).LimitedToInvocations(cached, 5), NewCaller("B", 2, 1, cached, box)).Sharing(cached);
-
-        Run(countsInside);
-        var inside = box.Yields;
-        box.Reset();
-        Run(countsShared);
-
-        inside.ShouldBe("A1 A2 A3 B1 A1 A2 A3 B1"); // A's budget on M sees nothing: M is built inside the shared cache
-        box.Yields.ShouldBe("A1 A2 B1 A1 A2 B1");   // A's budget on the shared cache itself counts A's calls each turn
     }
 
     [Fact]

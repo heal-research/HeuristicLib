@@ -11,9 +11,9 @@ namespace HEAL.HeuristicLib.Algorithms;
 /// <summary>Stops its algorithm once a counter reaches a maximum count, checked after each produced state.</summary>
 /// <remarks>
 /// The counter restarts each time this budget is built, such as in each Cycle turn, because the budget shares it in its own
-/// scope. The wrappers counting into it live in <see cref="Algorithm"/>, where <c>LimitedToInvocations</c> and
-/// <c>LimitedToCandidates</c> place them. A copy that replaces <see cref="Algorithm"/> loses those wrappers, and the budget
-/// then never stops.
+/// scope. The wrappers counting into it live in <see cref="Algorithm"/>, where <c>LimitedToInvocations</c>,
+/// <c>LimitedToCandidates</c> and <c>LimitedToCount</c> place them. A copy that replaces <see cref="Algorithm"/> loses those
+/// wrappers, and the budget then never stops.
 /// </remarks>
 public sealed record OperatorCountBudgetAlgorithm<TCandidate, TSearchState>
     : Algorithm<OperatorCountBudgetAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
@@ -120,5 +120,27 @@ public static class OperatorCountBudgetExtensions
             IOperator<TOperation, TCandidate> observedOperator, OperatorCountMetric metric, int maximumCount)
             where TOperation : IOperation<TOperation> =>
             new(algorithm.Counting(observedOperator, out var counter, metric), counter, maximumCount);
+    }
+
+    extension<TAlgorithm>(TAlgorithm algorithm) where TAlgorithm : class, IConfigurationNode
+    {
+        /// <summary>
+        /// Stops the algorithm once the counts that <paramref name="placement"/> places reach the given number, such as
+        /// <c>ga.LimitedToCount(1_000, (g, calls) => g.Counting(g.Mutator, calls).Counting(g.Crossover, calls))</c>.
+        /// </summary>
+        /// <remarks>
+        /// The placement runs during this call and is not stored. It states what each wrapper counts, so one budget can add
+        /// calls of one operator to candidates of another. Counting a target twice counts every call twice. The counter
+        /// restarts with the budget and stays inside it; a placement that ignores it leaves a budget that never stops.
+        /// </remarks>
+        /// <param name="maximumCount">The count after which the budget stops, checked after each produced state.</param>
+        /// <param name="placement">Places the counting wrappers on the algorithm it receives, which is this one, and returns the algorithm to limit.</param>
+        public OperatorCountBudgetAlgorithm<TCandidate, TSearchState> LimitedToCount<TCandidate, TSearchState>(int maximumCount,
+            Func<TAlgorithm, Counter, IAlgorithm<TCandidate, TSearchState>> placement)
+            where TSearchState : class, ISearchState
+        {
+            var counter = new Counter();
+            return new(placement(algorithm, counter), counter, maximumCount);
+        }
     }
 }

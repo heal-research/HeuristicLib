@@ -8,117 +8,54 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+/// <summary>Stops its algorithm once a duration reaches a maximum, checked after each produced state.</summary>
 /// <remarks>
-/// Sums invocation durations for every operation of the selected configuration references in the resolution scope the
-/// budget is built in and in its child scopes, including calls from outside the child algorithm. Repeated references
-/// count once. Nested and concurrent calls contribute their full durations, including failed calls.
-/// Each executor owns one combined accumulator, checked after each produced state.
+/// The duration restarts each time this budget is built, such as in each Cycle turn, because the budget shares it in its
+/// own scope. The wrappers measuring into it live in <see cref="Algorithm"/>, where <c>LimitedToDuration</c> places them.
+/// They add the time of every call, including failed, nested and concurrent calls, so the duration is a sum of call times
+/// rather than wall clock time. A copy that replaces <see cref="Algorithm"/> loses those wrappers, and the budget then
+/// never stops.
 /// </remarks>
-public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
+public sealed record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
     : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
-    public ValueArray<IOperator> ObservedOperators { get; init; }
-    public TimeSpan MaximumDuration { get; init; }
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
-
-    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
-        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
-
-    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
-        new(nameof(MaximumDuration), static algorithm => algorithm.MaximumDuration, static (algorithm, value) => algorithm with { MaximumDuration = value });
-
-    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeProvider> TimeProviderParameter { get; } =
-        new(nameof(TimeProvider), static algorithm => algorithm.TimeProvider, static (algorithm, value) => algorithm with { TimeProvider = value });
-
-    public static ReferenceListParameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>> ObservedOperatorsParameter { get; } =
-        new(nameof(ObservedOperators), static algorithm => algorithm.ObservedOperators, static (algorithm, value) => algorithm with { ObservedOperators = value.Cast<IOperator>().ToValueArray() });
-
-    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, ObservedOperatorsParameter, MaximumDurationParameter, TimeProviderParameter];
-
-    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
-
-    public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IReadOnlyList<IOperator> observedOperators, TimeSpan maximumDuration)
+    public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, Duration duration, TimeSpan maximumDuration)
     {
         Algorithm = algorithm;
-        ObservedOperators = observedOperators.ToValueArray();
+        Duration = duration;
         MaximumDuration = maximumDuration;
     }
 
-    public override bool Supports(ExecutionSignature execution) =>
-        base.Supports(execution) && ObservedOperators.All(source => execution.Supports(source));
-
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
-    {
-        var accumulator = new DurationAccumulator();
-        var selection = ObservedOperators.Aggregate(Pointcut.OfType<IOperator>().Not(),
-            (pointcut, source) => pointcut | Pointcut.Reference(source));
-        var aspect = Aspect.Create(selection, new DurationMeasuringOperatorAdvice(accumulator, TimeProvider));
-        scope.AddAspect(aspect);
-        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
-        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumDuration);
-    }
-}
-
-public record OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>
-    : Algorithm<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TCandidate, TSearchState>
-    where TOperation : IOperation<TOperation>
-    where TSearchState : class, ISearchState
-{
     public IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
 
-    /// <summary>
-    /// Gets the operator whose call duration, including failed calls, is measured against the budget.
-    /// </summary>
-    /// <remarks>
-    /// Measurement applies to every call of the operator in the budget's resolution scope and its child scopes, so
-    /// enclosing budgets and observations compose. If nothing in that scope calls the observed operator, nothing is
-    /// measured and the budget never stops.
-    /// </remarks>
-    public IOperator<TOperation, TCandidate> ObservedOperator { get; init; }
-
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+    public Duration Duration { get; init; }
 
     /// <summary>
-    /// Gets the measured-operator duration budget. The expected value is positive.
+    /// Gets the measured duration budget. The expected value is positive.
     /// </summary>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public static Parameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
-        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static budget => budget.Algorithm, static (budget, value) => budget with { Algorithm = value });
 
-    public static Parameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TimeProvider> TimeProviderParameter { get; } =
-        new(nameof(TimeProvider), static algorithm => algorithm.TimeProvider, static (algorithm, value) => algorithm with { TimeProvider = value });
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, Duration> DurationParameter { get; } =
+        new(nameof(Duration), static budget => budget.Duration, static (budget, value) => budget with { Duration = value });
 
-    public static Parameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
-        new(nameof(MaximumDuration), static algorithm => algorithm.MaximumDuration, static (algorithm, value) => algorithm with { MaximumDuration = value });
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
+        new(nameof(MaximumDuration), static budget => budget.MaximumDuration, static (budget, value) => budget with { MaximumDuration = value });
 
-    public static ReferenceListParameter<OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState>> ObservedOperatorParameter { get; } =
-        new(nameof(ObservedOperator), static algorithm => [algorithm.ObservedOperator], static (algorithm, value) => algorithm with { ObservedOperator = (IOperator<TOperation, TCandidate>)value[0] });
-
-    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, ObservedOperatorParameter, TimeProviderParameter, MaximumDurationParameter];
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, DurationParameter, MaximumDurationParameter];
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
-    {
-        Algorithm = algorithm;
-        ObservedOperator = observedOperator;
-        MaximumDuration = maximumDuration;
-    }
-
-    /// <remarks>Each executor has its own accumulator and contextual timing advice.</remarks>
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var accumulator = new DurationAccumulator();
-        var aspect = Aspect.Create(Pointcut.Reference(ObservedOperator), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(accumulator, TimeProvider));
-        scope.AddAspect(aspect);
+        scope.Share(Duration);
         var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
-        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, accumulator, MaximumDuration);
+        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Resolve(Duration), MaximumDuration);
     }
 }
 
@@ -158,37 +95,40 @@ public static class OperatorDurationBudgetExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        /// <remarks>Measures all operations of each selected configuration. Repeated references count once.</remarks>
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
-            IReadOnlyList<IOperator> observedOperators, TimeSpan maximumDuration) =>
-            new(algorithm, observedOperators, maximumDuration) { TimeProvider = TimeProvider.System };
-
-        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
-            IReadOnlyList<IOperator> observedOperators, TimeSpan maximumDuration, TimeProvider timeProvider) =>
-            new(algorithm, observedOperators, maximumDuration) { TimeProvider = timeProvider };
-
         /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time.</summary>
         /// <remarks>
-        /// The operation is inferred from the operator; for an operator implementing several operations, pass it through a
-        /// variable of the operation's operator type.
+        /// The operator is matched by reference, and it is an error when the algorithm does not hold it. The operation is
+        /// inferred from the operator; for an operator implementing several operations, pass it through a variable of the
+        /// operation's operator type.
         /// </remarks>
-        public OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToDuration<TOperation>(
-            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
-            where TOperation : IOperation<TOperation>
-        {
-            return new(algorithm, observedOperator, maximumDuration) { TimeProvider = TimeProvider.System };
-        }
+        /// <param name="observedOperator">The operator whose calls are measured.</param>
+        /// <param name="maximumDuration">The time after which the budget stops, checked after each produced state.</param>
+        /// <param name="timeProvider">Measures each call. When omitted, the system clock does.</param>
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration<TOperation>(
+            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration, TimeProvider? timeProvider = null)
+            where TOperation : IOperation<TOperation> =>
+            new(algorithm.Timing(observedOperator, out var duration, timeProvider), duration, maximumDuration);
+    }
 
-        /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time.</summary>
+    extension<TAlgorithm>(TAlgorithm algorithm) where TAlgorithm : class, IConfigurationNode
+    {
+        /// <summary>
+        /// Stops the algorithm once the time that <paramref name="placement"/> measures reaches the given duration, such as
+        /// <c>ga.LimitedToDuration(TimeSpan.FromSeconds(10), (g, time) => g.Timing(g.Mutator, time).Timing(g.Crossover, time))</c>.
+        /// </summary>
         /// <remarks>
-        /// The operation is inferred from the operator; for an operator implementing several operations, pass it through a
-        /// variable of the operation's operator type.
+        /// The placement runs during this call and is not stored. Timing a target twice adds every call twice. The duration
+        /// restarts with the budget and stays inside it; a placement that ignores it leaves a budget that never stops.
         /// </remarks>
-        public OperatorDurationBudgetAlgorithm<TOperation, TCandidate, TSearchState> LimitedToDuration<TOperation>(
-            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration, TimeProvider timeProvider)
-            where TOperation : IOperation<TOperation>
+        /// <param name="maximumDuration">The time after which the budget stops, checked after each produced state.</param>
+        /// <param name="placement">Places the timing wrappers on the algorithm it receives, which is this one, and returns the algorithm to limit.</param>
+        /// <param name="timeProvider">Measures each call. When omitted, the system clock does.</param>
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration<TCandidate, TSearchState>(TimeSpan maximumDuration,
+            Func<TAlgorithm, Duration, IAlgorithm<TCandidate, TSearchState>> placement, TimeProvider? timeProvider = null)
+            where TSearchState : class, ISearchState
         {
-            return new(algorithm, observedOperator, maximumDuration) { TimeProvider = timeProvider };
+            var duration = new Duration(timeProvider);
+            return new(placement(algorithm, duration), duration, maximumDuration);
         }
     }
 }
