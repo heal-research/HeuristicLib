@@ -37,7 +37,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 3);
         var iterations = algorithm.Iterations.Count();
         var quality = algorithm.Iterations.TracePopulationCandidates([iterations]);
-        var run = algorithm.Advised(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
         {
@@ -56,7 +56,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 5);
 
         var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-        var run = algorithm.Advised(qualityAnalyzer).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(qualityAnalyzer).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -73,7 +73,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 5);
 
         var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-        var run = algorithm.Advised(qualityAnalyzer).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(qualityAnalyzer).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -88,7 +88,7 @@ public class IterationObservationSpecs
         var cycle = (CycleAlgorithm.Create(innerAlgorithm) with { MaximumCycles = 2 }).Sharing(innerAlgorithm);
 
         var innerQuality = innerAlgorithm.Iterations.TracePopulationCandidates();
-        var run = cycle.Advised(innerQuality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = cycle.AnalyzedBy(innerQuality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -102,7 +102,7 @@ public class IterationObservationSpecs
         var algorithm = CreateGeneticAlgorithm(problem, maximumGenerations: 4);
 
         var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-        var run = algorithm.Advised(qualityAnalyzer).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(qualityAnalyzer).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         var streamedStates = new List<PopulationState<RealVector>>();
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))

@@ -18,21 +18,16 @@ public sealed class Counter : IConfigurationNode<CountAccumulator>, IClock<long>
     // The call that created this counter placed its wrapper.
     IReadOnlyList<Substitution> IClock.Substitutions => [];
 
-    (Func<object> Read, Aspect Aspect) IClock.Bind(RunResults results)
+    Func<object> IClock.Bind(RunResults results)
     {
         var accumulator = results.Result(this);
-        return (() => accumulator.CurrentCount, PlacedInTheGraph.Instance);
-    }
-
-    private sealed class PlacedInTheGraph : Aspect
-    {
-        public static readonly PlacedInTheGraph Instance = new();
+        return () => accumulator.CurrentCount;
     }
 }
 
 /// <summary>Counts the successful calls of one operator, or their candidate work.</summary>
 /// <remarks>
-/// Attached with <c>Advised</c>, it counts every call of its operator's configuration reference. Placed explicitly with
+/// Attached with <c>AnalyzedBy</c>, it counts every call of its operator's configuration reference. Placed explicitly with
 /// <c>Counted</c>, it counts the calls of the configuration it wraps.
 /// </remarks>
 public abstract class OperatorCounter : Obsolete.Counter
@@ -52,9 +47,6 @@ internal sealed class OperatorCounter<TOperation, TCandidate>(IOperator<TOperati
 {
     protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
         [Substitution.Of<IOperator<TOperation, TCandidate>>(source, node => node.Counted(this))];
-
-    protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
-        Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice<TOperation, TCandidate>(result, Metric));
 }
 
 /// <summary>A clock that adds up durations, such as the time spent evaluating; its result in each run is a <see cref="DurationAccumulator"/>.</summary>
@@ -79,7 +71,7 @@ public abstract class Duration : Clock<TimeSpan, DurationAccumulator>
 
 /// <summary>Adds up the time spent in the calls of one operator, including calls that fail.</summary>
 /// <remarks>
-/// Attached with <c>Advised</c>, it times every call of its operator's configuration reference. Placed explicitly with
+/// Attached with <c>AnalyzedBy</c>, it times every call of its operator's configuration reference. Placed explicitly with
 /// <c>Timed</c>, it times the calls of the configuration it wraps.
 /// </remarks>
 public abstract class OperatorDuration : Duration
@@ -93,9 +85,6 @@ internal sealed class OperatorDuration<TOperation, TCandidate>(IOperator<TOperat
 {
     protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
         [Substitution.Of<IOperator<TOperation, TCandidate>>(source, node => node.Timed(this))];
-
-    protected override Aspect CreateAspect(DurationAccumulator result, RunResults results) =>
-        Aspect.Create(Pointcut.Reference(source), new DurationMeasuringOperatorAdvice<TOperation, TCandidate>(result, TimeProvider));
 }
 
 // Counts the observations of one source, such as the cycles an observation point reports.
@@ -108,7 +97,4 @@ internal sealed class ObservationCounter<TObservation>(ObservationSource<TObserv
         var count = results.Result(this);
         return _ => count.IncrementBy(1);
     }
-
-    protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
-        Aspect.Observe(source, _ => result.IncrementBy(1));
 }

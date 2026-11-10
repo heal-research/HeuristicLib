@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -14,7 +15,7 @@ namespace HEAL.HeuristicLib.Tests.Analysis;
 
 using HEAL.HeuristicLib.Inspection.Obsolete;
 
-// An instrument attached with advice and the same instrument placed explicitly with a wrapper configuration collect
+// An instrument attached with AnalyzedBy and the same instrument placed explicitly with a wrapper configuration collect
 // the same data into the run's one result. Each theory runs both paths over equivalent boundaries.
 public sealed class InstrumentPlacementTests
 {
@@ -32,11 +33,9 @@ public sealed class InstrumentPlacementTests
         var candidates = evaluator.Invocations.CountCandidates();
         var duration = evaluator.Invocations.Duration(time);
         var scope = ResolutionScope.Create();
-        IOperator<Evaluation, int> placed = evaluator;
-        if (attached)
-            Attach(scope, invocations, candidates, duration);
-        else
-            placed = evaluator.Counted(invocations).Counted(candidates).Timed(duration);
+        var placed = attached
+            ? evaluator.AnalyzedBy(invocations, candidates, duration)
+            : evaluator.Counted(invocations).Counted(candidates).Timed(duration);
         var executor = Resolve(scope, placed);
 
         for (var call = 0; call < 4; call++)
@@ -58,14 +57,9 @@ public sealed class InstrumentPlacementTests
         var evaluations = evaluator.Invocations.Count();
         var batches = evaluator.Invocations.Trace(observation => observation.Candidates.Count, [evaluations]);
         var scope = ResolutionScope.Create();
-        IOperator<Evaluation, int> placed;
-        if (attached)
-        {
-            Attach(scope, batches);
-            placed = evaluator.Retry(2);
-        }
-        else
-            placed = evaluator.Counted(evaluations).Observed(batches).Retry(2);
+        var placed = attached
+            ? evaluator.Retry(2).AnalyzedBy(batches)
+            : evaluator.Counted(evaluations).Observed(batches).Retry(2);
         var executor = Resolve(scope, placed);
 
         for (var call = 1; call <= 3; call++)
@@ -86,7 +80,7 @@ public sealed class InstrumentPlacementTests
         var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var best = algorithm.Evaluator.Invocations.TraceBestSoFar([evaluations], TraceRetention.EveryNth(2));
 
-        var attached = algorithm.Advised(best).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var attached = algorithm.AnalyzedBy(best).CreateRun(problem, RandomNumberGenerator.Create(7));
         await attached.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         var placed = (algorithm with { Evaluator = algorithm.Evaluator.Counted(evaluations).Observed(best) }).CreateRun(problem, RandomNumberGenerator.Create(7));
         await placed.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -108,7 +102,7 @@ public sealed class InstrumentPlacementTests
         var states = inner.Iterations.Trace(observation => observation.State.Population.EvaluatedCandidates.Single().Candidate);
         IAlgorithm<int, PopulationState<int>> cycle;
         if (attached)
-            cycle = (CycleAlgorithm.Create(inner) with { MaximumCycles = 3 }).Sharing(inner).Advised(states);
+            cycle = (CycleAlgorithm.Create(inner) with { MaximumCycles = 3 }).Sharing(inner).AnalyzedBy(states);
         else
         {
             var observed = inner.Observed(states);
@@ -135,9 +129,7 @@ public sealed class InstrumentPlacementTests
         var evaluations = evaluator.Invocations.Count();
         var terminator = new AfterOperatorCountTerminator<int>(evaluations, 2);
         var scope = ResolutionScope.Create();
-        if (attached)
-            Attach(scope, evaluations);
-        IOperator<Evaluation, int> placed = attached ? evaluator : evaluator.Counted(evaluations);
+        var placed = attached ? evaluator.AnalyzedBy(evaluations) : evaluator.Counted(evaluations);
         var typed = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>();
         var termination = terminatorFirst ? typed.Resolve(terminator) : null;
         var evaluation = typed.Resolve(placed);
@@ -162,7 +154,7 @@ public sealed class InstrumentPlacementTests
         var best = algorithm.Evaluator.Invocations.TraceBestSoFar();
         var everyOther = algorithm.Iterations.Trace(observation => observation.Iteration, retention: TraceRetention.EveryNth(2));
         IAlgorithm<RealVector, PopulationState<RealVector>> configured = attached
-            ? algorithm.Advised(best, everyOther)
+            ? algorithm.AnalyzedBy(best, everyOther)
             : (algorithm with { Evaluator = algorithm.Evaluator.Observed(best) }).Observed(everyOther);
 
         var first = configured.CreateRun(problem, RandomNumberGenerator.Create(3));
@@ -176,14 +168,11 @@ public sealed class InstrumentPlacementTests
         second.Result(everyOther).Snapshot().Values.ShouldBe([2L, 4L]);
     }
 
-    // A clock shared by two traces applies once and before both observations, whichever trace is attached first and
-    // whether they are attached in one scope or in a scope and its child.
+    // A clock shared by two traces of one call applies once and before both observations, whichever trace is listed first.
     [Theory]
-    [InlineData(true, false)]
-    [InlineData(true, true)]
-    [InlineData(false, false)]
-    [InlineData(false, true)]
-    public void ASharedClock_TicksOnceBeforeBothObservations(bool sameScope, bool swap)
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ASharedClock_TicksOnceBeforeBothObservations(bool swap)
     {
         var evaluator = new ProblemEvaluator<int>();
         var candidates = evaluator.Invocations.CountCandidates();
@@ -191,10 +180,7 @@ public sealed class InstrumentPlacementTests
         var second = evaluator.Invocations.Trace(observation => -observation.Candidates.Count, [candidates]);
         var (outer, inner) = swap ? (second, first) : (first, second);
         var root = ResolutionScope.Create();
-        Attach(root, outer);
-        var scope = sameScope ? root : root.CreateChildScope();
-        Attach(scope, inner);
-        var executor = Resolve(scope, evaluator);
+        var executor = Resolve(root, evaluator.AnalyzedBy(outer, inner));
 
         executor.Evaluate([1, 2], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
         executor.Evaluate([3, 4, 5], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
@@ -215,11 +201,7 @@ public sealed class InstrumentPlacementTests
         var reads = checksum.Invocations.Count();
         var values = checksum.Invocations.Trace(observation => observation.Result, [reads]);
         var scope = ResolutionScope.Create();
-        IOperator<Checksum, int> placed = checksum;
-        if (attached)
-            Attach(scope, values);
-        else
-            placed = checksum.Counted(reads).Observed(values);
+        var placed = attached ? checksum.AnalyzedBy(values) : checksum.Counted(reads).Observed(values);
         var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(placed);
 
         executor.Read(RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem).ShouldBe(1);
@@ -251,13 +233,13 @@ public sealed class InstrumentPlacementTests
     public async Task Advised_DoesNotSelectItself()
     {
         var inner = new CountingExecutionAlgorithm(1, new ProblemEvaluator<int>());
-        var resolutions = new AllAlgorithmResolutions();
-        var run = (CycleAlgorithm.Create(inner) with { MaximumCycles = 2 }).Advised(resolutions).CreateRun(IntegerProblem, RandomNumberGenerator.Create(1));
+        var resolutions = new CountAccumulator();
+        var run = (CycleAlgorithm.Create(inner) with { MaximumCycles = 2 }).Advised(AllAlgorithmResolutions(resolutions)).CreateRun(IntegerProblem, RandomNumberGenerator.Create(1));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // The cycle and its two turns; the Advised node at the root is not among them.
-        run.Result(resolutions).CurrentCount.ShouldBe(3);
+        resolutions.CurrentCount.ShouldBe(3);
     }
 
     // The exclusion covers only the node adding the advice: an inner Advised node attaching an instrument that
@@ -266,31 +248,27 @@ public sealed class InstrumentPlacementTests
     public void Advised_AddingAdviceForAnotherResolvedNode_IsAnError()
     {
         var inner = new CountingExecutionAlgorithm(1, new ProblemEvaluator<int>());
-        var algorithm = inner.Advised(new AllAlgorithmResolutions()).Advised(inner.Calls.Count());
+        var algorithm = inner.Advised(AllAlgorithmResolutions(new CountAccumulator())).Advised(AllAlgorithmResolutions(new CountAccumulator()));
 
         Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(IntegerProblem, RandomNumberGenerator.Create(1)).Complete(cancellationToken: TestContext.Current.CancellationToken))
             .Message.ShouldContain("already resolved without it");
     }
 
-    // The first instrument listed wraps closest, and nesting keeps the order, so inner advice wraps closer.
+    // Substitutions apply in order and each new one matches the original target, so later entries and later calls sit
+    // closer to it and record first.
     [Fact]
-    public void Advised_FirstListedAndInnerAttachmentsWrapClosest()
+    public void AnalyzedBy_LaterEntriesAndLaterCallsSitCloser()
     {
         var evaluator = new ProblemEvaluator<int>();
         var log = new List<string>();
+        Instrument Logging(string label) => evaluator.Invocations.Observing(_ => log.Add(label));
         var algorithm = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }
-            .Advised(new Logging(evaluator, "first", log), new Logging(evaluator, "second", log))
-            .Advised(new Logging(evaluator, "outer", log));
+            .AnalyzedBy(Logging("first"), Logging("second"))
+            .AnalyzedBy(Logging("outer"));
 
         algorithm.CreateRun(IntegerProblem, RandomNumberGenerator.Create(1)).Complete(cancellationToken: TestContext.Current.CancellationToken);
 
-        log.ShouldBe(["first", "second", "outer"]);
-    }
-
-    private static void Attach(ResolutionScope scope, params Instrument[] instruments)
-    {
-        foreach (var instrument in instruments)
-            scope.AddAspect(scope.Results.Aspect(instrument));
+        log.ShouldBe(["outer", "second", "first"]);
     }
 
     private static IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IOperator<Evaluation, int> evaluator) =>
@@ -343,34 +321,18 @@ public sealed class InstrumentPlacementTests
         }
     }
 
-    // A counter of the executors resolved for every algorithm, written outside the library.
-    private sealed class AllAlgorithmResolutions : Counter
+    // Advice counting the executors resolved for every algorithm, written outside the library.
+    private static Aspect AllAlgorithmResolutions(CountAccumulator resolutions) =>
+        Aspect.Create(Pointcut.OfType<IAlgorithm<int, PopulationState<int>>>(), new ResolutionCounting(resolutions));
+
+    private sealed class ResolutionCounting(CountAccumulator resolutions) : AlgorithmAdvice<int, PopulationState<int>>
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
-
-        protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
-            Aspect.Create(Pointcut.OfType<IAlgorithm<int, PopulationState<int>>>(), new ResolutionCounting(result));
-
-        private sealed class ResolutionCounting(CountAccumulator resolutions) : AlgorithmAdvice<int, PopulationState<int>>
+        public override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> Wrap<TSearchSpace, TProblem>(
+            IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> executor, IAlgorithm<int, PopulationState<int>> source)
         {
-            public override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> Wrap<TSearchSpace, TProblem>(
-                IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> executor, IAlgorithm<int, PopulationState<int>> source)
-            {
-                resolutions.IncrementBy(1);
-                return executor;
-            }
+            resolutions.IncrementBy(1);
+            return executor;
         }
-    }
-
-    // Logs its label after each evaluation, so the order of the log is the order of the wrappers from the inside out.
-    private sealed class Logging(IOperator<Evaluation, int> evaluator, string label, List<string> log) : Instrument<List<string>>
-    {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
-
-        protected override List<string> CreateResult(RunResults results) => log;
-
-        protected override Aspect CreateAspect(List<string> result, RunResults results) =>
-            Aspect.Observe(evaluator.Invocations, _ => result.Add(label));
     }
 
     private sealed class ManualTimeProvider : TimeProvider

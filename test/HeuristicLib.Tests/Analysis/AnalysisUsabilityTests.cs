@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -16,10 +17,11 @@ public class AnalysisUsabilityTests
         var evaluator = new ManualEvaluator();
         var first = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
         var second = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: TraceRetention.EveryNth(2));
-        var scope = Install(first, second);
+        var placed = evaluator.AnalyzedBy(first, second);
+        var scope = ResolutionScope.Create();
 
         foreach (var candidate in Enumerable.Range(1, 5))
-            Evaluate(scope, evaluator, candidate);
+            Evaluate(scope, placed, candidate);
 
         scope.Results.Result(first).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
         scope.Results.Result(second).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
@@ -36,10 +38,11 @@ public class AnalysisUsabilityTests
         var shared = TraceRetention.EveryNth(2);
         var first = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: shared);
         var second = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0], retention: shared);
-        var scope = Install(first, second);
+        var placed = evaluator.AnalyzedBy(first, second);
+        var scope = ResolutionScope.Create();
 
         foreach (var candidate in Enumerable.Range(1, 5))
-            Evaluate(scope, evaluator, candidate);
+            Evaluate(scope, placed, candidate);
 
         scope.Results.Result(first).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
         scope.Results.Result(second).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
@@ -52,10 +55,11 @@ public class AnalysisUsabilityTests
         var secondEvaluator = new ManualEvaluator();
         var count = 0;
         var trace = Analyzer.Trace([firstEvaluator.Invocations, secondEvaluator.Invocations], observation => count += observation.ObjectiveVectors.Count);
-        var scope = Install(trace);
+        var placed = new TwoEvaluators(firstEvaluator, secondEvaluator).Substitute(trace.Substitutions);
+        var scope = ResolutionScope.Create();
 
-        Evaluate(scope, firstEvaluator, 1, 2);
-        Evaluate(scope, secondEvaluator, 3, 4);
+        Evaluate(scope, placed.First, 1, 2);
+        Evaluate(scope, placed.Second, 3, 4);
 
         scope.Results.Result(trace).Snapshot().Select(entry => entry.Value).ShouldBe([2, 4]);
     }
@@ -66,9 +70,9 @@ public class AnalysisUsabilityTests
         var evaluator = new ManualEvaluator();
         var count = 0;
         var trace = Analyzer.Trace([evaluator.Invocations, evaluator.Invocations], observation => count += observation.ObjectiveVectors.Count);
-        var scope = Install(trace);
+        var scope = ResolutionScope.Create();
 
-        Evaluate(scope, evaluator, 1, 2);
+        Evaluate(scope, evaluator.AnalyzedBy(trace), 1, 2);
 
         scope.Results.Result(trace).Snapshot().Select(entry => entry.Value).ShouldBe([2]);
     }
@@ -82,11 +86,11 @@ public class AnalysisUsabilityTests
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var mutations = mutator.Invocations.Trace(observation => observation.Offspring.Count);
         var evaluations = evaluator.Invocations.Trace(observation => observation.Candidates.Count);
-        var root = Install(mutations, evaluations);
+        var root = ResolutionScope.Create();
         var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
 
-        scope.Resolve(mutator).Mutate([new RealVector(2.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        scope.Resolve(evaluator).Evaluate([new RealVector(2.0), new RealVector(3.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve(mutator.AnalyzedBy(mutations)).Mutate([new RealVector(2.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve(evaluator.AnalyzedBy(evaluations)).Evaluate([new RealVector(2.0), new RealVector(3.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
         root.Results.Result(mutations).Snapshot().Select(entry => entry.Value).ShouldBe([1]);
         root.Results.Result(evaluations).Snapshot().Select(entry => entry.Value).ShouldBe([2]);
@@ -116,14 +120,15 @@ public class AnalysisUsabilityTests
                 Interlocked.Decrement(ref activeCalls);
             }
         });
-        var root = Install(trace);
+        var placed = evaluator.AnalyzedBy(trace);
+        var root = ResolutionScope.Create();
         using var start = new Barrier(4);
         var workers = Enumerable.Range(0, 4).Select(_ => Task.Run(() =>
         {
             var scope = root.CreateChildScope();
             start.SignalAndWait(TestContext.Current.CancellationToken);
             for (var i = 0; i < 8; i++)
-                Evaluate(scope, evaluator, i);
+                Evaluate(scope, placed, i);
         }, TestContext.Current.CancellationToken)).ToArray();
 
         await Task.WhenAll(workers);
@@ -149,16 +154,17 @@ public class AnalysisUsabilityTests
     }
 
     [Fact]
-    public void SharedClock_IsInstalledOncePerScope()
+    public void SharedClock_IsInstalledOnce()
     {
         var evaluator = new ManualEvaluator();
         var clock = evaluator.Invocations.CountCandidates();
         var first = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors.Count, clocks: [clock, clock]);
         var second = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors.Count, clocks: [clock]);
-        var scope = Install(first, second);
+        var placed = evaluator.AnalyzedBy(first, second);
+        var scope = ResolutionScope.Create();
 
-        Evaluate(scope, evaluator, 1, 2);
-        Evaluate(scope, evaluator, 3, 4, 5);
+        Evaluate(scope, placed, 1, 2);
+        Evaluate(scope, placed, 3, 4, 5);
 
         scope.Results.Result(first).By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
         scope.Results.Result(second).By(clock).Select(point => point.Time).ShouldBe([2L, 5L]);
@@ -195,21 +201,25 @@ public class AnalysisUsabilityTests
         var evaluator = new ManualEvaluator();
         var trace = evaluator.Invocations.Trace(observation => observation.ObjectiveVectors[0][0],
             retention: new UnknownDecisionRetention());
-        var scope = Install(trace);
+        var placed = evaluator.AnalyzedBy(trace);
+        var scope = ResolutionScope.Create();
 
-        var exception = Should.Throw<InvalidOperationException>(() => Evaluate(scope, evaluator, 1));
+        var exception = Should.Throw<InvalidOperationException>(() => Evaluate(scope, placed, 1));
         exception.Message.ShouldContain("unknown decision");
     }
 
-    private static ResolutionScope Install(params Instrument[] instruments)
+    private sealed record TwoEvaluators(IOperator<Evaluation, int> First, IOperator<Evaluation, int> Second) : IConfigurationNode
     {
-        var scope = ResolutionScope.Create();
-        foreach (var instrument in instruments)
-            scope.AddAspect(scope.Results.Aspect(instrument));
-        return scope;
+        public static Parameter<TwoEvaluators, IOperator<Evaluation, int>> FirstParameter { get; } =
+            new(nameof(First), static node => node.First, static (node, value) => node with { First = value });
+
+        public static Parameter<TwoEvaluators, IOperator<Evaluation, int>> SecondParameter { get; } =
+            new(nameof(Second), static node => node.Second, static (node, value) => node with { Second = value });
+
+        public IReadOnlyList<IParameter> GetParameters() => [FirstParameter, SecondParameter];
     }
 
-    private static void Evaluate(ResolutionScope scope, ManualEvaluator evaluator, params int[] candidates) =>
+    private static void Evaluate(ResolutionScope scope, IOperator<Evaluation, int> evaluator, params int[] candidates) =>
         scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
 
     private sealed class SeparateEvaluatorAnalyzer : Aspect

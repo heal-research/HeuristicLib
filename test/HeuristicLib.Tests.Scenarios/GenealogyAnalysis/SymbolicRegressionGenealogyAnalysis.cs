@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 using HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions;
 using HEAL.HeuristicLib.Inspection;
@@ -48,7 +49,7 @@ public class GenealogyGraphTests
 
         var analysis = ga.Iterations.TracePopulationCandidates();
 
-        var run = ga.Advised(analysis).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = ga.AnalyzedBy(analysis).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var ares = run.Result(analysis).Snapshot();
 
@@ -87,7 +88,7 @@ public class GenealogyGraphTests
         var genealogyAnalysis =
             Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
 
-        var run = algorithm.Advised(evalQualities, qualities).Advised(genealogyAnalysis).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = algorithm.AnalyzedBy(evalQualities, qualities, genealogyAnalysis).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         var qres = run.Result(qualities).Snapshot();
@@ -117,7 +118,7 @@ public class GenealogyGraphTests
         var genealogy =
             new GenealogyAnalyzer<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>(
                 mutators: [algorithm.Mutator], algorithms: [algorithm]);
-        var run = algorithm.TerminatedAfterIterations(8).Advised(genealogy).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = algorithm.TerminatedAfterIterations(8).AnalyzedBy(genealogy).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.Result(genealogy);
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
@@ -152,7 +153,7 @@ public class GenealogyGraphTests
         var genealogy = Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
         var qualities = algorithm.Iterations.TracePopulationCandidates();
 
-        var run = algorithm.Advised(genealogy).Advised(qualities).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = algorithm.AnalyzedBy(genealogy, qualities).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.Result(genealogy);
         var qres = run.Result(qualities).Snapshot();

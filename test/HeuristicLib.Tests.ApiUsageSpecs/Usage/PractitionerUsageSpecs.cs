@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
@@ -406,14 +407,11 @@ public class PractitionerUsageSpecs
 
         var counted = new CountingOperatorAdvice<Mutation, RealVector>(counter, OperatorCountMetric.Candidates);
         var measurement = mutator.Invocations.Duration();
-        var scope = ResolutionScope.Create();
-        var measured = scope.Results.Aspect(measurement);
 
         Aspect.Create(Pointcut.Reference(mutator), counted).Single().Pointcut.Matches(mutator).ShouldBeTrue();
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
-        measured.Single().Pointcut.Matches(mutator).ShouldBeTrue();
-        measured.Single().Advice.ShouldBeOfType<DurationMeasuringOperatorAdvice<Mutation, RealVector>>().Duration.ShouldBeSameAs(scope.Results.Result(measurement));
+        mutator.AnalyzedBy(measurement).ShouldBeOfType<Timed<Mutation, RealVector>>().Duration.ShouldBeSameAs(measurement);
     }
 
     [Fact]
@@ -455,7 +453,7 @@ public class PractitionerUsageSpecs
         var observedAlgorithm = baseAlgorithm with { Mutator = baseAlgorithm.Mutator.Counted(counter) };
         var algorithm = observedAlgorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
-        var run = algorithm.Advised(counter).CreateRun(problem, RandomNumberGenerator.Create(987));
+        var run = algorithm.AnalyzedBy(counter).CreateRun(problem, RandomNumberGenerator.Create(987));
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
               .ToList();
 

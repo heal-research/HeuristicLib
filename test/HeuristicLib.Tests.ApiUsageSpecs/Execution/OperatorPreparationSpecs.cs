@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
@@ -21,10 +22,8 @@ public sealed partial class OperatorPreparationSpecs
         var childCalls = source.Invocations.Count();
         var wrapperCalls = twice.Invocations.Count();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(scope.Results.Aspect(childCalls));
-        scope.AddAspect(scope.Results.Aspect(wrapperCalls));
         var executor = scope
-            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(twice);
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(twice.AnalyzedBy(childCalls, wrapperCalls));
         var problem = new TestFunctionProblem(new SphereFunction(1));
         IReadOnlyList<RealVector> parents = [new(1.0)];
 

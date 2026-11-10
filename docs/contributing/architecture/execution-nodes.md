@@ -6,7 +6,7 @@ Configurations describe reusable settings, child configurations and instrument d
 | ---------------- | --------------------------------------------------------------------------- |
 | Configuration    | Settings, declared children, instruments and a typed `CreateExecutor` hook. |
 | Executor         | Typed operations, private fields and resolved child references.             |
-| Instrument       | Immutable definition of one result per run and its collecting aspect.       |
+| Instrument       | Immutable definition of one result per run and how it is placed.            |
 | Run result       | Runtime data collected for an instrument within one run.                    |
 | Resolution scope | Constructing executors with contextual children, advice and run results.    |
 | Pointcut         | Selecting configurations during resolution.                                 |
@@ -27,9 +27,9 @@ Keep private execution data in its executor. Use `Sharing` on an enclosing confi
 
 Configured wrappers are ordinary configurations with declared children. Operator wrappers return `scope.ResolveOperator(ChildOperator)` or wrap the resolved child with `TOperation.Wrap(childOperator, wrapper)`; wrapping algorithms resolve their `ChildAlgorithm` through the scope their `CreateExecutor` receives and build their executor around it.
 
-Advice wraps resolved executors and introduces no configured children. Operation and role advice provide typed `Check` and `Wrap` hooks; constructor-bound dependencies belong to the runtime advice. Observation sources wrap successful operator calls, algorithm iterations or algorithm calls. Instruments create the collecting aspect from each run's result; explicit placement uses the same observation wrappers.
+Advice wraps resolved executors and introduces no configured children. Operation and role advice provide typed `Check` and `Wrap` hooks; constructor-bound dependencies belong to the runtime advice. Observation sources wrap successful operator calls, algorithm iterations or algorithm calls. Instruments place observation wrappers through substitutions; explicit placement uses the same wrappers.
 
-Use `Aspect.Observe` for runtime callbacks and source-defined counters or durations for accounting. Attach them to an algorithm with `Advised`, or add a plain aspect through `scope.AddAspect` before direct resolution.
+Use `Observing` for runtime callbacks and source-defined counters or durations for accounting, and attach them to an algorithm with `AnalyzedBy`. Plain aspects attach through `Advised`, or through `scope.AddAspect` before direct resolution.
 
 ## Resources and child activations
 

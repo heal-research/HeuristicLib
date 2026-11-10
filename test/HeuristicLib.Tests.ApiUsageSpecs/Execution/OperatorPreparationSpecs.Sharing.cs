@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
@@ -20,21 +21,21 @@ public sealed partial class OperatorPreparationSpecs
     {
         var source = new CountingSource();
         var reads = ReadSource(source).Count();
+        var counted = ((IOperator<ReadValue, RealVector>)source).AnalyzedBy(reads);
         var root = ResolutionScope.Create();
-        root.AddAspect(root.Results.Aspect(reads));
         var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var random = RandomNumberGenerator.Create(1);
 
-        var read = Read(scope, source);
+        var read = Read(scope, counted);
         var mutation = scope.Resolve((IOperator<Mutation, RealVector>)source);
         read.Read(random, problem.SearchSpace, problem).ShouldBe(1);
         mutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(2);
-        Read(scope, source).Read(random, problem.SearchSpace, problem).ShouldBe(3);
+        Read(scope, counted).Read(random, problem.SearchSpace, problem).ShouldBe(3);
 
         var child = scope.CreateChildScope();
         child.Resolve((IOperator<Mutation, RealVector>)source).Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(1);
-        Read(child, source).Read(random, problem.SearchSpace, problem).ShouldBe(2);
+        Read(child, counted).Read(random, problem.SearchSpace, problem).ShouldBe(2);
         root.Results.Result(reads).CurrentCount.ShouldBe(3);
     }
 
@@ -68,7 +69,7 @@ public sealed partial class OperatorPreparationSpecs
         var cycle = CycleAlgorithm.Create(first.TerminatedAfterIterations(2), second.TerminatedAfterIterations(2)) with { MaximumCycles = 3 };
         var calls = evaluator.Invocations.Count();
         var produced = cycle.Iterations.Count();
-        var run = cycle.Sharing(cached).Advised(calls, produced).Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var run = cycle.Sharing(cached).AnalyzedBy(calls, produced).Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7));
         var results = await run.CompleteAsync(ExecutionConcurrency.Concurrent(3), cancellationToken: TestContext.Current.CancellationToken);
 
         results.Length.ShouldBe(3);
@@ -78,8 +79,8 @@ public sealed partial class OperatorPreparationSpecs
     }
 
     private static IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Read(
-        ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> scope, CountingSource source) =>
-        (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator((IOperator<ReadValue, RealVector>)source);
+        ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> scope, IOperator<ReadValue, RealVector> source) =>
+        (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(source);
 
     private static InvocationSource<ReadValue, RealVector, int> ReadSource(CountingSource source) =>
         ObservationSource.Create((IOperator<ReadValue, RealVector>)source, (Action<int> observe) => new ReadObservationAdvice(observe));
@@ -124,6 +125,11 @@ public sealed partial class OperatorPreparationSpecs
     private sealed record RepeatedEvaluation(CachingEvaluator<RealVector> Evaluator, RealVector Candidate)
         : Algorithm<RepeatedEvaluation, RealVector, SingleSolutionState<RealVector>>
     {
+        public static Parameter<RepeatedEvaluation, CachingEvaluator<RealVector>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
+
         protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope)
         {

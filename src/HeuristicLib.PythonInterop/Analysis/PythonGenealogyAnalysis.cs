@@ -210,7 +210,7 @@ public class PythonGenealogyAnalysis
         RankAnalyzer<TCandidate>? RankAnalysis,
         TraceAnalyzer<EvaluationObservation<TCandidate>, EvaluatedCandidate<TCandidate>> QualityCurve,
         TraceAnalyzer<AlgorithmObservation<TCandidate, PopulationState<TCandidate>>, ValueArray<EvaluatedCandidate<TCandidate>>>? AllPopulations,
-        Aspect? CallbackAnalyzer)
+        Instrument? CallbackAnalyzer)
         where TCandidate : notnull
     {
         public ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run)
@@ -233,19 +233,17 @@ public class PythonGenealogyAnalysis
         }
 
         // All analysis definitions collect into their own result in this run.
-        public AdvisedAlgorithm<TCandidate, TSearchState> AttachTo<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+        public IAlgorithm<TCandidate, TSearchState> AttachTo<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
             where TSearchState : class, ISearchState
         {
-            List<Instrument> instruments = [Qualities, QualityCurve];
+            List<Instrument> analyzers = [Qualities, QualityCurve];
             if (AllPopulations is not null)
-                instruments.Add(AllPopulations);
-
-            List<Aspect> aspects = [];
+                analyzers.Add(AllPopulations);
             if (RankAnalysis is not null)
-                instruments.Add(RankAnalysis);
+                analyzers.Add(RankAnalysis);
             if (CallbackAnalyzer is not null)
-                aspects.Add(CallbackAnalyzer);
-            return new AdvisedAlgorithm<TCandidate, TSearchState>(algorithm, instruments, aspects);
+                analyzers.Add(CallbackAnalyzer);
+            return algorithm.AnalyzedBy(analyzers);
         }
     }
 
@@ -294,7 +292,7 @@ public class PythonGenealogyAnalysis
         var qc = evaluator.Invocations.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
         var apt = parameters.TrackPopulations ? algorithm.Iterations.Trace(static observation => observation.State.Population.EvaluatedCandidates) : null;
         var c = callback != null
-            ? Aspect.Observe(algorithm.Iterations, observation => callback(observation.State))
+            ? algorithm.Iterations.Observing(observation => callback(observation.State))
             : null;
         return new MyAnalyzers<TCandidate>(qualities, rankAnalysis, qc, apt, c);
     }

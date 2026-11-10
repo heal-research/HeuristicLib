@@ -42,6 +42,14 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 
     public required IAlgorithm<TCandidate, TSearchState> Second { get; init; }
 
+    public static Parameter<TwoStageAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> FirstParameter { get; } =
+        new(nameof(First), static algorithm => algorithm.First, static (algorithm, value) => algorithm with { First = value });
+
+    public static Parameter<TwoStageAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> SecondParameter { get; } =
+        new(nameof(Second), static algorithm => algorithm.Second, static (algorithm, value) => algorithm with { Second = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), FirstParameter, SecondParameter];
+
     protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
@@ -80,8 +88,9 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 }
 ```
 
-Four details carry the design:
+Five details carry the design:
 
+- **Both children are declared as parameters.** Analysis and other substitutions reach only declared children, so an undeclared child could not be observed.
 - **Both children are resolved in `CreateExecutor`.** Each build receives children with the requesting context's observations, with independent private fields and any explicitly shared resources.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
@@ -103,18 +112,18 @@ var staged = new TwoStageAlgorithm<RealVector, PopulationState<RealVector>>
 };
 
 var wholeRun = staged.Iterations.TracePopulationQuality();
-var run = staged.Advised(wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+var run = staged.AnalyzedBy(wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 ```
 
 Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
 
-Because the children are resolved through the scope, either stage can also be observed on its own:
+Because the children are declared, either stage can also be observed on its own:
 
 ```csharp
 var exploreQuality = explore.Iterations.TracePopulationQuality();
 
 var wholeRun = staged.Iterations.TracePopulationQuality();
-var run = staged.Advised(exploreQuality, wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+var run = staged.AnalyzedBy(exploreQuality, wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 ```
 
 `run.Result(exploreQuality)` then holds only the first stage's generations, and `run.Result(wholeRun)` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.

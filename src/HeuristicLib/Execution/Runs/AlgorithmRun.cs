@@ -10,12 +10,14 @@ public abstract class AlgorithmRun
 {
     private readonly Lock sync = new();
     private readonly ResolutionScope scope;
+    private readonly IConfigurationNode configuration;
 
     public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Ready;
 
-    protected AlgorithmRun(ResolutionScope scope)
+    protected AlgorithmRun(ResolutionScope scope, IConfigurationNode configuration)
     {
         this.scope = scope;
+        this.configuration = configuration;
     }
 
     /// <summary>Returns this run's result of the instrument, creating it when the run has not looked it up yet.</summary>
@@ -23,13 +25,44 @@ public abstract class AlgorithmRun
     /// The result can be read before, during and after execution, also after a failure. Each result type states how it
     /// may be read while the run writes to it, such as a trace through its snapshots.
     /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// The instrument needs placing and the run's algorithm does not hold it, so it would read empty. What a delegate
+    /// creates cannot be seen, so nothing is reported once the algorithm holds a delegate.
+    /// </exception>
     [OverloadResolutionPriority(1)]
-    public TResult Result<TResult>(Instrument<TResult> instrument) where TResult : class => scope.Results.Result(instrument);
+    public TResult Result<TResult>(Instrument<TResult> instrument) where TResult : class
+    {
+        if (instrument.Substitutions.Count > 0 && !MayHold(configuration, instrument))
+            throw new InvalidOperationException($"This run's algorithm does not hold the {ExecutionSignature.Name(instrument.GetType())}, so its result would stay empty. " +
+                "Attach it with algorithm.AnalyzedBy(analyzer) and create the run from the configuration that call returns.");
+        return scope.Results.Result(instrument);
+    }
 
     /// <summary>Returns this run's result of the configuration, such as the accumulator of a counter.</summary>
     /// <remarks>It can be read before, during and after execution, also after a failure.</remarks>
     public TResult Result<TResult>(IConfigurationNode<TResult> configuration) where TResult : class, IRunResult =>
         scope.RunResult(configuration);
+
+    // Whether a declared parameter reachable from the root holds the value, or a delegate could have placed it unseen.
+    private static bool MayHold(IConfigurationNode root, object value)
+    {
+        var seen = new HashSet<IConfigurationNode>(ReferenceEqualityComparer.Instance);
+        var pending = new Stack<IConfigurationNode>([root]);
+        while (pending.TryPop(out var node))
+        {
+            if (!seen.Add(node))
+                continue;
+            foreach (var parameter in node.GetParameters())
+            {
+                var held = parameter.GetValue(node);
+                if (ReferenceEquals(held, value) || held is Delegate)
+                    return true;
+                foreach (var child in parameter.GetChildren(node))
+                    pending.Push(child);
+            }
+        }
+        return false;
+    }
 
     protected ResolutionScope? BeginExecutionSegment()
     {
@@ -85,7 +118,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     public IRandomNumberGenerator Random { get; }
 
     public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
-        : base(ResolutionScope.Create())
+        : base(ResolutionScope.Create(), algorithm)
     {
         Algorithm = algorithm;
         Problem = problem;

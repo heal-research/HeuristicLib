@@ -4,18 +4,18 @@ namespace HEAL.HeuristicLib.Inspection;
 
 /// <summary>A notion of time a trace records each entry against, such as a count of evaluations or the elapsed time.</summary>
 /// <remarks>
-/// A clock is an instrument whose result is read as a time. A trace binds each of its clocks to the run, reads them at
-/// every entry and attaches the clocks' own aspects before its observations, so an entry reads clocks that already
-/// include its call. Mixed lists, such as <c>[evaluations, Clock.Elapsed]</c>, use this type. Derive a clock of your own
-/// from <see cref="Clock{TTime, TResult}"/>.
+/// A clock is read as a time. A trace binds each of its clocks to the run, reads them at every entry and lists the
+/// clocks' own substitutions after its observations, so an entry reads clocks that already include its call. Mixed
+/// lists, such as <c>[evaluations, Clock.Elapsed]</c>, use this type. Derive a clock of your own from
+/// <see cref="Clock{TTime, TResult}"/>.
 /// </remarks>
 public interface IClock
 {
     /// <summary>The substitutions that keep this clock current, which a trace lists after its own, so that they sit closer to the node.</summary>
     IReadOnlyList<Substitution> Substitutions { get; }
 
-    // Binds the clock to one run: the reader a trace samples at each entry, and the aspect that keeps the clock current.
-    internal (Func<object> Read, Aspect Aspect) Bind(RunResults results);
+    // Binds the clock to one run: the reader a trace samples at each entry.
+    internal Func<object> Bind(RunResults results);
 }
 
 /// <summary>A clock whose time has the type <typeparamref name="TTime"/>, which is what a trace is read back by.</summary>
@@ -24,10 +24,9 @@ public interface IClock<out TTime> : IClock;
 /// <summary>An instrument whose result in each run is read as a time of the type <typeparamref name="TTime"/>.</summary>
 /// <remarks>
 /// This is the type a custom clock derives from, such as one over a domain quantity the library knows nothing about. Its
-/// result is created once per run, as for every instrument, and a clock that is kept current by advice places that
-/// advice through <see cref="Instrument{TResult}.CreateAspect"/>. A clock belongs beside the thing it reads. The clock
-/// object is also the key a trace is read back with, so one instance means one axis: two clocks of the same kind stay
-/// distinguishable.
+/// result is created once per run, as for every instrument, and a clock that needs keeping current names the wrapper
+/// that does so in its substitutions. A clock belongs beside the thing it reads. The clock object is also the key a trace
+/// is read back with, so one instance means one axis: two clocks of the same kind stay distinguishable.
 /// </remarks>
 public abstract class Clock<TTime, TResult> : Instrument<TResult>, IClock<TTime> where TResult : class
 {
@@ -36,10 +35,10 @@ public abstract class Clock<TTime, TResult> : Instrument<TResult>, IClock<TTime>
     /// <summary>Reads the time from this run's result. Called once per recorded trace entry.</summary>
     protected abstract TTime Read(TResult result);
 
-    (Func<object> Read, Aspect Aspect) IClock.Bind(RunResults results)
+    Func<object> IClock.Bind(RunResults results)
     {
         var result = results.Result(this);
-        return (() => Read(result)!, results.Aspect(this));
+        return () => Read(result)!;
     }
 }
 

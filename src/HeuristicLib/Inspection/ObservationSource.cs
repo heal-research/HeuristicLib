@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Inspection;
 /// <para>
 /// A source is a configuration and the wrapper that makes each call of that configuration's executor produce an
 /// observation; creating one installs nothing. Both ways of collecting use that one wrapper: attaching an instrument
-/// with <c>Advised</c> places it through advice, and placing it explicitly, such as <c>evaluator.Observed(trace)</c>,
+/// with <c>AnalyzedBy</c> places it through a substitution, and placing it explicitly, such as <c>evaluator.Observed(trace)</c>,
 /// wraps the configuration where it is written. An operation offers its source as <c>Invocations</c>, such as
 /// <c>crossover.Invocations</c>, and an algorithm as <c>Iterations</c> and <c>Calls</c>; an operator implementing several
 /// operations offers each through a view typed to that operation.
@@ -79,7 +79,7 @@ public sealed class InvocationSource<TOperation, TCandidate, TObservation> : Obs
 
     public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
         recordingInto is null
-            ? throw new InvalidOperationException($"This source of {Operator.GetType().Name} was created from an advice factory, so it can only be attached with Advised. " +
+            ? throw new InvalidOperationException($"This source of {Operator.GetType().Name} was created from an advice factory, so only Aspect.Observe can use it. " +
                 $"Create it from a record implementing {nameof(IInvocationObservation<,,>)} to place it.")
             : recordingInto(instrument);
 
@@ -97,52 +97,48 @@ public static class ObservationSource
         new(configuration, static observe => new ObservationAdvice<TOperation, TCandidate, TObservation>(observe),
             instrument => Substitution.Of<IOperator<TOperation, TCandidate>>(configuration, node => new Observed<TOperation, TCandidate, TObservation>(node, instrument)));
 
-    /// <summary>Creates a source that only attaching with <c>Advised</c> can use, observing any value.</summary>
+    /// <summary>Creates a source that only <c>Aspect.Observe</c> can use, observing any value.</summary>
     /// <param name="configuration">The observed operator, matched by reference.</param>
-    /// <param name="observe">
-    /// Creates the advice whose wrapper passes each observation of a call to the given callback. Observation through
-    /// <c>Advised</c> and the operation's <c>Observed</c> wrapper both apply it.
-    /// </param>
+    /// <param name="observe">Creates the advice whose wrapper passes each observation of a call to the given callback.</param>
     public static InvocationSource<TOperation, TCandidate, TObservation> Create<TOperation, TCandidate, TObservation>(
         IOperator<TOperation, TCandidate> configuration, Func<Action<TObservation>, OperatorAdvice<TOperation, TCandidate>> observe)
         where TOperation : IOperation<TOperation> =>
         new(configuration, observe);
 
     /// <summary>Creates the source of the observations of a role of your own, such as a cooling schedule.</summary>
+    /// <typeparam name="TConfiguration">
+    /// The type of the slots holding the configuration. Use the role's interface, because the wrapper must fit the slot.
+    /// </typeparam>
     /// <param name="configuration">The observed configuration, matched by reference.</param>
-    /// <param name="observe">
-    /// Creates the advice whose wrapper passes each observation of a call to the given callback. An explicit wrapper of
-    /// the role applies the same advice to the executor it wraps, recording into
+    /// <param name="place">
+    /// Creates the role's own observation wrapper around a configuration, recording into the instrument through
     /// <see cref="IObservationInstrument{TObservation}.CreateRecorder"/>.
     /// </param>
-    public static ObservationSource<TObservation> Create<TConfiguration, TExecutor, TObservation>(
-        TConfiguration configuration, Func<Action<TObservation>, Advice<TConfiguration, TExecutor>> observe)
-        where TConfiguration : class, IConfigurationNode<TExecutor>
-        where TExecutor : class, IExecutor =>
-        new RoleSource<TConfiguration, TExecutor, TObservation>(configuration, observe);
+    public static ObservationSource<TObservation> Create<TConfiguration, TObservation>(
+        TConfiguration configuration, Func<TConfiguration, IObservationInstrument<TObservation>, TConfiguration> place)
+        where TConfiguration : class, IConfigurationNode =>
+        new RoleSource<TConfiguration, TObservation>(configuration, place);
 
-    private sealed class RoleSource<TConfiguration, TExecutor, TObservation>(
-        TConfiguration configuration, Func<Action<TObservation>, Advice<TConfiguration, TExecutor>> observe)
+    private sealed class RoleSource<TConfiguration, TObservation>(
+        TConfiguration configuration, Func<TConfiguration, IObservationInstrument<TObservation>, TConfiguration> place)
         : ObservationSource<TObservation>
-        where TConfiguration : class, IConfigurationNode<TExecutor>
-        where TExecutor : class, IExecutor
+        where TConfiguration : class, IConfigurationNode
     {
         public override IConfigurationNode Configuration => configuration;
 
-        // An own role has no wrapper the library could create; phase 3 settles how its author supplies one.
         public override Substitution RecordingInto(IObservationInstrument<TObservation> instrument) =>
-            throw new InvalidOperationException($"A source of the role {typeof(TConfiguration).Name} can only be attached with Advised for now.");
+            Substitution.Of(configuration, node => place(node, instrument));
 
         internal override Aspect Observe(Action<TObservation> callback) =>
-            Aspect.Create(Pointcut.Reference(configuration), observe(callback));
+            throw new InvalidOperationException($"A source of the role {typeof(TConfiguration).Name} is placed with AnalyzedBy or Observing, not with Aspect.Observe.");
     }
 }
 
 /// <summary>An instrument that records observations, such as a trace; what <c>Observed</c> wrappers record into.</summary>
 /// <remarks>
-/// Implement it on an instrument of your own, together with <see cref="Instrument{TResult}"/>, so that both ways of
-/// collecting reach it: its aspect observes the source through <c>Aspect.Observe</c>, and explicit placement records
-/// through the callback this creates.
+/// Implement it on an instrument of your own, together with <see cref="Instrument{TResult}"/>. Its substitutions place
+/// it through <see cref="ObservationSource{TObservation}.RecordingInto"/>, and the wrapper records through the callback
+/// this creates.
 /// </remarks>
 public interface IObservationInstrument<in TObservation>
 {

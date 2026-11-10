@@ -96,29 +96,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : Instrument<Gen
 
     protected override GenealogyGraph<TCandidate> CreateResult(RunResults results) => new(equality);
 
-    protected override Aspect CreateAspect(GenealogyGraph<TCandidate> result, RunResults results) => Observe(result);
-
-    internal Aspect Observe(GenealogyGraph<TCandidate> graph) =>
-        new Collection(graph, crossovers, mutators, algorithms, RecordGenerations(graph));
-
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; init; }
-
-    private sealed class Collection : Aspect
-    {
-        public Collection(GenealogyGraph<TCandidate> graph,
-            IReadOnlyList<IOperator<Crossover, TCandidate>> crossovers,
-            IReadOnlyList<IOperator<Mutation, TCandidate>> mutators,
-            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms,
-            Action<AlgorithmObservation<TCandidate, TSearchState>> recordGenerations)
-        {
-            Advices =
-            [
-                .. crossovers.SelectMany(crossover => Aspect.Observe(crossover.Invocations, RecordCrossovers(graph))),
-                .. mutators.SelectMany(mutator => Aspect.Observe(mutator.Invocations, RecordMutations(graph))),
-                .. algorithms.SelectMany(algorithm => Aspect.Observe(algorithm.Iterations, recordGenerations))
-            ];
-        }
-    }
 }
 
 public static class GenealogyAnalysisTraces

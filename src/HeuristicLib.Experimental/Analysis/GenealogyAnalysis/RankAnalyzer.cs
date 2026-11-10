@@ -46,7 +46,6 @@ public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandi
     {
         if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
             throw new ArgumentException("A rank analysis needs at least one crossover, mutator or algorithm to observe.");
-        this.algorithms = (algorithms ?? []).ToValueArray();
         this.equality = equality ?? EqualityComparer<TCandidate>.Default;
         ObjectiveComparer = objectiveComparer;
         genealogy = new GenealogyAnalyzer<TCandidate, TSearchState>(crossovers, mutators, algorithms, equality)
@@ -54,7 +53,6 @@ public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandi
     }
 
     private readonly GenealogyAnalyzer<TCandidate, TSearchState> genealogy;
-    private readonly ValueArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
     private readonly IEqualityComparer<TCandidate> equality;
 
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; }
@@ -80,18 +78,6 @@ public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandi
     }
 
     protected override RankState<TCandidate> CreateResult(RunResults results) => new(new GenealogyGraph<TCandidate>(equality));
-
-    protected override Aspect CreateAspect(RankState<TCandidate> result, RunResults results) =>
-        new Collection(genealogy.Observe(result.Graph), algorithms, result);
-
-    private sealed class Collection : Aspect
-    {
-        public Collection(Aspect genealogy, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms, RankState<TCandidate> result)
-        {
-            // The graph contains this generation before its ranks are read.
-            Advices = [.. genealogy, .. algorithms.SelectMany(algorithm => Aspect.Observe(algorithm.Iterations, _ => result.RecordRanks()))];
-        }
-    }
 }
 
 /// <summary>

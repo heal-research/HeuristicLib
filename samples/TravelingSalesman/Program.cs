@@ -14,7 +14,7 @@ var algorithm = GeneticAlgorithm.For(problem, populationSize: 100, maximumGenera
 // A run pairs the configuration with a problem and a random source. Attach analyzers with Advised, so the same
 // configuration can be run again under different observation, and read each run's own result from the run.
 var quality = algorithm.Iterations.TracePopulationCandidates();
-var run = algorithm.Advised(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
 var finalState = await run.CompleteAsync();
 

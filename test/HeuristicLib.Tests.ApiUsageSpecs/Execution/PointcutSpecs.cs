@@ -1,12 +1,16 @@
+using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
@@ -238,8 +242,7 @@ public class PointcutSpecs
         var temperatures = Analyzer.Trace([Temperatures(warmup), Temperatures(warmup), Temperatures(main)],
             static temperature => temperature);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(scope.Results.Aspect(temperatures));
-        var executor = scope.Resolve(plan);
+        var executor = scope.Resolve(plan.Substitute(temperatures.Substitutions));
 
         executor.Temperature(step: 0).ShouldBe(100);
         var first = scope.Results.Result(temperatures).Snapshot();
@@ -249,8 +252,7 @@ public class PointcutSpecs
         scope.Results.Result(temperatures).Snapshot().Values.ShouldBe([100, 2]);
     }
 
-    // A role of your own is observed by attaching an instrument to the scope, as Advised does, or explicitly by
-    // a wrapper of the role's own that applies the same observation advice and records into the instrument.
+    // A role of your own is observed by substituting its own wrapper for it, or explicitly by writing that wrapper.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -263,9 +265,7 @@ public class PointcutSpecs
             ? new AnnealingPlan(warmup, main, WarmupSteps: 3)
             : new AnnealingPlan(new ObservedCooling(warmup, temperatures), new ObservedCooling(main, temperatures), WarmupSteps: 3);
         var scope = ResolutionScope.Create();
-        if (attached)
-            scope.AddAspect(scope.Results.Aspect(temperatures));
-        var executor = scope.Resolve(plan);
+        var executor = scope.Resolve(attached ? plan.Substitute(temperatures.Substitutions) : plan);
 
         executor.Temperature(step: 0).ShouldBe(100);
         executor.Temperature(step: 5).ShouldBe(2);
@@ -273,9 +273,41 @@ public class PointcutSpecs
         scope.Results.Result(temperatures).Snapshot().Values.ShouldBe([100, 2]);
     }
 
+    // A later placement walks through the wrapper an earlier one left, so a role's wrapper declares what it holds.
+    [Fact]
+    public void ARoleCanBeObservedBySuccessivePlacements()
+    {
+        ICoolingSchedule warmup = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
+        ICoolingSchedule main = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
+        var plan = new AnnealingPlan(warmup, main, WarmupSteps: 3);
+        var first = Analyzer.Trace([Temperatures(warmup)], static temperature => temperature);
+        var second = Analyzer.Trace([Temperatures(warmup)], static temperature => temperature);
+        var scope = ResolutionScope.Create();
+        var executor = scope.Resolve(plan.Substitute(first.Substitutions).Substitute(second.Substitutions));
+
+        executor.Temperature(step: 0).ShouldBe(100);
+
+        scope.Results.Result(first).Snapshot().Values.ShouldBe([100]);
+        scope.Results.Result(second).Snapshot().Values.ShouldBe([100]);
+    }
+
+    // A run reads a definition only when its algorithm holds it, which the role's wrapper makes visible by declaring it.
+    [Fact]
+    public async Task ARunReadsTheTraceOfARoleItsAlgorithmHolds()
+    {
+        ICoolingSchedule schedule = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
+        var temperatures = Analyzer.Trace([Temperatures(schedule)], static temperature => temperature);
+        var algorithm = new CoolingAlgorithm(schedule).AnalyzedBy(temperatures);
+
+        var run = algorithm.CreateRun(new TestFunctionProblem(new SphereFunction(1)), RandomNumberGenerator.Create(seed: 42));
+        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.Result(temperatures).Snapshot().Values.ShouldBe([100]);
+    }
+
     // The role's calls receive no problem, so its observations are the plain temperatures each call returned.
     private static ObservationSource<double> Temperatures(ICoolingSchedule schedule) =>
-        ObservationSource.Create(schedule, (Action<double> observe) => new RecordedCoolingAdvice(observe));
+        ObservationSource.Create<ICoolingSchedule, double>(schedule, static (node, instrument) => new ObservedCooling(node, instrument));
 
     private sealed class MutationCounter : Aspect
     {
@@ -338,16 +370,58 @@ public class PointcutSpecs
         }
     }
 
-    // The role's own observation wrapper: it applies the same advice as attaching the instrument, recording into it.
+    // The role's own observation wrapper, recording each temperature into the instrument.
     private sealed record ObservedCooling(ICoolingSchedule Schedule, IObservationInstrument<double> Instrument) : ICoolingSchedule
     {
+        public static Parameter<ObservedCooling, ICoolingSchedule> ScheduleParameter { get; } =
+            new(nameof(Schedule), static node => node.Schedule, static (node, value) => node with { Schedule = value });
+
+        public static Parameter<ObservedCooling, IObservationInstrument<double>> InstrumentParameter { get; } =
+            new(nameof(Instrument), static node => node.Instrument, static (node, value) => node with { Instrument = value });
+
+        public IReadOnlyList<IParameter> GetParameters() => [ScheduleParameter, InstrumentParameter];
+
         public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) =>
             new RecordedCoolingAdvice(Instrument.CreateRecorder(scope.Results)).Wrap(scope.Resolve(Schedule), Schedule);
+    }
+
+    private sealed record CoolingAlgorithm(ICoolingSchedule Schedule)
+        : Algorithm<CoolingAlgorithm, RealVector, SingleSolutionState<RealVector>>
+    {
+        public static Parameter<CoolingAlgorithm, ICoolingSchedule> ScheduleParameter { get; } =
+            new(nameof(Schedule), static algorithm => algorithm.Schedule, static (algorithm, value) => algorithm with { Schedule = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), ScheduleParameter];
+
+        protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope) =>
+            new Executor<TSearchSpace, TProblem>(scope.Resolve(Schedule));
+
+        private sealed class Executor<TSearchSpace, TProblem>(ICoolingScheduleExecutor schedule)
+            : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>
+            where TSearchSpace : class, ISearchSpace<RealVector>
+            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        {
+            public override async IAsyncEnumerable<SingleSolutionState<RealVector>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
+                SingleSolutionState<RealVector>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            {
+                yield return SingleSolutionState.From(new RealVector(schedule.Temperature(step: 0)), new ObjectiveVector(0));
+                await Task.CompletedTask;
+            }
+        }
     }
 
     private sealed record AnnealingPlan(ICoolingSchedule Warmup, ICoolingSchedule Main, int WarmupSteps)
         : IConfigurationNode<AnnealingPlan.Executor>
     {
+        public static Parameter<AnnealingPlan, ICoolingSchedule> WarmupParameter { get; } =
+            new(nameof(Warmup), static node => node.Warmup, static (node, value) => node with { Warmup = value });
+
+        public static Parameter<AnnealingPlan, ICoolingSchedule> MainParameter { get; } =
+            new(nameof(Main), static node => node.Main, static (node, value) => node with { Main = value });
+
+        public IReadOnlyList<IParameter> GetParameters() => [WarmupParameter, MainParameter];
+
         public Executor CreateExecutor(ResolutionScope scope) => new(scope.Resolve(Warmup), scope.Resolve(Main), WarmupSteps);
 
         public sealed class Executor(ICoolingScheduleExecutor warmup, ICoolingScheduleExecutor main, int warmupSteps) : IExecutor

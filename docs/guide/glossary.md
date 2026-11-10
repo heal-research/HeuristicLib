@@ -620,9 +620,9 @@ Status: `Canonical`
 
 An aspect is the ordered list of its pointcut/advice pairs. `Aspect.Create(pointcut, advice)` creates one pair. A derived constructor assigns its pairs to the protected `Advices` and spreads other aspects into them, as in `Advices = [.. Aspect.Observe(evaluator.Invocations, Record)]`.
 
-Attach aspects and instruments through `Advised` before creating the run. Direct scope users call `AddAspect`. Within a scope, later added aspects wrap closer; within an aspect, pairs retain their listed order. Match pointcuts first and keep the closest occurrence of each advice instance. Traces sharing a clock therefore update it once before recording.
+Attach aspects through `Advised` before creating the run. Direct scope users call `AddAspect`. Within a scope, later added aspects wrap closer; within an aspect, pairs retain their listed order. Match pointcuts first and keep the closest occurrence of each advice instance.
 
-An aspect holds its pairs and any runtime dependencies in its advice. Reusing a raw aspect may couple caller-owned data. Instruments instead create independent result/aspect pairs for each run.
+An aspect holds its pairs and any runtime dependencies in its advice. Reusing a raw aspect may couple caller-owned data. Instruments instead create independent results for each run.
 
 See also: Advice, Join point, Pointcut, Resolution scope.
 
@@ -636,7 +636,7 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Attach analysis definitions to the algorithm with `Advised` before creating its run. Their results span nested algorithms and fresh executor activations within that run. The returned run starts in `Ready` and accepts no later attachments.
+Attach analysis definitions to the algorithm with `AnalyzedBy` before creating its run. Their results span nested algorithms and fresh executor activations within that run. The returned run starts in `Ready` and accepts no later attachments.
 
 See also: Analyzer, Configuration, Executor, Search state.
 
@@ -644,9 +644,9 @@ See also: Analyzer, Configuration, Executor, Search state.
 
 Status: `Canonical`
 
-An instrument is an immutable definition of one typed result per run and the aspect that collects into it. `Instrument<TResult>` creates that result and aspect together on the first lookup. Definitions use reference identity. Several placements within one run share its result; another run creates independent data.
+An instrument is an immutable definition of one typed result per run and the substitutions that place what collects into it. `Instrument<TResult>` creates the result on the first lookup. Definitions use reference identity. Several placements within one run share its result; another run creates independent data.
 
-Attach instruments through `Advised` or explicit placement such as `Observed`, `Counted` or `Timed`.
+Attach instruments through `AnalyzedBy` or explicit placement such as `Observed`, `Counted` or `Timed`.
 
 See also: Analyzer, Clock, Run result.
 
@@ -840,7 +840,7 @@ See also: Executor, Run.
 
 Status: `Canonical`
 
-An analyzer is an immutable instrument definition that derives data from selected execution boundaries. Each run creates its own collector and typed result, obtained through `run.Result(analyzer)`. Attach the definition with `Advised` or explicit observation placement.
+An analyzer is an immutable instrument definition that derives data from selected execution boundaries. Each run creates its own collector and typed result, obtained through `run.Result(analyzer)`. Attach the definition with `AnalyzedBy` or explicit observation placement.
 
 A trace result supports live reads and immutable snapshots. An accumulating result publishes its domain accumulator and is read after execution has stopped. Reusing a definition across runs keeps their data independent.
 
@@ -960,9 +960,9 @@ See also: Algorithm, Analyzer, Observation source, Operator, Run.
 
 Status: `Canonical`
 
-An observation source names the observations of one observed configuration: `Invocations` on an operator for its successful invocations, `Iterations` on an algorithm for the search states it yields, or a point the configuration publishes, such as `Cycles` and `Turns` on a cycle algorithm. `ObservationSource<TObservation>` represents it; the type name is `Provisional`. `ObservationSource.Create<TObservation>(configuration, observe)` creates a boundary source. An observation point is itself a source, identified by the point reference rather than its value type.
+An observation source names the observations of one observed configuration: `Invocations` on an operator for its successful invocations, `Iterations` on an algorithm for the search states it yields, or a point the configuration publishes, such as `Cycles` and `Turns` on a cycle algorithm. `ObservationSource<TObservation>` represents it; the type name is `Provisional`. `ObservationSource.Create` creates a boundary source. An observation point is itself a source, identified by the point reference rather than its value type.
 
-A source describes observations; creating one installs nothing. `Analyzer.Trace` and `Aspect.Observe` attach it through an aspect, which resolution weaves into the executors a run builds. In that it resembles a cold `IObservable<T>`, but the library implements neither that interface nor Rx-style operators. A trace observes each boundary once, matched by configuration reference and observation type, so two sources of one configuration and observation type record each observation once. An operator implementing several operations offers each operation's source through a view typed to that operation.
+A source describes observations; creating one installs nothing. `AnalyzedBy` places a wrapper recording it into the configuration graph, and `Aspect.Observe` attaches it through an aspect, which resolution weaves into the executors a run builds. In that it resembles a cold `IObservable<T>`, but the library implements neither that interface nor Rx-style operators. A trace observes each boundary once, matched by configuration reference and observation type, so two sources of one configuration and observation type record each observation once. An operator implementing several operations offers each operation's source through a view typed to that operation.
 
 See also: Observation, Trace.
 

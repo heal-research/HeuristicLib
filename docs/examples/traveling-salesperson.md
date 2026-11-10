@@ -37,7 +37,7 @@ var algorithm = GeneticAlgorithm.For(
     mutationRate: 0.25);
 
 var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-var run = algorithm.Advised(qualityAnalyzer).CreateRun(
+var run = algorithm.AnalyzedBy(qualityAnalyzer).CreateRun(
     problem, RandomNumberGenerator.Create(seed: 42));
 
 await run.CompleteAsync();

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
@@ -107,7 +108,7 @@ public class AutoEcPaperScenarioTests
                 ActivatedTravelingSalesmanProblem>(
                 [evaluator]);
 
-        var run = racing.Advised(qualityCurve).Advised(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
+        var run = racing.AnalyzedBy(qualityCurve).AnalyzedBy(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -133,6 +134,12 @@ public class AutoEcPaperScenarioTests
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
             new UniformOnePositionMutator());
         var evaluator = problem.CreateEvaluator();
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
+                [evaluator]);
+        var analyzed = evaluator.AnalyzedBy(qualityCurve, bbcp);
 
         var racing = new DynamicRacingAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem,
             PopulationState<RealVector>, GeneticAlgorithm<RealVector>>(
@@ -140,7 +147,7 @@ public class AutoEcPaperScenarioTests
             metaCreator,
             metaMutator,
             new BestPopulationStateMerger<RealVector>(),
-            candidate => CreateGa(problem, evaluator, candidate),
+            candidate => CreateGa(problem, analyzed, candidate),
             algorithm => algorithm.Evaluator)
         {
             NoRacers = 2,
@@ -149,13 +156,8 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
-        var bbcp =
-            new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
-                [evaluator]);
 
-        var run = racing.Advised(qualityCurve).Advised(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),

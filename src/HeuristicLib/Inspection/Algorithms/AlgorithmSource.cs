@@ -31,7 +31,7 @@ public sealed class AlgorithmSource<TCandidate, TSearchState, TObservation> : Ob
 
 /// <summary>Counts what one algorithm's executor calls do, such as the states they yield or the calls that start.</summary>
 /// <remarks>
-/// Attached with <c>Advised</c>, it counts at its algorithm's configuration reference. Placed explicitly with
+/// Attached with <c>AnalyzedBy</c>, it counts at its algorithm's configuration reference. Placed explicitly with
 /// <c>Counted</c>, it counts at the algorithm it wraps.
 /// </remarks>
 public abstract class AlgorithmCounter : Obsolete.Counter
@@ -50,9 +50,6 @@ internal abstract class AlgorithmCounter<TObservedCandidate, TObservedSearchStat
 {
     protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
         [Substitution.Of<IAlgorithm<TObservedCandidate, TObservedSearchState>>(source, node => node.Counted(this))];
-
-    protected sealed override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
-        Aspect.Create(Pointcut.Reference(source), CreateAdvice<TObservedCandidate, TObservedSearchState>(result));
 }
 
 // Counts the states an algorithm yields.

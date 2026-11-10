@@ -9,6 +9,11 @@ public sealed record AdditiveStepAlgorithm(int Increment)
 {
     public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator<int>();
 
+    public static Parameter<AdditiveStepAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
+
     protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
         new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), Increment);

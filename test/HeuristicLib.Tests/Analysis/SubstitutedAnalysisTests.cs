@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -46,14 +47,12 @@ public class SubstitutedAnalysisTests
 
     // S8 and the aspects table, deferred construction: one trace records every selected call across fresh executors, and
     // each run has its own result.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Trace_RecordsEveryCallAcrossFreshExecutorsAndPerRun(bool attached)
+    [Fact]
+    public void Trace_RecordsEveryCallAcrossFreshExecutorsAndPerRun()
     {
         var (box, m) = NewMutator();
         var trace = m.Invocations.Trace(_ => 1);
-        var cycle = Place(Cycle(NewCaller("A", 3, 1, m, box), NewCaller("B", 2, 1, m, box)), trace, attached);
+        var cycle = Cycle(NewCaller("A", 3, 1, m, box), NewCaller("B", 2, 1, m, box)).AnalyzedBy(trace);
 
         var first = cycle.CreateRun(Problem, Rng);
         first.Complete(cancellationToken: Ct);
@@ -171,11 +170,9 @@ public class SubstitutedAnalysisTests
         run.Result(calls).CurrentCount.ShouldBe(3);
     }
 
-    // Aspects table, counting: both paths measure equally, including a failed attempt that is not counted.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Counting_MeasuresTheSameThroughBothPaths(bool attached)
+    // Aspects table, counting: a failed attempt is not counted.
+    [Fact]
+    public void Counting_LeavesOutAFailedAttempt()
     {
         var box = new Recording();
         IOperator<Evaluation, int> flaky = new M(box) { FailFirstCall = true };
@@ -183,8 +180,7 @@ public class SubstitutedAnalysisTests
         var counter = flaky.Invocations.Count();
         IAlgorithm<int, PopulationState<int>> a = NewCaller("A", 3, 1, retried, box);
 
-        var placed = attached ? a.Advised(counter) : a.Substitute(counter.Substitutions);
-        var run = placed.CreateRun(Problem, Rng);
+        var run = a.AnalyzedBy(counter).CreateRun(Problem, Rng);
         run.Complete(cancellationToken: Ct);
 
         box.Calls.ShouldBe(4);
@@ -201,11 +197,9 @@ public class SubstitutedAnalysisTests
         a.Substitute(duration.Substitutions).ShouldBe(a with { Mutator = m.Timed(duration) });
     }
 
-    // Aspects table, ordering: counting, observation and retry give the same sequence through both paths.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void CountingObservationAndRetry_GiveTheSameSequenceThroughBothPaths(bool attached)
+    // Aspects table, ordering: under a retry, counting and observation see the successful calls only.
+    [Fact]
+    public void CountingAndObservationUnderARetry_SeeTheSuccessfulCalls()
     {
         var box = new Recording();
         IOperator<Evaluation, int> flaky = new M(box) { FailFirstCall = true };
@@ -213,7 +207,7 @@ public class SubstitutedAnalysisTests
         var batches = flaky.Invocations.Trace(observation => observation.Candidates.Count, [evaluations]);
         IAlgorithm<int, PopulationState<int>> a = NewCaller("A", 3, 1, flaky.Retry(2), box);
 
-        var run = (attached ? a.Advised(batches) : a.Substitute(batches.Substitutions)).CreateRun(Problem, Rng);
+        var run = a.AnalyzedBy(batches).CreateRun(Problem, Rng);
         run.Complete(cancellationToken: Ct);
 
         run.Result(batches).Snapshot().Values.ShouldBe([1, 1, 1]);
@@ -222,14 +216,14 @@ public class SubstitutedAnalysisTests
 
     // Aspects table, tracing: same value functions, retention and clocks, so equal seeded runs record equal entries.
     [Fact]
-    public async Task Tracing_RecordsTheSameEntriesThroughBothPaths()
+    public async Task AnalyzedBy_RecordsWhatSubstitutingItsPlacementsRecords()
     {
         var problem = new TestFunctionProblem(new SphereFunction(2));
         var ga = RealGa(problem) with { MaximumGenerations = 4 };
         var evaluations = ga.Evaluator.Invocations.CountCandidates();
         var best = ga.Evaluator.Invocations.TraceBestSoFar([evaluations], TraceRetention.EveryNth(2));
 
-        var attached = ga.Advised(best).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var attached = ga.AnalyzedBy(best).CreateRun(problem, RandomNumberGenerator.Create(7));
         await attached.CompleteAsync(cancellationToken: Ct);
         var placed = ga.Substitute(best.Substitutions).CreateRun(problem, RandomNumberGenerator.Create(7));
         await placed.CompleteAsync(cancellationToken: Ct);
@@ -240,10 +234,8 @@ public class SubstitutedAnalysisTests
     }
 
     // Aspects table, internal progress: the start and end of each inner call, including a turn that yields no state.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void TheCallsOfInnerAlgorithms_AreRecordedThroughBothPaths(bool attached)
+    [Fact]
+    public void TheCallsOfInnerAlgorithms_AreRecorded()
     {
         var (box, m) = NewMutator();
         IAlgorithm<int, PopulationState<int>> a = NewCaller("A", 1, 1, m, box);
@@ -251,23 +243,21 @@ public class SubstitutedAnalysisTests
         var calls = Analyzer.Trace<AlgorithmCallObservation<int, PopulationState<int>>, AlgorithmCallEvent>([a.Calls, idle.Calls], observation => observation.Event);
         IAlgorithm<int, PopulationState<int>> cycle = Cycle(a, idle) with { MaximumCycles = 1 };
 
-        var run = (attached ? cycle.Advised(calls) : cycle.Substitute(calls.Substitutions)).CreateRun(Problem, Rng);
+        var run = cycle.AnalyzedBy(calls).CreateRun(Problem, Rng);
         run.Complete(cancellationToken: Ct);
 
         run.Result(calls).Snapshot().Values.ShouldBe([AlgorithmCallEvent.Started, AlgorithmCallEvent.Completed, AlgorithmCallEvent.Started, AlgorithmCallEvent.Completed]);
     }
 
     // Aspects table, shared execution: one executor across turns, with each requester's own wrapper around it.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Trace_RecordsEveryCallOfASharedConfiguration(bool attached)
+    [Fact]
+    public void Trace_RecordsEveryCallOfASharedConfiguration()
     {
         var (box, m) = NewMutator();
         var trace = m.Invocations.Trace(_ => 1);
         var shared = Cycle(NewCaller("A", 3, 1, m, box), NewCaller("B", 2, 1, m, box)).Sharing(m);
 
-        var run = Place(shared, trace, attached).CreateRun(Problem, Rng);
+        var run = shared.AnalyzedBy(trace).CreateRun(Problem, Rng);
         run.Complete(cancellationToken: Ct);
 
         box.Builds.ShouldBe(1);
@@ -275,17 +265,15 @@ public class SubstitutedAnalysisTests
     }
 
     // Aspects table, separate termination: a counter and a terminator share the run's result whichever is built first.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void AnInstrumentCounter_ReachesASeparateTerminator(bool attached)
+    [Fact]
+    public void AnInstrumentCounter_ReachesASeparateTerminator()
     {
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var ga = RealGa(problem) with { MaximumGenerations = 50 };
         var mutations = ga.Mutator.Invocations.Count();
 
         var terminated = ga with { Terminator = new AfterOperatorCountTerminator<RealVector>(mutations, 3) };
-        var run = Place(terminated, mutations, attached).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = terminated.AnalyzedBy(mutations).CreateRun(problem, RandomNumberGenerator.Create(42));
         var states = run.Stream(cancellationToken: Ct).Count();
 
         states.ShouldBeLessThan(50);
@@ -293,15 +281,13 @@ public class SubstitutedAnalysisTests
     }
 
     // Aspects table, independent runs: state of a value function and retention belong to the run.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task OneConfiguration_GivesIndependentResultsPerRun(bool attached)
+    [Fact]
+    public async Task OneConfiguration_GivesIndependentResultsPerRun()
     {
         var problem = new TestFunctionProblem(new SphereFunction(2));
         var ga = RealGa(problem) with { MaximumGenerations = 3 };
         var best = ga.Evaluator.Invocations.TraceBestSoFar();
-        var placed = Place(ga, best, attached);
+        var placed = ga.AnalyzedBy(best);
 
         var first = placed.CreateRun(problem, RandomNumberGenerator.Create(1));
         var second = placed.CreateRun(problem, RandomNumberGenerator.Create(1));
@@ -352,7 +338,7 @@ public class SubstitutedAnalysisTests
         run.Result(second).By(clock).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
     }
 
-    // D36, the known gap: separate calls wrap the clock twice, so the clock ticks twice per call.
+    // D36: each call places what it lists, so separate calls wrap the clock twice and it ticks twice per call.
     [Fact]
     public void TwoTracesSharingAClockInSeparateCalls_TickItTwice()
     {
@@ -387,21 +373,14 @@ public class SubstitutedAnalysisTests
     }
 
     // Aspects table, consumer extensions: an operation defined outside the library, through both paths.
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void AnExternalOperation_IsCountedAndTracedThroughBothPaths(bool attached)
+    [Fact]
+    public void AnExternalOperation_IsCountedAndTraced()
     {
         var checksum = new IncrementingChecksum();
         var reads = checksum.Invocations.Count();
         var values = checksum.Invocations.Trace(observation => observation.Result, [reads]);
         var scope = ResolutionScope.Create();
-        IOperator<Checksum, int> placed = checksum;
-        if (attached)
-            scope.AddAspect(scope.Results.Aspect(values));
-        else
-            placed = placed.Substitute(values.Substitutions);
-        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(placed);
+        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(checksum.AnalyzedBy(values));
 
         executor.Read(Rng, DummySearchSpace<int>.Instance, Problem).ShouldBe(1);
         executor.Read(Rng, DummySearchSpace<int>.Instance, Problem).ShouldBe(2);
@@ -507,12 +486,8 @@ public class SubstitutedAnalysisTests
         var (_, m) = NewMutator();
         var source = ObservationSource.Create(m, (Action<int> _) => new NoAdvice());
 
-        Should.Throw<InvalidOperationException>(() => source.Trace(value => value).Substitutions).Message.ShouldContain("Advised");
+        Should.Throw<InvalidOperationException>(() => source.Trace(value => value).Substitutions).Message.ShouldContain("Aspect.Observe");
     }
-
-    private static IAlgorithm<TCandidate, TSearchState> Place<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm, Instrument instrument, bool attached)
-        where TSearchState : class, ISearchState =>
-        attached ? algorithm.Advised(instrument) : algorithm.Substitute(instrument.Substitutions);
 
     private static List<string> States(IAlgorithm<RealVector, PopulationState<RealVector>> algorithm, TestFunctionProblem problem) =>
         [.. Enumerable.Select(algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: Ct),

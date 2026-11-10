@@ -25,7 +25,7 @@ public class AnalysisSpecs
             new[] { firstAlgorithm.Iterations, secondAlgorithm.Iterations },
             () => new BestSoFar(),
             (best, observation) => best.Update(observation.State.Population.Select(candidate => candidate.ObjectiveVector), observation.Problem.Objective));
-        var both = firstAlgorithm.Then(secondAlgorithm).Advised(combined);
+        var both = firstAlgorithm.Then(secondAlgorithm).AnalyzedBy(combined);
 
         var first = both.CreateRun(problem, RandomNumberGenerator.Create(42));
         await first.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -46,7 +46,7 @@ public class AnalysisSpecs
         var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var quality = algorithm.Iterations.TracePopulationQuality(retention: TraceRetention.EveryNth(2), clocks: [iterations, evaluations]);
         var best = algorithm.Evaluator.Invocations.TraceBestSoFar(clocks: [evaluations]);
-        var run = algorithm.Advised(quality, best).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.AnalyzedBy(quality, best).CreateRun(problem, RandomNumberGenerator.Create(42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -65,7 +65,7 @@ public class AnalysisSpecs
         var quality = algorithm.Iterations.Trace(
             static observation => observation.State.Population.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective));
 
-        var run = algorithm.Advised(size, quality).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.AnalyzedBy(size, quality).CreateRun(problem, RandomNumberGenerator.Create(42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(size).Latest!.Value.Value.ShouldBe(16);
@@ -80,7 +80,7 @@ public class AnalysisSpecs
         var algorithm = CreateAlgorithm(problem);
         var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var quality = algorithm.Iterations.TracePopulationQuality(clocks: [evaluations]);
-        var run = algorithm.Advised(quality).Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.AnalyzedBy(quality).Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

@@ -156,11 +156,10 @@ public sealed class OperationDefinitionDocumentationSpecs
         var estimator = ChoosePerItem.Create<Estimation, RealVector>(new ScaledEstimator(1.0), new ScaledEstimator(10.0));
         var counts = estimator.Invocations.Trace(observation => observation.Estimates.Count);
         var root = ResolutionScope.Create();
-        root.AddAspect(root.Results.Aspect(counts));
         var scope = root.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
         RealVector[] candidates = [new(1.0), new(2.0), new(3.0)];
 
-        var estimates = scope.Resolve(estimator).Estimate(candidates, RandomNumberGenerator.Create(42), searchSpace, problem);
+        var estimates = scope.Resolve(estimator.AnalyzedBy(counts)).Estimate(candidates, RandomNumberGenerator.Create(42), searchSpace, problem);
 
         estimates.Count.ShouldBe(candidates.Length);
         for (var i = 0; i < candidates.Length; i++)

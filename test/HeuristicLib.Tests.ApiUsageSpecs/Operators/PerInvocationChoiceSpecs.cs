@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
@@ -28,7 +29,7 @@ public sealed class PerInvocationChoiceSpecs
         var exploringCalls = exploring.Invocations.Count();
         var choiceCalls = mutator.Invocations.Count();
 
-        var run = algorithm.Advised(fineTuningCalls, exploringCalls, choiceCalls).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var run = algorithm.AnalyzedBy(fineTuningCalls, exploringCalls, choiceCalls).CreateRun(problem, RandomNumberGenerator.Create(7));
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
             .ToList();
 

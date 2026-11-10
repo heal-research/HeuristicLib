@@ -1,6 +1,6 @@
 # Observability and analysis
 
-An analyzer defines the analysis of selected execution boundaries. Attach the definition with `Advised`, create a run, then read the typed result through `run.Result(analyzer)`. Each run creates independent result data.
+An analyzer defines the analysis of selected execution boundaries. Attach the definition with `AnalyzedBy`, create a run from the configuration it returns, then read the typed result through `run.Result(analyzer)`. Each run creates independent result data.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-imports{csharp}
 
@@ -16,7 +16,7 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                          |
 | Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                                   |
-| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An instrument attached with `Advised`                                                                        |
+| Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An instrument attached with `AnalyzedBy`                                                                     |
 | Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect attached with `Advised`                                                                            |
 | A count or duration that stops or limits the run                                            | Inspection such as `Invocations.CountCandidates()` or `LimitedToCandidates`, read by terminators and budgets |
 | The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                            |
@@ -43,15 +43,15 @@ Observation sources match configurations by reference. A copied configuration is
 
 ### Sources and `IObservable<T>`
 
-A source resembles a cold `IObservable<T>`: it describes observations without producing any until something subscribes. Here, `Analyzer.Trace` and `Aspect.Observe` subscribe by creating an aspect, and adding that aspect to a run or scope attaches it. The library implements neither `IObservable<T>` nor Rx-style operators. A callback can feed observations into Rx, for example into a subject:
+A source resembles a cold `IObservable<T>`: it describes observations without producing any until something subscribes. Here, an analyzer such as `Analyzer.Trace` or `Observing` subscribes when `AnalyzedBy` places it in the configuration. The library implements neither `IObservable<T>` nor Rx-style operators. A callback can feed observations into Rx, for example into a subject:
 
 ```csharp
 var subject = new Subject<CrossoverObservation<RealVector>>();
-var feed = Aspect.Observe(crossover.Invocations, subject.OnNext);
-var run = algorithm.Advised(feed).CreateRun(problem, random);
+var feed = crossover.Invocations.Observing(subject.OnNext);
+var run = algorithm.AnalyzedBy(feed).CreateRun(problem, random);
 ```
 
-The callback runs on the thread that invoked the operator, inside the wrapped invocation.
+The callback runs on the thread that invoked the operator, inside the wrapped invocation. Anything taking a callback produces a configuration that cannot be serialized.
 
 ## Select configurations by properties or names
 
@@ -67,7 +67,7 @@ Names compare exactly and case-sensitively. Several nodes may share a name, and 
 
 ## Ownership and reads
 
-Attach instruments and aspects through `Advised` before creating a run. Instruments are reusable definitions; each run creates a fresh result, clock state and retention state. A definition attached several times in one run still collects into that run's single result, and shared advice applies once by reference. Raw aspects retain any caller-owned dependencies supplied to their advice constructors.
+Attach instruments through `AnalyzedBy` and aspects through `Advised` before creating a run. `AnalyzedBy` places what the instruments need into the configuration it returns, so create the run from that configuration. Instruments are reusable definitions; each run creates a fresh result, clock state and retention state. A definition repeated within one `AnalyzedBy` call is placed once. Separate calls place it again, and every placement collects into that run's single result. Shared advice applies once by reference. Raw aspects retain any caller-owned dependencies supplied to their advice constructors.
 
 `LifecycleState` reports whether a run is `Ready`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. The returned run accepts no further attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 
@@ -87,7 +87,7 @@ Retention runs after a trace's function reads an observation. It controls stored
 
 ## Accumulating analyzers
 
-Some analysis produces one mutable summary rather than a history. Derive the definition from `Instrument<TResult>`, create the accumulator in `CreateResult` and its observations in `CreateAspect`, and name the substitutions that place it in `CreateSubstitutions`. Put synchronization on the run-created result or collector:
+Some analysis produces one mutable summary rather than a history. Derive the definition from `Instrument<TResult>`, create the accumulator in `CreateResult`, record each observation in `CreateRecorder`, and name the substitutions that place it in `CreateSubstitutions`. Put synchronization on the run-created result or collector:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-accumulating-analyzer{csharp}
 
@@ -149,15 +149,15 @@ Attach analysis definitions to the algorithms before constructing an experiment,
 
 ## Observe an operation of your own
 
-An operation you define becomes observable when it declares an observation record, the advice that builds it, and an `Invocations` source, as each built-in operation does. Its source then works with `Analyzer.Trace` and `Aspect.Observe` like any other. An observation that carries the problem of the invocation it observed lets a trace rank by that problem's objective. See [Make the operation observable](/contributing/architecture/operator-implementation#make-the-operation-observable) for a complete example.
+An operation you define becomes observable when it declares an observation record, the advice that builds it, and an `Invocations` source, as each built-in operation does. Its source then works with `Analyzer.Trace` and `Observing` like any other. An observation that carries the problem of the invocation it observed lets a trace rank by that problem's objective. See [Make the operation observable](/contributing/architecture/operator-implementation#make-the-operation-observable) for a complete example.
 
-## Use an aspect directly
+## Count, time and observe an operator
 
-`Aspect.Create` pairs a pointcut with advice. Attach aspects with `algorithm.Advised(aspect)` or call `scope.AddAspect(aspect)` before direct resolution. Instruments can be attached alongside them through the instrument overload of `Advised`:
+`AnalyzedBy` attaches counters, durations and callbacks:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-aspects{csharp}
 
-Within an aspect, earlier pairs wrap closer to the executor. The first definition listed in `Advised` wraps closest, and nested `algorithm.Advised(a).Advised(b)` places `a` closer. In the example, timing finishes before the observation callback. Counting updates after success; timing also records failed calls.
+Pass everything in one `AnalyzedBy` call and apply budgets afterwards, because one call resolves every target against the same configuration. Later entries sit closer to the operator, so in the example the timing finishes before the observation callback runs. A clock shared by several traces of one call ticks once and before them. Each call places what it lists, so a clock shared across separate `AnalyzedBy` calls ticks twice. Counting updates after success; timing also records failed calls.
 
 `Invocations.Count()`, `CountCandidates()` and `Duration()` create definitions. Read their accumulators through the run. `Counted` and `Timed` place the same instruments explicitly around a selected configuration.
 
@@ -171,7 +171,7 @@ The run stops after two successful mutation invocations and `run.Result(mutation
 
 ### Select several configurations
 
-To select several configurations, pair a pointcut with role advice:
+`Aspect.Create` pairs a pointcut with advice. Attach aspects with `algorithm.Advised(aspect)` or call `scope.AddAspect(aspect)` before direct resolution. To select several configurations, pair a pointcut with role advice:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-role-advice{csharp}
 
@@ -181,7 +181,7 @@ Custom selection derives a small class:
 
 Reference, type and custom pointcuts of the same configuration type combine with `And`/`&` and `Or`/`|`. Matching short-circuits from left to right. The pointcut sees configurations that resolution reaches, including those created later by a meta-algorithm.
 
-An aspect stores its pointcut/advice pairs in `Advices`. An instrument creates one result and one collecting aspect per run; an instrument that depends on another includes that run's aspect for it through `RunResults.Aspect`. Matching precedes reference deduplication, and the closest effective occurrence of an advice instance wins. Shared clock advice is therefore applied once before trace observations.
+An aspect stores its pointcut/advice pairs in `Advices`. Within an aspect, earlier pairs wrap closer to the executor. Matching precedes reference deduplication, and the closest effective occurrence of an advice instance wins.
 
 Child-scope advice wraps closer than inherited advice. A scope receives later added aspects closer to the executor. Instrument results remain run-bound across child activations, while raw advice may intentionally retain caller-owned runtime dependencies. An observation's own numbers, such as `Iteration`, describe the call it observes.
 

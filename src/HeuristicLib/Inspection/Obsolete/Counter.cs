@@ -6,10 +6,10 @@ namespace HEAL.HeuristicLib.Inspection.Obsolete;
 /// <remarks>
 /// Create counters from the source they count, such as <c>evaluator.Invocations.Count()</c>. Each call creates a new
 /// counter with its own result, so keep the variable: <c>run.Result(counter).CurrentCount</c> reads it, and a terminator
-/// such as <c>AfterOperatorCountTerminator</c> checks it. A counter of your own derives from this type and places its
-/// advice through <see cref="Instrument{TResult}.CreateAspect"/>.
+/// such as <c>AfterOperatorCountTerminator</c> checks it. A counter of your own derives from this type and names the
+/// wrapper that keeps it current in its substitutions.
 /// <para>
-/// This type is temporary and goes with the advice that keeps it current. As a configuration node it hands out the run's
+/// This type is temporary and goes with the old counters. As a configuration node it hands out the run's
 /// result, so a wrapper or terminator reaches old and new counters alike.
 /// </para>
 /// </remarks>

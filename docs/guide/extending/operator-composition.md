@@ -194,7 +194,7 @@ var unshared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement()
 };
-var run = unshared.Advised(counter).CreateRun(problem, random);
+var run = unshared.AnalyzedBy(counter).CreateRun(problem, random);
 ```
 
 The improvement check uses its own evaluator configuration here, so the counter measures only the algorithm's evaluations. Share the selected evaluator to include comparison work:
@@ -206,7 +206,7 @@ var shared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(evaluator)
 };
-var run = shared.Advised(counter).CreateRun(problem, random);
+var run = shared.AnalyzedBy(counter).CreateRun(problem, random);
 ```
 
 Each refined candidate causes two comparison evaluations and the algorithm's subsequent evaluation. All three reach the selected evaluator and increment the same counter.
@@ -216,7 +216,7 @@ An external terminator reads the same run-bound counter definition. Read its val
 ```csharp
 var budgeted = shared.TerminatedBy(
     AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
-var run = budgeted.Advised(counter).CreateRun(problem, random);
+var run = budgeted.AnalyzedBy(counter).CreateRun(problem, random);
 ```
 
 `shared.LimitedToCandidates(evaluator, 100_000)` owns its accumulator and adds counting advice only to the resolution context for the budgeted algorithm. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
@@ -273,7 +273,7 @@ var requests = cache.Invocations.CountCandidates();
 var solves = problemEvaluator.Invocations.CountCandidates();
 
 var cached = algorithm with { Evaluator = cache };
-var run = cached.Advised(requests, solves).CreateRun(problem, random);
+var run = cached.AnalyzedBy(requests, solves).CreateRun(problem, random);
 ```
 
 After the run, `run.Result(requests).CurrentCount` includes cache hits and `run.Result(solves).CurrentCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration, and share it so both uses hit one cache. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
@@ -287,7 +287,7 @@ new CachingEvaluator<...>(problemEvaluator.LimitEvaluations(100_000), keySelecto
 
 With the limit outside, the budget means evaluation requests, so a refiner re-evaluating a candidate the cache already knows still spends from it. With the cache outside, the request never reaches the limit and the budget means actual problem evaluations.
 
-To attribute refinement effort separately instead of folding it into one counter, give the refiner its own evaluator and select that evaluator with an aspect:
+To attribute refinement effort separately instead of folding it into one counter, give the refiner its own evaluator and count that evaluator:
 
 ```csharp
 var refinementEvaluator = new ProblemEvaluator<RealVector>();
@@ -296,7 +296,7 @@ var attributed = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(refinementEvaluator)
 };
-var run = attributed.Advised(refinementCount).CreateRun(problem, random);
+var run = attributed.AnalyzedBy(refinementCount).CreateRun(problem, random);
 ```
 
 `run.Result(refinementCount).CurrentCount` measures the improvement check's comparison evaluations. The algorithm's own evaluator is a different configuration, so its calls do not contribute to that count.
@@ -459,7 +459,7 @@ Two distinct no-change mutators make the selection order visible through counter
 
 `firstCalls.CurrentCount` is one and `secondCalls.CurrentCount` is zero. The observed executor starts at the first child. The original executor continues to its second child with its original unobserved children.
 
-An independent root prepares a fresh cursor, even when it resolves the same configuration object:
+An independent root prepares a fresh cursor:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-independent{csharp}
 
@@ -473,7 +473,7 @@ This executable example keeps an `EvaluationCache<int>` in its executor. MemoryC
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-authoring{csharp}
 
-The following usage shares the wrapper, so both resolutions receive one executor and one cache, and calls it concurrently. Separate RNGs belong to the separate calls. The counting aspect sits above the sharing point and therefore reaches the child evaluator inside the shared executor.
+The following usage shares the wrapper, so both resolutions receive one executor and one cache, and calls it concurrently. Separate RNGs belong to the separate calls. `AnalyzedBy` places the count on the child evaluator in the configuration, so the shared executor counts through it.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-usage{csharp}
 

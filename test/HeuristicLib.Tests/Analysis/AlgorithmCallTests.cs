@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -73,7 +74,7 @@ public sealed class AlgorithmCallTests
     {
         var algorithm = new ScriptedAlgorithm(States: 2);
         var calls = algorithm.Calls.Trace(call => call.Event);
-        var run = algorithm.Advised(calls).CreateRun(Problem, RandomNumberGenerator.Create(1));
+        var run = algorithm.AnalyzedBy(calls).CreateRun(Problem, RandomNumberGenerator.Create(1));
         await using (var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken))
             (await states.MoveNextAsync()).ShouldBeTrue();
 
@@ -92,9 +93,7 @@ public sealed class AlgorithmCallTests
         var calls = algorithm.Calls.Count();
         var iterations = algorithm.Iterations.Count();
         var root = ResolutionScope.Create();
-        root.AddAspect(root.Results.Aspect(calls));
-        root.AddAspect(root.Results.Aspect(iterations));
-        var executor = Resolve(root, algorithm);
+        var executor = Resolve(root, algorithm.AnalyzedBy(calls, iterations));
 
         await Run(executor);
         await using (var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
@@ -121,7 +120,7 @@ public sealed class AlgorithmCallTests
         var turns = Analyzer.Trace([explore.Calls, idle.Calls],
             call => (Turn: ReferenceEquals(call.Algorithm, explore) ? "explore" : "idle", call.Event, call.Iterations));
         IAlgorithm<int, PopulationState<int>> cycle = attached
-            ? (CycleAlgorithm.Create<int, PopulationState<int>>(explore, idle) with { MaximumCycles = 2 }).Advised(turns)
+            ? (CycleAlgorithm.Create<int, PopulationState<int>>(explore, idle) with { MaximumCycles = 2 }).AnalyzedBy(turns)
             : CycleAlgorithm.Create<int, PopulationState<int>>(explore.Observed(turns), idle.Observed(turns)) with { MaximumCycles = 2 };
         var run = cycle.CreateRun(Problem, RandomNumberGenerator.Create(1));
 
@@ -148,7 +147,7 @@ public sealed class AlgorithmCallTests
         var calls = turn.Calls.Trace(call => call.Event, [turnCounter]);
         IAlgorithm<int, PopulationState<int>> cycle;
         if (attached)
-            cycle = (CycleAlgorithm.Create(turn, turn) with { MaximumCycles = 2 }).Advised(states, calls);
+            cycle = (CycleAlgorithm.Create(turn, turn) with { MaximumCycles = 2 }).AnalyzedBy(states, calls);
         else
         {
             var placed = turn.Counted(turnCounter).Observed(calls).Observed(states);

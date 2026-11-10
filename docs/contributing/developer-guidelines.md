@@ -208,7 +208,7 @@ This guideline is held very highly but is not absolute. A special case with a te
 
 Current exceptions:
 
-- Analysis definitions may retain value functions and runtime callbacks, including Python callbacks, and `Advised` may attach those definitions to an algorithm configuration. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
+- Analysis definitions may retain value functions and runtime callbacks, including Python callbacks, and `AnalyzedBy` may attach those definitions to an algorithm configuration. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
 - `HeuristicLib.PythonInterop` operators such as `VisualizationCallbackEvaluator` hold Python-facing callbacks.
 - `DynamicRacingAlgorithm` and `DelegatingRacingStateMerger` in `HeuristicLib.Experimental` hold delegates that build, inspect and merge contenders.
 - Duration-based terminators, budgets and observations hold a replaceable `TimeProvider`.

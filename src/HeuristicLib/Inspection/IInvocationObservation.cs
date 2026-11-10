@@ -44,7 +44,7 @@ public interface IAlgorithmObservation<TCandidate, TSearchState, TSelf>
         where TProblem : class, Problems.IProblem<TCandidate, TSearchSpace>;
 }
 
-// Temporary: attaching an instrument with Advised reaches the same wrappers through these until phase 3 removes advice.
+// Temporary: Aspect.Observe reaches the same wrappers through these until phase 3 removes advice.
 internal sealed class ObservationAdvice<TOperation, TCandidate, TObservation>(Action<TObservation> record) : OperatorAdvice<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
     where TObservation : IInvocationObservation<TOperation, TCandidate, TObservation>

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -73,9 +74,8 @@ public sealed class AlpsMutationCompositionTests
             algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
         var candidates = algorithm.Mutator.Invocations.CountCandidates();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(scope.Results.Aspect(candidates));
 
-        await States(scope, algorithm);
+        await States(scope, algorithm.AnalyzedBy(candidates));
 
         scope.Results.Result(candidates).CurrentCount.ShouldBe(0);
     }
@@ -101,7 +101,7 @@ public sealed class AlpsMutationCompositionTests
         MutationRate = rate
     };
 
-    private static ValueTask<AlpsState<int>[]> States(ResolutionScope scope, AlpsGeneticAlgorithm<int> algorithm) =>
+    private static ValueTask<AlpsState<int>[]> States(ResolutionScope scope, IAlgorithm<int, AlpsState<int>> algorithm) =>
         scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, AlpsState<int>>(algorithm)
             .RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
             .ToArrayAsync(TestContext.Current.CancellationToken);

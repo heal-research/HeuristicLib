@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
@@ -15,14 +16,14 @@ namespace HEAL.HeuristicLib.Tests.Analysis;
 public class TraceCompositionTests
 {
     [Fact]
-    public async Task DuplicateAnalyzerAttachment_RecordsEachObservationOnce()
+    public async Task AnAnalyzerRepeatedInOneCall_IsPlacedOnce_AndAnotherCallPlacesItAgain()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 1);
         var trace = algorithm.Iterations.TracePopulationQuality();
-        var run = algorithm.Advised(trace, trace).Advised(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.AnalyzedBy(trace, trace).AnalyzedBy(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        run.Result(trace).SampleCount.ShouldBe(1);
+        run.Result(trace).SampleCount.ShouldBe(2);
     }
 
     [Fact]
@@ -31,7 +32,7 @@ public class TraceCompositionTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 1);
         var trace = algorithm.Iterations.TracePopulationQuality();
-        var run = algorithm.Advised(new FailingModule()).Advised(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.Advised(new FailingModule()).AnalyzedBy(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
         Should.Throw<InvalidOperationException>(() => run.Stream());
         run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         run.Result(trace).Snapshot().ShouldBeEmpty();
@@ -43,7 +44,7 @@ public class TraceCompositionTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 1) with { Creator = new FailingCreator() };
         var trace = algorithm.Iterations.TracePopulationQuality();
-        var run = algorithm.Advised(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.AnalyzedBy(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
         Should.Throw<InvalidOperationException>(() => run.Stream());
         run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         run.Result(trace).Snapshot().ShouldBeEmpty();
@@ -55,7 +56,7 @@ public class TraceCompositionTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var trace = algorithm.Iterations.TracePopulationQuality();
-        var advised = algorithm.Advised(trace);
+        var advised = algorithm.AnalyzedBy(trace);
         var run = advised.CreateRun(problem, RandomNumberGenerator.Create(42));
         await using (var stream = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
                                      .GetAsyncEnumerator(TestContext.Current.CancellationToken))
@@ -75,7 +76,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var trace = algorithm.Iterations.TracePopulationQuality();
         using var cancellation = new CancellationTokenSource();
-        var run = algorithm.Advised(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.AnalyzedBy(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
         await using var stream = run.Stream(cancellationToken: cancellation.Token).GetAsyncEnumerator(cancellation.Token);
         (await stream.MoveNextAsync()).ShouldBeTrue();
         await cancellation.CancelAsync();
@@ -124,7 +125,7 @@ public class TraceCompositionTests
         var second = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar([evaluations]);
         var third = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar([evaluations]);
 
-        var run = algorithm.Advised(first, second, third).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = algorithm.AnalyzedBy(first, second, third).CreateRun(problem, RandomNumberGenerator.Create(42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(first).By(evaluations).Single().Time.ShouldBe(16);
@@ -142,9 +143,9 @@ public class TraceCompositionTests
         var first = algorithm.Evaluator.Invocations.TraceBestSoFar([evaluations]);
         var second = algorithm.Evaluator.Invocations.TraceBestSoFar([evaluations]);
 
-        var firstRun = algorithm.Advised(first).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var firstRun = algorithm.AnalyzedBy(first).CreateRun(problem, RandomNumberGenerator.Create(42));
         await firstRun.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var secondRun = algorithm.Advised(second).CreateRun(problem, RandomNumberGenerator.Create(43));
+        var secondRun = algorithm.AnalyzedBy(second).CreateRun(problem, RandomNumberGenerator.Create(43));
         await secondRun.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         firstRun.Result(first).By(evaluations).Single().Time.ShouldBe(16);
@@ -159,7 +160,7 @@ public class TraceCompositionTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 2);
         var trace = algorithm.Iterations.TracePopulationCandidates();
-        var advised = algorithm.Advised(trace);
+        var advised = algorithm.AnalyzedBy(trace);
         var firstRun = advised.CreateRun(problem, RandomNumberGenerator.Create(42));
         await firstRun.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         var first = firstRun.Result(trace).Snapshot();
@@ -179,7 +180,7 @@ public class TraceCompositionTests
         var quality = algorithm.Iterations.Trace(
             observation => observation.State.Population.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective),
             [iterations]);
-        var run = algorithm.Advised(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -199,7 +200,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var firstDimension = algorithm.Iterations.Trace(
             observation => observation.State.Population.Candidates.Select(candidate => candidate[0]).MinMeanMax());
-        var run = algorithm.Advised(firstDimension).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(firstDimension).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -220,7 +221,7 @@ public class TraceCompositionTests
         var offspring = algorithm.Crossover.Invocations.Trace(
             observation => observation.Offspring.Select(candidate => candidate[0]).MinMeanMax(),
             [iterations]);
-        var run = algorithm.Advised(offspring).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(offspring).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -238,7 +239,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 2);
         var offspringCount = algorithm.Crossover.Invocations.Trace(
             observation => observation.Offspring.Count);
-        var run = algorithm.Advised(offspringCount).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(offspringCount).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -252,7 +253,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { MutationRate = 1 };
         var crossed = algorithm.Crossover.Invocations.Trace(static observation => observation.Offspring.ToImmutableArray());
         var mutated = algorithm.Mutator.Invocations.Trace(static observation => observation.Offspring.ToImmutableArray());
-        var run = algorithm.Advised(crossed, mutated).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(crossed, mutated).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -284,7 +285,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var first = algorithm.Iterations.TracePopulationCandidates();
         var second = algorithm.Iterations.TracePopulationCandidates();
-        var run = algorithm.Advised(first, second).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(first, second).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -301,7 +302,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var batchSize = algorithm.Evaluator.Invocations.Trace(observation => observation.Candidates.Count, [evaluations]);
-        var run = algorithm.Advised(batchSize).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(batchSize).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -319,7 +320,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var mutated = algorithm.Mutator.Invocations.Trace(
             observation => observation.Offspring.Select(candidate => candidate[0]).MinMeanMax());
-        var run = algorithm.Advised(mutated).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(mutated).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -336,7 +337,7 @@ public class TraceCompositionTests
         };
         var kept = algorithm.Interceptor.Invocations.Trace(
             observation => observation.State.Population.EvaluatedCandidates.Count);
-        var run = algorithm.Advised(kept).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(kept).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -354,7 +355,7 @@ public class TraceCompositionTests
         var removed = algorithm.Interceptor.Invocations.Trace(
             observation => observation.UntransformedState.Population.EvaluatedCandidates.Count -
                            observation.State.Population.EvaluatedCandidates.Count);
-        var run = algorithm.Advised(removed).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(removed).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -369,7 +370,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var first = algorithm.Evaluator.Invocations.Trace(observation => observation.Candidates.Count);
         var second = algorithm.Evaluator.Invocations.Trace(observation => observation.ObjectiveVectors.Count);
-        var run = algorithm.Advised(first, second).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(first, second).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -384,7 +385,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 6);
         var every = algorithm.Iterations.Trace(observation => observation.Iteration);
 
-        var run = algorithm.Advised(every).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(every).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(every).SampleCount.ShouldBe(6);
@@ -398,7 +399,7 @@ public class TraceCompositionTests
         var everyThird = algorithm.Iterations.Trace(observation => observation.Iteration,
             retention: TraceRetention.EveryNth(3));
 
-        var run = algorithm.Advised(everyThird).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(everyThird).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(everyThird).Snapshot().Values.ShouldBe([3L, 6L]);
@@ -413,7 +414,7 @@ public class TraceCompositionTests
             observation => observation.State.Population.EvaluatedCandidates.Count,
             retention: TraceRetention.OnChange());
 
-        var run = algorithm.Advised(populationSize).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(populationSize).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // The population size never changes, so only the first firing is kept.
@@ -430,7 +431,7 @@ public class TraceCompositionTests
             clocks: [iterations],
             retention: TraceRetention.LatestOnly());
 
-        var run = algorithm.Advised(current).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(current).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Every firing replaced the one before it, so the trace holds the last one and its own moment.
@@ -447,7 +448,7 @@ public class TraceCompositionTests
         var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var best = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar([evaluations]);
 
-        var run = algorithm.Advised(best).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(best).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var comparer = problem.Objective.TotalOrderComparer;
@@ -477,8 +478,8 @@ public class TraceCompositionTests
     }
 
     /// <summary>
-    /// A clock over a boundary is written by deriving from <see cref="Clock{TTime, TResult}"/> and observing its source
-    /// in its aspect, which leaves the clock with counting an observation into its run's result and reading the time.
+    /// A clock over a boundary is written by deriving from <see cref="Clock{TTime, TResult}"/> and placing an observation
+    /// of its source, which leaves the clock with counting an observation into its run's result and reading the time.
     /// </summary>
     [Fact]
     public async Task CustomObservingClock_InstallsItselfForItsSource()
@@ -488,7 +489,7 @@ public class TraceCompositionTests
         var crossoverCalls = new CrossoverCallClock(algorithm.Crossover);
         var quality = algorithm.Iterations.TracePopulationCandidates([crossoverCalls]);
 
-        var run = algorithm.Advised(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // The initial population is created rather than crossed, so the first generation is recorded at zero calls.
@@ -496,16 +497,19 @@ public class TraceCompositionTests
     }
 
     private sealed class CrossoverCallClock(IOperator<Crossover, RealVector> crossover)
-        : Clock<long, CountAccumulator>
+        : Clock<long, CountAccumulator>, IObservationInstrument<CrossoverObservation<RealVector>>
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [crossover.Invocations.RecordingInto(this)];
+
+        public Action<CrossoverObservation<RealVector>> CreateRecorder(RunResults results)
+        {
+            var count = results.Result(this);
+            return _ => count.IncrementBy(1);
+        }
 
         protected override CountAccumulator CreateResult(RunResults results) => new();
 
         protected override long Read(CountAccumulator result) => result.CurrentCount;
-
-        protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
-            Aspect.Observe(crossover.Invocations, _ => result.IncrementBy(1));
     }
 
     private sealed class CreatorCountAnalyzer
@@ -568,7 +572,7 @@ public class TraceCompositionTests
         // Nothing here names an objective.
         var quality = algorithm.Iterations.TracePopulationCandidates();
 
-        var run = algorithm.Advised(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var sample = run.Result(quality).Snapshot()[0].Value;

@@ -26,9 +26,6 @@ public sealed class CandidateSummaryAnalyzer<TCandidate>(IOperator<Evaluation, T
 
     protected override CandidateSummary<TCandidate> CreateResult(RunResults results) => new();
 
-    protected override Aspect CreateAspect(CandidateSummary<TCandidate> result, RunResults results) =>
-        Aspect.Observe(evaluator.Invocations, Record(result));
-
     private static Action<EvaluationObservation<TCandidate>> Record(CandidateSummary<TCandidate> result) =>
         observation => result.Add(observation.Candidates);
 }
@@ -79,7 +76,7 @@ public sealed class ObservabilityDocumentationSpecs
         #region observability-experiment-setup
         var quality = algorithm.Iterations.TracePopulationQuality(
             clocks: [algorithm.Evaluator.Invocations.CountCandidates()]);
-        var run = algorithm.Advised(quality).Repeat(2).CreateRun(problem, random);
+        var run = algorithm.AnalyzedBy(quality).Repeat(2).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
         var analyses = run.Trials.Select(trial => trial.Run.Result(quality)).ToList();
         #endregion observability-experiment-setup
@@ -99,7 +96,7 @@ public sealed class ObservabilityDocumentationSpecs
 
         #region observability-quick-start
         var quality = algorithm.Iterations.TracePopulationCandidates();
-        var run = algorithm.Advised(quality).CreateRun(problem, random);
+        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
 
         var best = run.Result(quality).RequireLatestValue().Best;
@@ -121,7 +118,7 @@ public sealed class ObservabilityDocumentationSpecs
         var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var best = algorithm.Evaluator.Invocations.TraceBestSoFar(clocks: [evaluations]);
         var population = algorithm.Iterations.TracePopulationQuality(clocks: [evaluations]);
-        var run = algorithm.Advised(best, population).CreateRun(problem, random);
+        var run = algorithm.AnalyzedBy(best, population).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
         #endregion observability-boundary-and-clock
 
@@ -163,7 +160,7 @@ public sealed class ObservabilityDocumentationSpecs
         var bestAtEveryEvaluation = algorithm.Evaluator.Invocations.TraceBestSoFar(clocks: [evaluations], retention: TraceRetention.EveryObservation());
         #endregion observability-retention
 
-        var run = algorithm.Advised(quality, bestAtEveryEvaluation).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(quality, bestAtEveryEvaluation).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(quality).By(iterations).Select(point => point.Time).ShouldBe([10L, 20L]);
@@ -176,7 +173,7 @@ public sealed class ObservabilityDocumentationSpecs
         var algorithm = CreateAlgorithm(maximumGenerations: 3);
         var summary = new CandidateSummaryAnalyzer<RealVector>(algorithm.Evaluator);
 
-        var run = algorithm.Advised(summary).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(summary).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(summary).Candidates.Count.ShouldBe(12);
@@ -202,7 +199,7 @@ public sealed class ObservabilityDocumentationSpecs
             (best, observation) => best.Update(observation.ObjectiveVectors, observation.Problem.Objective));
         #endregion observability-best-so-far
 
-        var run = algorithm.Advised(size, offspring, quality, bestSoFar).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(size, offspring, quality, bestSoFar).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(size).Snapshot().Values.ShouldBe([4, 4, 4]);
@@ -222,7 +219,7 @@ public sealed class ObservabilityDocumentationSpecs
         var combined = sources.TraceBestSoFar();
         #endregion observability-combined-trace
 
-        var run = firstAlgorithm.Then(secondAlgorithm).Advised(combined).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
+        var run = firstAlgorithm.Then(secondAlgorithm).AnalyzedBy(combined).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(combined).SampleCount.ShouldBeGreaterThan(0);
@@ -255,7 +252,7 @@ public sealed class ObservabilityDocumentationSpecs
         var calls = exploitation.Calls.Count();
         var iteration = exploitation.Iterations.Trace(observation => observation.Iteration, [calls]);
         var turns = Analyzer.Trace(new[] { exploration.Calls, exploitation.Calls }, call => call.Event);
-        var run = cycle.Advised(iteration, turns).CreateRun(problem, random);
+        var run = cycle.AnalyzedBy(iteration, turns).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
         #endregion observability-cycle
 
@@ -277,9 +274,9 @@ public sealed class ObservabilityDocumentationSpecs
         #region observability-aspects
         var counting = algorithm.Mutator.Invocations.Count();
         var timing = algorithm.Mutator.Invocations.Duration();
-        var observation = Aspect.Observe(algorithm.Mutator.Invocations,
+        var observation = algorithm.Mutator.Invocations.Observing(
             value => offspring.Add(value.Offspring.Count));
-        var run = algorithm.Advised(counting, timing).Advised(observation).CreateRun(problem, random);
+        var run = algorithm.AnalyzedBy(observation, counting, timing).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
         #endregion observability-aspects
 
@@ -298,7 +295,7 @@ public sealed class ObservabilityDocumentationSpecs
         #region observability-shared-accounting
         var mutations = algorithm.Mutator.Invocations.Count();
         var limited = algorithm.TerminatedBy(new AfterOperatorCountTerminator<RealVector>(mutations, 2));
-        var run = limited.Advised(mutations).CreateRun(problem, random);
+        var run = limited.AnalyzedBy(mutations).CreateRun(problem, random);
 
         await run.CompleteAsync(cancellationToken: cancellationToken);
         var measuredCount = run.Result(mutations).CurrentCount;

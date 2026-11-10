@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -23,40 +24,34 @@ public sealed class RunResultsTests
         var result = first.Results.Result(instrument);
 
         first.CreateChildScope().Results.Result(instrument).ShouldBeSameAs(result);
-        first.Results.Aspect(instrument).ShouldBeSameAs(first.Results.Aspect(instrument));
         second.Results.Result(instrument).ShouldNotBeSameAs(result);
         instrument.Created.ShouldBe(2);
     }
 
     [Fact]
-    public async Task ConcurrentLookupsAcrossChildScopesPublishOneResultAndAspect()
+    public async Task ConcurrentLookupsAcrossChildScopesPublishOneResult()
     {
         var instrument = new CreationCountingInstrument();
         var root = ResolutionScope.Create();
-        var lookups = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(() =>
-        {
-            var results = root.CreateChildScope().Results;
-            return (Result: results.Result(instrument), Aspect: results.Aspect(instrument));
-        }, TestContext.Current.CancellationToken)));
+        var lookups = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(
+            () => root.CreateChildScope().Results.Result(instrument),
+            TestContext.Current.CancellationToken)));
 
         instrument.Created.ShouldBe(1);
-        lookups.ShouldAllBe(value => ReferenceEquals(value.Result, lookups[0].Result) && ReferenceEquals(value.Aspect, lookups[0].Aspect));
+        lookups.ShouldAllBe(value => ReferenceEquals(value, lookups[0]));
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void FailedResultOrAspectCreationPublishesNeitherAndCanRetry(bool failAspect)
+    [Fact]
+    public void FailedResultCreationPublishesNothingAndCanRetry()
     {
-        var instrument = new FailsFirstCreation(failAspect);
+        var instrument = new FailsFirstCreation();
         var results = ResolutionScope.Create().Results;
 
-        Should.Throw<InvalidOperationException>(() => results.Aspect(instrument));
+        Should.Throw<InvalidOperationException>(() => results.Result(instrument));
         var result = results.Result(instrument);
 
         instrument.Attempts.ShouldBe(2);
         results.Result(instrument).ShouldBeSameAs(result);
-        results.Aspect(instrument).ShouldBeSameAs(results.Aspect(instrument));
         instrument.Attempts.ShouldBe(2);
     }
 
@@ -72,10 +67,6 @@ public sealed class RunResultsTests
     }
 
     [Fact]
-    public void AnInstrumentPlacedNowhere_HasAnEmptyAspect() =>
-        ResolutionScope.Create().Results.Aspect(new CreationCountingInstrument()).ShouldBeEmpty();
-
-    [Fact]
     public void AnInstrumentBuildingOnItself_IsRejected()
     {
         var results = ResolutionScope.Create().Results;
@@ -89,7 +80,7 @@ public sealed class RunResultsTests
     {
         var evaluator = new ProblemEvaluator<int>();
         var evaluations = evaluator.Invocations.Count();
-        var algorithm = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Advised(evaluations);
+        var algorithm = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.AnalyzedBy(evaluations);
         var root = ResolutionScope.Create();
         await Run(Resolve(root, algorithm));
 
@@ -174,7 +165,7 @@ public sealed class RunResultsTests
         var algorithm = new SteppingAlgorithm(time, Steps: 3);
         var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
         var root = ResolutionScope.Create(time);
-        var states = Resolve(root, algorithm.Advised(steps)).RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
+        var states = Resolve(root, algorithm.AnalyzedBy(steps)).RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
 
         await foreach (var _ in states)
             time.Advance(TimeSpan.FromSeconds(10));
@@ -290,7 +281,7 @@ public sealed class RunResultsTests
         }
     }
 
-    private sealed class FailsFirstCreation(bool failAspect) : Instrument<object>
+    private sealed class FailsFirstCreation : Instrument<object>
     {
         protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
 
@@ -299,16 +290,9 @@ public sealed class RunResultsTests
         protected override object CreateResult(RunResults results)
         {
             Attempts++;
-            if (!failAspect && Attempts == 1)
+            if (Attempts == 1)
                 throw new InvalidOperationException("result creation");
             return new object();
-        }
-
-        protected override Aspect? CreateAspect(object result, RunResults results)
-        {
-            if (failAspect && Attempts == 1)
-                throw new InvalidOperationException("aspect creation");
-            return null;
         }
     }
 

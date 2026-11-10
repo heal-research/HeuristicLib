@@ -37,23 +37,12 @@ public sealed class BestBeforeChangePerformanceAnalyzer<TCandidate, TSearchSpace
     protected override BestBeforeChangePerformance<TCandidate> CreateResult(RunResults results) =>
         new(objectiveValueSelector, PredictionEpochMultiplier);
 
-    protected override Aspect CreateAspect(BestBeforeChangePerformance<TCandidate> result, RunResults results) =>
-        new Collection(evaluators, result);
-
     private static Action<EvaluationObservation<TCandidate>> Record(BestBeforeChangePerformance<TCandidate> result) => observation =>
     {
         if (observation.Problem is not TProblem problem)
             throw new InvalidOperationException($"The performance analysis requires {typeof(TProblem).Name}, but the evaluation used {observation.Problem.GetType().Name}.");
         result.ReadBatch(observation, problem.CurrentEpoch, problem.Objective.TotalOrderComparer);
     };
-
-    private sealed class Collection : Aspect
-    {
-        public Collection(IReadOnlyList<IOperator<Evaluation, TCandidate>> evaluators, BestBeforeChangePerformance<TCandidate> result)
-        {
-            Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Invocations, Record(result)))];
-        }
-    }
 }
 
 public readonly record struct BestBeforeChangePerformanceEntry<TCandidate>(

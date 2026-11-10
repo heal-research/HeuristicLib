@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -522,7 +523,7 @@ public class OperatorCountBudgetAlgorithmTests
         };
         var externallyStoppedAlgorithm = algorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 3));
 
-        var run = externallyStoppedAlgorithm.Advised(counter).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var run = externallyStoppedAlgorithm.AnalyzedBy(counter).CreateRun(problem, RandomNumberGenerator.Create(42));
         var results = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
@@ -677,12 +678,12 @@ public class OperatorCountBudgetAlgorithmTests
         var withoutBudget = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
         var withBudget = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
 
-        var unbudgeted = algorithm.Advised(withoutBudget).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var unbudgeted = algorithm.AnalyzedBy(withoutBudget).CreateRun(problem, RandomNumberGenerator.Create(42));
         await unbudgeted.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         var budgeted = algorithm
             .LimitedToDuration(algorithm.Evaluator, TimeSpan.FromSeconds(30), new AdvancingTimeProvider(TimeSpan.FromMilliseconds(1)))
-            .Advised(withBudget)
+            .AnalyzedBy(withBudget)
             .CreateRun(problem, RandomNumberGenerator.Create(42));
         await budgeted.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 

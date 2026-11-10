@@ -1,4 +1,5 @@
 #region resource-cache-imports
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
@@ -72,12 +73,12 @@ public sealed class ResourceCachingDocumentationSpecs
         var space = new UnrestrictedIntegerSpace();
         var problem = FuncProblem.Create((int candidate) => candidate * candidate, space, SingleObjective.Minimize);
         var evaluations = evaluator.Invocations.CountCandidates();
+        var analyzed = memoized.AnalyzedBy(evaluations);
         var root = ResolutionScope.Create();
-        root.AddAspect(root.Results.Aspect(evaluations));
         var scope = root
             .For<int, UnrestrictedIntegerSpace, IProblem<int, UnrestrictedIntegerSpace>>();
-        var first = scope.Resolve(memoized);
-        var second = scope.Resolve(memoized);
+        var first = scope.Resolve(analyzed);
+        var second = scope.Resolve(analyzed);
         first.Evaluate([1, 2], RandomNumberGenerator.Create(1), space, problem);
         var results = await Task.WhenAll(
             Task.Run(() => first.Evaluate([1, 2, 3], RandomNumberGenerator.Create(2), space, problem)),

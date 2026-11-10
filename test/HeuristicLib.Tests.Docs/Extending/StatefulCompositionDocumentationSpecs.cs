@@ -1,5 +1,6 @@
 #region stateful-composition-imports
 using System.Collections.Immutable;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
@@ -81,13 +82,11 @@ public sealed class StatefulCompositionDocumentationSpecs
         var firstCalls = first.Invocations.Count();
         var secondCalls = second.Invocations.Count();
         var observedScope = scope.CreateChildScope();
-        observedScope.AddAspect(observedScope.Results.Aspect(firstCalls));
-        observedScope.AddAspect(observedScope.Results.Aspect(secondCalls));
         var observed = observedScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
             IProblem<RealVector, BoundedRealVectorSearchSpace>>()
-            .Resolve(composition);
+            .Resolve(composition.AnalyzedBy(firstCalls, secondCalls));
 
         observed.Mutate(parents, random, searchSpace, problem); // First child with its own cursor.
         original.Mutate(parents, random, searchSpace, problem); // Second child with the original cursor.
@@ -99,12 +98,11 @@ public sealed class StatefulCompositionDocumentationSpecs
         #region stateful-composition-independent
         var independentFirstCalls = first.Invocations.Count();
         var independentScope = ResolutionScope.Create();
-        independentScope.AddAspect(independentScope.Results.Aspect(independentFirstCalls));
         var independent = independentScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
             IProblem<RealVector, BoundedRealVectorSearchSpace>>()
-            .Resolve(composition);
+            .Resolve(composition.AnalyzedBy(independentFirstCalls));
         independent.Mutate(parents, random, searchSpace, problem); // First child with a fresh cursor.
         #endregion stateful-composition-independent
 

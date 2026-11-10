@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -192,7 +193,7 @@ public class ConfigurationSharingTests
         var cycle = Cycle(NewCaller("A", 3, 1, cached, box), NewCaller("B", 2, 1, cached, box)).Sharing(cached);
         var counter = m.Invocations.Count();
 
-        var run = cycle.Advised(counter).CreateRun(Problem, Rng);
+        var run = cycle.AnalyzedBy(counter).CreateRun(Problem, Rng);
         run.Complete();
 
         run.Result(counter).CurrentCount.ShouldBe(1); // the inner evaluator is reached once: candidate 1 is cached for every later call
@@ -274,6 +275,11 @@ public class ConfigurationSharingTests
         : Algorithm<Caller, int, PopulationState<int>>
     {
         public IOperator<Evaluation, int>? Second { get; init; }
+
+        public static Parameter<Caller, IOperator<Evaluation, int>> MutatorParameter { get; } =
+            new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), MutatorParameter];
 
         protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)

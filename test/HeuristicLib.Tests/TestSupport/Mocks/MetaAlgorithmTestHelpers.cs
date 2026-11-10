@@ -44,6 +44,11 @@ public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluat
 {
     public int ExecutionCount { get; private set; }
 
+    public static Parameter<CountingExecutionAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
+
     // Counts private data construction for each executor.
     protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)

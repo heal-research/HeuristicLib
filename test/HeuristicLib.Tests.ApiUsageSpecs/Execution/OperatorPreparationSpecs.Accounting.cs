@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
@@ -17,7 +18,7 @@ public sealed partial class OperatorPreparationSpecs
         var mutator = (IOperator<Mutation, RealVector>)source;
         var counter = mutator.Invocations.Count();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, 2)).Advised(counter);
+        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, 2)).AnalyzedBy(counter);
         var runs = Enumerable.Range(0, 3).Select(_ => algorithm.CreateRun(problem, RandomNumberGenerator.Create(1))).ToArray();
 
         await Task.WhenAll(runs.Select(run => run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken)));
@@ -33,7 +34,7 @@ public sealed partial class OperatorPreparationSpecs
         var source = new CountingSource();
         var candidates = ((IOperator<Mutation, RealVector>)source).Invocations.CountCandidates();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(new AfterOperatorCountTerminator<RealVector>(candidates, 2)).Advised(candidates);
+        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(new AfterOperatorCountTerminator<RealVector>(candidates, 2)).AnalyzedBy(candidates);
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
         run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
@@ -52,7 +53,7 @@ public sealed partial class OperatorPreparationSpecs
         var duration = ((IOperator<Mutation, RealVector>)source).Invocations.Duration(clock);
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(
-            AfterOperatorDurationTerminator.For(problem, duration, TimeSpan.FromTicks(2))).Advised(duration);
+            AfterOperatorDurationTerminator.For(problem, duration, TimeSpan.FromTicks(2))).AnalyzedBy(duration);
         var first = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
         var second = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
 
@@ -70,7 +71,7 @@ public sealed partial class OperatorPreparationSpecs
         var mutator = (IOperator<Mutation, RealVector>)source;
         var counter = mutator.Invocations.Count();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var run = new TwoOperationAlgorithm(source).Advised(counter).CreateRun(problem, RandomNumberGenerator.Create(1));
+        var run = new TwoOperationAlgorithm(source).AnalyzedBy(counter).CreateRun(problem, RandomNumberGenerator.Create(1));
         run.Result(counter).CurrentCount.ShouldBe(0);
 
         run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(4);

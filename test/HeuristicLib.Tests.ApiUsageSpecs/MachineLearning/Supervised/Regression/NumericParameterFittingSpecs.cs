@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Data;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 using HEAL.HeuristicLib.Execution;
@@ -152,9 +153,9 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
-        var sharedRun = sharing.Advised(sharedCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var sharedRun = sharing.AnalyzedBy(sharedCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
         sharedRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
-        var ownRun = notSharing.Advised(ownCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var ownRun = notSharing.AnalyzedBy(ownCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
         ownRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.

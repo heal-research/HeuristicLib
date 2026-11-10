@@ -1,8 +1,8 @@
 # Analyzer architecture
 
-An analyzer is an immutable instrument definition that creates one typed result and its collecting aspect per run. Traces use `TraceAnalyzer<TObservation, TValue> : Instrument<Trace<TObservation, TValue>>`. Accumulating analyses derive directly from `Instrument<TResult>` and create their graphs, fronts or histories per run.
+An analyzer is an immutable instrument definition that creates one typed result per run and names the substitutions that place its collector. Traces use `TraceAnalyzer<TObservation, TValue> : Instrument<Trace<TObservation, TValue>>`. Accumulating analyses derive directly from `Instrument<TResult>` and create their graphs, fronts or histories per run.
 
-Attach definitions through `algorithm.Advised(definition)` and read them through `run.Result(definition)`. The same definition may be reused across runs; each run owns independent result and collector state. Within one run, placements share its result and aspect by definition reference. Plain aspects may still retain caller-owned runtime data.
+Attach definitions through `algorithm.AnalyzedBy(definition)` and read them through `run.Result(definition)` on a run created from the configuration that call returned. Pass every analyzer of a configuration in one call and apply budgets afterwards, because one call resolves every target against the same configuration while a later call no longer finds what an earlier one copied. The same definition may be reused across runs; each run owns independent result and collector state. Within one run, placements share its result by definition reference. Plain aspects may still retain caller-owned runtime data.
 
 ## Observation boundaries
 
@@ -20,7 +20,7 @@ The trace machinery names no operation; a ready-made trace extends the source of
 
 An operation's observation record makes an executor report it, through `IInvocationObservation`. External operations construct boundary sources through `ObservationSource.Create`; source inheritance is limited to the library. The wrapper keeps no further state. Algorithm observation advice keeps no counter. Each executor numbers the iterations of its own call from 1, so `Iteration` restarts in each call, including every activation by a meta-algorithm, whatever its scope policy. Invocation-local previous states stay in the iterator.
 
-Within an aspect, earlier pairs wrap closer to the executor. Within a scope, later added aspects wrap closer, and child-scope advice precedes inherited advice. Matching happens before reference deduplication; the closest occurrence wins. A trace lists the run aspects of its clocks before its own observation advice so shared clocks update once before collection.
+`AnalyzedBy` applies its substitutions in order, so a later entry sits closer to its target. A trace lists the substitutions of its clocks after its own, and a substitution listed twice applies once at its last position, so a clock shared within one call updates once and before the observations that read it. Each call places what it lists: a clock shared across separate calls updates twice, and a trace on the original target of `Counting(target, out counter)` sits inside that counter and reads it before the call.
 
 Counters are instruments and clocks: operator sources offer `Count()` and `CountCandidates()`, and algorithm iteration or call sources offer `Count()`. Durations from operator sources measure failed calls too. `Clock.Elapsed` reads the root scope's active execution time, excluding pauses and consumer work. Custom clocks derive from `Clock<TTime, TResult>`.
 
@@ -44,7 +44,7 @@ A per-result `RetentionDecider<TValue>.Decide` returns `Append`, `ReplaceLatest`
 
 ## Accumulating analyzers
 
-A trace keeps a history of immutable values. A mutable summary instead uses `Instrument<TResult>` directly. Its `CreateResult` creates one accumulator and its `CreateAspect` closes over that result. Synchronization belongs to the run-created result or collector. Read a live front, genealogy graph, rank state or performance summary after execution has stopped; copying it on each read is not part of the contract.
+A trace keeps a history of immutable values. A mutable summary instead uses `Instrument<TResult>` directly. Its `CreateResult` creates one accumulator and its `CreateRecorder` records into that result. Synchronization belongs to the run-created result or collector. Read a live front, genealogy graph, rank state or performance summary after execution has stopped; copying it on each read is not part of the contract.
 
 Neither retention nor clocks apply to it. There is nothing to store apart from what was computed, and one current state has no moment of its own.
 

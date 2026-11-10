@@ -27,34 +27,38 @@ public sealed class PredefinedAspectSpecs
         var algorithm = GeneticAlgorithm.Create(creator, crossover, mutator);
         var results = ResolutionScope.Create().Results;
         var timeProvider = TimeProvider.System;
+        (IConfigurationNode Source, Instrument Instrument)[] instruments =
+        [
+            (algorithm, algorithm.Calls.Count()),
+            (creator, creator.Invocations.Count()),
+            (creator, creator.Invocations.Duration(timeProvider)),
+            (crossover, crossover.Invocations.Count()),
+            (crossover, crossover.Invocations.Duration(timeProvider)),
+            (evaluator, evaluator.Invocations.Count()),
+            (evaluator, evaluator.Invocations.Duration(timeProvider)),
+            (mutator, mutator.Invocations.Count()),
+            (mutator, mutator.Invocations.Duration(timeProvider)),
+            (refiner, refiner.Invocations.Count()),
+            (refiner, refiner.Invocations.Duration(timeProvider)),
+            (selector, selector.Invocations.Count()),
+            (selector, selector.Invocations.Duration(timeProvider)),
+            (replacer, replacer.Invocations.Count()),
+            (replacer, replacer.Invocations.Duration(timeProvider)),
+            (interceptor, interceptor.Invocations.Count()),
+            (interceptor, interceptor.Invocations.Duration(timeProvider)),
+            (terminator, terminator.Invocations.Count()),
+            (terminator, terminator.Invocations.Duration(timeProvider)),
+            (creator, creator.Invocations.CountCandidates()),
+            (crossover, crossover.Invocations.CountCandidates()),
+            (evaluator, evaluator.Invocations.CountCandidates()),
+            (mutator, mutator.Invocations.CountCandidates()),
+            (refiner, refiner.Invocations.CountCandidates()),
+            (selector, selector.Invocations.CountCandidates()),
+            (replacer, replacer.Invocations.CountCandidates()),
+            (algorithm, algorithm.Iterations.Count())
+        ];
         (IConfigurationNode Source, Aspect Aspect)[] aspects =
         [
-            (algorithm, results.Aspect(algorithm.Calls.Count())),
-            (creator, results.Aspect(creator.Invocations.Count())),
-            (creator, results.Aspect(creator.Invocations.Duration(timeProvider))),
-            (crossover, results.Aspect(crossover.Invocations.Count())),
-            (crossover, results.Aspect(crossover.Invocations.Duration(timeProvider))),
-            (evaluator, results.Aspect(evaluator.Invocations.Count())),
-            (evaluator, results.Aspect(evaluator.Invocations.Duration(timeProvider))),
-            (mutator, results.Aspect(mutator.Invocations.Count())),
-            (mutator, results.Aspect(mutator.Invocations.Duration(timeProvider))),
-            (refiner, results.Aspect(refiner.Invocations.Count())),
-            (refiner, results.Aspect(refiner.Invocations.Duration(timeProvider))),
-            (selector, results.Aspect(selector.Invocations.Count())),
-            (selector, results.Aspect(selector.Invocations.Duration(timeProvider))),
-            (replacer, results.Aspect(replacer.Invocations.Count())),
-            (replacer, results.Aspect(replacer.Invocations.Duration(timeProvider))),
-            (interceptor, results.Aspect(interceptor.Invocations.Count())),
-            (interceptor, results.Aspect(interceptor.Invocations.Duration(timeProvider))),
-            (terminator, results.Aspect(terminator.Invocations.Count())),
-            (terminator, results.Aspect(terminator.Invocations.Duration(timeProvider))),
-            (creator, results.Aspect(creator.Invocations.CountCandidates())),
-            (crossover, results.Aspect(crossover.Invocations.CountCandidates())),
-            (evaluator, results.Aspect(evaluator.Invocations.CountCandidates())),
-            (mutator, results.Aspect(mutator.Invocations.CountCandidates())),
-            (refiner, results.Aspect(refiner.Invocations.CountCandidates())),
-            (selector, results.Aspect(selector.Invocations.CountCandidates())),
-            (replacer, results.Aspect(replacer.Invocations.CountCandidates())),
             (algorithm, Aspect.Observe(algorithm.Iterations, _ => { })),
             (crossover, Aspect.Observe(crossover.Invocations, _ => { })),
             (evaluator, Aspect.Observe(evaluator.Invocations, _ => { })),
@@ -62,13 +66,11 @@ public sealed class PredefinedAspectSpecs
             (interceptor, Aspect.Observe(interceptor.Invocations, _ => { }))
         ];
 
+        foreach (var (source, instrument) in instruments)
+            source.Substitute(instrument.Substitutions).ShouldNotBeSameAs(source);
         foreach (var (source, aspect) in aspects)
             aspect.ShouldHaveSingleItem().Pointcut.Matches(source).ShouldBeTrue();
 
-        // Counters are instruments: each run creates the aspect that places them at their source.
-        results.Aspect(algorithm.Iterations.Count()).ShouldHaveSingleItem().Pointcut.Matches(algorithm).ShouldBeTrue();
-        results.Aspect(evaluator.Invocations.CountCandidates()).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
-        results.Aspect(evaluator.Invocations.Duration(timeProvider)).ShouldHaveSingleItem().Pointcut.Matches(evaluator).ShouldBeTrue();
         results.Elapsed.ShouldBe(TimeSpan.Zero);
     }
 }

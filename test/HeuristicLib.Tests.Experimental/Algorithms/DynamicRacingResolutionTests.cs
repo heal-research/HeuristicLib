@@ -181,9 +181,9 @@ public sealed class DynamicRacingResolutionTests
     }
 
     // D3: a substitution stops at the delegate, so an outer one reports it, and whoever writes the delegate places the trace
-    // inside it, where every contender then records into the run's one trace as an outer trace does through advice.
+    // inside it, where every contender then records into the run's one trace.
     [Fact]
-    public async Task ATraceOfContenders_IsPlacedInTheBuilderAndRecordsWhatAnOuterTraceRecords()
+    public async Task ATraceOfContenders_IsPlacedInTheBuilder()
     {
         var contender = new LifetimeProbeAlgorithm { Started = static () => { }, Disposed = static () => { } };
         var trace = contender.Evaluator.Invocations.Trace(_ => 1);
@@ -191,19 +191,12 @@ public sealed class DynamicRacingResolutionTests
         var outer = Racing(_ => contender);
         Should.Throw<InvalidOperationException>(() => outer.Substitute(trace.Substitutions)).Message.ShouldContain("AlgBuilder");
 
-        using var outerProblem = new EpochProblem(epochLength: 10_000);
-        outerProblem.UpdateOnce();
-        var withAdvice = ResolutionScope.Create();
-        withAdvice.AddAspect(withAdvice.Results.Aspect(trace));
-        await Steps(withAdvice, outer, outerProblem);
-
         using var innerProblem = new EpochProblem(epochLength: 10_000);
         innerProblem.UpdateOnce();
         var placed = ResolutionScope.Create();
         await Steps(placed, Racing(_ => contender.Substitute(trace.Substitutions)), innerProblem);
 
-        withAdvice.Results.Result(trace).SampleCount.ShouldBeGreaterThan(0);
-        placed.Results.Result(trace).SampleCount.ShouldBe(withAdvice.Results.Result(trace).SampleCount);
+        placed.Results.Result(trace).SampleCount.ShouldBeGreaterThan(0);
 
         static DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, LifetimeProbeAlgorithm> Racing(
             Func<MetaCandidate, LifetimeProbeAlgorithm> build) =>

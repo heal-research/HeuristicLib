@@ -48,7 +48,7 @@ General operator advice applies to every operation. Each also has a typed role a
 
 ## Keep ordering explicit
 
-Within an aspect, earlier pairs wrap closer to the source executor. Within a scope, later added aspects wrap closer; `algorithm.Advised(a).Advised(b)` places `a` closer than `b`. Child-scope advice wraps closer than inherited advice. Match pointcuts first, then keep the closest occurrence of each advice instance. Clock advice shared by traces therefore counts each call once.
+Within an aspect, earlier pairs wrap closer to the source executor. Within a scope, later added aspects wrap closer; `algorithm.Advised(a).Advised(b)` places `a` closer than `b`. Child-scope advice wraps closer than inherited advice. Match pointcuts first, then keep the closest occurrence of each advice instance.
 
 See [Execution resolution](/contributing/architecture/execution-resolution#pointcuts-advice-and-join-points) for advice application and [Operator composition](/guide/extending/operator-composition#authoring-a-composition) for configured wrappers with declared children.
 
@@ -56,4 +56,4 @@ See [Execution resolution](/contributing/architecture/execution-resolution#point
 
 Supply concrete runtime dependencies through the advice constructor and pass them to its wrapping executors. Advice has no resource lookup or child resolution capability. Create resource dependent advice for each run so independent runs receive independent data.
 
-Use `mutator.Invocations.Count()`, `CountCandidates()` or `Duration()` to define an instrument. Attach it with `Advised` or place it through `Counted` or `Timed`, and read its result with `run.Result(instrument)`. A terminator receives the same definition and reads that run's result. Reusing a definition across runs gives independent accumulators. Runtime advice constructors still receive concrete dependencies, as the custom examples above do. See [shared accounting](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator).
+Use `mutator.Invocations.Count()`, `CountCandidates()` or `Duration()` to define an instrument. Attach it with `AnalyzedBy` or place it through `Counted` or `Timed`, and read its result with `run.Result(instrument)`. A terminator receives the same definition and reads that run's result. Reusing a definition across runs gives independent accumulators. Runtime advice constructors still receive concrete dependencies, as the custom examples above do. See [shared accounting](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator).

@@ -38,17 +38,6 @@ public sealed class ParetoFrontAnalyzer<T> : Instrument<ParetoFront<T>>, IObserv
 
     protected override ParetoFront<T> CreateResult(RunResults results) => new(ReferencePoint, Objective);
 
-    protected override Aspect CreateAspect(ParetoFront<T> result, RunResults results) =>
-        new Collection(result, evaluators);
-
     private static Action<EvaluationObservation<T>> Record(ParetoFront<T> front) =>
         observation => front.AddPoints(observation.Candidates.ToEvaluated(observation.ObjectiveVectors));
-
-    private sealed class Collection : Aspect
-    {
-        public Collection(ParetoFront<T> front, IReadOnlyList<IOperator<Evaluation, T>> evaluators)
-        {
-            Advices = [.. evaluators.SelectMany(evaluator => Aspect.Observe(evaluator.Invocations, Record(front)))];
-        }
-    }
 }

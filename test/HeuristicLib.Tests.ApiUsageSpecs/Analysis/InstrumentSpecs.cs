@@ -22,7 +22,7 @@ public class InstrumentSpecs
 
         var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
         var best = algorithm.Evaluator.Invocations.TraceBestSoFar(clocks: [evaluations, Clock.Elapsed]);
-        var run = algorithm.Advised(best)
+        var run = algorithm.AnalyzedBy(best)
             .TerminatedBy(AfterOperatorCountTerminator.For(problem, evaluations, 48))
             .CreateRun(problem, RandomNumberGenerator.Create(42));
 
@@ -51,8 +51,8 @@ public class InstrumentSpecs
         run.Result(mutations).CurrentCount.ShouldBe(run.Result(offspring).SampleCount);
     }
 
-    // An instrument of your own derives from Instrument<TResult>, creates its aspect from the library's
-    // sources and implements IObservationInstrument, so the library's Observed wrappers can place it too.
+    // An instrument of your own derives from Instrument<TResult>, places itself through the library's sources and
+    // implements IObservationInstrument, so the library's Observed wrappers can place it too.
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
@@ -64,26 +64,9 @@ public class InstrumentSpecs
         var mutations = algorithm.Mutator.Invocations.Count();
 
         IAlgorithm<RealVector, PopulationState<RealVector>> configured = attached
-            ? algorithm.Advised(sizes, mutations)
-            : (algorithm with { Mutator = algorithm.Mutator.Observed(sizes) }).Advised(mutations);
+            ? algorithm.AnalyzedBy(sizes, mutations)
+            : (algorithm with { Mutator = algorithm.Mutator.Observed(sizes) }).AnalyzedBy(mutations);
         var run = configured.CreateRun(problem, RandomNumberGenerator.Create(42));
-        await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-
-        run.Result(mutations).CurrentCount.ShouldBeGreaterThan(0);
-        run.Result(sizes).Values.Sum().ShouldBe((int)run.Result(mutations).CurrentCount);
-    }
-
-    // A node of your own attaches instruments the way Advised does, through the scope it is resolved in.
-    [Fact]
-    public async Task ANodeOfYourOwnAttachesInstruments()
-    {
-        var problem = new TestFunctionProblem(new RastriginFunction(4));
-        var algorithm = CreateAlgorithm(problem);
-        var sizes = new OffspringSizes(algorithm.Mutator);
-        var mutations = algorithm.Mutator.Invocations.Count();
-
-        var measured = new Measured<RealVector, PopulationState<RealVector>>(new Measured<RealVector, PopulationState<RealVector>>(algorithm, sizes), mutations);
-        var run = measured.CreateRun(problem, RandomNumberGenerator.Create(42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(mutations).CurrentCount.ShouldBeGreaterThan(0);
@@ -113,28 +96,11 @@ public class InstrumentSpecs
 
         protected override Dictionary<int, int> CreateResult(RunResults results) => [];
 
-        // The aspect records into the result it receives, which the run publishes together with the aspect.
-        protected override Aspect CreateAspect(Dictionary<int, int> result, RunResults results) =>
-            Aspect.Observe(mutator.Invocations, Recorder(result));
-
         private static Action<MutationObservation<RealVector>> Recorder(Dictionary<int, int> sizes) =>
             observation =>
             {
                 lock (sizes)
                     sizes[observation.Offspring.Count] = sizes.GetValueOrDefault(observation.Offspring.Count) + 1;
             };
-    }
-
-    // Attaches its instruments to the scope it is resolved in, then resolves its child there.
-    private sealed record Measured<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> ChildAlgorithm, Instrument Instrument)
-        : WrappingAlgorithm<TCandidate, TSearchState>(ChildAlgorithm)
-        where TSearchState : class, ISearchState
-    {
-        protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
-            ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
-        {
-            scope.AddAspect(scope.Results.Aspect(Instrument));
-            return scope.Resolve(ChildAlgorithm);
-        }
     }
 }

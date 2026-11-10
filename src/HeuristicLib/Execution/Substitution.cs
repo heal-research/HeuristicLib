@@ -255,7 +255,7 @@ internal sealed class SubstitutionCall
                 $"through declared parameters, so this placement selects nothing.{delegates} A reference matches exactly that object, and it stops matching once an " +
                 "earlier Substitute call copied it, which happens to every ancestor of what that call changed. Three routes reach the node: pass all substitutions " +
                 "in one Substitute call, which resolves every target against the same input; substitute ancestors first; or name the target from the current " +
-                "configuration, as in limited.Counting(limited.Algorithm.Iterations, out var iterations).");
+                "configuration, as in limited.Counting(limited.Algorithm.Iterations, out var iterations). AnalyzedBy is one such call, so analyze first and apply budgets afterwards.");
         }
 
         private readonly record struct Visited(IConfigurationNode Rewritten, IConfigurationNode Replaced, bool Selected, bool PlacedBelow);

@@ -9,13 +9,13 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <para>
 /// The analyzer is an instrument and holds immutable settings only: its sources, clocks, retention and value function.
 /// Each run creates its own <see cref="Trace{TObservation, TValue}"/>, read with <c>run.Result(trace)</c>, so reusing one
-/// analyzer for several runs gives each run an independent trace. Attach it with <c>Advised</c>, which observes its
-/// sources wherever they are resolved, or place it explicitly with an <c>Observed</c> wrapper, which records into the
-/// same result.
+/// analyzer for several runs gives each run an independent trace. Attach it with <c>AnalyzedBy</c>, which wraps its
+/// sources wherever the configuration holds them, or place it explicitly with an <c>Observed</c> wrapper, which records
+/// into the same result.
 /// </para>
 /// <para>
 /// A trace observes each boundary once, by its configuration and observation type, so a source given twice counts
-/// once. Attaching it also attaches its clocks, closer to the executors than its observations, so an observation made
+/// once. Attaching it also attaches its clocks, closer to the nodes than its observations, so an observation made
 /// after a call, such as an invocation or a yielded state, reads clocks that already include that call. The start of an
 /// algorithm call is the exception: it is reported before the wrappers inside it run, so it reads a counter of that
 /// algorithm's calls before its own call is counted.
@@ -48,19 +48,7 @@ public sealed class TraceAnalyzer<TObservation, TValue> : Instrument<Trace<TObse
     public Action<TObservation> CreateRecorder(RunResults results) => results.Result(this).Record;
 
     protected override Trace<TObservation, TValue> CreateResult(RunResults results) =>
-        new(createValue(), [.. clocks.Select(clock => (clock, clock.Bind(results).Read))], retention.CreateDecider<TValue>());
-
-    // Clock advice comes first, so it wraps closer and an entry reads clocks that already include its call.
-    protected override Aspect CreateAspect(Trace<TObservation, TValue> result, RunResults results) =>
-        new Observing([.. clocks.Select(clock => clock.Bind(results).Aspect), .. sources.Select(source => Aspect.Observe(source, result.Record))]);
-
-    private sealed class Observing : Aspect
-    {
-        public Observing(IEnumerable<Aspect> aspects)
-        {
-            Advices = [.. aspects.SelectMany(aspect => aspect)];
-        }
-    }
+        new(createValue(), [.. clocks.Select(clock => (clock, clock.Bind(results)))], retention.CreateDecider<TValue>());
 }
 
 /// <summary>A run's trace: the entries a trace analyzer recorded, read through immutable snapshots.</summary>

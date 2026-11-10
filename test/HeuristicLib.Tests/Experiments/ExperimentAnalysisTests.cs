@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -13,7 +14,7 @@ public class ExperimentAnalysisTests
     {
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
         var calls = algorithm.Evaluator.Invocations.Count();
-        var run = algorithm.Advised(calls).Repeat(3).CreateRun(
+        var run = algorithm.AnalyzedBy(calls).Repeat(3).CreateRun(
             MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
         await run.CompleteAsync(ExecutionConcurrency.Concurrent(concurrency), cancellationToken: TestContext.Current.CancellationToken);
@@ -28,7 +29,7 @@ public class ExperimentAnalysisTests
     {
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
         var calls = algorithm.Evaluator.Invocations.Count();
-        var run = algorithm.Advised(calls).Repeat(2).CreateRun(
+        var run = algorithm.AnalyzedBy(calls).Repeat(2).CreateRun(
             MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
         await run.Trials[0].Run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

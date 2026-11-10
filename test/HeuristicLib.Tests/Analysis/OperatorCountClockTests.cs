@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
@@ -19,9 +20,7 @@ public class OperatorCountClockTests
         var candidates = scorer.Invocations.CountCandidates();
         var invocations = scorer.Invocations.Count();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(scope.Results.Aspect(candidates));
-        scope.AddAspect(scope.Results.Aspect(invocations));
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(scorer);
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(scorer.AnalyzedBy(candidates, invocations));
 
         executor.Score([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Score([4, 5], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
@@ -62,8 +61,7 @@ public class OperatorCountClockTests
         var problem = CreateProblem();
         var invocations = checksum.Invocations.Count();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(scope.Results.Aspect(invocations));
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(checksum);
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(checksum.AnalyzedBy(invocations));
 
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

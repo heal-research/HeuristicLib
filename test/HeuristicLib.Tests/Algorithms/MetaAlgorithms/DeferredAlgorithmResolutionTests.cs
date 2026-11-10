@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Mutators;
@@ -364,11 +365,11 @@ public sealed class DeferredAlgorithmResolutionTests
             clock.Advance(10);
             return observation.Offspring[0];
         }, clocks: [calls]);
+        var analyzed = ((IAlgorithm<int, ProbeState>)algorithm).AnalyzedBy(trace);
         IAlgorithm<int, ProbeState> budget = measureDuration
-            ? algorithm.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
-            : algorithm.LimitedToInvocations(algorithm.Mutator, 3);
+            ? analyzed.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
+            : analyzed.LimitedToInvocations(algorithm.Mutator, 3);
         var root = ResolutionScope.Create();
-        root.AddAspect(root.Results.Aspect(trace));
         await using var paused = Resolve(root.CreateChildScope(), budget).RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -468,6 +469,11 @@ public sealed class DeferredAlgorithmResolutionTests
         public Action<ProbeData> Prepared { get; init; } = static _ => { };
         public Action<ResolutionScope> Building { get; init; } = static _ => { };
 
+        public static Parameter<ProbeAlgorithm, IOperator<Mutation, int>> MutatorParameter { get; } =
+            new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), MutatorParameter];
+
         protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, ProbeState> scope)
         {
@@ -516,12 +522,19 @@ public sealed class DeferredAlgorithmResolutionTests
         }
     }
 
-    private sealed class MutationCallClock(IOperator<Mutation, int> mutator) : Counter
+    private sealed class MutationCallClock(IOperator<Mutation, int> mutator) : Clock<long, CountAccumulator>, IObservationInstrument<MutationObservation<int>>
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [mutator.Invocations.RecordingInto(this)];
 
-        protected override Aspect CreateAspect(CountAccumulator result, RunResults results) =>
-            Aspect.Observe(mutator.Invocations, _ => result.IncrementBy(1));
+        public Action<MutationObservation<int>> CreateRecorder(RunResults results)
+        {
+            var count = results.Result(this);
+            return _ => count.IncrementBy(1);
+        }
+
+        protected override CountAccumulator CreateResult(RunResults results) => new();
+
+        protected override long Read(CountAccumulator result) => result.CurrentCount;
     }
 
     private sealed class MutationData { public int Invocations; }

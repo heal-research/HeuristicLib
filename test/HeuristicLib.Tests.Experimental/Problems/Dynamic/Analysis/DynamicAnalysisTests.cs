@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -49,7 +50,7 @@ public class DynamicAnalysisTests
         var epoch = Clock.FromEpoch(problem);
         var bestPerEpoch = algorithm.Evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
 
-        var run = algorithm.Advised(bestPerEpoch).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.AnalyzedBy(bestPerEpoch).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -70,7 +71,7 @@ public class DynamicAnalysisTests
         var epoch = Clock.FromEpoch(problem);
         var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
 
-        var run = algorithm.Advised(work).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.AnalyzedBy(work).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -176,7 +177,7 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.Advised(analysis).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.AnalyzedBy(analysis).CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -204,7 +205,7 @@ public class DynamicAnalysisTests
     {
         var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
         var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([algorithm.Evaluator]);
-        var configured = algorithm.Advised(analysis);
+        var configured = algorithm.AnalyzedBy(analysis);
         var first = configured.CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(1));
         var second = configured.CreateRun(new IntegerDynamicProblem(epochLength: 100), RandomNumberGenerator.Create(2));
 
@@ -224,10 +225,9 @@ public class DynamicAnalysisTests
         var evaluator = new ProblemEvaluator<int>();
         var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([evaluator]);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(scope.Results.Aspect(analysis));
         var space = new IntegerSearchSpace();
         var problem = FuncProblem.Create((int candidate) => candidate, space, SingleObjective.Minimize);
-        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator);
+        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator.AnalyzedBy(analysis));
 
         var error = Should.Throw<InvalidOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1), space, problem));
 

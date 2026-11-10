@@ -168,8 +168,8 @@ public class OperatorAuthoringSpecs
     public void MutatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Mutation, RealVector> childMutator = new PullTowardZeroMutator();
-        var counting = ResolutionScope.Create().Results.Aspect(childMutator.Invocations.Count());
-        counting.Single().Pointcut.Matches(childMutator).ShouldBeTrue();
+        var counting = childMutator.Invocations.Count();
+        childMutator.AnalyzedBy(counting).ShouldNotBeSameAs(childMutator);
     }
 
     [Fact]
@@ -275,9 +275,9 @@ public class OperatorAuthoringSpecs
     public void RefinerCompositionFactories_InferRoleTypes()
     {
         IOperator<Refinement, RealVector> childRefiner = new HalveRefiner();
-        var counting = ResolutionScope.Create().Results.Aspect(childRefiner.Invocations.Count());
+        var counting = childRefiner.Invocations.Count();
         var iterated = IteratedRefiner.Create(childRefiner, 2);
-        counting.Single().Pointcut.Matches(childRefiner).ShouldBeTrue();
+        childRefiner.AnalyzedBy(counting).ShouldNotBeSameAs(childRefiner);
         iterated.ChildOperator.ShouldBeSameAs(childRefiner);
     }
 
@@ -470,12 +470,12 @@ public class OperatorAuthoringSpecs
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Evaluation, RealVector> child = new FirstValueEvaluator();
-        var counting = ResolutionScope.Create().Results.Aspect(child.Invocations.Count());
-        var duration = ResolutionScope.Create().Results.Aspect(child.Invocations.Duration());
+        var counting = child.Invocations.Count();
+        var duration = child.Invocations.Duration();
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
-        counting.Single().Pointcut.Matches(child).ShouldBeTrue();
-        duration.Single().Pointcut.Matches(child).ShouldBeTrue();
+        child.AnalyzedBy(counting).ShouldNotBeSameAs(child);
+        child.AnalyzedBy(duration).ShouldNotBeSameAs(child);
         repeating.ChildOperator.ShouldBeSameAs(child);
         repeating.Aggregator.ShouldBe(ObjectiveVectorAggregation.Median);
         caching.ChildOperator.ShouldBeSameAs(child);
@@ -561,9 +561,9 @@ public class OperatorAuthoringSpecs
     public void SelectorCompositionFactories_InferRoleTypes()
     {
         IOperator<Selection, RealVector> childSelector = new FirstSelector();
-        var counting = ResolutionScope.Create().Results.Aspect(childSelector.Invocations.Count());
+        var counting = childSelector.Invocations.Count();
         var chooseOne = ChoosePerInvocation.Create(childSelector, new LastSelector());
-        counting.Single().Pointcut.Matches(childSelector).ShouldBeTrue();
+        childSelector.AnalyzedBy(counting).ShouldNotBeSameAs(childSelector);
         chooseOne.ChildOperators[0].ShouldBeSameAs(childSelector);
     }
 
@@ -639,10 +639,10 @@ public class OperatorAuthoringSpecs
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
         IOperator<Replacement, RealVector> child = new OffspringReplacer();
-        var counting = ResolutionScope.Create().Results.Aspect(child.Invocations.Count());
-        var duration = ResolutionScope.Create().Results.Aspect(child.Invocations.Duration());
-        counting.Single().Pointcut.Matches(child).ShouldBeTrue();
-        duration.Single().Pointcut.Matches(child).ShouldBeTrue();
+        var counting = child.Invocations.Count();
+        var duration = child.Invocations.Duration();
+        child.AnalyzedBy(counting).ShouldNotBeSameAs(child);
+        child.AnalyzedBy(duration).ShouldNotBeSameAs(child);
     }
 
     [Fact]

@@ -54,9 +54,9 @@ public class ExperimentSpecs
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleHillClimber(problem);
         var best = algorithm.Evaluator.Invocations.TraceBestSoFar();
-        var experiment = algorithm.Advised(best)
+        var experiment = algorithm.AnalyzedBy(best)
             .AsGrid()
-            .VaryBy([4, 8], (_, maximumNeighbors) => (algorithm with { MaxNeighbors = maximumNeighbors }).Advised(best));
+            .VaryBy([4, 8], (_, maximumNeighbors) => (algorithm with { MaxNeighbors = maximumNeighbors }).AnalyzedBy(best));
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456));
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -75,7 +75,7 @@ public class ExperimentSpecs
         {
             var evaluator = new ProblemEvaluator<RealVector>();
             var observations = evaluator.Invocations.Trace(observation => observation.Evaluator);
-            var configured = (algorithm with { Evaluator = evaluator }).Advised(observations);
+            var configured = (algorithm with { Evaluator = evaluator }).AnalyzedBy(observations);
             return (Algorithm: configured, Trace: observations, Evaluator: evaluator);
         }).ToArray();
         var experiment = cases[0].Algorithm.AsGrid().VaryBy(cases, (_, value) => value.Algorithm).Repeat(2);
@@ -91,7 +91,7 @@ public class ExperimentSpecs
             observations.ShouldNotBeEmpty();
             observations.ShouldAllBe(evaluator => ReferenceEquals(evaluator, selected.Evaluator));
             var other = cases.Single(value => !ReferenceEquals(value.Algorithm, trial.Algorithm));
-            trial.Run.Result(other.Trace).SampleCount.ShouldBe(0);
+            Should.Throw<InvalidOperationException>(() => trial.Run.Result(other.Trace)).Message.ShouldContain("does not hold");
         }
     }
 

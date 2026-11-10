@@ -32,7 +32,7 @@ Experimental can contain content, hosting or analysis at the corresponding layer
 
 ## Layers and execution phases
 
-Configuration and executor are phases within these responsibilities. Configurations describe reusable settings, children and instrument definitions. Executors hold mutable fields and resolved children. `Advised` attaches instruments or aspects during construction; an aspect contains pointcut/advice pairs and resolves no configurations.
+Configuration and executor are phases within these responsibilities. Configurations describe reusable settings, children and instrument definitions. Executors hold mutable fields and resolved children. `AnalyzedBy` places analyzers in the configuration, and `Advised` attaches aspects during construction; an aspect contains pointcut/advice pairs and resolves no configurations.
 
 ## Run ownership
 

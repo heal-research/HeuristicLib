@@ -22,9 +22,9 @@ A scope holds shared executors by configuration reference. The nearest ancestor 
 
 `algorithm.Sharing(configurations)` declares the configurations whose bare executors child scopes reuse. Configuration reference identity selects them; equal but distinct configurations keep separate entries. A new sharing owner or root starts independently. A request for incompatible run types is rejected rather than constructing a second executor. Configurations never requested construct nothing.
 
-`AlgorithmRun` creates an independent root scope and starts in `Ready`. Executor construction remains lazy until first execution. Experiment trials each own an algorithm run and its result table. Analysis is attached to the configuration through `Advised` before creating the run.
+`AlgorithmRun` creates an independent root scope and starts in `Ready`. Executor construction remains lazy until first execution. Experiment trials each own an algorithm run and its result table. Analysis is attached to the configuration through `AnalyzedBy` before creating the run.
 
-`Instrument<TResult>` defines one result per run and the aspect that collects into it. Its immutable definition is identified by reference. `RunResults.Result` and `RunResults.Aspect` lazily create and publish the result/aspect pair together, without supply bindings or child resolution. Callers read results through `AlgorithmRun.Result`.
+`Instrument<TResult>` defines one result per run and the substitutions that place what collects into it. Its immutable definition is identified by reference. `RunResults.Result` lazily creates and publishes the result, without supply bindings or child resolution. Callers read results through `AlgorithmRun.Result`.
 
 ### Operation-parameterized operators
 
@@ -66,7 +66,7 @@ A join point is the executor built for one selected configuration. A shared conf
 
 Child-scope advice precedes inherited advice, closest to the raw executor first. Within one scope, later added aspects wrap closer; within an aspect, pairs keep their listed order. `algorithm.Advised(a).Advised(b)` therefore places `a` closer than `b`.
 
-Pointcuts match before advice is deduplicated by reference. The closest matching occurrence of each advice instance applies once. A trace lists its clocks before its observations, so clocks update first even when shared by several traces or attached at several scopes.
+Pointcuts match before advice is deduplicated by reference. The closest matching occurrence of each advice instance applies once.
 
 ## Deferred construction
 
