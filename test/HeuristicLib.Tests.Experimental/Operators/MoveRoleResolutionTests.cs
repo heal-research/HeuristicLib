@@ -19,33 +19,31 @@ public class MoveRoleResolutionTests
     private static readonly BoundedRealVectorSearchSpace SearchSpace = new(2, -1.0, 1.0);
 
     /// <summary>
-    /// The move operators are operations, so advice wraps their calls as it wraps those of the core operators. A
-    /// neighborhood hands out itself for each of them, so advice selecting one operation reaches the neighborhood a run
-    /// resolves and leaves its other operations alone.
+    /// The move operators are operations, so a wrapper wraps their calls as it wraps those of the core operators. A
+    /// neighborhood hands out itself for each of them, so a wrapper for one operation wraps the neighborhood's executor for
+    /// that operation and leaves its other operations alone.
     /// </summary>
     [Fact]
-    public void MoveOperators_AreWrappedByAdviceOfTheirOwnOperation()
+    public void MoveOperators_AreWrappedByWrappersOfTheirOwnOperation()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
-        var (creations, applications, evaluations) = (new CountAccumulator(), new CountAccumulator(), new CountAccumulator());
+        var (creations, applications, evaluations) = (new Counter(), new Counter(), new Counter());
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.Reference(neighborhood.MoveCreator), new CountingOperatorAdvice<MoveCreation<int>, RealVector>(creations, OperatorCountMetric.Invocations)));
-        root.AddAspect(Aspect.Create(Pointcut.Reference(neighborhood.MoveApplier), new CountingOperatorAdvice<MoveApplication<int>, RealVector>(applications, OperatorCountMetric.Invocations)));
-        root.AddAspect(Aspect.Create(Pointcut.Reference(neighborhood.MoveEvaluator), new CountingOperatorAdvice<MoveEvaluation<int>, RealVector>(evaluations, OperatorCountMetric.Invocations)));
         var scope = root
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var random = RandomNumberGenerator.Create(1);
         var candidate = new RealVector(0.0, 0.0);
 
-        var move = scope.Resolve(neighborhood.MoveCreator).Moves(candidate, random, SearchSpace, problem).First();
-        scope.Resolve(neighborhood.MoveApplier).Apply(candidate, move, random, SearchSpace, problem);
-        var evaluator = scope.Resolve(neighborhood.MoveEvaluator);
+        var move = scope.Resolve(neighborhood.MoveCreator.Counted(creations)).Moves(candidate, random, SearchSpace, problem).First();
+        scope.Resolve(neighborhood.MoveApplier.Counted(applications)).Apply(candidate, move, random, SearchSpace, problem);
+        var evaluator = scope.Resolve(neighborhood.MoveEvaluator.Counted(evaluations));
         evaluator.Evaluate(new ObjectiveVector(0.0), candidate, move, random, SearchSpace, problem);
         evaluator.Evaluate(candidate, random, SearchSpace, problem);
 
         neighborhood.MoveEvaluator.ShouldBeSameAs(neighborhood);
-        (creations.CurrentCount, applications.CurrentCount, evaluations.CurrentCount).ShouldBe((1, 1, 2));
+        (root.Results.Result(creations).CurrentCount, root.Results.Result(applications).CurrentCount, root.Results.Result(evaluations).CurrentCount)
+            .ShouldBe((1, 1, 2));
     }
 
     // One neighborhood performs all three operations with one executor. A substitution for one operation wraps its slot and

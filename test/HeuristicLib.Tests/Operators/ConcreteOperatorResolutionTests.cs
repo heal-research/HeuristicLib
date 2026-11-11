@@ -33,24 +33,37 @@ public sealed class ConcreteOperatorResolutionTests
         var checkingRefiner = new ImprovementCheckingRefiner<int>(refiner) { Evaluator = evaluator };
         var eliteSelector = new EliteSelector<int>(female);
         var genderSelector = new GenderSpecificSelector<int>(female, male);
+        var counters = Enumerable.Range(0, 7).Select(_ => new Counter()).ToArray();
+        ISubstitutionBundle[] counting =
+        [
+            CountingIfHeld(creator, counters[0]), CountingIfHeld(crossover, counters[1]), CountingIfHeld(mutator, counters[2]),
+            CountingIfHeld(refiner, counters[3]), CountingIfHeld(evaluator, counters[4]), CountingIfHeld(female, counters[5]),
+            CountingIfHeld(male, counters[6])
+        ];
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var random = RandomNumberGenerator.Create(42);
         var population = new[] { 10, 20, 30 }.Select(candidate => EvaluatedCandidate.From(candidate, new ObjectiveVector(candidate))).ToArray();
-        Action<ResolutionScope> invoke = kind switch
+        var countedTransformedCreator = transformedCreator.Substitute(counting);
+        var countedTransformedCrossover = transformedCrossover.Substitute(counting);
+        var countedRefiningEvaluator = refiningEvaluator.Substitute(counting);
+        var countedCheckingRefiner = checkingRefiner.Substitute(counting);
+        var countedEliteSelector = eliteSelector.Substitute(counting);
+        var countedGenderSelector = genderSelector.Substitute(counting);
+        Action<ResolutionScope, bool> invoke = kind switch
         {
-            nameof(TransformedCreator<int>) => scope => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(transformedCreator).Create(1, random, problem.SearchSpace, problem).ShouldBe([11]),
-            nameof(TransformedCrossover<int>) => scope => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(transformedCrossover).Cross([new Parents<int>(10, 20)], random, problem.SearchSpace, problem).ShouldBe([11]),
-            nameof(RefinementEvaluator<int>) => scope => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(refiningEvaluator).Evaluate([10], random, problem.SearchSpace, problem).ShouldBe([new ObjectiveVector(9)]),
-            nameof(ImprovementCheckingRefiner<int>) => scope => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(checkingRefiner).Refine([10], random, problem.SearchSpace, problem).ShouldBe([9]),
-            nameof(EliteSelector<int>) => scope => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(eliteSelector).Select(population, problem.Objective, 2, random, problem.SearchSpace, problem)
+            nameof(TransformedCreator<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+                .Resolve(counted ? countedTransformedCreator : transformedCreator).Create(1, random, problem.SearchSpace, problem).ShouldBe([11]),
+            nameof(TransformedCrossover<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+                .Resolve(counted ? countedTransformedCrossover : transformedCrossover).Cross([new Parents<int>(10, 20)], random, problem.SearchSpace, problem).ShouldBe([11]),
+            nameof(RefinementEvaluator<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+                .Resolve(counted ? countedRefiningEvaluator : refiningEvaluator).Evaluate([10], random, problem.SearchSpace, problem).ShouldBe([new ObjectiveVector(9)]),
+            nameof(ImprovementCheckingRefiner<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+                .Resolve(counted ? countedCheckingRefiner : checkingRefiner).Refine([10], random, problem.SearchSpace, problem).ShouldBe([9]),
+            nameof(EliteSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+                .Resolve(counted ? countedEliteSelector : eliteSelector).Select(population, problem.Objective, 2, random, problem.SearchSpace, problem)
                 .Select(candidate => candidate.Candidate).ShouldBe([10, 10]),
-            nameof(GenderSpecificSelector<int>) => scope => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(genderSelector).Select(population, problem.Objective, 3, random, problem.SearchSpace, problem)
+            nameof(GenderSpecificSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+                .Resolve(counted ? countedGenderSelector : genderSelector).Select(population, problem.Objective, 3, random, problem.SearchSpace, problem)
                 .Select(candidate => candidate.Candidate).ShouldBe([10, 20, 20]),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
@@ -64,27 +77,24 @@ public sealed class ConcreteOperatorResolutionTests
             nameof(GenderSpecificSelector<int>) => [0, 0, 0, 0, 0, 1, 1],
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
-        var counters = Enumerable.Range(0, expectedInvocations.Length).Select(_ => new CountAccumulator()).ToArray();
         var parent = ResolutionScope.Create();
-        invoke(parent);
+        invoke(parent, false);
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice(counters[0], OperatorCountMetric.Invocations)));
-        child.AddAspect(Aspect.Create(Pointcut.Reference(crossover), new CountingOperatorAdvice(counters[1], OperatorCountMetric.Invocations)));
-        child.AddAspect(Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice(counters[2], OperatorCountMetric.Invocations)));
-        child.AddAspect(Aspect.Create(Pointcut.Reference(refiner), new CountingOperatorAdvice(counters[3], OperatorCountMetric.Invocations)));
-        child.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counters[4], OperatorCountMetric.Invocations)));
-        child.AddAspect(Aspect.Create(Pointcut.Reference(female), new CountingOperatorAdvice(counters[5], OperatorCountMetric.Invocations)));
-        child.AddAspect(Aspect.Create(Pointcut.Reference(male), new CountingOperatorAdvice(counters[6], OperatorCountMetric.Invocations)));
 
-        invoke(child);
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations);
-        invoke(parent);
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations);
-        invoke(child);
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations.Select(count => 2 * count));
-        invoke(ResolutionScope.Create());
-        counters.Select(counter => counter.CurrentCount).ShouldBe(expectedInvocations.Select(count => 2 * count));
+        invoke(child, true);
+        counters.Select(counter => parent.Results.Result(counter).CurrentCount).ShouldBe(expectedInvocations);
+        invoke(parent, false);
+        counters.Select(counter => parent.Results.Result(counter).CurrentCount).ShouldBe(expectedInvocations);
+        invoke(child, true);
+        counters.Select(counter => parent.Results.Result(counter).CurrentCount).ShouldBe(expectedInvocations.Select(count => 2 * count));
+        invoke(ResolutionScope.Create(), false);
+        counters.Select(counter => parent.Results.Result(counter).CurrentCount).ShouldBe(expectedInvocations.Select(count => 2 * count));
     }
+
+    // Counts the target wherever a configuration holds it, and leaves a configuration that does not hold it unchanged.
+    private static Substitution CountingIfHeld<TOperation>(IOperator<TOperation, int> target, Counter counter)
+        where TOperation : IOperation<TOperation> =>
+        Substitution.Of<IOperator<TOperation, int>>(node => ReferenceEquals(node, target), node => node.Counted(counter));
 
     private sealed record ConstantCreator : SingleCandidateCreator<int>
     {

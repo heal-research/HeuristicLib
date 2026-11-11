@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Execution;
 namespace HEAL.HeuristicLib.Algorithms;
 
 /// <summary>Gives an algorithm configuration a name and forwards its execution unchanged.</summary>
-/// <remarks>The wrapper and its child are separate configurations; a name pointcut selects the wrapper.</remarks>
+/// <remarks>The wrapper and its child are separate configurations; selecting by name selects the wrapper.</remarks>
 public sealed record NamedAlgorithm<TCandidate, TSearchState> : WrappingAlgorithm<TCandidate, TSearchState>, INamedConfiguration
     where TSearchState : class, ISearchState
 {

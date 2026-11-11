@@ -13,7 +13,7 @@ Start with a completion method when you only need the final state. Choose stream
 | Retain control of one execution | `algorithm.CreateRun(problem, random)`                                      | [Explicit runs](#explicit-runs-for-control-and-analysis)                                       |
 | Analysis results                | Attach instruments with `AnalyzedBy`, then use `CreateRun` and `run.Result` | [Analysis](#explicit-runs-for-control-and-analysis) and [run results](#read-run-bound-results) |
 
-Executor construction and aspect weaving happen automatically. You do not need to manage those steps to use any of these entry points.
+Executor construction happens automatically. You do not need to manage those steps to use any of these entry points.
 
 <div class="flow-chart flow-chart--execution" role="img" aria-label="An algorithm configuration, problem and random source create a fresh run. Stream observes every state while CompleteAsync returns the final state.">
   <section class="flow-card">
@@ -116,7 +116,7 @@ Private execution data, such as a cache, belongs to its executor. Use `Sharing` 
 
 An explicit `AlgorithmRun` is returned in `Ready` without constructing the executor graph. Consume each returned stream only once and finish or dispose it before requesting another stream from the run. Requesting another stream while one is active throws without changing the active execution.
 
-Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained iterator, executors and run-bound results. The root algorithm is resolved with its configured advice only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
+Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained iterator, executors and run-bound results. The root algorithm is resolved only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
 
 Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup failure sets `Failed` and propagates the original exception, including an `OperationCanceledException` thrown during cleanup. Execution-graph setup or execution failures are terminal; cancellation thrown during graph setup sets `Canceled`. A failed or canceled run cannot resume. A construction failure also ends its resolution scope tree.
 

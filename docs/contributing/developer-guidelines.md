@@ -167,7 +167,9 @@ Every configuration's `CreateExecutor` receives a scope typed to the run for ope
 
 Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
-Resolving a configuration an algorithm builds itself makes it visible to pointcuts, so selection can differ from what the user configured. This is an authoring guideline, not a rule enforced by the resolver. Advice wraps already resolved executors and introduces no configuration children. Supply concrete runtime dependencies through advice constructors and pass them to wrapping executors. Advice has no resource lookup or child resolution capability. Keep run-result lookup and child resolution in configuration hooks.
+A configuration an algorithm builds itself is not a declared child, so substitutions do not reach it, and analysis or budgets placed by the user miss its work. This is an authoring guideline, not a rule enforced by the resolver. A wrapper holds the configuration it wraps as a declared child. Supply concrete runtime dependencies through the wrapper's properties and pass them to its executor. Keep run-result lookup and child resolution in configuration hooks.
+
+Constructing a node never changes the rules for its siblings. A `CreateExecutor` hook resolves its children and builds its executor; it does not change how the scope builds any other configuration. Behavior around a configuration is a wrapper in the configuration graph, so it affects only the configuration it holds and is visible before resolution begins. The one scope change during construction is `Share`, which changes only how long an executor lives and fails for a configuration that the scope or a scope below it has already resolved.
 
 ### § 4.4 Expose one construction hook
 
@@ -196,9 +198,9 @@ A setting has one input path.
 
 Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor` and throw `InvalidOperationException` before execution begins. Bound bases validate run-type compatibility before calling the hook. Do not add a separate validation API.
 
-For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before requesting resources. `Supports` supplies preflight metadata and resolution checks each executor against its requested interface. Advice rejects unsupported operators in `Check` before raw construction and child work. A construction failure ends the scope tree while retaining published results.
+For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before requesting resources. `Supports` supplies preflight metadata and resolution checks each executor against its requested interface. A wrapper rejects a child it cannot serve in its constructor, or in `CreateExecutor` before it resolves the child. A construction failure ends the scope tree while retaining published results.
 
-Instrument result creation must not depend on a requesting executor or its children. Its hooks receive only `RunResults`. Failed creation publishes no result or aspect; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
+Instrument result creation must not depend on a requesting executor or its children. Its hooks receive only `RunResults`. Failed creation publishes no result; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
 
 ### § 4.8 Represent configured behavior with value strategies
 
@@ -274,7 +276,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executors expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `SearchSpace` and `Problem` are the call's search space and problem without their run types, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument and cannot replace these; typed role advice receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `CountCandidateWork` defaults to throwing, and operations with candidate work implement it, so it does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `SearchSpace` and `Problem` are the call's search space and problem without their run types, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. Generic wrappers reach no other argument and cannot replace these; a typed wrapper of one operation receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `CountCandidateWork` defaults to throwing, and operations with candidate work implement it, so it does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
 
 A wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>`, which forwards the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them, as a choice among children does by supplying none. A routed executor derives from `RoutingExecutor<TExecutor>` and exposes none of its children's controls.
 
@@ -480,7 +482,7 @@ Do not make callers spell generic arguments available values can determine.
 
 Order parameters as primary inputs, RNG, search space and problem. An operation's executor method always ends with the RNG, search space and problem, including termination and operations defined outside the library, so that invocation wrappers find the RNG of every call. Reduced authoring arities and other operator APIs omit groups that do not apply. Lower level inputs that replace a search space occupy its position.
 
-Generic types and methods that name an operation put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, operations, authoring bases, compositions, advice and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
+Generic types and methods that name an operation put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, operations, authoring bases, compositions, wrappers and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
 
 ### § 8.8 Expose direct static implementations when the operation needs one
 
@@ -516,11 +518,11 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Each operation supplies one invocation over its named method. General wrappers and advice reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper, advice type or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work implements both. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`. A typed advice base per role, such as `MutatorAdvice`, is acceptable because it varies over roles only.
+Each operation supplies one invocation over its named method. General wrappers reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work implements both. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family
-(`Resolve`, `ResolveOptional`, `TryResolve`), inspection advice and named configuration wrappers all have this shape.
+(`Resolve`, `ResolveOptional`, `TryResolve`), the observation sources beside each operation and named configuration wrappers all have this shape.
 
 What is not acceptable is a surface that multiplies over an axis the role's author does not know exists, so that
 adding one role silently obliges members for every value of some other dimension. Before adding a per-role member,
@@ -546,8 +548,8 @@ because an adjective cannot be misread as a command to modify the receiver: `alg
 `algorithm.LimitedToCandidates(evaluator, 100_000)`. `ga.TerminatedBy(t)` is not a genetic algorithm any
 more, and the name should not suggest otherwise.
 
-A method that **mutates the receiver** is named with an imperative verb and never with `With*`, even when it returns
-the receiver for chaining: `scope.AddAspect(aspect)`. A fluent chain is not evidence that a value is being built,
+A method that **mutates the receiver** is named with an imperative verb, such as `scope.Share(configuration)`, and never
+with `With*`, even when it returns the receiver for chaining. A fluent chain is not evidence that a value is being built,
 so the name has to carry that distinction on its own.
 
 This was applied across the library after `With*` was found covering three different semantics at once, one of which

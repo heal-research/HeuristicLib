@@ -36,41 +36,38 @@ public sealed partial class OperatorPreparationSpecs
     public void TheSameExternalInvocationWrapperSupportsAnExternalOperationAndForwardsItsControls()
     {
         var source = new ValueSource(42);
-        var twice = new Twice<ReadValue, RealVector>(source);
-        var counter = new Counter();
-        var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.Reference(source), counter));
-        var scope = root
+        var calls = new CallCount();
+        var twice = new Twice<ReadValue, RealVector>(new CountingCalls<ReadValue, RealVector>(source, calls));
+        var scope = ResolutionScope.Create()
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var executor = (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(twice);
         var problem = new TestFunctionProblem(new SphereFunction(1));
 
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(42);
-        counter.Invocations.ShouldBe(2);
+        calls.Invocations.ShouldBe(2);
         ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(43);
-        counter.Invocations.ShouldBe(4);
+        calls.Invocations.ShouldBe(4);
     }
 
     [Fact]
-    public void ExternalOperationAndRetryParticipateInGeneralAdviceAndForwardControls()
+    public void ExternalOperationAndRetryAreReachedBySubstitutionAndForwardControls()
     {
         IOperator<ReadValue, RealVector> source = new ValueSource(42);
         var forwarded = new Forward<ReadValue, RealVector>(source).Retry(2);
-        var counter = new Counter();
-        var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.Reference(source), counter));
-        var scope = root
+        var calls = new CallCount();
+        var counted = forwarded.Substitute(source, child => new CountingCalls<ReadValue, RealVector>(child, calls));
+        var scope = ResolutionScope.Create()
             .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var problem = new TestFunctionProblem(new SphereFunction(1));
 
-        var executor = (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(forwarded);
+        var executor = (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(counted);
 
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(42);
-        counter.Invocations.ShouldBe(1);
+        calls.Invocations.ShouldBe(1);
         ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
         executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(43);
-        counter.Invocations.ShouldBe(2);
+        calls.Invocations.ShouldBe(2);
     }
 
     private interface IValueControl
@@ -169,19 +166,24 @@ public sealed partial class OperatorPreparationSpecs
             ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
-    private sealed class Counter : OperatorAdvice
+    private sealed class CallCount
     {
-        public int Invocations { get; private set; }
+        public int Invocations { get; set; }
+    }
 
-        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
-            operation.Wrap(executor, new Counting(this));
+    // A general wrapper for any operation, built from public APIs: it counts the successful calls of its child.
+    private sealed record CountingCalls<TOperation, TCandidate>(IOperator<TOperation, TCandidate> ChildOperator, CallCount Calls)
+        : WrappingOperator<TOperation, TCandidate>(ChildOperator) where TOperation : IOperation<TOperation>
+    {
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+            TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, Counting>(scope.ResolveOperator(ChildOperator), new Counting(Calls));
 
-        private readonly struct Counting(Counter counter) : IInvocationWrapper
+        private readonly struct Counting(CallCount calls) : IInvocationWrapper
         {
             public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
             {
                 var result = invocation.Proceed();
-                counter.Invocations++;
+                calls.Invocations++;
                 return result;
             }
         }

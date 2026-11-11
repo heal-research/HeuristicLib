@@ -47,7 +47,7 @@ Prefer one honest concept over parallel hierarchies when their semantics are tru
 
 Algorithms and operators should compose through their ordinary contracts. A composed configuration remains usable wherever its supported contract is accepted, including alongside consumer defined components. Algorithms own optimization orchestration, so replacing or composing components does not require callers to assemble a search loop.
 
-Common tasks should have short domain entry points over the same machinery available through explicit APIs. Callers can request a final search state, stream progress or retain a run for additional control. Executor construction and aspect weaving remain automatic. Additional control should reveal only the responsibilities the caller needs, with predictable ownership, failure and resource sharing semantics.
+Common tasks should have short domain entry points over the same machinery available through explicit APIs. Callers can request a final search state, stream progress or retain a run for additional control. Executor construction remains automatic. Additional control should reveal only the responsibilities the caller needs, with predictable ownership, failure and resource sharing semantics.
 
 Conveniences should compose a small coherent core. Their brevity does not justify redundant execution paths or unnecessary public machinery. Dependencies that affect behavior remain explicit.
 

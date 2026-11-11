@@ -232,11 +232,11 @@ public sealed class DeferredAlgorithmResolutionTests
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var values = new List<int> { paused.Current.Value };
-        var observedCalls = new CountAccumulator();
+        var observing = source.Counting(algorithm.Mutator, out var calls);
+        var observedCalls = root.Results.Result(calls);
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(algorithm.Mutator), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
 
-        var observed = await Run(Resolve(child, source));
+        var observed = await Run(Resolve(child, observing));
         observedCalls.CurrentCount.ShouldBe(cycle ? 4 : 2);
         while (await paused.MoveNextAsync())
             values.Add(paused.Current.Value);
@@ -261,12 +261,12 @@ public sealed class DeferredAlgorithmResolutionTests
         await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
-        var observedCalls = new CountAccumulator();
+        var observing = budget.Counting(algorithm.Mutator, out var calls);
+        var observedCalls = root.Results.Result(calls);
         // A sibling scope builds its own budget. A child of the original budget's scope would count against that budget too.
         var sibling = root.CreateChildScope();
-        sibling.AddAspect(Aspect.Create(Pointcut.Reference(algorithm.Mutator), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
 
-        var observed = await Run(Resolve(sibling, budget));
+        var observed = await Run(Resolve(sibling, observing));
         observed.Select(state => state.Call).ShouldBe([1, 2, 3]);
         observedCalls.CurrentCount.ShouldBe(3);
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -329,11 +329,11 @@ public sealed class DeferredAlgorithmResolutionTests
         var root = ResolutionScope.Create();
         var first = await Run(Resolve(root, budget));
         first.Select(state => state.Call).ShouldBe([1, 2]);
-        var observedCalls = new CountAccumulator();
+        var observing = budget.Counting(algorithm.Mutator, out var calls);
+        var observedCalls = root.Results.Result(calls);
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(algorithm.Mutator), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
 
-        var observed = await Run(Resolve(child, budget));
+        var observed = await Run(Resolve(child, observing));
         observed.Select(state => state.Call).ShouldBe([1, 2]);
         observed[0].Data.ShouldNotBeSameAs(first[0].Data);
         observedCalls.CurrentCount.ShouldBe(2);
@@ -387,11 +387,11 @@ public sealed class DeferredAlgorithmResolutionTests
         var source = algorithm.TerminatedBy(terminator);
         var root = ResolutionScope.Create();
         (await Run(Resolve(root, source))).Count.ShouldBe(2);
-        var observedCalls = new CountAccumulator();
+        var observing = source.Counting(terminator, out var calls);
+        var observedCalls = root.Results.Result(calls);
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(terminator), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
 
-        (await Run(Resolve(child, source))).Count.ShouldBe(2);
+        (await Run(Resolve(child, observing))).Count.ShouldBe(2);
         observedCalls.CurrentCount.ShouldBe(2);
         (await Run(Resolve(root, source))).Count.ShouldBe(1); // the root's terminator continues its count
         observedCalls.CurrentCount.ShouldBe(2);
@@ -410,11 +410,11 @@ public sealed class DeferredAlgorithmResolutionTests
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         paused.Current.Value.ShouldBe(1);
-        var observedCalls = new CountAccumulator();
+        var observing = budget.Counting(algorithm.Mutator, out var calls);
+        var observedCalls = root.Results.Result(calls);
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(algorithm.Mutator), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
 
-        (await Run(Resolve(child, budget))).Count.ShouldBe(2);
+        (await Run(Resolve(child, observing))).Count.ShouldBe(2);
         observedCalls.CurrentCount.ShouldBe(2);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         paused.Current.Value.ShouldBe(2);

@@ -8,7 +8,6 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation.Fixtures;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 
@@ -51,8 +50,8 @@ public sealed class OperatorOwnershipTests
             "stateless author overrides only its domain method");
         Check(typed.Resolve(evaluation).Evaluate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem).Count == 1,
             "evaluation keeps objective-vector results");
-        Check(Pointcut.Named<IOperator<Mutation, RealVector>>("outer").Matches(named), "common pointcuts recognize generic names");
-        Check(!Pointcut.Reference(mutation).Matches(named), "wrapper and child remain separate configurations");
+        Check(named is INamedConfiguration { Name: "outer" }, "a generic name carries the name a substitution selects it by");
+        Check(!ReferenceEquals(mutation, named), "wrapper and child remain separate configurations");
         IOperator<Mutation, RealVector> counting = new CountingMutation();
         Check(Invoke(typed.Resolve(counting)) == 1 && Invoke(typed.Resolve(counting.Named("count"))) == 2,
             "a name resolves its child in the same scope, so both share the child's private fields");
@@ -204,13 +203,6 @@ public sealed class OperatorOwnershipTests
         log.FailConstruction = false;
         Check(Invoke(Typed(ResolutionScope.Create()).Resolve(mutation)) == 3 && log.Preparations == 3,
             "a new scope reconstructs private data after a construction failure");
-        var dual = new DualRoleMutation();
-        IOperator<Mutation, RealVector> dualMutation = dual;
-        var root = ResolutionScope.Create();
-        var advisedScope = root.CreateChildScope();
-        advisedScope.AddAspect(Aspect.Create(Pointcut.Reference(dual), new DualRoleAdvice()));
-        Reject(() => Typed(advisedScope).Resolve(dualMutation), "Supported extension bases");
-        Check(Invoke(Typed(root).Resolve(dualMutation)) == Input[0][0], "advice rejection leaves unadvised construction usable");
     }
 
     [Fact]
@@ -260,19 +252,6 @@ public sealed class OperatorOwnershipTests
         Check(!discardedExecutor.IsAlive, "live source does not retain discarded fresh execution");
         GC.KeepAlive(root);
         GC.KeepAlive(retainedSource);
-    }
-
-    // A mutation that is also an own role, so advice for its own role meets it when it resolves as a mutation.
-    private sealed record DualRoleMutation : SingleCandidateMutator<RealVector>, IConfigurationNode<Node>
-    {
-        public override RealVector MutateCandidate(RealVector parent, IRandomNumberGenerator random) => parent;
-
-        Node IConfigurationNode<Node>.CreateExecutor(ResolutionScope scope) => new();
-    }
-
-    private sealed class DualRoleAdvice : Advice<DualRoleMutation, Node>
-    {
-        public override Node Wrap(Node executor, DualRoleMutation source) => executor;
     }
 
     private sealed class Node(object? state = null) : IExecutor

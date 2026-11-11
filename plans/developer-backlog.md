@@ -611,6 +611,16 @@ Tried and reverted on 2026-10-25, in the Package 4 review of the [operator role 
 
 The developer rejected it: an interface added to every authoring base to improve one message. The fit report names each configuration at fault, with its path and the run it cannot serve, which is the information the check owes. Reopen only if users cannot tell from that report what to change.
 
+Raised again on 2026-11-10 by steps 4 and 5 of the [core simplification plan](core-simplification-plan.md), as a public virtual description that a wrapper's `Supports` rejection and the report on an operator below an observation wrapper would use. The developer kept the rejection, because the report still names the operator to change.
+
+### A built-in counter of completed algorithm calls
+
+Proposed and rejected on 2026-11-10, after step 5 of the [core simplification plan](core-simplification-plan.md) deleted `CountingAlgorithmAdvice`, which counted calls that completed. `ga.Calls.Count()` counts started calls on purpose, so a call's number is known when it begins, and `ga.Calls.Observing` with a check of `AlgorithmCallEvent.Completed` expresses completions. Nothing in the repository needs them. Reopen when a terminator needs a run-bound count of completed calls.
+
+### A reference substitution that tolerates a missing target
+
+Proposed and rejected on 2026-11-10, after step 5 of the [core simplification plan](core-simplification-plan.md) found one test helper that counts a target only where a configuration holds it. `Substitution.Of(target, replace)` reports D17's error for a target the configuration does not hold, on purpose, and `Substitution.Of<TNode>(node => ReferenceEquals(node, target), replace)` already expresses the tolerant form in one line. Reopen if users repeat that predicate.
+
 ### Detaching the bound operator bases from the agnostic one
 
 Proposed and rejected on 2026-10-25, against Sonar S4019 after the typed scopes began deriving from `ResolutionScope`. The bound bases would implement `IOperator<TOperation, TCandidate>` themselves, so they would inherit no run-generic hook for the leaf hook to hide. The hierarchy of authoring bases is deliberate, and removing or bypassing a base is not a fix for a warning about it. The two bound bases suppress S4019 instead; author code never triggers it.

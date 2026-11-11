@@ -15,11 +15,9 @@ public class RefinerBatchSemanticsTests
     {
         var population = Enumerable.Range(0, populationSize).Select(value => new Individual(value)).ToArray();
 
-        foreach (var (name, topology, advice) in PassThroughTopologies())
+        foreach (var (name, topology) in PassThroughTopologies())
         {
             var refinedScope = ResolutionScope.Create();
-            if (advice is not null)
-                refinedScope.AddAspect(advice);
             var refined = refinedScope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
 
             refined.Count.ShouldBe(population.Length, name);
@@ -50,15 +48,15 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void InspectionRefiners_ReportThePopulationTheRefinerActuallyReturned()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var observed = new DropLastRefiner();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
-        var executor = scope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(observed);
+        var executor = scope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(
+            observed.Counted(counter, OperatorCountMetric.Candidates));
 
         Refine(executor, 1, 2, 3);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     // This topology assigns each candidate to a child and restores input order, which needs one result per assigned
@@ -71,20 +69,20 @@ public class RefinerBatchSemanticsTests
         Should.Throw<InvalidOperationException>(() => Refine(executor, 1, 2, 3));
     }
 
-    private static IEnumerable<(string Name, IOperator<Refinement, Individual> Topology, Aspect? Advice)> PassThroughTopologies()
+    private static IEnumerable<(string Name, IOperator<Refinement, Individual> Topology)> PassThroughTopologies()
     {
         var noChange = NoChangeRefiner<Individual>.Instance;
 
-        yield return ("no change", noChange, null);
-        yield return ("pipeline", PipelineRefiner.Create(noChange, noChange), null);
-        yield return ("empty pipeline", PipelineRefiner.Create<Individual>(), null);
-        yield return ("iterated", noChange.AsIterated(3), null);
-        yield return ("choose one", ChoosePerItem.Create(noChange), null);
-        yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0), null);
-        yield return ("counting", noChange, Aspect.Create(Pointcut.Reference(noChange), new CountingOperatorAdvice(new CountAccumulator(), OperatorCountMetric.Candidates)));
-        yield return ("duration measuring", noChange.Timed(new Duration()), null);
-        yield return ("improvement checking", noChange.CheckedForImprovement(), null);
-        yield return ("single candidate", new IdentityRefiner(), null);
+        yield return ("no change", noChange);
+        yield return ("pipeline", PipelineRefiner.Create(noChange, noChange));
+        yield return ("empty pipeline", PipelineRefiner.Create<Individual>());
+        yield return ("iterated", noChange.AsIterated(3));
+        yield return ("choose one", ChoosePerItem.Create(noChange));
+        yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0));
+        yield return ("counting", noChange.Counted(new Counter(), OperatorCountMetric.Candidates));
+        yield return ("duration measuring", noChange.Timed(new Duration()));
+        yield return ("improvement checking", noChange.CheckedForImprovement());
+        yield return ("single candidate", new IdentityRefiner());
     }
 
     private static IReadOnlyList<Individual> Refine(IRefinementExecutor<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> executor, params int[] values) =>

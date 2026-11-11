@@ -38,9 +38,6 @@ public sealed class LayerDependencyTests
             ("Execution.ExecutionConcurrency", "Execution/Concurrency/"),
             ("Execution.ExecutionConcurrencyKind", "Execution/Concurrency/"),
             ("Execution.BatchExecution", "Execution/Concurrency/"),
-            ("Execution.Aspect", "Execution/Aspects/"),
-            ("Execution.Advice", "Execution/Aspects/"),
-            ("Execution.Advice`1", "Execution/Aspects/"),
             ("Execution.ISubstitutionBundle", "Execution/"),
             ("Execution.Instrument", "Execution/Results/"),
             ("Execution.Instrument`1", "Execution/Results/"),
@@ -125,7 +122,7 @@ public sealed class LayerDependencyTests
     [Theory]
     [InlineData("Inspection", "Inspection")]
     [InlineData("Encodings/Permutations", "Encodings.Permutations")]
-    [InlineData("Execution/Aspects", "Execution")]
+    [InlineData("Execution", "Execution")]
     public void SemanticCheck_KeepsInspectionEncodingsAndResolutionFreeOfAnalysis(string folder, string concept)
     {
         var repositoryRoot = FindRepositoryRoot();
@@ -218,12 +215,12 @@ public sealed class LayerDependencyTests
     }
 
     [Fact]
-    public void SemanticCheck_AllowsPublicAspectsInHosting()
+    public void SemanticCheck_AllowsPublicExecutionTypesInHosting()
     {
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private Aspect? aspect; }",
+            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private Substitution? substitution; }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
@@ -488,7 +485,7 @@ public sealed class LayerDependencyTests
             return "Inspection";
         if (path.StartsWith(MainRoot + "Execution/Runs/", StringComparison.Ordinal))
             return "Hosting";
-        // Resolution, aspects and composition contracts; hosting is classified above.
+        // Resolution, substitution and composition contracts; hosting is classified above.
         if (path.StartsWith(MainRoot + "Execution/", StringComparison.Ordinal))
             return "Execution";
         if (path.StartsWith(MainRoot + "Experiments/", StringComparison.Ordinal) &&

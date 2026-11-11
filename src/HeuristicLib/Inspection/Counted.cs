@@ -99,3 +99,25 @@ public static class CountedOperatorExtensions
             Substitution.Of(target, node => node.Counted(counter, metric));
     }
 }
+
+/// <summary>Counts each successful invocation.</summary>
+internal readonly struct InvocationCountingWrapper(CountAccumulator counter) : IInvocationWrapper
+{
+    public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
+    {
+        var result = invocation.Proceed();
+        counter.IncrementBy(1);
+        return result;
+    }
+}
+
+/// <summary>Counts the candidate work of each successful invocation.</summary>
+internal readonly struct CandidateCountingWrapper(CountAccumulator counter) : IInvocationWrapper
+{
+    public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult>
+    {
+        var result = invocation.Proceed();
+        counter.IncrementBy(invocation.CountCandidateWork(result));
+        return result;
+    }
+}

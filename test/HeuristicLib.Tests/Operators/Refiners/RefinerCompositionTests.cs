@@ -37,14 +37,12 @@ public class RefinerCompositionTests
     [Fact]
     public void IteratedRefiner_AppliesTheChildRefinerOncePerIteration()
     {
-        var counter = new CountAccumulator();
         var observed = AddOffset(1);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.AsIterated(4));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.AsIterated(4).Counting(observed, out var counter));
 
         Refine(executor, 3).ShouldBe([7]);
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
@@ -106,29 +104,27 @@ public class RefinerCompositionTests
     [Fact]
     public void CountRefinedCandidates_CountsEveryReturnedCandidate()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var observed = AddOffset(1);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.Counted(counter, OperatorCountMetric.Candidates));
 
         Refine(executor, 3, 4, 5);
 
-        counter.CurrentCount.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Fact]
     public void CountRefinerCalls_DoesNotIncrementWhenRefinementThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var observed = new ThrowingRefiner();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.Counted(counter));
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 3));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -158,36 +154,31 @@ public class RefinerCompositionTests
     [Fact]
     public void ObservableRefiner_ReportsOncePerCallAtItsOwnPositionInTheComposition()
     {
-        var inside = new CountAccumulator();
-        var around = new CountAccumulator();
+        var around = new Counter();
         var inner = AddOffset(1);
         var outer = AddOffset(1).AsIterated(3);
         var insideScope = ResolutionScope.Create();
-        insideScope.AddAspect(Aspect.Create(Pointcut.Reference(inner), new CountingOperatorAdvice(inside, OperatorCountMetric.Invocations)));
-        var insideExecutor = insideScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(inner.AsIterated(3));
+        var insideExecutor = insideScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(inner.AsIterated(3).Counting(inner, out var inside));
         var aroundScope = ResolutionScope.Create();
-        aroundScope.AddAspect(Aspect.Create(Pointcut.Reference(outer), new CountingOperatorAdvice(around, OperatorCountMetric.Invocations)));
-        var aroundExecutor = aroundScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(outer);
+        var aroundExecutor = aroundScope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(outer.Counted(around));
 
         Refine(insideExecutor, 3).ShouldBe([6]);
         Refine(aroundExecutor, 3).ShouldBe([6]);
 
-        inside.CurrentCount.ShouldBe(3);
-        around.CurrentCount.ShouldBe(1);
+        insideScope.Results.Result(inside).CurrentCount.ShouldBe(3);
+        aroundScope.Results.Result(around).CurrentCount.ShouldBe(1);
     }
 
     [Fact]
     public void NestedComposition_AppliesEveryStageAndItsInspection()
     {
-        var counter = new CountAccumulator();
         var observed = AddOffset(1);
         var refiner = PipelineRefiner.Create(observed, Multiply(2).AsIterated(2));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(refiner.Counting(observed, out var counter, OperatorCountMetric.Candidates));
 
         Refine(executor, 3).ShouldBe([16]);
-        counter.CurrentCount.ShouldBe(1);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(1);
     }
 
     [Fact]

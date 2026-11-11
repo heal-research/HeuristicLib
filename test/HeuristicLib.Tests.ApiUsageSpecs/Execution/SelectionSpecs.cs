@@ -15,51 +15,8 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
-public class PointcutSpecs
+public class SelectionSpecs
 {
-    [Fact]
-    public void AReferenceRetainsItsDeclaredRole()
-    {
-        IOperator<Mutation, RealVector> mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        Pointcut<IOperator<Mutation, RealVector>> selected = Pointcut.Reference(mutator);
-
-        selected.Matches(mutator).ShouldBeTrue();
-        selected.Matches(new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5)).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void RoleAndConcreteTypeSelectionsSupportConfigurationFilters()
-    {
-        var smallMutation = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        var largeMutation = smallMutation with { MutationStrength = 2.0 };
-
-        Pointcut<IOperator<Mutation, RealVector>> selectedMutators = Pointcut.Predicate<IOperator<Mutation, RealVector>>(
-            mutator => mutator is GaussianMutator { MutationStrength: < 1 });
-        Pointcut<GaussianMutator> selectedGaussianMutators = Pointcut.Predicate<GaussianMutator>(
-            mutator => mutator.MutationStrength < 1);
-
-        selectedMutators.Matches(smallMutation).ShouldBeTrue();
-        selectedGaussianMutators.Matches(smallMutation).ShouldBeTrue();
-        selectedMutators.Matches(largeMutation).ShouldBeFalse();
-        selectedGaussianMutators.Matches(largeMutation).ShouldBeFalse();
-    }
-
-    [Fact]
-    public void NamesCanBePropertiesOnConfiguredWrappers()
-    {
-        var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        var exploration = new Named<Mutation, RealVector>(child, "exploration");
-        var refinement = new Named<Mutation, RealVector>(child, "refinement");
-        var allMutators = Pointcut.OfType<IOperator<Mutation, RealVector>>();
-        Pointcut<IOperator<Mutation, RealVector>> selected = allMutators
-            .And(new ExplorationMutations());
-
-        // Matches examines supplied nodes; an aspect applies a selection while resolving.
-        IConfigurationNode[] nodes = [child, exploration, refinement];
-        nodes.Where(selected.Matches).ShouldBe([exploration]);
-        nodes.Where(allMutators.Matches).ShouldBe(nodes);
-    }
-
     [Fact]
     public void NamingWrappersInOneScopeForwardControlsOfTheChildExecutorTheyShare()
     {
@@ -78,60 +35,10 @@ public class PointcutSpecs
         childStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
     }
 
-    [Fact]
-    public void NamedPointcutsCanExcludeOneOfSeveralNodesWithTheSameName()
-    {
-        var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        var first = child.Named("exploration");
-        var second = Named.Create(child, "exploration");
-        var refinement = new Named<Mutation, RealVector>(child, "refinement");
-        Pointcut<IOperator<Mutation, RealVector>> selected = Pointcut.Named<IOperator<Mutation, RealVector>>("exploration") &
-            !Pointcut.Reference<IOperator<Mutation, RealVector>>(first);
-        IConfigurationNode[] nodes = [child, first, second, refinement];
-
-        var matches = nodes.Where(selected.Matches).ToArray();
-
-        matches.Single().ShouldBeSameAs(second);
-    }
-
-    [Fact]
-    public void ReferenceAndRoleSelectionsComposeWithoutLosingTheRole()
-    {
-        IOperator<Mutation, RealVector> preferred = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        IOperator<Mutation, RealVector> alternative = new GaussianMutator(mutationRate: 0.2, mutationStrength: 2.0);
-        var exactReference = Pointcut.Reference(preferred);
-        var smallMutations = Pointcut.OfType<IOperator<Mutation, RealVector>>()
-            .And(new SmallMutations());
-
-        Pointcut<IOperator<Mutation, RealVector>> selected = exactReference.Or(smallMutations);
-        Pointcut<IOperator<Mutation, RealVector>> sameSelection = exactReference | smallMutations;
-        IConfigurationNode[] nodes = [preferred, alternative];
-
-        nodes.Where(selected.Matches).ShouldBe([preferred]);
-        nodes.Where(sameSelection.Matches).ShouldBe([preferred]);
-    }
-
-    [Fact]
-    public void APropertyConditionCanBeReusedAsASelector()
-    {
-        var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
-        IOperator<Mutation, RealVector> exploration = new Named<Mutation, RealVector>(child, "exploration");
-        IOperator<Mutation, RealVector> refinement = new Named<Mutation, RealVector>(child, "refinement");
-        var namedExploration = new ExplorationMutations();
-
-        var namedReferences = Pointcut.Reference(exploration) | Pointcut.Reference(refinement);
-        Pointcut<IOperator<Mutation, RealVector>> selected = namedReferences & namedExploration;
-        var sameSelection = namedReferences.And(new ExplorationMutations());
-        IConfigurationNode[] nodes = [child, exploration, refinement];
-
-        nodes.Where(selected.Matches).ShouldBe([exploration]);
-        nodes.Where(sameSelection.Matches).ShouldBe([exploration]);
-    }
-
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task OneAspectCanCountEveryConfiguredMutatorInAnAlgorithm(bool useSubclass)
+    public async Task OneSubstitutionCanCountEveryConfiguredMutatorInAnAlgorithm(bool useBundle)
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var exploration = new GaussianMutator(mutationRate: 0.5, mutationStrength: 1.0);
@@ -147,21 +54,21 @@ public class PointcutSpecs
             MutationRate = 0.5,
             Elites = 1
         };
-        var mutations = new CountAccumulator();
-        var counting = useSubclass
+        var mutations = new Counter();
+        ISubstitutionBundle counting = useBundle
             ? new MutationCounter(mutations)
-            : Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(), new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Invocations));
+            : Substitution.Of((IOperator<Mutation, RealVector> mutator) => mutator.Counted(mutations));
 
-        var run = algorithm.Advised(counting).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.Substitute(counting).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        mutations.CurrentCount.ShouldBeGreaterThan(0);
+        run.Result(mutations).CurrentCount.ShouldBeGreaterThan(0);
     }
 
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void ConsumerDefinedRolesCanBeAdvisedDirectly(bool selectByReference)
+    public void ConsumerDefinedRolesCanBeWrappedDirectly(bool selectByReference)
     {
         ICoolingSchedule warmup = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
         ICoolingSchedule main = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
@@ -169,68 +76,14 @@ public class PointcutSpecs
         var queriedTemperatures = new List<double>();
 
         var recording = selectByReference
-            ? Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(queriedTemperatures.Add))
-            : Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(queriedTemperatures.Add));
+            ? Substitution.Of(warmup, schedule => new RecordedCooling(schedule, queriedTemperatures.Add))
+            : Substitution.Of((ICoolingSchedule schedule) => new RecordedCooling(schedule, queriedTemperatures.Add));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(recording);
-        var executor = scope.Resolve(plan);
+        var executor = scope.Resolve(plan.Substitute(recording));
 
         executor.Temperature(step: 0).ShouldBe(100);
         executor.Temperature(step: 5).ShouldBe(2);
         queriedTemperatures.ShouldBe(selectByReference ? [100] : [100, 2]);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public void OneAspectCanBeUsedDirectlyOrSharedByIndependentCompositions(bool useCompositions)
-    {
-        ICoolingSchedule warmup = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
-        ICoolingSchedule main = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
-        var plan = new AnnealingPlan(warmup, main, WarmupSteps: 3);
-        var queriedTemperatures = new List<double>();
-        var recording = Aspect.Create(
-            Pointcut.OfType<ICoolingSchedule>(),
-            new RecordedCoolingAdvice(queriedTemperatures.Add));
-        var first = new AspectGroup(recording);
-        var second = new AspectGroup(recording);
-
-        var scope = ResolutionScope.Create();
-        scope.AddAspect(recording);
-        if (useCompositions)
-        {
-            scope.AddAspect(first);
-            scope.AddAspect(second);
-        }
-        var executor = scope.Resolve(plan);
-        executor.Temperature(step: 0).ShouldBe(100);
-        executor.Temperature(step: 5).ShouldBe(2);
-
-        queriedTemperatures.ShouldBe([100, 2]);
-    }
-
-    [Fact]
-    public void OneInstallationApiCombinesExistingAspectsReferencesAndPointcuts()
-    {
-        ICoolingSchedule warmup = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
-        ICoolingSchedule main = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
-        var plan = new AnnealingPlan(warmup, main, WarmupSteps: 3);
-        var events = new List<string>();
-        var recording = Aspect.Create(Pointcut.OfType<ICoolingSchedule>(),
-            new RecordedCoolingAdvice(temperature => events.Add($"existing:{temperature}")));
-        Action<double> recordWarmup = temperature => events.Add($"warmup:{temperature}");
-        Action<double> recordAll = temperature => events.Add($"all:{temperature}");
-        var combined = new AspectGroup(recording,
-            Aspect.Create(Pointcut.Reference(warmup), new RecordedCoolingAdvice(recordWarmup)),
-            Aspect.Create(Pointcut.OfType<ICoolingSchedule>(), new RecordedCoolingAdvice(recordAll)));
-
-        var scope = ResolutionScope.Create();
-        scope.AddAspect(combined);
-        var executor = scope.Resolve(plan);
-        executor.Temperature(step: 0).ShouldBe(100);
-        executor.Temperature(step: 5).ShouldBe(2);
-
-        events.ShouldBe(["existing:100", "warmup:100", "all:100", "existing:2", "all:2"]);
     }
 
     [Fact]
@@ -309,32 +162,11 @@ public class PointcutSpecs
     private static ObservationSource<double> Temperatures(ICoolingSchedule schedule) =>
         ObservationSource.Create<ICoolingSchedule, double>(schedule, static (node, instrument) => new ObservedCooling(node, instrument));
 
-    private sealed class MutationCounter : Aspect
+    // A bundle of one's own: it counts every mutator the configuration it is applied to holds.
+    private sealed class MutationCounter(Counter mutations) : ISubstitutionBundle
     {
-        private static readonly Pointcut<IOperator<Mutation, RealVector>> Mutators = Pointcut.OfType<IOperator<Mutation, RealVector>>();
-
-        public MutationCounter(CountAccumulator mutations)
-        {
-            Advices = [(Mutators, new CountingOperatorAdvice<Mutation, RealVector>(mutations, OperatorCountMetric.Invocations))];
-        }
-    }
-
-    private sealed class SmallMutations : Pointcut<IOperator<Mutation, RealVector>>
-    {
-        public override bool Matches(IOperator<Mutation, RealVector> mutator) => mutator is GaussianMutator { MutationStrength: < 1.0 };
-    }
-
-    private sealed class ExplorationMutations : Pointcut<IOperator<Mutation, RealVector>>
-    {
-        public override bool Matches(IOperator<Mutation, RealVector> mutator) => mutator is Named<Mutation, RealVector> { Name: "exploration" };
-    }
-
-    private sealed class AspectGroup : Aspect
-    {
-        public AspectGroup(params IReadOnlyList<Aspect> aspects)
-        {
-            Advices = [.. aspects.SelectMany(aspect => aspect)];
-        }
+        public IReadOnlyList<Substitution> Substitutions { get; } =
+            [Substitution.Of((IOperator<Mutation, RealVector> mutator) => mutator.Counted(mutations))];
     }
 
     // A consumer-defined role: the library knows nothing about cooling schedules.
@@ -355,18 +187,24 @@ public class PointcutSpecs
         }
     }
 
-    private sealed class RecordedCoolingAdvice(Action<double> record) : Advice<ICoolingSchedule, ICoolingScheduleExecutor>
+    // A wrapper of the role written outside the library, recording each temperature its schedule returns.
+    private sealed record RecordedCooling(ICoolingSchedule Schedule, Action<double> Record) : ICoolingSchedule
     {
-        public override ICoolingScheduleExecutor Wrap(ICoolingScheduleExecutor executor, ICoolingSchedule source) => new Executor(executor, record);
+        public static Parameter<RecordedCooling, ICoolingSchedule> ScheduleParameter { get; } =
+            new(nameof(Schedule), static node => node.Schedule, static (node, value) => node with { Schedule = value });
 
-        private sealed class Executor(ICoolingScheduleExecutor schedule, Action<double> record) : ICoolingScheduleExecutor
+        public IReadOnlyList<IParameter> GetParameters() => [ScheduleParameter];
+
+        public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) => new RecordingExecutor(scope.Resolve(Schedule), Record);
+    }
+
+    private sealed class RecordingExecutor(ICoolingScheduleExecutor schedule, Action<double> record) : ICoolingScheduleExecutor
+    {
+        public double Temperature(int step)
         {
-            public double Temperature(int step)
-            {
-                var temperature = schedule.Temperature(step);
-                record(temperature);
-                return temperature;
-            }
+            var temperature = schedule.Temperature(step);
+            record(temperature);
+            return temperature;
         }
     }
 
@@ -382,7 +220,7 @@ public class PointcutSpecs
         public IReadOnlyList<IParameter> GetParameters() => [ScheduleParameter, InstrumentParameter];
 
         public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) =>
-            new RecordedCoolingAdvice(Instrument.CreateRecorder(scope.Results)).Wrap(scope.Resolve(Schedule), Schedule);
+            new RecordingExecutor(scope.Resolve(Schedule), Instrument.CreateRecorder(scope.Results));
     }
 
     private sealed record CoolingAlgorithm(ICoolingSchedule Schedule)

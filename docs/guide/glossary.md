@@ -346,7 +346,7 @@ An operation is a named action an operator performs, such as mutation or evaluat
 
 An operation is distinct from the executor that performs it. One executor can support several operations. Use operation for the action, executor for the callable runtime object, and invocation for one actual use of an operation.
 
-`IOperation<TSelf>` identifies an operation in an operator contract. For example, `Mutation` in `IOperator<Mutation, TCandidate>` identifies mutation, whose executor interface is `IMutationExecutor<...>`. Its static members recognize that executor interface for the run types, wrap an executor so that each invocation passes through an invocation wrapper and state whether invocations report candidate work. Resolution and advice reach them through `OperationInfo`. `IItemOperation<TSelf>` marks an operation whose invocations split into items and adds routing them.
+`IOperation<TSelf>` identifies an operation in an operator contract. For example, `Mutation` in `IOperator<Mutation, TCandidate>` identifies mutation, whose executor interface is `IMutationExecutor<...>`. Its static members recognize that executor interface for the run types, wrap an executor so that each invocation passes through an invocation wrapper and state whether invocations report candidate work. Resolution and wrappers reach them through `OperationInfo`. `IItemOperation<TSelf>` marks an operation whose invocations split into items and adds routing them.
 
 Related terms:
 
@@ -556,7 +556,7 @@ Iterative algorithms return an `IterativeAlgorithmExecutor<TCandidate, TSearchSp
 
 The term does not imply a common child-enumeration API or a universal operation on all nodes.
 
-See also: Configuration, Configuration graph, Executor, Pointcut.
+See also: Configuration, Configuration graph, Executor.
 
 ### Configuration graph
 
@@ -570,17 +570,11 @@ See also: Configuration, Execution graph.
 
 ### Pointcut
 
-Status: `Canonical`
+Status: `Legacy`
 
-A pointcut selects configurations whose executors receive advice. `Pointcut<TConfiguration>` examines one supplied configuration through `Matches`.
+A former selector of the configurations whose executors received advice. A substitution selects instead: by reference, by the type of a lambda's parameter or by a predicate, such as `node is INamedConfiguration { Name: "exploration" }` for a name.
 
-`Pointcut.Reference(source)` selects by object reference. `Pointcut.OfType<TConfiguration>()` selects implementations and derived types. `Pointcut.Predicate<TConfiguration>(predicate)` provides runtime-only matching by configuration data; custom selection may also derive a small pointcut class. `Pointcut.Named<TConfiguration>(name)` matches the exact, case-sensitive name carried by `INamedConfiguration`.
-
-Pointcuts of the same declared configuration type combine through `And` and `Or`, also spelled `&` and `|`, with left-to-right short-circuit matching. `Not()` and `!` complement a selection within that declared type. Matching neither traverses a graph nor resolves executions.
-
-A selected configuration can have several callers and contextual executor bindings. Selecting it does not select one invocation or caller path.
-
-See also: Advice, Aspect, Configuration node, Join point, Resolution scope.
+See also: Named configuration, Substitution bundle.
 
 ### Named configuration
 
@@ -588,43 +582,33 @@ Status: `Canonical`
 
 A named configuration carries a descriptive `Name` through `INamedConfiguration`. Configurations may implement the contract directly; the predefined `Named*` wrappers add it while retaining an operator or algorithm role and forwarding the child's executor.
 
-Names are case-sensitive labels and need not be unique. A named wrapper and its child are separate configuration nodes. A name pointcut selects the wrapper; it does not assign that name to the child or introduce a caller path. Configuration identity and execution sharing still use configuration references.
+Names are case-sensitive labels and need not be unique. A named wrapper and its child are separate configuration nodes. A selection by name selects the wrapper; it does not assign that name to the child or introduce a caller path. Configuration identity and execution sharing still use configuration references.
 
-See also: Configuration node, Pointcut.
+See also: Configuration node, Substitution bundle.
 
 ### Advice
 
-Status: `Canonical`
+Status: `Legacy`
 
-Advice wraps the executors built for the configurations a pointcut selects. It contains no pointcut and is separate from the configuration graph.
+A former mechanism that wrapped the executors built for selected configurations from outside the configuration graph. Use a wrapper: a configuration that holds the configuration it wraps as its declared child, placed with `Substitute`. See [Writing wrappers](/guide/extending/writing-wrappers).
 
-The single `Advice` concept provides around advice. Its wrapper can run code around an operation, change its arguments or results, or decide whether to invoke it. Advice is not restricted to observation.
-
-`Advice<TConfiguration>` identifies the configuration role it can advise. Operator advice checks a selected operator before its executor is built and wraps each executor built for it: `OperatorAdvice` covers every operation, `OperatorAdvice<TOperation, TCandidate>` one operation, and role bases such as `MutatorAdvice<TCandidate>` receive typed executors. `AlgorithmAdvice<TCandidate, TSearchState>` wraps each executor built for a selected algorithm, and a consumer-defined role's advice derives from `Advice<TConfiguration, TExecutor>`. Advice receives concrete runtime dependencies through its constructor. Runtime data held by advice is shared wherever that advice instance is reused. Assemble advice with independent dependencies for independent runs. Advice has no resource lookup or child resolution capability. Resolution compares advice by reference. Observation, counting and duration measurement are predefined advice.
-
-See also: Aspect, Configuration node, Join point, Pointcut.
+See also: Invocation wrapper, Substitution bundle, Wrapper chain.
 
 ### Join point
 
-Status: `Canonical`
+Status: `Legacy`
 
-A join point is the executor built for one configuration selected by a pointcut. Advice wraps every contextual executor built for the same configuration, once per request, so a shared configuration receives one wrapper for each use. Advice wrappers keep no private data. Data that must accumulate belongs to the advice or to an object it receives, such as a counter.
+The former name for the executor that advice wrapped. A wrapper holds its configuration instead, and wraps its child's executor.
 
-A join point does not identify one invocation or one occurrence of a configuration along a caller path.
-
-See also: Advice, Configuration node, Executor, Pointcut.
+See also: Advice, Executor.
 
 ### Aspect
 
-Status: `Canonical`
+Status: `Legacy`
 
-An aspect is the ordered list of its pointcut/advice pairs. `Aspect.Create(pointcut, advice)` creates one pair. A derived constructor assigns its pairs to the protected `Advices` and spreads other aspects into them, as in `Advices = [.. Aspect.Create(Pointcut.Reference(evaluator), advice)]`.
+A former ordered list of pointcut and advice pairs, attached through `Advised` or `AddAspect`. Use a substitution bundle.
 
-Attach aspects through `Advised` before creating the run. Direct scope users call `AddAspect`. Within a scope, later added aspects wrap closer; within an aspect, pairs retain their listed order. Match pointcuts first and keep the closest occurrence of each advice instance.
-
-An aspect holds its pairs and any runtime dependencies in its advice. Reusing a raw aspect may couple caller-owned data. Instruments instead create independent results for each run.
-
-See also: Advice, Join point, Pointcut, Resolution scope.
+See also: Advice, Pointcut, Substitution bundle.
 
 ### Run
 
@@ -742,7 +726,7 @@ Status: `Canonical`
 
 An execution graph is a graph of executors created from a configuration graph during a run.
 
-A run may contain more than one execution graph over time or through different observation contexts. A shared configuration has one executor for all its uses within the sharing node, each use wrapped by its own observers.
+A run may contain more than one execution graph over time or through different observation contexts. A shared configuration has one executor for all its uses within the sharing node.
 
 See also: Configuration graph, Executor, Run.
 
@@ -752,19 +736,19 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to executors during a run.
 
-The scope holds one bare executor per configuration reference, ordered advice and the root's run results. `CreateChildScope()` inherits advice and explicit sharing while constructing independent executors for other configurations. `Share` selects configurations retained for child scopes. `AddAspect` adds advice before its targets resolve. Independent roots have separate results.
+The scope holds one executor per configuration reference and the root's run results. `CreateChildScope()` inherits explicit sharing while constructing independent executors for other configurations. `Share` selects configurations retained for child scopes. Independent roots have separate results.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for state, construction and observation rules.
 
-See also: Configuration, Wrapper chain, Execution graph, Executor, Aspect, Run.
+See also: Configuration, Wrapper chain, Execution graph, Executor, Run.
 
 ### Shared configuration
 
 Status: `Canonical`
 
-A shared configuration resolves to one bare executor in the nearest scope that shares it. Its first construction uses a dedicated child scope of that owner, and every request applies its own scope's advice. Other configurations have one executor per requesting scope. A new root or sharing owner creates independent data.
+A shared configuration resolves to one executor in the nearest scope that shares it. Its first construction uses a dedicated child scope of that owner, and every request receives that executor. Other configurations have one executor per requesting scope. A new root or sharing owner creates independent data.
 
-The configuration reference identifies what is shared. Sharing preserves private executor fields and resolved children for that owner's lifetime; advice below the sharing point cannot reach those children.
+The configuration reference identifies what is shared. Sharing preserves private executor fields and resolved children for that owner's lifetime.
 
 See [execution resolution](/contributing/architecture/execution-resolution#shared-configurations).
 
@@ -784,13 +768,13 @@ See also: Analyzer, Clock, Instrument.
 
 Status: `Canonical`
 
-A wrapper chain is the ordered set of execution wrappers applied to one selected configuration in a resolution context.
+A wrapper chain is the ordered set of wrappers around one configuration, each holding the next as its declared child.
 
-Configured wrappers belong to the configuration graph. Advice wraps the raw executor built for a configuration. Earlier advice wraps closer to that source executor; later advice wraps outside it. A new scope's advice precedes inherited advice. Each advice instance applies once at its first position.
+Wrappers belong to the configuration graph, so the configuration states the order: a wrapper written inside another is closer to the executor. Substitutions apply one after another, and a later one sits closer to the node it matches.
 
-Constructing another chain creates its own executor fields and child bindings. Existing chains keep their controls and advice. Run-bound results are shared within the root scope tree, and `Sharing` retains explicitly selected executors across child scopes.
+Constructing another chain creates its own executor fields and child bindings. Existing chains keep their controls. Run-bound results are shared within the root scope tree, and `Sharing` retains explicitly selected executors across child scopes.
 
-See also: Advice, Aspect, Configuration, Executor, Resolution scope.
+See also: Configuration, Executor, Invocation wrapper, Resolution scope, Substitution bundle.
 
 ### Invocation wrapper
 
@@ -798,7 +782,7 @@ Status: `Canonical`
 
 An invocation wrapper adds behavior such as retry, timing, counting or per-invocation choice around each call to an executor's named method. The operation builds it into one wrapping executor through `IOperation<TSelf>.Wrap`, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
 
-`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `Proceed(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerInvocation` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each operation writes its invocation as a private struct. Each wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>` and holds its own wrapped executor, so another binding gets its own children and advice. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
+`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `Proceed(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerInvocation` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each operation writes its invocation as a private struct. Each wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>` and holds its own wrapped executor, so another binding gets its own children. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
 
 See also: Operation invocation, Executor, Wrapper chain, Retry.
 
@@ -942,9 +926,9 @@ Status: `Canonical`
 
 Inspection observes and measures execution while preserving the observed operation's inputs, outputs and computation. It may update its own counters, clocks and collected data. Explicit algorithm or operator policies may use those counts and durations to change behavior, such as stopping after a budget is consumed.
 
-`HEAL.HeuristicLib.Inspection` contains observations, predefined observation/counting/timing advice, clocks and accumulators. General aspects and advice belong to the execution model and may change behavior. Analysis derives and publishes results from observations.
+`HEAL.HeuristicLib.Inspection` contains observations, predefined observation, counting and timing wrappers, clocks and accumulators. Wrappers of your own belong to the execution model and may change behavior. Analysis derives and publishes results from observations.
 
-See also: Advice, Analyzer, Observation.
+See also: Analyzer, Observation, Wrapper chain.
 
 ### Observation
 

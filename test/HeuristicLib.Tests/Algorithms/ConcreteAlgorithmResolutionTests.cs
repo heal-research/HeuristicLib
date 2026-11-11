@@ -28,19 +28,20 @@ public sealed class ConcreteAlgorithmResolutionTests
         var parent = ResolutionScope.Create();
         (await Next(parent, algorithm)).ShouldBe(1);
 
-        var observedCreations = new CountAccumulator();
-        var observedInterceptions = new CountAccumulator();
+        var creations = new Counter();
+        var interceptions = new Counter();
+        var observing = algorithm.Substitute(Substitution.Counting(creator, creations), countInterceptions(interceptions));
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice(observedCreations, OperatorCountMetric.Invocations)));
-        child.AddAspect(countInterceptions(observedInterceptions));
+        var observedCreations = parent.Results.Result(creations);
+        var observedInterceptions = parent.Results.Result(interceptions);
 
-        (await Next(child, algorithm)).ShouldBe(1);
+        (await Next(child, observing)).ShouldBe(1);
         observedCreations.CurrentCount.ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
         (await Next(parent, algorithm)).ShouldBe(2);
         observedCreations.CurrentCount.ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
-        (await Next(child, algorithm)).ShouldBe(2);
+        (await Next(child, observing)).ShouldBe(2);
         observedCreations.CurrentCount.ShouldBe(2);
         observedInterceptions.CurrentCount.ShouldBe(2);
         creatorPreparations.ShouldBe(2);
@@ -67,10 +68,10 @@ public sealed class ConcreteAlgorithmResolutionTests
         (await paused.MoveNextAsync()).ShouldBeTrue();
         Candidate(paused.Current).ShouldBe(1);
 
-        var observedInterceptions = new CountAccumulator();
+        var interceptions = new Counter();
         var child = parent.CreateChildScope();
-        child.AddAspect(countInterceptions(observedInterceptions));
-        await using var observed = Run(child, algorithm).GetAsyncEnumerator();
+        var observedInterceptions = parent.Results.Result(interceptions);
+        await using var observed = Run(child, algorithm.Substitute(countInterceptions(interceptions))).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
         Candidate(observed.Current).ShouldBe(1);
         observedInterceptions.CurrentCount.ShouldBe(1);
@@ -84,7 +85,7 @@ public sealed class ConcreteAlgorithmResolutionTests
     }
 
     // Each algorithm gets an interceptor over its own search state, together with a way to count that interceptor's calls.
-    private static (IAlgorithm<int> Algorithm, Func<CountAccumulator, Aspect> CountInterceptions) CreateAlgorithm(string kind, IOperator<Creation, int> creator,
+    private static (IAlgorithm<int> Algorithm, Func<Counter, Substitution> CountInterceptions) CreateAlgorithm(string kind, IOperator<Creation, int> creator,
         Action prepareInterceptor, double mutationRate = 0.5)
     {
         if (kind == nameof(HillClimber<int>))
@@ -99,7 +100,7 @@ public sealed class ConcreteAlgorithmResolutionTests
                 BatchSize = 1,
                 Direction = LocalSearchDirection.FirstImprovement
             };
-            return (hillClimber, counter => Aspect.Create(Pointcut.Reference(solutionInterceptor), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
+            return (hillClimber, counter => Substitution.Counting(solutionInterceptor, counter));
         }
 
         var interceptor = new IdentityInterceptor<PopulationState<int>>(prepareInterceptor);
@@ -141,7 +142,7 @@ public sealed class ConcreteAlgorithmResolutionTests
             },
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
-        return (algorithm, counter => Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
+        return (algorithm, counter => Substitution.Counting(interceptor, counter));
     }
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>

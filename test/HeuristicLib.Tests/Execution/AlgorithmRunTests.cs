@@ -12,19 +12,19 @@ public class AlgorithmRunTests
     public async Task Stream_ResolvesOnceBeforeEnumerationAndKeepsTheExecutorsOnResume()
     {
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
-        var aspect = new CheckCountingAspect();
-        var run = algorithm.Advised(aspect).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var resolutions = 0;
+        var algorithm = new CountingExecutionAlgorithm(1, new ResolutionProbe(evaluator, () => resolutions++));
+        var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
         var cancellationToken = TestContext.Current.CancellationToken;
 
         algorithm.ExecutionCount.ShouldBe(0);
-        aspect.CheckCount.ShouldBe(0);
+        resolutions.ShouldBe(0);
         var stream = run.Stream(cancellationToken: cancellationToken);
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Running);
         algorithm.ExecutionCount.ShouldBe(1);
         evaluator.ExecutionCount.ShouldBe(1);
-        aspect.CheckCount.ShouldBe(1);
+        resolutions.ShouldBe(1);
         await using (var enumerator = stream.GetAsyncEnumerator(cancellationToken))
             (await enumerator.MoveNextAsync()).ShouldBeTrue();
 
@@ -34,7 +34,7 @@ public class AlgorithmRunTests
         run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
         algorithm.ExecutionCount.ShouldBe(1);
         evaluator.ExecutionCount.ShouldBe(1);
-        aspect.CheckCount.ShouldBe(1);
+        resolutions.ShouldBe(1);
     }
 
     [Theory]
@@ -82,10 +82,10 @@ public class AlgorithmRunTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void AdviceFailure_IsTerminal(bool canceled)
+    public void ResolutionFailure_IsTerminal(bool canceled)
     {
         Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException();
-        var run = new SequenceAlgorithm().Advised(new FailingModule(failure)).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var run = new FailingResolution(new SequenceAlgorithm(), failure).CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
         var expectedState = canceled ? RunLifecycleState.Canceled : RunLifecycleState.Failed;
 
         var thrown = Record.Exception(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
@@ -222,50 +222,25 @@ public class AlgorithmRunTests
         run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
     }
 
-    [Fact]
-    public void TheSameAspectAddedTwice_ChecksItsAdviceOnce()
+    // Throws the given failure when it is resolved, after its child resolved.
+    private sealed record FailingResolution(IAlgorithm<int, PopulationState<int>> ChildAlgorithm, Exception Failure)
+        : WrappingAlgorithm<int, PopulationState<int>>(ChildAlgorithm)
     {
-        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var aspect = new CheckCountingAspect();
-        var run = new AdditiveStepAlgorithm(1).Advised(aspect, aspect).CreateRun(problem, RandomNumberGenerator.Create(42));
-
-        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
-
-        aspect.CheckCount.ShouldBe(1);
-    }
-
-    private sealed class FailingModule : Aspect
-    {
-        public FailingModule(Exception failure)
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
-            Advices = [(Pointcut.OfType<IAlgorithm<int, PopulationState<int>>>(), new ThrowingAlgorithmAdvice(failure))];
+            _ = scope.Resolve(ChildAlgorithm);
+            throw Failure;
         }
     }
 
-    private sealed class ThrowingAlgorithmAdvice(Exception failure) : AlgorithmAdvice<int, PopulationState<int>>
+    // Reports each resolution of the evaluator it wraps and returns that evaluator's executor.
+    private sealed record ResolutionProbe(IOperator<Evaluation, int> ChildOperator, Action Resolved) : WrappingOperator<Evaluation, int>(ChildOperator)
     {
-        public override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            Wrap<TSearchSpace, TProblem>(IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> executor,
-                IAlgorithm<int, PopulationState<int>> source) =>
-            throw failure;
-    }
-
-    private sealed class CheckingEvaluatorAdvice(Action check) : OperatorAdvice<Evaluation, int>
-    {
-        public override void Check<TSearchSpace, TProblem, TSearchState>(OperationInfo operation,
-            IOperator<Evaluation, int> source) => check();
-
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
-            OperationInfo operation,
-            IOperator<Evaluation, int> source) => executor;
-    }
-
-    private sealed class CheckCountingAspect : Aspect
-    {
-        public int CheckCount { get; private set; }
-        public CheckCountingAspect()
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            Advices = [(Pointcut.OfType<IOperator<Evaluation, int>>(), new CheckingEvaluatorAdvice(() => CheckCount++))];
+            Resolved();
+            return scope.Resolve(ChildOperator);
         }
     }
 

@@ -46,41 +46,37 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_WithAnEmptyBatch_ReturnsAnEmptyResultWithoutEvaluating()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(observed);
 
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        Refine(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner)).ShouldBeEmpty();
+        Refine(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner.Counting(observed, out var counter))).ShouldBeEmpty();
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void Refine_EvaluatesTheOriginalAndTheRefinedCandidates()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(observed);
 
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
-        Refine(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
+        Refine(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(
+            refiner.Counting(observed, out var counter, OperatorCountMetric.Candidates)), 10, 20);
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     // Sharing one cache instance is what turns the algorithm's own evaluation of the returned candidate into a hit.
     [Fact]
     public void Refine_WithASharedCachingEvaluator_LetsALaterEvaluationHitTheCache()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var observed = CreateEvaluator();
-        var sharedEvaluator = observed.Cached();
+        var sharedEvaluator = observed.Counted(counter, OperatorCountMetric.Candidates).Cached();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var refinerExecutor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
         var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();
@@ -89,7 +85,7 @@ public class ImprovementCheckingRefinerTests
         algorithmEvaluator.Evaluate(accepted, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         accepted.ShouldBe([5]);
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     // Operator budgets install a counted replacement keyed by reference, so a refiner holding the same evaluator
@@ -97,32 +93,26 @@ public class ImprovementCheckingRefinerTests
     [Fact]
     public void Refine_WithTheEvaluatorAnOperatorBudgetObserves_CountsItsComparisonEvaluations()
     {
-        var counter = new CountAccumulator();
         var sharedEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator);
 
         var budgetScope = ResolutionScope.Create().CreateChildScope();
-        budgetScope.AddAspect(Aspect.Create(Pointcut.Reference(sharedEvaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
 
-        Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
+        Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(
+            refiner.Counting(sharedEvaluator, out var counter, OperatorCountMetric.Candidates)), 10, 20);
 
-        counter.CurrentCount.ShouldBe(4);
+        budgetScope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
-    // The counterpart: a different evaluator execution is not reached by the budget's replacement.
+    // The counterpart: a refiner with its own evaluator does not hold the algorithm's, so a budget on that one cannot reach it.
     [Fact]
     public void Refine_WithItsOwnEvaluator_KeepsComparisonEvaluationsOutOfTheBudget()
     {
-        var counter = new CountAccumulator();
         var algorithmEvaluator = CreateEvaluator();
         var refiner = new AddOffsetRefiner(-5).CheckedForImprovement();
 
-        var budgetScope = ResolutionScope.Create().CreateChildScope();
-        budgetScope.AddAspect(Aspect.Create(Pointcut.Reference(algorithmEvaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
-
-        Refine(budgetScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner), 10, 20);
-
-        counter.CurrentCount.ShouldBe(0);
+        Should.Throw<InvalidOperationException>(() => refiner.Counting(algorithmEvaluator, out _, OperatorCountMetric.Candidates))
+            .Message.ShouldContain("is not reachable");
     }
 
     [Fact]

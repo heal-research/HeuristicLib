@@ -7,8 +7,9 @@ namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>Describes one operation for the run types of one resolution, such as mutation over one search space and problem.</summary>
 /// <remarks>
-/// Resolution passes this to advice, which checks and wraps executors without knowing their operation. The operation's
-/// own <see cref="IOperation{TSelf}"/> members supply every answer.
+/// A wrapper written for every operation, such as a counter, gets this from <see cref="For"/> to check and wrap its
+/// child's executor without knowing the operation. The operation's own <see cref="IOperation{TSelf}"/> members supply
+/// every answer.
 /// </remarks>
 public sealed class OperationInfo
 {
@@ -21,7 +22,7 @@ public sealed class OperationInfo
     }
 
     /// <summary>Whether the operation's invocations report candidate work.</summary>
-    /// <remarks>Advice measuring candidate work checks this before the executor is built.</remarks>
+    /// <remarks>A wrapper measuring candidate work checks this before it resolves its child.</remarks>
     public bool SupportsCandidateWork { get; }
 
     /// <summary>Rejects an operator whose operation reports no candidate work.</summary>

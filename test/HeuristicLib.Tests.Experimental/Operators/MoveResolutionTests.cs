@@ -19,7 +19,7 @@ public class MoveResolutionTests
     [InlineData("evaluator")]
     public void StatefulMoveRoles_CreatePrivateDataOncePerScope(string role)
     {
-        var preparations = new Counter();
+        var preparations = new Preparations();
         IOperator source = role switch
         {
             "creator" => new CountingCreator(preparations),
@@ -51,24 +51,24 @@ public class MoveResolutionTests
     [Fact]
     public void MoveEvaluation_ReportsOneCandidatePerCall()
     {
-        IOperator<MoveEvaluation<int>, int> evaluator = new CountingEvaluator(new Counter());
-        var candidates = new CountAccumulator();
+        IOperator<MoveEvaluation<int>, int> evaluator = new CountingEvaluator(new Preparations());
+        var candidates = new Counter();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice<MoveEvaluation<int>, int>(candidates, OperatorCountMetric.Candidates)));
-        var executor = scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator);
+        var executor = scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(
+            evaluator.Counted(candidates, OperatorCountMetric.Candidates));
 
         executor.Evaluate(new ObjectiveVector(0), 0, 0, Random, SearchSpace, Problem);
         executor.Evaluate(new ObjectiveVector(0), 0, 1, Random, SearchSpace, Problem);
 
-        candidates.CurrentCount.ShouldBe(2);
+        scope.Results.Result(candidates).CurrentCount.ShouldBe(2);
     }
 
-    private sealed class Counter
+    private sealed class Preparations
     {
         public int Value { get; set; }
     }
 
-    private sealed record CountingCreator(Counter Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+    private sealed record CountingCreator(Preparations Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
 
         protected override IMoveCreationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
@@ -89,7 +89,7 @@ public class MoveResolutionTests
         }
     }
 
-    private sealed record CountingApplier(Counter Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+    private sealed record CountingApplier(Preparations Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
 
         protected override IMoveApplicationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
@@ -107,7 +107,7 @@ public class MoveResolutionTests
         }
     }
 
-    private sealed record CountingEvaluator(Counter Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+    private sealed record CountingEvaluator(Preparations Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
 
         protected override IMoveEvaluationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)

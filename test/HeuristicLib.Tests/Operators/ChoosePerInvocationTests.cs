@@ -119,28 +119,28 @@ public class ChoosePerInvocationTests
     }
 
     [Fact]
-    public void AdviceCountsTheChoiceOncePerCallAndOnlyTheChosenChild()
+    public void CountersCountTheChoiceOncePerCallAndOnlyTheChosenChild()
     {
         var first = new IndexMutator(0, []);
         var second = new IndexMutator(1, []);
         var choice = ChoosePerInvocation.Create([first, second], [1.0, 0.0]);
-        CountAccumulator firstCalls = new(), secondCalls = new(), choiceCalls = new(), choiceCandidates = new();
+        Counter firstCalls = new(), secondCalls = new(), choiceCalls = new(), choiceCandidates = new();
+        var counted = choice
+            .Substitute(Substitution.Counting(first, firstCalls), Substitution.Counting(second, secondCalls))
+            .Counted(choiceCandidates, OperatorCountMetric.Candidates)
+            .Counted(choiceCalls);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(first), new CountingOperatorAdvice(firstCalls, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(second), new CountingOperatorAdvice(secondCalls, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(choice), new CountingOperatorAdvice(choiceCalls, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(choice), new CountingOperatorAdvice(choiceCandidates, OperatorCountMetric.Candidates)));
         var executor = scope
-            .For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice);
+            .For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(counted);
         var random = RandomNumberGenerator.Create(1);
 
         for (var call = 0; call < 3; call++)
             executor.Mutate([1, 2], random, Problem.SearchSpace, Problem);
 
-        firstCalls.CurrentCount.ShouldBe(3);
-        secondCalls.CurrentCount.ShouldBe(0);
-        choiceCalls.CurrentCount.ShouldBe(3);
-        choiceCandidates.CurrentCount.ShouldBe(6);
+        scope.Results.Result(firstCalls).CurrentCount.ShouldBe(3);
+        scope.Results.Result(secondCalls).CurrentCount.ShouldBe(0);
+        scope.Results.Result(choiceCalls).CurrentCount.ShouldBe(3);
+        scope.Results.Result(choiceCandidates).CurrentCount.ShouldBe(6);
     }
 
     [Fact]
@@ -148,18 +148,16 @@ public class ChoosePerInvocationTests
     {
         var child = new IndexMutator(0, []);
         var choice = ChoosePerInvocation.Create(child);
-        var calls = new CountAccumulator();
         var root = ResolutionScope.Create();
         var plain = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice);
         var countedScope = root.CreateChildScope();
-        countedScope.AddAspect(Aspect.Create(Pointcut.Reference(child), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
-        var counted = countedScope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice);
+        var counted = countedScope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice.Counting(child, out var calls));
         var random = RandomNumberGenerator.Create(1);
 
         plain.Mutate([1], random, Problem.SearchSpace, Problem);
         counted.Mutate([1], random, Problem.SearchSpace, Problem);
 
-        calls.CurrentCount.ShouldBe(1);
+        root.Results.Result(calls).CurrentCount.ShouldBe(1);
     }
 
     [Fact]

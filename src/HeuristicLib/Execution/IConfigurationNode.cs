@@ -34,8 +34,8 @@ public interface IConfigurationNode
 /// </summary>
 /// <remarks>
 /// Operators and algorithms are not of this kind: their executor type depends on the run's search space and problem,
-/// so they build through their own hooks. Advice for such a role derives from
-/// <see cref="Advice{TConfiguration, TExecutor}"/>.
+/// so they build through their own hooks. A wrapper for such a role is another configuration of the role that resolves
+/// the configuration it wraps.
 /// </remarks>
 public interface IConfigurationNode<out TExecutor> : IConfigurationNode
     where TExecutor : class, IExecutor

@@ -6,7 +6,6 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation.Fixtures;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 
@@ -20,15 +19,15 @@ public sealed class MixedOperatorResolutionTests
     public void TypedAndUntypedResolutionShareTheExecutorOfTheirScopeInEitherOrder(bool untypedFirst)
     {
         var source = new DualCrossover();
-        var counter = new InvocationCounter();
-        var log = new AdviceLog();
+        var counter = new Counter();
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountInvocations(counter, log)));
         var typed = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
-        IOperator<Crossover, RealVector> forwarded = source;
-        IOperator<Crossover, RealVector> current = source;
+        IOperator<Crossover, RealVector> counted = source.Counted(counter);
+        IOperator<Crossover, RealVector> forwarded = counted;
+        IOperator<Crossover, RealVector> current = counted;
         var first = untypedFirst ? root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(forwarded) : typed.Resolve(current);
         var second = untypedFirst ? typed.Resolve(current) : root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(forwarded);
+        second.ShouldBeSameAs(first);
         Invoke(first).ShouldBe(1);
         Invoke(second).ShouldBe(2);
         var child = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
@@ -37,27 +36,25 @@ public sealed class MixedOperatorResolutionTests
         control.Value = 12;
         Invoke(operation).ShouldBe(13);
         source.Preparations.ShouldBe(2);
-        log.Wraps.ShouldBe(3);
-        counter.Value.ShouldBe(3);
+        root.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Fact]
-    public void MixedChildrenUseTheSameAncestryAndAspectsInBothDirections()
+    public void MixedChildrenUseTheSameAncestryAndWrappersInBothDirections()
     {
         var source = new DualCrossover();
-        IOperator<Crossover, RealVector> current = source;
+        var counter = new Counter();
+        IOperator<Crossover, RealVector> current = source.Counted(counter);
         IOperator<Crossover, RealVector> forwarded = new ForwardedCrossover(current);
         var outer = new CurrentForward(forwarded);
-        var counter = new InvocationCounter();
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountInvocations(counter, new AdviceLog())));
         var parent = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var parentNode = parent.Resolve(outer);
         var descendantNode = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);
         Invoke(parentNode).ShouldBe(1);
         Invoke(descendantNode).ShouldBe(1);
         source.Preparations.ShouldBe(2);
-        counter.Value.ShouldBe(2);
+        root.Results.Result(counter).CurrentCount.ShouldBe(2);
 
         var independent = ResolutionScope.Create();
         var child = independent.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(outer);

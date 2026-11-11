@@ -18,17 +18,15 @@ public class RepeatingEvaluatorTests
     [Fact]
     public void Evaluate_PerformsConfiguredTotalNumberOfRepetitions()
     {
-        var counter = new CountAccumulator();
         var problem = CreateProblem();
         var observed = new CandidateEvaluator();
         var evaluator = observed.AsRepeated(3);
 
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counting(observed, out var counter))
             .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Fact]

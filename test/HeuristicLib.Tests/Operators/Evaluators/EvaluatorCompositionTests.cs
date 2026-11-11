@@ -10,14 +10,11 @@ public class EvaluatorCompositionTests
     [Fact]
     public void CachingEvaluator_UsesIndependentCachePerExecution()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var evaluator = observed.Cached();
+        var evaluator = observed.Cached().Counting(observed, out var counter);
         var firstScope = ResolutionScope.Create();
-        firstScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var firstExecutor = firstScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondScope = ResolutionScope.Create();
-        secondScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var secondExecutor = secondScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
@@ -25,20 +22,18 @@ public class EvaluatorCompositionTests
         firstExecutor.Evaluate([1], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
         secondExecutor.Evaluate([1], RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        firstScope.Results.Result(counter).CurrentCount.ShouldBe(1);
+        secondScope.Results.Result(counter).CurrentCount.ShouldBe(1);
     }
 
     [Fact]
     public void LimitEvaluator_UsesIndependentCounterPerExecution()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var evaluator = observed.LimitEvaluations(2, enforceLimitWithinBatch: true);
+        var evaluator = observed.LimitEvaluations(2, enforceLimitWithinBatch: true).Counting(observed, out var counter, OperatorCountMetric.Candidates);
         var firstScope = ResolutionScope.Create();
-        firstScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var firstExecutor = firstScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var secondScope = ResolutionScope.Create();
-        secondScope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var secondExecutor = secondScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
@@ -46,23 +41,22 @@ public class EvaluatorCompositionTests
         secondExecutor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
         limited.Count.ShouldBe(3);
-        counter.CurrentCount.ShouldBe(3);
+        firstScope.Results.Result(counter).CurrentCount.ShouldBe(2);
+        secondScope.Results.Result(counter).CurrentCount.ShouldBe(1);
     }
 
     [Fact]
     public void RepeatingEvaluator_InvokesResolvedChildForEveryEvaluation()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var evaluator = observed.AsRepeated(2, ObjectiveVectorAggregation.Mean);
+        var evaluator = observed.AsRepeated(2, ObjectiveVectorAggregation.Mean).Counting(observed, out var counter);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
 
         executor.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]

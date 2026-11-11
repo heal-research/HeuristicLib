@@ -378,8 +378,10 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     private sealed class Entry : IDisposable
     {
         private readonly PerformanceTrackingEvaluatorObserver performanceObserver;
-        // The contender with its evaluator observed by this entry's tracker. It is built once, so a restart resolves the
-        // same graph and the tracker spans restarts; it is never persisted or handed out.
+        // The contender with its evaluator observed by this entry's tracker, ending an iteration of the problem at each of
+        // its states, so the race's epoch also ends under UpdatePolicy.AfterEachIteration. A builder that applies the
+        // updates itself changes nothing, because a second wrapper finds no update pending. The graph is built once, so a
+        // restart resolves the same graph and the tracker spans restarts; it is never persisted or handed out.
         private readonly IAlgorithm<TCandidate, TSearchState> tracked;
         private IEnumerator<TSearchState>? running;
 
@@ -389,7 +391,8 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
             Algorithm = algorithm;
             ParentRegistry = parentRegistry;
             performanceObserver = new PerformanceTrackingEvaluatorObserver(modelObservationInterval, objectiveValueSelector);
-            tracked = ((IAlgorithm<TCandidate, TSearchState>)algorithm).Substitute(evaluator.Invocations.Observing(performanceObserver.AfterEvaluation));
+            tracked = ((IAlgorithm<TCandidate, TSearchState>)algorithm).ApplyingIterationUpdates()
+                .Substitute(evaluator.Invocations.Observing(performanceObserver.AfterEvaluation));
             Candidate = candidate;
             LastState = initialState;
             running = CreateEnumerator(problem, random, initialState, ct);

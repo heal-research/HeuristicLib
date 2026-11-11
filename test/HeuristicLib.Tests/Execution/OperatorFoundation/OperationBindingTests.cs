@@ -32,8 +32,7 @@ public sealed class OperationBindingTests
         var source = new AllOperations();
         var probe = new HookProbe();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
-        InvokeOperation(scope, source, operation);
+        InvokeOperation(scope, source, operation, new ProbeWrapping(probe));
         probe.Work.ShouldBe(expectedWork);
         probe.Successes.ShouldBe(1);
         probe.Cleanups.ShouldBe(1);
@@ -82,13 +81,12 @@ public sealed class OperationBindingTests
     public void EveryOperationSupportsAnInvocationWrapperThatInvokesItsChildTwice(int operation)
     {
         var source = new AllOperations();
-        var advice = new TwiceAdvice();
+        var twice = new TwiceWrapping();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), advice));
 
-        InvokeOperation(scope, source, operation);
+        InvokeOperation(scope, source, operation, twice);
 
-        advice.Wraps.ShouldBe(1);
+        twice.Wraps.ShouldBe(1);
         source.Preparations.ShouldBe(1);
         source.Constructions.ShouldBe(1);
         source.Invocations.ShouldBe(2);
@@ -111,9 +109,8 @@ public sealed class OperationBindingTests
         var fork = RandomNumberGenerator.Create(2);
         var recorder = new InvocationRecorder();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(null, fork, recorder)));
 
-        InvokeOperation(scope, source, operation);
+        InvokeOperation(scope, source, operation, new RedirectingWrapping(null, fork, recorder));
 
         source.RandomSources.ShouldBe([fork]);
         recorder.Random.ShouldNotBeNull().ShouldNotBeSameAs(fork);
@@ -136,9 +133,8 @@ public sealed class OperationBindingTests
         var recorder = new InvocationRecorder();
         var otherExecutor = ResolveOperation(ResolutionScope.Create(), other, operation);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new RedirectingAdvice(otherExecutor, null, recorder)));
 
-        InvokeOperation(scope, source, operation);
+        InvokeOperation(scope, source, operation, new RedirectingWrapping(otherExecutor, null, recorder));
 
         source.Invocations.ShouldBe(0);
         other.Invocations.ShouldBe(1);
@@ -161,14 +157,12 @@ public sealed class OperationBindingTests
         var root = ResolutionScope.Create();
         var raw = ResolveOperation(root, source, operation);
         var forwardingScope = root.CreateChildScope();
-        forwardingScope.AddAspect(Aspect.Create(Pointcut.Reference(source), new TwiceAdvice()));
-        var forwarding = ResolveOperation(forwardingScope, source, operation);
+        var forwarding = ResolveOperation(forwardingScope, source, operation, new TwiceWrapping());
         var supplied = new SuppliedControl();
         var supplyingScope = root.CreateChildScope();
-        supplyingScope.AddAspect(Aspect.Create(Pointcut.Reference(source), new ControlSupplyingAdvice(supplied)));
-        var supplying = ResolveOperation(supplyingScope, source, operation);
+        var supplying = ResolveOperation(supplyingScope, source, operation, new ControlSupplyingWrapping(supplied));
 
-        // Each build creates its own executor, so the advised build forwards the control of its own raw executor.
+        // Each build creates its own executor, so the wrapped build forwards the control of its own raw executor.
         forwarding.ShouldNotBeOfType(raw.GetType());
         ExecutorControls.Find<IExecutor>(forwarding).ShouldBeOfType(raw.GetType());
         ExecutorControls.Find<SuppliedControl>(supplying).ShouldBeSameAs(supplied);
@@ -176,14 +170,14 @@ public sealed class OperationBindingTests
     }
 
     [Fact]
-    public void InvocationWrappersBindOncePerExecutorAndRetainTheirOwnChildAdvice()
+    public void InvocationWrappersBindOncePerExecutorAndRetainTheirOwnChildWrappers()
     {
         var source = new AllOperations();
         IOperator<Mutation, RealVector> mutation = source;
-        var factory = new TwiceAdvice();
+        var factory = new TwiceWrapping();
+        IOperator<Mutation, RealVector> wrapped = new Wrapped<Mutation>(mutation, factory);
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.Reference(source), factory));
-        var first = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
+        var first = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(wrapped);
         factory.Wraps.ShouldBe(1);
         source.Invocations.ShouldBe(0);
         var random = RandomNumberGenerator.Create(1);
@@ -191,11 +185,11 @@ public sealed class OperationBindingTests
             first.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
         factory.Wraps.ShouldBe(1);
 
-        var contextCalls = new CountAccumulator();
+        var counted = wrapped.Counting(mutation, out var calls);
+        var contextCalls = root.Results.Result(calls);
         var secondScope = root.CreateChildScope();
-        secondScope.AddAspect(Aspect.Create(Pointcut.Reference(mutation), new CountingOperatorAdvice(contextCalls, OperatorCountMetric.Invocations)));
         var second = secondScope
-            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutation);
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(counted);
         factory.Wraps.ShouldBe(2);
         second.Mutate(Candidates, random, Problem.SearchSpace, Problem).ShouldBeSameAs(AllOperations.Output);
         contextCalls.CurrentCount.ShouldBe(2);
@@ -223,8 +217,7 @@ public sealed class OperationBindingTests
         var source = new AllOperations { Failure = failure };
         var probe = new HookProbe();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new ProbeAdvice(probe)));
-        Assert.Throws<OperationCanceledException>(() => InvokeOperation(scope, source, operation)).ShouldBeSameAs(failure);
+        Assert.Throws<OperationCanceledException>(() => InvokeOperation(scope, source, operation, new ProbeWrapping(probe))).ShouldBeSameAs(failure);
         probe.Failure.ShouldBeSameAs(failure);
         probe.Successes.ShouldBe(0);
         probe.Cleanups.ShouldBe(1);
@@ -239,8 +232,7 @@ public sealed class OperationBindingTests
         var source = new AllOperations();
         var root = ResolutionScope.Create();
         var measured = root.CreateChildScope();
-        measured.AddAspect(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
-        var failure = Assert.Throws<InvalidOperationException>(() => InvokeOperation(measured, source, operation));
+        var failure = Assert.Throws<InvalidOperationException>(() => InvokeOperation(measured, source, operation, new CandidateMetric()));
         failure.Message.ShouldContain(name);
         failure.Message.ShouldContain("candidate budget");
         failure.Message.ShouldContain(nameof(AllOperations));
@@ -260,9 +252,8 @@ public sealed class OperationBindingTests
         var source = new AllOperations();
         var probe = new HookProbe();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CandidateWorkAdvice(probe)));
 
-        Assert.Throws<NotSupportedException>(() => InvokeOperation(scope, source, operation));
+        Assert.Throws<NotSupportedException>(() => InvokeOperation(scope, source, operation, new CandidateWorkWrapping(probe)));
         probe.Successes.ShouldBe(0);
         source.Invocations.ShouldBe(1);
     }
@@ -273,9 +264,8 @@ public sealed class OperationBindingTests
         var child = new SharedOperations(new ProbeLog());
         var source = new Forward<Checksum, RealVector>(child);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CandidateMetric()));
         var failure = Assert.Throws<InvalidOperationException>(() =>
-            scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source));
+            scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(new Wrapped<Checksum>(source, new CandidateMetric())));
         failure.Message.ShouldContain(nameof(Checksum));
         child.Log.Preparations.ShouldBe(0);
     }
@@ -309,32 +299,38 @@ public sealed class OperationBindingTests
             .Message.ShouldContain(nameof(TwoCandidateMutator));
     }
 
-    private static IExecutor ResolveOperation(ResolutionScope scope, AllOperations source, int operation)
+    private static IExecutor ResolveOperation(ResolutionScope scope, AllOperations source, int operation, Wrapping? wrapping = null)
     {
         var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
+        IOperator<TOperation, RealVector> Wrap<TOperation>(IOperator<TOperation, RealVector> child)
+            where TOperation : IOperation<TOperation> => wrapping is null ? child : new Wrapped<TOperation>(child, wrapping);
         return operation switch
         {
-            0 => typed.ResolveOperator((IOperator<Creation, RealVector>)source),
-            1 => typed.ResolveOperator((IOperator<Crossover, RealVector>)source),
-            2 => typed.ResolveOperator((IOperator<Mutation, RealVector>)source),
-            3 => typed.ResolveOperator((IOperator<Evaluation, RealVector>)source),
-            4 => typed.ResolveOperator((IOperator<Selection, RealVector>)source),
-            5 => typed.ResolveOperator((IOperator<Refinement, RealVector>)source),
-            6 => typed.ResolveOperator((IOperator<Replacement, RealVector>)source),
-            7 => typed.ResolveOperator((IOperator<Termination, RealVector>)source),
-            8 => typed.ResolveOperator((IOperator<Interception<ProbeState>, RealVector>)source),
+            0 => typed.ResolveOperator(Wrap((IOperator<Creation, RealVector>)source)),
+            1 => typed.ResolveOperator(Wrap((IOperator<Crossover, RealVector>)source)),
+            2 => typed.ResolveOperator(Wrap((IOperator<Mutation, RealVector>)source)),
+            3 => typed.ResolveOperator(Wrap((IOperator<Evaluation, RealVector>)source)),
+            4 => typed.ResolveOperator(Wrap((IOperator<Selection, RealVector>)source)),
+            5 => typed.ResolveOperator(Wrap((IOperator<Refinement, RealVector>)source)),
+            6 => typed.ResolveOperator(Wrap((IOperator<Replacement, RealVector>)source)),
+            7 => typed.ResolveOperator(Wrap((IOperator<Termination, RealVector>)source)),
+            8 => typed.ResolveOperator(Wrap((IOperator<Interception<ProbeState>, RealVector>)source)),
             _ => throw new ArgumentOutOfRangeException(nameof(operation))
         };
     }
 
-    private static void InvokeOperation(ResolutionScope scope, AllOperations source, int operation, bool retry = false)
+    private static void InvokeOperation(ResolutionScope scope, AllOperations source, int operation, Wrapping? wrapping = null, bool retry = false)
     {
         var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
         var random = RandomNumberGenerator.Create(1);
         var space = Problem.SearchSpace;
         var population = Candidates.ToEvaluated<RealVector>([1.0, 2.0, 3.0]);
         IOperator<TOperation, RealVector> Wrap<TOperation>(IOperator<TOperation, RealVector> child)
-            where TOperation : IOperation<TOperation> => retry ? child.Retry(3) : child;
+            where TOperation : IOperation<TOperation>
+        {
+            var wrapped = wrapping is null ? child : new Wrapped<TOperation>(child, wrapping);
+            return retry ? wrapped.Retry(3) : wrapped;
+        }
         switch (operation)
         {
             case 0:
@@ -401,16 +397,42 @@ public sealed class OperationBindingTests
         }
     }
 
-    private sealed class ProbeAdvice(HookProbe probe) : OperatorAdvice
+    // Wraps its child's executor for whichever operation it is resolved, as an external author writes one wrapper for every
+    // operation. What the wrapper does comes from the test.
+    private sealed record Wrapped<TOperation> : WrappingOperator<TOperation, RealVector>
+        where TOperation : IOperation<TOperation>
     {
-        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
+        public Wrapped(IOperator<TOperation, RealVector> childOperator, Wrapping wrapping)
+            : base(childOperator)
+        {
+            wrapping.Check(childOperator);
+            Wrapping = wrapping;
+        }
+
+        public Wrapping Wrapping { get; init; }
+
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
+            Wrapping.Wrap(scope.ResolveOperator(ChildOperator), OperationInfo.For<TOperation, RealVector, TSearchSpace, TProblem, TSearchState>());
+    }
+
+    // What a wrapper does around the executor of any operation, and what it rejects when it is placed.
+    private abstract class Wrapping
+    {
+        public virtual void Check<TOperation>(IOperator<TOperation, RealVector> child) where TOperation : IOperation<TOperation> { }
+
+        public abstract IExecutor Wrap(IExecutor executor, OperationInfo operation);
+    }
+
+    private sealed class ProbeWrapping(HookProbe probe) : Wrapping
+    {
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation) =>
             operation.Wrap(executor, new ProbeWrapper(probe, operation.SupportsCandidateWork));
     }
 
     // Asks for candidate work without checking the operation, which only a faulty wrapper does.
-    private sealed class CandidateWorkAdvice(HookProbe probe) : OperatorAdvice
+    private sealed class CandidateWorkWrapping(HookProbe probe) : Wrapping
     {
-        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source)
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation)
         {
             operation.SupportsCandidateWork.ShouldBeFalse();
             return operation.Wrap(executor, new ProbeWrapper(probe, countsWork: true));
@@ -426,11 +448,11 @@ public sealed class OperationBindingTests
         }
     }
 
-    private sealed class TwiceAdvice : OperatorAdvice
+    private sealed class TwiceWrapping : Wrapping
     {
         public int Wraps { get; private set; }
 
-        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source)
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation)
         {
             Wraps++;
             return operation.Wrap(executor, new Twice());
@@ -451,10 +473,10 @@ public sealed class OperationBindingTests
         }
     }
 
-    private sealed class RedirectingAdvice(IExecutor? executor, IRandomNumberGenerator? random, InvocationRecorder recorder) : OperatorAdvice
+    private sealed class RedirectingWrapping(IExecutor? target, IRandomNumberGenerator? random, InvocationRecorder recorder) : Wrapping
     {
-        public override IExecutor Wrap(IExecutor wrapped, OperationInfo operation, IOperator source) =>
-            operation.Wrap(wrapped, new RedirectingWrapper(executor, random, recorder));
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation) =>
+            operation.Wrap(executor, new RedirectingWrapper(target, random, recorder));
     }
 
     private sealed class SuppliedControl;
@@ -467,18 +489,22 @@ public sealed class OperationBindingTests
         public TControl? Get<TControl>() where TControl : class => control as TControl;
     }
 
-    private sealed class ControlSupplyingAdvice(SuppliedControl control) : OperatorAdvice
+    private sealed class ControlSupplyingWrapping(SuppliedControl control) : Wrapping
     {
-        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) =>
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation) =>
             operation.Wrap(executor, new ControlSupplyingWrapper(control));
     }
 
-    private sealed class CandidateMetric : OperatorAdvice
+    // Rejects an operation without candidate work when it is placed, before anything is resolved.
+    private sealed class CandidateMetric : Wrapping
     {
-        public override void Check(OperationInfo operation, IOperator source) =>
-            operation.RequireCandidateWork(source, "candidate budget");
+        public override void Check<TOperation>(IOperator<TOperation, RealVector> child)
+        {
+            if (!TOperation.SupportsCandidateWork)
+                throw new InvalidOperationException($"{typeof(TOperation).Name} declares no candidate work, so a candidate budget cannot measure {child.GetType().Name}.");
+        }
 
-        public override IExecutor Wrap(IExecutor executor, OperationInfo operation, IOperator source) => executor;
+        public override IExecutor Wrap(IExecutor executor, OperationInfo operation) => executor;
     }
 
     // Inherits its mutator's hook, whose executor performs no evaluation.

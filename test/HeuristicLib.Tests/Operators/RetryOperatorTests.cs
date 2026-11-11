@@ -32,16 +32,14 @@ public sealed class RetryOperatorTests
         var innerTime = new Duration(clock);
         var outerTime = new Duration(clock);
         var retry = leaf.Timed(innerTime).Retry(3).Named("retry");
-        var innerCalls = new CountAccumulator();
-        var outerWork = new CountAccumulator();
+        Counter innerCalls = new(), outerWork = new();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(innerCalls, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(retry), new CountingOperatorAdvice(outerWork, OperatorCountMetric.Candidates)));
-        var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Timed(outerTime));
+        var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Timed(outerTime).Substitute(
+            Substitution.Counting(leaf, innerCalls), Substitution.Counting(retry, outerWork, OperatorCountMetric.Candidates)));
         executor.Mutate(parents, random, Space.Instance, Problem()).ShouldBeSameAs(parents);
         attempts.ShouldBe(failures + 1);
-        innerCalls.CurrentCount.ShouldBe(1);
-        outerWork.CurrentCount.ShouldBe(2);
+        scope.Results.Result(innerCalls).CurrentCount.ShouldBe(1);
+        scope.Results.Result(outerWork).CurrentCount.ShouldBe(2);
         scope.Results.Result(innerTime).CurrentDuration.ShouldBe(TimeSpan.FromMilliseconds(failures + 1));
         scope.Results.Result(outerTime).CurrentDuration.ShouldBe(TimeSpan.FromMilliseconds(2 * (failures + 1) + 1));
         var expectedRandom = RandomNumberGenerator.Create(7);
@@ -64,16 +62,15 @@ public sealed class RetryOperatorTests
         };
         var attempts = 0;
         var leaf = new CallbackMutator((_, _) => { attempts++; throw failure; });
-        var calls = new CountAccumulator();
+        var calls = new Counter();
         var retry = leaf.Retry(3);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(retry), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry);
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Counted(calls));
         Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()))
             .ShouldBeSameAs(failure);
         attempts.ShouldBe(expectedAttempts);
-        calls.CurrentCount.ShouldBe(0);
+        scope.Results.Result(calls).CurrentCount.ShouldBe(0);
     }
 
     [Theory]
@@ -107,19 +104,15 @@ public sealed class RetryOperatorTests
         var leaf = new CallbackMutator((_, _) => ++attempts < 4 ? throw new RetryableOperationException("again") : [attempts]);
         var inner = leaf.Retry(2);
         var outer = inner.Retry(2);
-        var childCalls = new CountAccumulator();
-        var innerCalls = new CountAccumulator();
-        var outerCalls = new CountAccumulator();
+        Counter childCalls = new(), innerCalls = new(), outerCalls = new();
+        var counted = outer.Substitute(Substitution.Counting(leaf, childCalls), Substitution.Counting(inner, innerCalls)).Counted(outerCalls);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(childCalls, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(inner), new CountingOperatorAdvice(innerCalls, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(outer), new CountingOperatorAdvice(outerCalls, OperatorCountMetric.Invocations)));
-        scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(outer)
+        scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(counted)
             .Mutate([0], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBe([4]);
         attempts.ShouldBe(4);
-        childCalls.CurrentCount.ShouldBe(1);
-        innerCalls.CurrentCount.ShouldBe(1);
-        outerCalls.CurrentCount.ShouldBe(1);
+        scope.Results.Result(childCalls).CurrentCount.ShouldBe(1);
+        scope.Results.Result(innerCalls).CurrentCount.ShouldBe(1);
+        scope.Results.Result(outerCalls).CurrentCount.ShouldBe(1);
     }
 
     [Fact]
@@ -139,14 +132,13 @@ public sealed class RetryOperatorTests
     {
         var result = new UncountableList();
         var source = new CallbackMutator((_, _) => result);
-        var calls = new CountAccumulator();
+        var calls = new Counter();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Timed(new Duration()));
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Counted(calls).Timed(new Duration()));
 
         executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBeSameAs(result);
-        calls.CurrentCount.ShouldBe(1);
+        scope.Results.Result(calls).CurrentCount.ShouldBe(1);
     }
 
     [Fact]
@@ -154,11 +146,10 @@ public sealed class RetryOperatorTests
     {
         var leaf = new CallbackMutator(static (parents, _) => parents);
         var source = leaf.Retry(3).Named("inspected");
-        var counter = new CountAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Timed(new Duration()));
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Timed(new Duration()).Counting(leaf, out var counted));
+        var counter = scope.Results.Result(counted);
         var random = RandomNumberGenerator.Create(1);
         var problem = Problem();
         IReadOnlyList<int> input = [1];

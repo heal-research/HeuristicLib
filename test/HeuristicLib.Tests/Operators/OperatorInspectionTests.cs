@@ -15,41 +15,38 @@ namespace HEAL.HeuristicLib.Tests.Operators;
 public class OperatorInspectionTests
 {
     [Theory]
-    [InlineData(OperatorCountMetric.Invocations, 4, 5)]
-    [InlineData(OperatorCountMetric.Candidates, 7, 8)]
-    public void CountingMutator_NewExecutorsShareOnlyTheSuppliedCounter(OperatorCountMetric metric, int sharedCount, int independentCount)
+    [InlineData(OperatorCountMetric.Invocations, 4)]
+    [InlineData(OperatorCountMetric.Candidates, 7)]
+    public void CountingMutator_NewExecutorsShareOnlyTheCounterOfTheirRun(OperatorCountMetric metric, int sharedCount)
     {
         var preparations = 0;
-        var counter = new CountAccumulator();
-        var observedCalls = new CountAccumulator();
+        var counter = new Counter();
+        var observedCalls = new Counter();
         var leaf = new AdvancingMutator(() => preparations++);
-        var source = leaf;
-        var aspect = Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice<Mutation, int>(counter, metric));
+        var source = leaf.Counted(counter, metric);
         var problem = CreateProblem();
         var random = RandomNumberGenerator.Create(1);
         var parent = ResolutionScope.Create();
-        parent.AddAspect(aspect);
         var outer = parent.ResolveMutator(source);
         outer.Mutate([0, 0], random, problem.SearchSpace, problem).ShouldBe([1, 1]);
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
-        var inner = child.ResolveMutator(source);
+        var inner = child.ResolveMutator(source.Counting(leaf, observedCalls));
         inner.ShouldNotBeSameAs(outer);
         inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         outer.Mutate([0, 0, 0], random, problem.SearchSpace, problem).ShouldBe([2, 2, 2]);
         inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
 
-        counter.CurrentCount.ShouldBe(sharedCount);
-        observedCalls.CurrentCount.ShouldBe(2);
+        parent.Results.Result(counter).CurrentCount.ShouldBe(sharedCount);
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
         preparations.ShouldBe(2);
 
         var independentScope = ResolutionScope.Create();
-        independentScope.AddAspect(aspect);
         var independent = independentScope.ResolveMutator(source);
         independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
-        counter.CurrentCount.ShouldBe(independentCount);
-        observedCalls.CurrentCount.ShouldBe(2);
+        parent.Results.Result(counter).CurrentCount.ShouldBe(sharedCount);
+        independentScope.Results.Result(counter).CurrentCount.ShouldBe(1);
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
         preparations.ShouldBe(3);
     }
 
@@ -58,7 +55,7 @@ public class OperatorInspectionTests
     public void TimedMutator_NewExecutorsShareOnlyTheDurationOfTheirRun()
     {
         var preparations = 0;
-        var observedCalls = new CountAccumulator();
+        var observedCalls = new Counter();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
         var duration = new Duration(timeProvider);
         var leaf = new AdvancingMutator(() => preparations++);
@@ -73,8 +70,7 @@ public class OperatorInspectionTests
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
-        var inner = child.ResolveMutator(source);
+        var inner = child.ResolveMutator(source.Counting(leaf, observedCalls));
         inner.ShouldNotBeSameAs(outer);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
         inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
@@ -83,7 +79,7 @@ public class OperatorInspectionTests
         inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
 
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
-        observedCalls.CurrentCount.ShouldBe(2);
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
         preparations.ShouldBe(2);
 
         var independentScope = ResolutionScope.Create();
@@ -91,7 +87,7 @@ public class OperatorInspectionTests
         independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
         independentScope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
-        observedCalls.CurrentCount.ShouldBe(2);
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
         preparations.ShouldBe(3);
     }
 
@@ -148,37 +144,35 @@ public class OperatorInspectionTests
     [Fact]
     public void CountCreatorCalls_IncrementsOncePerCreateCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var creator = new SequenceCreator();
-        var aspect = Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice<Creation, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Creation, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Creation, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var counted = creator.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveCreator(creator);
+        var executor = scope.ResolveCreator(counted);
         var problem = CreateProblem();
 
         executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountCreatedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var creator = new SequenceCreator();
-        var aspect = Aspect.Create(Pointcut.Reference(creator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
+        var counted = creator.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveCreator(creator);
+        var executor = scope.ResolveCreator(counted);
         var problem = CreateProblem();
 
         executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
@@ -200,17 +194,16 @@ public class OperatorInspectionTests
     [Fact]
     public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingCreator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.ResolveCreator(source);
+        var executor = scope.ResolveCreator(source.Counted(counter));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
             executor.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -232,53 +225,50 @@ public class OperatorInspectionTests
     [Fact]
     public void CountMutatorCalls_IncrementsOncePerMutateCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var mutator = new AddOneMutator();
-        var aspect = Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice<Mutation, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Mutation, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Mutation, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var counted = mutator.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveMutator(mutator);
+        var executor = scope.ResolveMutator(counted);
         var problem = CreateProblem();
 
         executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountMutatedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var mutator = new AddOneMutator();
-        var aspect = Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
+        var counted = mutator.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveMutator(mutator);
+        var executor = scope.ResolveMutator(counted);
         var problem = CreateProblem();
 
         executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
     public void CountMutatorCalls_DoesNotIncrementWhenMutationThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingMutator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.ResolveMutator(source);
+        var executor = scope.ResolveMutator(source.Counted(counter));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
             executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -370,14 +360,13 @@ public class OperatorInspectionTests
     [Fact]
     public void CountCrossoverCalls_IncrementsOncePerCrossCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.Create(Pointcut.Reference(crossover), new CountingOperatorAdvice<Crossover, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Crossover, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Crossover, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var counted = crossover.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveCrossover(crossover);
+        var executor = scope.ResolveCrossover(counted);
         var problem = CreateProblem();
 
         executor.Cross(
@@ -391,18 +380,17 @@ public class OperatorInspectionTests
             problem.SearchSpace,
             problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountCrossedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.Create(Pointcut.Reference(crossover), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
+        var counted = crossover.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveCrossover(crossover);
+        var executor = scope.ResolveCrossover(counted);
         var problem = CreateProblem();
 
         executor.Cross(
@@ -416,7 +404,7 @@ public class OperatorInspectionTests
             problem.SearchSpace,
             problem);
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
@@ -446,17 +434,16 @@ public class OperatorInspectionTests
     [Fact]
     public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingCrossover();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.ResolveCrossover(source);
+        var executor = scope.ResolveCrossover(source.Counted(counter));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
             executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -478,53 +465,50 @@ public class OperatorInspectionTests
     [Fact]
     public void CountSelectorCalls_IncrementsOncePerSelectCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.Create(Pointcut.Reference(selector), new CountingOperatorAdvice<Selection, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Selection, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Selection, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var counted = selector.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveSelector(selector);
+        var executor = scope.ResolveSelector(counted);
         var problem = CreateProblem();
 
         executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountSelectedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.Create(Pointcut.Reference(selector), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
+        var counted = selector.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveSelector(selector);
+        var executor = scope.ResolveSelector(counted);
         var problem = CreateProblem();
 
         executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Fact]
     public void CountSelectorCalls_DoesNotIncrementWhenSelectionThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingSelector();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.ResolveSelector(source);
+        var executor = scope.ResolveSelector(source.Counted(counter));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
             executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -562,14 +546,13 @@ public class OperatorInspectionTests
     [Fact]
     public void CountReplacerCalls_IncrementsOncePerReplaceCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.Create(Pointcut.Reference(replacer), new CountingOperatorAdvice<Replacement, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Replacement, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Replacement, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var counted = replacer.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveReplacer(replacer);
+        var executor = scope.ResolveReplacer(counted);
         var problem = CreateProblem();
 
         executor.Replace(
@@ -589,18 +572,17 @@ public class OperatorInspectionTests
             problem.SearchSpace,
             problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountReplacementCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.Create(Pointcut.Reference(replacer), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
+        var counted = replacer.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.ResolveReplacer(replacer);
+        var executor = scope.ResolveReplacer(counted);
         var problem = CreateProblem();
 
         executor.Replace(
@@ -620,17 +602,16 @@ public class OperatorInspectionTests
             problem.SearchSpace,
             problem);
 
-        counter.CurrentCount.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Fact]
     public void CountReplacerCalls_DoesNotCountFailedCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingReplacer();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.ResolveReplacer(source);
+        var executor = scope.ResolveReplacer(source.Counted(counter));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => executor.Replace(
@@ -642,7 +623,7 @@ public class OperatorInspectionTests
             problem.SearchSpace,
             problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -699,19 +680,18 @@ public class OperatorInspectionTests
     [Fact]
     public void CountInterceptorCalls_IncrementsOncePerTransformCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var interceptor = new AddOneInterceptor();
-        var aspect = Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice<Interception<CounterState>, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Interception<CounterState>, int>>().Counter.ShouldBeSameAs(counter);
+        var counted = interceptor.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted);
         var problem = CreateProblem();
 
         executor.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
@@ -733,16 +713,15 @@ public class OperatorInspectionTests
     [Fact]
     public void CountInterceptorCalls_DoesNotCountFailedCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingInterceptor();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => executor.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
@@ -762,19 +741,18 @@ public class OperatorInspectionTests
     [Fact]
     public void CountTerminatorCalls_IncrementsOncePerTerminalStateCheck()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var terminator = new NeverTerminalStateTerminator();
-        var aspect = Aspect.Create(Pointcut.Reference(terminator), new CountingOperatorAdvice<Termination, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Termination, int>>().Counter.ShouldBeSameAs(counter);
+        var counted = terminator.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted);
         var problem = CreateProblem();
 
         executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
         executor.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
@@ -796,16 +774,15 @@ public class OperatorInspectionTests
     [Fact]
     public void CountTerminatorCalls_DoesNotCountFailedCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingTerminator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter));
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]

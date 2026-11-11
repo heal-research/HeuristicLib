@@ -87,10 +87,10 @@ public sealed class EvaluationResolutionTests
         var reports = new List<int>();
         var leaf = new CountingEvaluator(() => preparations++, () => calls++);
         var source = new CachingEvaluator<int>(leaf);
+        var reporting = source.Substitute(leaf, evaluator => new ReportingEvaluator(evaluator, reports.AddRange));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingEvaluatorAdvice(reports.AddRange)));
-        var first = Resolve(scope, source);
-        var second = Resolve(scope, source);
+        var first = Resolve(scope, reporting);
+        var second = Resolve(scope, reporting);
 
         Evaluate(first, 1).ShouldBe([new ObjectiveVector(101)]);
         Evaluate(second, 1).ShouldBe([new ObjectiveVector(101)]);
@@ -159,18 +159,20 @@ public sealed class EvaluationResolutionTests
         }
     }
 
-    private sealed class ObservingEvaluatorAdvice : EvaluatorAdvice<int>
+    // Reports the candidates of each successful call of the evaluator it wraps.
+    private sealed record ReportingEvaluator : WrappingOperator<Evaluation, int>
     {
-        private readonly Action<IReadOnlyList<int>> report;
-
-        public ObservingEvaluatorAdvice(Action<IReadOnlyList<int>> report)
+        public ReportingEvaluator(IOperator<Evaluation, int> childEvaluator, Action<IReadOnlyList<int>> report)
+            : base(childEvaluator)
         {
-            this.report = report;
+            Report = report;
         }
 
-        protected override IEvaluationExecutor<int, TRunSearchSpace, TRunProblem> Wrap<TRunSearchSpace, TRunProblem>(
-            IEvaluationExecutor<int, TRunSearchSpace, TRunProblem> executor, IOperator<Evaluation, int> evaluator) =>
-            new Executor<TRunSearchSpace, TRunProblem>(executor, report);
+        public Action<IReadOnlyList<int>> Report { get; init; }
+
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Report);
 
         private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> child, Action<IReadOnlyList<int>> report)
             : IEvaluationExecutor<int, TSearchSpace, TProblem>

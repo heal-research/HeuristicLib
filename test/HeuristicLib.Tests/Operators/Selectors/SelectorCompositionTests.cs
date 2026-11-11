@@ -10,13 +10,12 @@ public class SelectorCompositionTests
     [Fact]
     public void NoSameMatesSelector_AcceptsDifferentMatesWithoutRetrying()
     {
-        var counter = new CountAccumulator();
         var problem = CreateProblem();
         var observed = BestSelector.For(problem);
         var selector = observed.AvoidSameMates(maximumAttempts: 3);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector.Counting(observed, out var counted));
+        var counter = scope.Results.Result(counted);
         var population = new[]
         {
             EvaluatedCandidate.From(1, new ObjectiveVector(1.0)),

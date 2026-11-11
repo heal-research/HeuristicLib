@@ -12,27 +12,26 @@ public sealed class NamedOperatorTests
     public void NamedMutators_ShareTheirChildInAScopeAndObserveTheirNames()
     {
         var leaf = new AdvancingMutator();
-        var exploration = leaf.Named("exploration");
-        var refinement = leaf.Named("refinement");
-        var explored = new CountAccumulator();
-        var childCalls = new CountAccumulator();
+        IOperator<Mutation, int> exploration = leaf.Named("exploration");
+        IOperator<Mutation, int> refinement = leaf.Named("refinement");
+        Counter explored = new(), childCalls = new();
+        var countingExploration = CountingNamed("exploration", explored);
+        ISubstitutionBundle[] observing = [Substitution.Counting(leaf, childCalls), countingExploration];
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Named<IOperator<Mutation, int>>("exploration"), new CountingOperatorAdvice<Mutation, int>(explored, OperatorCountMetric.Invocations)));
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new CountingOperatorAdvice(childCalls, OperatorCountMetric.Invocations)));
         var typedScope = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var random = RandomNumberGenerator.Create(1);
 
-        var first = typedScope.Resolve(exploration);
-        var second = typedScope.Resolve(refinement);
+        var first = typedScope.Resolve(exploration.Substitute(observing));
+        var second = typedScope.Resolve(refinement.Substitute(observing));
         first.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
         second.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
-        typedScope.Resolve(leaf).Mutate([0], random, problem.SearchSpace, problem).ShouldBe([3]);
+        typedScope.Resolve(leaf.Counted(childCalls)).Mutate([0], random, problem.SearchSpace, problem).ShouldBe([3]);
         first.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([4]);
 
-        explored.CurrentCount.ShouldBe(2);
-        childCalls.CurrentCount.ShouldBe(4);
-        Pointcut.Named<IOperator<Mutation, int>>("exploration").Matches(leaf).ShouldBeFalse();
+        scope.Results.Result(explored).CurrentCount.ShouldBe(2);
+        scope.Results.Result(childCalls).CurrentCount.ShouldBe(4);
+        leaf.Substitute(countingExploration).ShouldBeSameAs(leaf);
     }
 
     [Fact]
@@ -44,9 +43,8 @@ public sealed class NamedOperatorTests
 
         copy.ChildOperator.ShouldBeSameAs(child);
         original.Name.ShouldBe("exploration");
-        Pointcut.Named<IOperator<Mutation, int>>("exploration").Matches(copy).ShouldBeFalse();
-        Pointcut.Named<IOperator<Mutation, int>>("refinement").Matches(copy).ShouldBeTrue();
-        Pointcut.Reference(original).Matches(copy).ShouldBeFalse();
+        copy.Name.ShouldBe("refinement");
+        copy.ShouldNotBeSameAs(original);
     }
 
     [Fact]
@@ -80,28 +78,32 @@ public sealed class NamedOperatorTests
         var namedAlgorithm = algorithm.Named("algorithm");
         var namedExecutor = scope.Resolve(namedAlgorithm);
         namedExecutor.ShouldNotBeNull();
-        Pointcut.Named<IAlgorithm<int, PopulationState<int>>>("algorithm").Matches(namedAlgorithm).ShouldBeTrue();
+        namedAlgorithm.Name.ShouldBe("algorithm");
     }
 
     [Fact]
-    public async Task NamedAlgorithm_AppliesAlgorithmAdviceToItsStream()
+    public async Task NamedAlgorithm_IsSelectedByItsNameAndWrappedAsAWhole()
     {
-        var algorithm = new AdditiveStepAlgorithm(2).Named("search");
-        var calls = new CountAccumulator();
-        var aspect = Aspect.Create(Pointcut.Named<IAlgorithm<int, PopulationState<int>>>("search"),
-            new CountingAlgorithmAdvice<int, PopulationState<int>>(calls));
+        IAlgorithm<int, PopulationState<int>> algorithm = new AdditiveStepAlgorithm(2).Named("search");
+        var calls = new Counter();
+        var counted = algorithm.Substitute(Substitution.Of<IAlgorithm<int, PopulationState<int>>>(
+            selected => selected is INamedConfiguration { Name: "search" },
+            selected => new CountedAlgorithm<int, PopulationState<int>, AlgorithmCallObservation<int, PopulationState<int>>>(selected, calls)));
         var root = ResolutionScope.Create();
-        root.AddAspect(aspect);
         var scope = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 
         var states = new List<PopulationState<int>>();
-        await foreach (var state in scope.Resolve(algorithm).RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in scope.Resolve(counted).RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states.Add(state);
 
         states.Single().Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
-        calls.CurrentCount.ShouldBe(1);
+        root.Results.Result(calls).CurrentCount.ShouldBe(1);
     }
+
+    // Counts the calls of every mutator carrying the name.
+    private static Substitution CountingNamed(string name, Counter counter) =>
+        Substitution.Of<IOperator<Mutation, int>>(mutator => mutator is INamedConfiguration named && named.Name == name, mutator => mutator.Counted(counter));
 
     private sealed record SequenceCreator : StatelessCreator<int>
     {

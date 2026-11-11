@@ -47,11 +47,16 @@ public sealed class AlpsMutationCompositionTests
     {
         var algorithm = CreateAlgorithm(0.5) with { MaximumGenerations = 2 };
         var offered = new List<IOperator<Mutation, int>>();
-        var count = new CountAccumulator();
+        var counter = new Counter();
+        var counted = algorithm.Substitute(Substitution.Of<IOperator<Mutation, int>>(mutator =>
+        {
+            offered.Add(mutator);
+            return true;
+        }, mutator => mutator.Counted(counter, OperatorCountMetric.Candidates)));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
+        var count = scope.Results.Result(counter);
 
-        var states = await States(scope, algorithm);
+        var states = await States(scope, counted);
         offered.ShouldBe([algorithm.Mutator]);
         var mutated = states[1].Population.Single().EvaluatedCandidates.Count(candidate => candidate.Candidate == 99);
         mutated.ShouldBeInRange(1, 15);
@@ -78,15 +83,6 @@ public sealed class AlpsMutationCompositionTests
         await States(scope, algorithm.AnalyzedBy(candidates));
 
         scope.Results.Result(candidates).CurrentCount.ShouldBe(0);
-    }
-
-    private sealed class OfferedMutators(List<IOperator<Mutation, int>> offered) : Pointcut<IOperator<Mutation, int>>
-    {
-        public override bool Matches(IOperator<Mutation, int> configuration)
-        {
-            offered.Add(configuration);
-            return true;
-        }
     }
 
     private static AlpsGeneticAlgorithm<int> CreateAlgorithm(double rate) => new()

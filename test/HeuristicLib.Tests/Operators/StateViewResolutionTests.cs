@@ -45,20 +45,19 @@ public class StateViewResolutionTests
     }
 
     [Fact]
-    public void GeneralAdvice_WrapsTerminationAndInterception()
+    public void AGeneralWrapper_WrapsTerminationAndInterception()
     {
-        var total = new InvocationCounter();
+        var calls = new Counter();
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.OfType<IOperator>(), new CountInvocations(total, new AdviceLog())));
         var scope = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>();
-        var terminator = scope.Resolve(new ThirdCallTerminator(new Probe()));
-        var interceptor = scope.Resolve(new CountingInterceptor(new Probe()));
+        var terminator = scope.Resolve(new ThirdCallTerminator(new Probe()).Counted(calls));
+        var interceptor = scope.Resolve(new CountingInterceptor(new Probe()).Counted(calls));
         var problem = CreateProblem();
 
         terminator.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
         interceptor.Transform(new FirstState(), null, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
 
-        total.Value.ShouldBe(2);
+        root.Results.Result(calls).CurrentCount.ShouldBe(2);
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()

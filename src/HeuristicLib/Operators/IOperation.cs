@@ -5,11 +5,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-/// <summary>Identifies an operation, such as mutation or evaluation, and supplies what resolution and advice need of it.</summary>
+/// <summary>Identifies an operation, such as mutation or evaluation, and supplies what resolution and wrappers need of it.</summary>
 /// <remarks>
 /// An operation implements these members explicitly. It recognizes the executor interface its operators implement for
 /// the run types, wraps such an executor so that each call passes through an <see cref="IInvocationWrapper"/>, and
-/// states whether its calls report candidate work. Resolution and advice reach them through <see cref="OperationInfo"/>.
+/// states whether its calls report candidate work. Resolution and wrappers reach them through <see cref="OperationInfo"/>.
 /// </remarks>
 public interface IOperation<TSelf> where TSelf : IOperation<TSelf>
 {

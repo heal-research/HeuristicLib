@@ -7,7 +7,7 @@
 - `DynamicRacingAlgorithm.Entry` in `src/HeuristicLib.Experimental/Algorithms/DynamicRacingAlgorithm.cs` builds a contender's tracked graph once and resolves it in a fresh child scope at every restart.
 - `test/HeuristicLib.Tests.Experimental/Algorithms/DynamicRacingResolutionTests.cs`:
   - `AContendersTracker_SpansItsRestarts`: the tracker survives iterator restarts.
-  - `ContendersApplyingIterationUpdates_EndTheRacesEpoch`: per-contender iteration updates end the race's epoch under `AfterEachIteration`.
+  - `Contenders_EndTheRacesEpochWhetherOrNotTheBuilderAppliesIterationUpdates`: racing applies iteration updates to each contender, so the race's epoch ends under `AfterEachIteration`.
   - `TheBuilder_ReceivesTheAlgorithmItReturnedWithoutTheTracker`: challengers are built from the untracked algorithm.
   - `ATraceOfContenders_IsPlacedInTheBuilder` and `NewExecutorStartsIndependentBurnInWhilePausedExecutorKeepsProgress`: observing contenders from outside racing.
 - `test/HeuristicLib.Tests.Experimental/Problems/Dynamic/Analysis/DynamicAnalysisTests.cs`: `ApplyingIterationUpdates()` with pausing, disposal and `Supports`.
@@ -38,7 +38,7 @@ private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumb
         .Stream(problem, random, initialState, ct).GetEnumerator();
 ```
 
-`ApplyingIterationUpdates()` only acts under `UpdatePolicy.AfterEachIteration`, so wrapping every contender is harmless under the other policies. Wrapping inside racing, as above, keeps `AlgBuilder` unaware of it; alternatively the builder wraps what it returns.
+`ApplyingIterationUpdates()` only acts under `UpdatePolicy.AfterEachIteration`, so wrapping every contender is harmless under the other policies. Racing wraps inside, as above, and `AlgBuilder` stays unaware of it. A builder that wraps what it returns as well changes nothing, because the second wrapper finds no update pending.
 
 ## Points to keep in mind
 
@@ -48,4 +48,4 @@ private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumb
 - **The selected evaluator must be one the contender holds.** The substitution matches it by reference, and a target it does not find is an error instead of an observation that never fires. It still finds the evaluator through the `ApplyingIterationUpdates()` wrapper.
 - **Observations read the problem at its interface.** `EvaluationObservation<TCandidate>.Problem` is an `IProblem<TCandidate, ISearchSpace<TCandidate>>`; read the objective from `evaluation.Problem.Objective`.
 - **An outer analyzer does not reach contenders.** A substitution stops at delegates such as `AlgBuilder`. A target named by reference reports `AlgBuilder` by name, and a selection by type or predicate passes over contenders without an error. Substitute inside the builder, or analyze a shared operator before the builder captures it.
-- **Iteration updates need wrapped contenders.** Under `AfterEachIteration`, the epoch loop ends only when a contender applies pending updates, so racing whose contenders are not wrapped never leaves its loop.
+- **Racing applies iteration updates itself.** Under `AfterEachIteration`, the epoch loop ends only when a contender applies pending updates, so racing wraps every tracked contender. Keep that wrapper when the branch rebuilds the tracked graph on a restart.

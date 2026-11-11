@@ -19,8 +19,8 @@ namespace HEAL.HeuristicLib.Problems.Dynamic;
 /// <para>
 /// The updates are applied before the state is yielded, so a caller that pauses after a state already sees the epoch that
 /// state's iteration completed, and a stream that is disposed or fails before its next state applies nothing more.
-/// Wrapping a contender rather than a meta-algorithm such as racing makes each of the contender's iterations an end of
-/// an iteration.
+/// Wrapping a contender rather than a meta-algorithm makes each of the contender's iterations an end of an iteration;
+/// racing wraps each of its contenders this way itself.
 /// </para>
 /// </remarks>
 public sealed record IterationUpdatingAlgorithm<TCandidate, TSearchState> : WrappingAlgorithm<TCandidate, TSearchState>

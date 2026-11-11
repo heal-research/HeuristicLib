@@ -17,41 +17,34 @@ public sealed class MutatorSelectionTests
         var small = new StepMutator(1);
         var large = new StepMutator(5);
         var mutator = ChoosePerItem.Create<Mutation, int>(small, large);
-        var counts = new Dictionary<IOperator<Mutation, int>, CountAccumulator>(ReferenceEqualityComparer.Instance);
+        var selected = new List<(IOperator<Mutation, int> Mutator, Counter Count)>();
+        var counted = Algorithm(mutator).Substitute((IOperator<Mutation, int> selection) => Counting(selection, selected));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
-        {
-            var count = new CountAccumulator();
-            counts.Add(source, count);
-            return count;
-        })));
 
-        await RunToCompletion(scope, Algorithm(mutator));
+        await RunToCompletion(scope, counted);
 
-        counts.Keys.ShouldBe([mutator, small, large], ignoreOrder: true);
-        counts[mutator].CurrentCount.ShouldBePositive();
-        (counts[small].CurrentCount + counts[large].CurrentCount).ShouldBe(counts[mutator].CurrentCount);
+        // The children are selected first; the composite selected last already holds their counted copies.
+        selected.Count.ShouldBe(3);
+        selected.Take(2).Select(entry => entry.Mutator).ShouldBe([small, large]);
+        var counts = selected.Select(entry => scope.Results.Result(entry.Count).CurrentCount).ToArray();
+        counts[2].ShouldBePositive();
+        (counts[0] + counts[1]).ShouldBe(counts[2]);
     }
 
     [Fact]
-    public async Task RoleSelection_ReachesMutatorsOfAlgorithmsResolvedLaterByCycle()
+    public async Task RoleSelection_ReachesTheMutatorsOfTheAlgorithmsACycleHolds()
     {
         var first = new StepMutator(1);
         var second = new StepMutator(2);
         var cycle = Algorithm(first).CycleWith(Algorithm(second), maximumCycles: 2);
-        var activations = new List<(IOperator<Mutation, int> Source, CountAccumulator Mutations)>();
+        var selected = new List<(IOperator<Mutation, int> Mutator, Counter Count)>();
+        var counted = cycle.Substitute((IOperator<Mutation, int> selection) => Counting(selection, selected));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.OfType<IOperator<Mutation, int>>(), new CountingSelectedMutator(source =>
-        {
-            var mutations = new CountAccumulator();
-            activations.Add((source, mutations));
-            return mutations;
-        })));
 
-        await RunToCompletion(scope, cycle);
+        await RunToCompletion(scope, counted);
 
-        activations.Select(activation => activation.Source).ShouldBe([first, second, first, second]);
-        activations.ShouldAllBe(activation => activation.Mutations.CurrentCount > 0);
+        selected.Select(selection => selection.Mutator).ShouldBe([first, second]);
+        selected.ShouldAllBe(selection => scope.Results.Result(selection.Count).CurrentCount > 0);
     }
 
     [Theory]
@@ -98,18 +91,25 @@ public sealed class MutatorSelectionTests
     {
         IOperator<Mutation, int> source = new StepMutator(1);
         var offered = new List<IOperator<Mutation, int>>();
-        var count = new CountAccumulator();
+        var counter = new Counter();
+        var countedSource = source.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(new OfferedMutators(offered), new CountingOperatorAdvice<Mutation, int>(count, OperatorCountMetric.Candidates)));
+        var count = scope.Results.Result(counter);
         var algorithm = Algorithm(source) with { PopulationSize = 16, MaximumGenerations = 2, MutationRate = 0.5 };
+        IAlgorithm<int, PopulationState<int>> root = nsga ? AsNsga2(algorithm) : algorithm;
+        var counted = root.Substitute(Substitution.Of<IOperator<Mutation, int>>(mutator =>
+        {
+            offered.Add(mutator);
+            return true;
+        }, _ => countedSource));
 
-        var states = await States(scope, nsga ? AsNsga2(algorithm) : algorithm);
+        var states = await States(scope, counted);
         offered.ShouldBe([source]);
         var mutated = states[1].Population.EvaluatedCandidates.Count(candidate => candidate.Candidate == 99);
         mutated.ShouldBeInRange(1, 15);
         count.CurrentCount.ShouldBe(mutated);
         // Another caller reaches the same source without the algorithm's mutation rate.
-        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(source)
+        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(countedSource)
             .Mutate([100], RandomNumberGenerator.Create(7), Problem.SearchSpace, Problem).ShouldBe([99]);
         count.CurrentCount.ShouldBe(mutated + 1);
     }
@@ -122,10 +122,10 @@ public sealed class MutatorSelectionTests
         var parent = ResolutionScope.Create();
         await using var paused = Run(parent, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
-        var observed = new CountAccumulator();
+        var observing = algorithm.Counting(source, out var counter, OperatorCountMetric.Candidates);
+        var observed = parent.Results.Result(counter);
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(observed, OperatorCountMetric.Candidates)));
-        await using var rebound = Run(child, algorithm).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        await using var rebound = Run(child, observing).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await rebound.MoveNextAsync()).ShouldBeTrue();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         observed.CurrentCount.ShouldBe(0);
@@ -156,31 +156,19 @@ public sealed class MutatorSelectionTests
     public async Task NonMutatingRates_DoNotObserveTheConfiguredSource_EvenWhenItIsTheSharedNoChangeMutator(bool nsga, bool noChange, double rate)
     {
         IOperator<Mutation, int> source = noChange ? NoChangeMutator<int>.Instance : new StepMutator(1);
-        var count = new CountAccumulator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), new CountingOperatorAdvice(count, OperatorCountMetric.Candidates)));
         var algorithm = Algorithm(source) with { MutationRate = rate };
-        await RunToCompletion(scope, nsga ? AsNsga2(algorithm) : algorithm);
-        count.CurrentCount.ShouldBe(0);
+        IAlgorithm<int, PopulationState<int>> root = nsga ? AsNsga2(algorithm) : algorithm;
+        await RunToCompletion(scope, root.Counting(source, out var counter, OperatorCountMetric.Candidates));
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
-    private sealed class OfferedMutators(List<IOperator<Mutation, int>> offered) : Pointcut<IOperator<Mutation, int>>
+    // Counts the selected mutator's candidates into a counter of its own and records the selection.
+    private static IOperator<Mutation, int> Counting(IOperator<Mutation, int> selection, List<(IOperator<Mutation, int> Mutator, Counter Count)> selected)
     {
-        public override bool Matches(IOperator<Mutation, int> mutator)
-        {
-            offered.Add(mutator);
-            return true;
-        }
-    }
-
-    private sealed class CountingSelectedMutator(Func<IOperator<Mutation, int>, CountAccumulator> counter) : OperatorAdvice<Mutation, int>
-    {
-        // Each resolution of a selected mutator records its own counter.
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
-            OperationInfo operation,
-            IOperator<Mutation, int> mutator) =>
-            new CountingOperatorAdvice<Mutation, int>(counter(mutator), OperatorCountMetric.Candidates)
-                .Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, mutator);
+        var count = new Counter();
+        selected.Add((selection, count));
+        return selection.Counted(count, OperatorCountMetric.Candidates);
     }
 
     private static GeneticAlgorithm<int> Algorithm(IOperator<Mutation, int> mutator) => new()

@@ -43,7 +43,6 @@ public sealed class IterativeAlgorithmResolutionTests
     {
         var preparations = 0;
         var interceptorPreparations = 0;
-        var observedCalls = new CountAccumulator();
         var interceptor = new AdvancingInterceptor(() => interceptorPreparations++);
         var source = CreateAlgorithm(bound, () => preparations++, interceptor: interceptor);
         var parent = ResolutionScope.Create();
@@ -51,8 +50,9 @@ public sealed class IterativeAlgorithmResolutionTests
         (await Next(outer)).Value.ShouldBe(101);
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
-        var inner = Resolve(child, source);
+        var observing = source.Counting(interceptor, out var calls);
+        var observedCalls = parent.Results.Result(calls);
+        var inner = Resolve(child, observing);
         inner.ShouldNotBeSameAs(outer);
         (await Next(inner)).Value.ShouldBe(101);
         (await Next(outer)).Value.ShouldBe(202);
@@ -72,7 +72,6 @@ public sealed class IterativeAlgorithmResolutionTests
     [InlineData(true)]
     public async Task PausedIterator_KeepsItsInterceptorPreviousStateAndRandomForkSequence(bool bound)
     {
-        var observedCalls = new CountAccumulator();
         var interceptor = new AdvancingInterceptor(static () => { });
         var source = CreateAlgorithm(bound, static () => { }, interceptor: interceptor);
         var parent = ResolutionScope.Create();
@@ -84,8 +83,9 @@ public sealed class IterativeAlgorithmResolutionTests
         paused.Current.PreviousValue.ShouldBeNull();
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(interceptor), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
-        var inner = Resolve(child, source);
+        var observing = source.Counting(interceptor, out var calls);
+        var observedCalls = parent.Results.Result(calls);
+        var inner = Resolve(child, observing);
         var innerRandom = new RecordingRandom();
         await using var observed = inner.RunStreamingAsync(Problem, innerRandom, ct: TestContext.Current.CancellationToken).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();

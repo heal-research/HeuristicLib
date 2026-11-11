@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 /// The type arguments are the search space and problem this neighborhood is written for, and a run it was not written
 /// for is reported when the execution graph is built. A neighborhood holds no execution data, so it is its own executor
 /// for every move operation, and <see cref="MoveCreator"/>, <see cref="MoveApplier"/> and <see cref="MoveEvaluator"/>
-/// return the neighborhood itself. Advice selecting one of them therefore applies to that operation of this
+/// return the neighborhood itself. A wrapper placed in one of these slots therefore wraps that operation of this
 /// neighborhood.
 /// </remarks>
 public abstract record Neighborhood<TCandidate, TSearchSpace, TProblem, TMove>

@@ -393,11 +393,11 @@ Source counters, durations, analyzers and `Observing`, attached with `AnalyzedBy
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 
-Counting and duration advice retain their supplied result accumulator. Independent root executions using the same accumulator also contribute to it. Counters increment after a successful child call. Duration measurement keeps timestamps local to each invocation and records elapsed time even when the child throws.
+Counters and durations keep their results in the run that holds them, so independent runs using the same definition measure separately. Counters increment after a successful child call. Duration measurement keeps timestamps local to each invocation and records elapsed time even when the child throws.
 
-A named configuration such as `mutator.Named("exploration")` supplies a selectable wrapper boundary while forwarding the child's executor. `Pointcut.Named<IOperator<Mutation, TCandidate>>("exploration")` selects that wrapper. Broad role pointcuts may select both the wrapper and its child.
+A named configuration such as `mutator.Named("exploration")` supplies a selectable wrapper boundary while forwarding the child's executor. A predicate such as `node is INamedConfiguration { Name: "exploration" }` selects that wrapper. A selection by role type may select both the wrapper and its child.
 
-See [Observability and analysis](/guide/execution/observability-and-analysis) for observation, counter, duration and pointcut APIs.
+See [Observability and analysis](/guide/execution/observability-and-analysis) for observation, counter, duration and selection APIs.
 
 ## Specialized executor capabilities
 
@@ -405,7 +405,7 @@ General wrappers and compositions preserve the operator role contract. Additiona
 
 An observation wrapper can implement `IMutationExecutor` without implementing `IMutationStrengthControl`. An `is` check on the wrapped mutator would then hide the source's adaptation capability. Resolving the control separately lets an algorithm keep adapting the selected source while every mutation call passes through the observation wrapper. The control interface contains no mutation operation, so it supplies no alternative path for mutation calls to bypass observations.
 
-`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the advised executor. Advice applied directly to the selected Gaussian configuration preserves access to its raw strength control. Rebinding preserves that selected state while applying the requesting scope's observations to mutation calls. Generic naming and retry wrappers pass on the same controls, including through child inspection.
+`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the wrapped executor. A wrapper placed directly around the Gaussian configuration preserves access to its raw strength control, because wrappers pass on their child's controls. Generic naming and retry wrappers pass on the same controls, including through child inspection.
 
 An algorithm author requests the control through the scope its `CreateExecutor` receives:
 
@@ -429,7 +429,7 @@ A multi-child composite such as a pipeline exposes its own controls. It does not
 
 Every operation call receives an explicit random number generator, and compositions invoke children in the order defined by their policy. Random draw order is therefore part of reproducible behavior. Adding, removing or reordering child operators may change later random draws even when the same root seed is used. The built in terminators and interceptors draw nothing, so `AnyTerminator`, `AllTerminator` and `PipelineInterceptor` are deterministic with respect to child ordering unless a child draws or depends on some other explicit input or external resource.
 
-Child configurations resolve when each composition executor is built. Each construction has independent private fields and current contextual advice. Sharing a configuration gives all its uses within the sharing node one executor, each use still wrapped by its own advice.
+Child configurations resolve when each composition executor is built. Each construction has independent private fields. Sharing a configuration gives all its uses within the sharing node one executor.
 
 See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
 

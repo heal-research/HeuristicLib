@@ -226,31 +226,21 @@ public sealed class InstrumentPlacementTests
         scope.Results.Result(reads).Snapshot().Values.ShouldHaveSingleItem().ShouldBeSameAs(second);
     }
 
-    // Advice an Advised node adds never applies to that node itself, so an instrument selecting every algorithm
-    // can be attached at a run's root and counts the algorithms below it.
+    // A wrapper selected by type wraps every algorithm of the graph, the root included, so it counts the
+    // resolutions of all of them.
     [Fact]
-    public async Task Advised_DoesNotSelectItself()
+    public async Task AlgorithmWrapperSelectedByType_CountsTheResolutionsOfEveryAlgorithm()
     {
         var inner = new CountingExecutionAlgorithm(1, new ProblemEvaluator<int>());
         var resolutions = new CountAccumulator();
-        var run = (CycleAlgorithm.Create(inner) with { MaximumCycles = 2 }).Advised(AllAlgorithmResolutions(resolutions)).CreateRun(IntegerProblem, RandomNumberGenerator.Create(1));
+        IAlgorithm<int, PopulationState<int>> cycle = CycleAlgorithm.Create(inner) with { MaximumCycles = 2 };
+        var run = cycle.Substitute((IAlgorithm<int, PopulationState<int>> algorithm) => new ResolutionCounting(algorithm, resolutions))
+            .CreateRun(IntegerProblem, RandomNumberGenerator.Create(1));
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        // The cycle and its two turns; the Advised node at the root is not among them.
+        // The cycle and its two turns.
         resolutions.CurrentCount.ShouldBe(3);
-    }
-
-    // The exclusion covers only the node adding the advice: an inner Advised node attaching an instrument that
-    // selects the outer one, which is already resolved, is an error.
-    [Fact]
-    public void Advised_AddingAdviceForAnotherResolvedNode_IsAnError()
-    {
-        var inner = new CountingExecutionAlgorithm(1, new ProblemEvaluator<int>());
-        var algorithm = inner.Advised(AllAlgorithmResolutions(new CountAccumulator())).Advised(AllAlgorithmResolutions(new CountAccumulator()));
-
-        Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(IntegerProblem, RandomNumberGenerator.Create(1)).Complete(cancellationToken: TestContext.Current.CancellationToken))
-            .Message.ShouldContain("already resolved without it");
     }
 
     // Substitutions apply in order and each new one matches the original target, so later entries and later calls sit
@@ -320,17 +310,15 @@ public sealed class InstrumentPlacementTests
         }
     }
 
-    // Advice counting the executors resolved for every algorithm, written outside the library.
-    private static Aspect AllAlgorithmResolutions(CountAccumulator resolutions) =>
-        Aspect.Create(Pointcut.OfType<IAlgorithm<int, PopulationState<int>>>(), new ResolutionCounting(resolutions));
-
-    private sealed class ResolutionCounting(CountAccumulator resolutions) : AlgorithmAdvice<int, PopulationState<int>>
+    // Counts the executors resolved for the algorithm it wraps, written outside the library.
+    private sealed record ResolutionCounting(IAlgorithm<int, PopulationState<int>> ChildAlgorithm, CountAccumulator Resolutions)
+        : WrappingAlgorithm<int, PopulationState<int>>(ChildAlgorithm)
     {
-        public override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> Wrap<TSearchSpace, TProblem>(
-            IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> executor, IAlgorithm<int, PopulationState<int>> source)
+        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
-            resolutions.IncrementBy(1);
-            return executor;
+            Resolutions.IncrementBy(1);
+            return scope.Resolve(ChildAlgorithm);
         }
     }
 

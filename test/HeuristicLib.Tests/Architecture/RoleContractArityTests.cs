@@ -115,21 +115,6 @@ public sealed class RoleContractArityTests
         forms.ShouldBe([["TCandidate"], ["TCandidate", "TSearchState"]]);
     }
 
-    [Fact]
-    public void AdviceWrappingAcceptsConcreteDependenciesInsteadOfResolutionContexts()
-    {
-        var hooks = Main.GetTypes()
-            .Where(type => typeof(Advice).IsAssignableFrom(type))
-            .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly))
-            .Where(method => method.Name is "Wrap" or "WrapNode")
-            .ToArray();
-
-        hooks.ShouldNotBeEmpty();
-        foreach (var hook in hooks)
-            hook.GetParameters().Select(parameter => parameter.ParameterType)
-                .ShouldNotContain(type => typeof(ResolutionScope).IsAssignableFrom(type));
-    }
-
     private static IReadOnlyList<Type> RolesDerivedFrom(Type half) =>
         [.. Main.GetExportedTypes()
             .Where(type => type.IsInterface && type.IsGenericTypeDefinition &&

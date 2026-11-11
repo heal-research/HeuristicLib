@@ -49,26 +49,24 @@ public class RefinementEvaluatorTests
     [Fact]
     public void Evaluate_IssuesItsEvaluationsThroughTheChildEvaluator()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed.AppliedAfterRefinement(new AddOffsetRefiner(10)));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(
+            observed.AppliedAfterRefinement(new AddOffsetRefiner(10)).Counting(observed, out var counter, OperatorCountMetric.Candidates));
         var problem = CreateProblem();
 
         executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     // Accounting follows reference identity, so sharing one evaluator configuration instance shares one counter.
     [Fact]
     public void Evaluate_SharesOneCounterWithAnAlgorithmUsingTheSameEvaluatorExecution()
     {
-        var counter = new CountAccumulator();
-        var sharedEvaluator = CreateEvaluator();
+        var counter = new Counter();
+        var sharedEvaluator = CreateEvaluator().Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(sharedEvaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
         var refining = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator.AppliedAfterRefinement(new AddOffsetRefiner(10)));
         var direct = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
         var problem = CreateProblem();
@@ -76,7 +74,7 @@ public class RefinementEvaluatorTests
         refining.Evaluate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         direct.Evaluate([1, 2], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     // Refiners may resize a population, but an evaluator owes one objective vector per supplied candidate, so this

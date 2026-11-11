@@ -10,10 +10,10 @@ using HEAL.HeuristicLib.Operators.Terminators;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 
-public sealed class PredefinedAspectSpecs
+public sealed class PredefinedAnalyzerSpecs
 {
     [Fact]
-    public void PredefinedAspectsInferEveryRoleFromTheirArguments()
+    public void PredefinedAnalyzersInferEveryRoleFromTheirArguments()
     {
         var creator = new UniformDistributedCreator();
         var crossover = SelectFirstParentCrossover<RealVector>.Instance;

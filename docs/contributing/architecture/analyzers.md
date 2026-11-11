@@ -2,7 +2,7 @@
 
 An analyzer is an immutable instrument definition that creates one typed result per run and names the substitutions that place its collector. Traces use `TraceAnalyzer<TObservation, TValue> : Instrument<Trace<TObservation, TValue>>`. Accumulating analyses derive directly from `Instrument<TResult>` and create their graphs, fronts or histories per run.
 
-Attach definitions through `algorithm.AnalyzedBy(definition)` and read them through `run.Result(definition)` on a run created from the configuration that call returned. Pass every analyzer of a configuration in one call and apply budgets afterwards, because one call resolves every target against the same configuration while a later call no longer finds what an earlier one copied. The same definition may be reused across runs; each run owns independent result and collector state. Within one run, placements share its result by definition reference. Plain aspects may still retain caller-owned runtime data.
+Attach definitions through `algorithm.AnalyzedBy(definition)` and read them through `run.Result(definition)` on a run created from the configuration that call returned. Pass every analyzer of a configuration in one call and apply budgets afterwards, because one call resolves every target against the same configuration while a later call no longer finds what an earlier one copied. The same definition may be reused across runs; each run owns independent result and collector state. Within one run, placements share its result by definition reference. Wrappers of your own may still retain caller-owned runtime data.
 
 ## Observation boundaries
 
@@ -24,7 +24,7 @@ An operation's observation record makes an executor report it, through `IInvocat
 
 Counters and durations are configuration nodes and clocks: operator sources offer `Count()`, `CountCandidates()` and `Duration()`, algorithm iteration or call sources offer `Count()`, and iteration sources offer `Duration()`. One created from a source holds the substitution that places its wrapper; one created with `new Counter()` or `new Duration()` measures only where it is placed explicitly, and the explicit wrapper states what it counts. Durations measure failed calls too. `Clock.Elapsed` reads the root scope's active execution time, excluding pauses and consumer work. Custom clocks derive from `Clock<TTime, TResult>`.
 
-Observation reads inputs, outputs and progress while preserving the observed computation. An algorithm that adapts to measured work uses inspection data in its explicit control flow rather than reading an analyzer's result. General aspects may change behavior; the observation contract applies to inspection and analysis.
+Observation reads inputs, outputs and progress while preserving the observed computation. An algorithm that adapts to measured work uses inspection data in its explicit control flow rather than reading an analyzer's result. Wrappers of your own may change behavior; the observation contract applies to inspection and analysis.
 
 ## Trace analyzers
 

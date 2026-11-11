@@ -76,11 +76,11 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 ## Private fields and shared resources
 
-Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Two resolutions of one configuration construct independent fields. Get controls from the same advised executor that performs the operation.
+Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Two resolutions of one configuration construct independent fields. Get controls from the same resolved executor that performs the operation.
 
 Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are configuration nodes whose executors hold the run's count or time. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` resolve them.
 
-The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Resources must not retain contextual children or advice. Authors own concurrency correctness across all participants. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned.
+The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Resources must not retain contextual children. Authors own concurrency correctness across all participants. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned.
 
 ## Explicit executors
 
@@ -116,11 +116,11 @@ Some specialized operators expose a configured starting value and a mutable curr
 
 - `GaussianMutator.MutationStrength` is immutable reusable configuration.
 - `IMutationStrengthControl.CurrentMutationStrength` is mutable execution data initialized from that configuration. This control has no mutation operation.
-- `EvolutionStrategy` projects the optional control from its selected mutator's raw binding and invokes mutation through the wrapped executor. Generated observations preserve adaptation and report each mutation once. The control and operation use the same executor fields. A separate resolution creates independent fields.
+- `EvolutionStrategy` projects the optional control through the controls its resolved mutator forwards and invokes mutation through that executor. Generated observations preserve adaptation and report each mutation once. The control and operation use the same executor fields. A separate resolution creates independent fields.
 
 The same mutator configuration can therefore be reused for independent runs without one run changing another run's starting strength. This is a specialized contract, not a general convention that operator configuration properties become mutable on executors.
 
-Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient: an observation wrapper can implement the mutation role without implementing the source's additional control interface. Resolve the control separately from the selected configuration's raw executor, and keep mutation calls on the advised executor. Generic naming, retry and inspection wrappers forward the child's controls. A composite exposes its own controls; the resolver does not search arbitrary children. See [Controls, failures and lifetime](/contributing/architecture/execution-resolution#controls-failures-and-lifetime) for the current projection boundary.
+Checking the wrapped mutator with `is IMutationStrengthControl` is insufficient: an observation wrapper can implement the mutation role without implementing the source's additional control interface. Find the control through the controls the resolved executor forwards, as `scope.Resolve(mutator, out IMutationStrengthControl? strength)` does, and keep mutation calls on that executor. Generic naming, retry and inspection wrappers forward the child's controls. A composite exposes its own controls; the resolver does not search arbitrary children. See [Controls, failures and lifetime](/contributing/architecture/execution-resolution#controls-failures-and-lifetime) for the current projection boundary.
 
 ## Wrapping and multi operators
 
@@ -157,7 +157,7 @@ Algorithms use the router to apply parameter-derived behavior in their execution
 
 ## Define a new operation
 
-When no existing role fits, define an operation. It has an executor interface with one named method, an operation type that implements `IOperation<TSelf>` and wraps that executor, and typed resolution extensions. Operators then implement `IOperator<TOperation, TCandidate>` for it, and naming, retry, choice, counting, timing and custom advice work without further code. A built-in operation is defined the same way.
+When no existing role fits, define an operation. It has an executor interface with one named method, an operation type that implements `IOperation<TSelf>` and wraps that executor, and typed resolution extensions. Operators then implement `IOperator<TOperation, TCandidate>` for it, and naming, retry, choice, counting, timing and custom wrappers work without further code. A built-in operation is defined the same way.
 
 The named method ends with the call's random number generator, search space and problem:
 

@@ -67,26 +67,25 @@ public class ObservationModuleTests
     }
 
     /// <summary>
-    /// An observation reports the configuration it was declared for, even when a configuration wrapper such as a
-    /// budget wraps it more tightly, and the two wrappers both act.
+    /// An observation reports the configuration it wraps, which is a budget's counting wrapper when the budget wraps the
+    /// evaluator more tightly, and the two wrappers both act.
     /// </summary>
     [Fact]
-    public void AnEvaluatorObservation_ReportsTheObservedEvaluatorAndComposesWithABudget()
+    public void AnEvaluatorObservation_ReportsTheConfigurationItWrapsAndComposesWithABudget()
     {
         IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         var problem = CreateProblem();
-        var counter = new CountAccumulator();
         var observed = new List<IOperator<Evaluation, int>>();
         var analyzed = evaluator.AnalyzedBy(evaluator.Invocations.Observing(observation => observed.Add(observation.Evaluator)));
+        var budgeted = analyzed.Counting(evaluator, out var calls);
         var root = ResolutionScope.Create();
         var budget = root.CreateChildScope();
-        budget.AddAspect(Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations)));
 
-        budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(analyzed)
+        budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(budgeted)
             .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(1);
-        observed.ShouldHaveSingleItem().ShouldBeSameAs(evaluator);
+        root.Results.Result(calls).CurrentCount.ShouldBe(1);
+        observed.ShouldHaveSingleItem().ShouldBe(evaluator.Counted(calls));
     }
 
     [Fact]

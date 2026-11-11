@@ -10,37 +10,34 @@ public class EvaluatorInspectionTests
     [Fact]
     public void CountEvaluatorCalls_IncrementsOncePerEvaluateCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var evaluator = CreateEvaluator();
-        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice<Evaluation, int>(counter, OperatorCountMetric.Invocations));
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Single().Advice.ShouldBeOfType<CountingOperatorAdvice<Evaluation, int>>().Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var counted = evaluator.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(counted);
         var problem = CreateProblem();
 
         executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountEvaluatedCandidates_IncrementsByBatchSize()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var evaluator = CreateEvaluator();
-        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counted(counter, OperatorCountMetric.Candidates));
         var problem = CreateProblem();
 
         executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
         executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
@@ -62,17 +59,15 @@ public class EvaluatorInspectionTests
     [Fact]
     public void CountEvaluatorCalls_DoesNotCountFailedCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var evaluator = new ThrowingEvaluator();
-        var aspect = Aspect.Create(Pointcut.Reference(evaluator), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations));
         var problem = CreateProblem();
 
         var scope = ResolutionScope.Create();
-        scope.AddAspect(aspect);
         Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counted(counter)).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]

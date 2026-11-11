@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 /// child scopes created below this algorithm, such as Cycle turns and Pipeline stages: every use of a shared
 /// configuration there receives one executor, kept by the scope this algorithm is resolved in for as long as that scope
 /// lives. Each shared executor is built in a child scope of its own, as for a child activation, so sharing changes how
-/// long it lives but not which advice reaches it: budgets inside it count only the calls made inside it, and two shared
+/// long it lives but not what it holds: budgets inside it count only the calls made inside it, and two shared
 /// configurations share a child only when that child is shared too. Resolving this algorithm in another scope, for
 /// example in the next Cycle turn or another run, creates new shared executors.
 /// </remarks>

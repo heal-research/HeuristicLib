@@ -47,15 +47,6 @@ public sealed class CandidateSummary<TCandidate>
 #endregion observability-accumulating-analyzer
 
 
-
-#region observability-custom-pointcut
-public sealed class SmallMutations : Pointcut<IOperator<Mutation, RealVector>>
-{
-    public override bool Matches(IOperator<Mutation, RealVector> mutator) =>
-        mutator is GaussianMutator { MutationStrength: < 1.0 };
-}
-#endregion observability-custom-pointcut
-
 public sealed class ObservabilityDocumentationSpecs
 {
     private static readonly BoundedRealVectorSearchSpace SearchSpace = new(1, -10.0, 10.0);
@@ -136,16 +127,15 @@ public sealed class ObservabilityDocumentationSpecs
     {
         IOperator<Mutation, RealVector> mutator = new NoChangeMutator<RealVector>();
 
-        #region observability-named-pointcuts
+        #region observability-named-selection
         var exploration = mutator.Named("exploration");
-        var selected = Pointcut.Named<IOperator<Mutation, RealVector>>("exploration");
-        var excluded = !Pointcut.Reference<IOperator<Mutation, RealVector>>(exploration);
-        var otherExploration = selected & excluded;
-        #endregion observability-named-pointcuts
+        Func<IOperator<Mutation, RealVector>, bool> selected = node => node is INamedConfiguration { Name: "exploration" };
+        Func<IOperator<Mutation, RealVector>, bool> otherExploration = node => selected(node) && !ReferenceEquals(node, exploration);
+        #endregion observability-named-selection
 
-        selected.Matches(exploration).ShouldBeTrue();
-        otherExploration.Matches(exploration).ShouldBeFalse();
-        otherExploration.Matches(mutator.Named("exploration")).ShouldBeTrue();
+        selected(exploration).ShouldBeTrue();
+        otherExploration(exploration).ShouldBeFalse();
+        otherExploration(mutator.Named("exploration")).ShouldBeTrue();
     }
 
     [Fact]
@@ -263,7 +253,7 @@ public sealed class ObservabilityDocumentationSpecs
     }
 
     [Fact]
-    public async Task AspectsCountTimeAndObserveAnOperator()
+    public async Task AnalyzersCountTimeAndObserveAnOperator()
     {
         var algorithm = CreateAlgorithm(maximumGenerations: 3);
         var problem = Problem;
@@ -271,14 +261,14 @@ public sealed class ObservabilityDocumentationSpecs
         var cancellationToken = TestContext.Current.CancellationToken;
         var offspring = new List<int>();
 
-        #region observability-aspects
+        #region observability-analyzers
         var counting = algorithm.Mutator.Invocations.Count();
         var timing = algorithm.Mutator.Invocations.Duration();
         var observation = algorithm.Mutator.Invocations.Observing(
             value => offspring.Add(value.Offspring.Count));
         var run = algorithm.AnalyzedBy(observation, counting, timing).CreateRun(problem, random);
         await run.CompleteAsync(cancellationToken: cancellationToken);
-        #endregion observability-aspects
+        #endregion observability-analyzers
 
         run.Result(counting).CurrentCount.ShouldBe(2L);
         offspring.ShouldBe([4, 4]);
@@ -305,21 +295,28 @@ public sealed class ObservabilityDocumentationSpecs
     }
 
     [Fact]
-    public async Task RoleAdviceCountsEverySelectedConfiguration()
+    public async Task ATypeSelectionCountsEverySelectedConfiguration()
     {
         var algorithm = CreateAlgorithm(maximumGenerations: 3) with { Mutator = new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.5) };
-        var counter = new CountAccumulator();
+        var counter = new Counter();
 
-        #region observability-role-advice
-        var counting = Aspect.Create(Pointcut.OfType<IOperator<Mutation, RealVector>>(),
-            new CountingOperatorAdvice<Mutation, RealVector>(counter, OperatorCountMetric.Candidates));
-        #endregion observability-role-advice
+        #region observability-type-selection
+        var counting = Substitution.Of((IOperator<Mutation, RealVector> mutator) =>
+            mutator.Counted(counter, OperatorCountMetric.Candidates));
+        #endregion observability-type-selection
 
-        var run = algorithm.Advised(counting).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.Substitute(counting).CreateRun(Problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        counter.CurrentCount.ShouldBe(8L);
-        new SmallMutations().Matches(algorithm.Mutator).ShouldBeTrue();
+        run.Result(counter).CurrentCount.ShouldBe(8L);
+
+        #region observability-predicate-selection
+        var smallMutations = Substitution.Of<IOperator<Mutation, RealVector>>(
+            mutator => mutator is GaussianMutator { MutationStrength: < 1.0 },
+            mutator => mutator.Counted(counter, OperatorCountMetric.Candidates));
+        #endregion observability-predicate-selection
+
+        algorithm.Substitute(smallMutations).Mutator.ShouldBeOfType<Counted<Mutation, RealVector>>();
     }
 
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(int maximumGenerations) =>

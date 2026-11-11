@@ -57,14 +57,15 @@ public class AdaptableMutationStrengthTests
         var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(mutator, out IMutationStrengthControl? strength);
         strength.ShouldNotBeNull();
         strength.CurrentMutationStrength = 4.0;
-        var observedCalls = new CountAccumulator();
+        var calls = new Counter();
+        var counted = mutator.Counted(calls);
+        var observedCalls = parent.Results.Result(calls);
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice(observedCalls, OperatorCountMetric.Invocations)));
         var typed = child.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
-        var inner = typed.Resolve(mutator, out IMutationStrengthControl? innerStrength);
+        var inner = typed.Resolve(counted, out IMutationStrengthControl? innerStrength);
         ShouldHaveIndependentStrength(innerStrength, strength);
         inner.ShouldNotBeAssignableTo<IMutationStrengthControl>();
-        typed.Resolve(mutator, out IMutationStrengthControl? repeatedStrength).ShouldNotBeSameAs(inner);
+        typed.Resolve(counted, out IMutationStrengthControl? repeatedStrength).ShouldBeSameAs(inner);
         ShouldHaveIndependentStrength(repeatedStrength, strength);
 
         inner.Mutate([new RealVector(0.0)], new SequenceRandom(0.0, 1.0), searchSpace, problem).ShouldBe([new RealVector(1.0)]);
@@ -86,17 +87,15 @@ public class AdaptableMutationStrengthTests
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
         var problem = CreateProblem(searchSpace);
         var gaussian = new GaussianMutator(1.0, 3.0);
-        var algorithm = CreateAlgorithm(gaussian, problem);
-        var calls = new CountAccumulator();
+        var calls = new Counter();
+        var algorithm = observed ? CreateAlgorithm(gaussian, problem).Counting(gaussian, calls) : CreateAlgorithm(gaussian, problem);
         var scope = ResolutionScope.Create();
-        if (observed)
-            scope.AddAspect(Aspect.Create(Pointcut.Reference(gaussian), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
         var executor = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
         var states = executor.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
         gaussian.MutationStrength.ShouldBe(3.0);
-        calls.CurrentCount.ShouldBe(observed ? 2 : 0);
+        scope.Results.Result(calls).CurrentCount.ShouldBe(observed ? 2 : 0);
     }
 
     [Fact]
@@ -106,11 +105,11 @@ public class AdaptableMutationStrengthTests
         var problem = CreateProblem(searchSpace);
         var gaussian = new GaussianMutator(1.0, 3.0);
         var algorithm = CreateAlgorithm(gaussian, problem);
-        var calls = new CountAccumulator();
+        var counter = new Counter();
         var root = ResolutionScope.Create();
+        var calls = root.Results.Result(counter);
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(gaussian), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
-        child.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(gaussian, out IMutationStrengthControl? localStrength);
+        child.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(gaussian.Counted(counter), out IMutationStrengthControl? localStrength);
         localStrength.ShouldNotBeNull();
         localStrength.CurrentMutationStrength = 9.0;
         var original = root.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
@@ -123,8 +122,8 @@ public class AdaptableMutationStrengthTests
         algorithmStrength.CurrentMutationStrength.ShouldBe(2.0);
 
         var sibling = root.CreateChildScope();
-        sibling.AddAspect(Aspect.Create(Pointcut.Reference(gaussian), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
-        var rebound = sibling.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm);
+        var rebound = sibling.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(
+            algorithm.Counting(gaussian, counter));
         var observed = rebound.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
         observed[1].Population.Single().Candidate.ShouldBe(new RealVector(-1.5));
         calls.CurrentCount.ShouldBe(2);
@@ -141,19 +140,17 @@ public class AdaptableMutationStrengthTests
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
         var problem = CreateProblem(searchSpace);
         var gaussian = new GaussianMutator(1.0, 3.0);
-        var calls = new CountAccumulator();
         var mutator = PipelineMutator.Create(gaussian);
-        var algorithm = CreateAlgorithm(mutator, problem);
+        var algorithm = CreateAlgorithm(mutator, problem).Counting(mutator, out var calls);
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
         var typed = scope.For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
-        typed.Resolve(mutator, out IMutationStrengthControl? strength);
+        typed.Resolve(algorithm.Mutator, out IMutationStrengthControl? strength);
         strength.ShouldBeNull();
 
         var states = typed.Resolve(algorithm).Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(state => state.Population.Single().Candidate[0]).ShouldBe([0.0, -1.5, -3.0]);
-        calls.CurrentCount.ShouldBe(2);
+        scope.Results.Result(calls).CurrentCount.ShouldBe(2);
     }
 
     [Theory]
@@ -172,17 +169,15 @@ public class AdaptableMutationStrengthTests
             var problem = CreateProblem(searchSpace);
             var gaussian = new GaussianMutator(1.0, 3.0);
             IOperator<Mutation, RealVector> mutator = wrapped ? gaussian.Retry(3).Named("inner").Named("outer") : gaussian;
-            var calls = new CountAccumulator();
             var root = ResolutionScope.Create();
-            root.AddAspect(Aspect.Create(Pointcut.Reference(mutator), new CountingOperatorAdvice(calls, OperatorCountMetric.Invocations)));
             var scope = root
                 .For<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>();
             if (preconstructGaussian)
                 scope.Resolve(gaussian, out IMutationStrengthControl? control);
-            var executor = scope.Resolve(CreateAlgorithm(mutator, problem));
+            var executor = scope.Resolve(CreateAlgorithm(mutator, problem).Counting(mutator, out var calls));
             var result = executor.Stream(problem, new SequenceRandom(), ct: TestContext.Current.CancellationToken)
                 .Select(state => state.Population.Single().Candidate[0]).ToList();
-            calls.CurrentCount.ShouldBe(2);
+            root.Results.Result(calls).CurrentCount.ShouldBe(2);
             return result;
         }
     }

@@ -397,16 +397,16 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void InspectionAdvice_CanBeConstructedDirectlyOrThroughInstrumentSources()
+    public void InspectionWrappers_CanBeConstructedDirectlyOrThroughInstrumentSources()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var mutator = CreateSimpleGeneticAlgorithm(problem).Mutator;
-        var counter = new CountAccumulator();
+        var counter = new Counter();
 
-        var counted = new CountingOperatorAdvice<Mutation, RealVector>(counter, OperatorCountMetric.Candidates);
+        var counted = mutator.Counted(counter, OperatorCountMetric.Candidates);
         var measurement = mutator.Invocations.Duration();
 
-        Aspect.Create(Pointcut.Reference(mutator), counted).Single().Pointcut.Matches(mutator).ShouldBeTrue();
+        counted.ChildOperator.ShouldBeSameAs(mutator);
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
         mutator.AnalyzedBy(measurement).ShouldBeOfType<Timed<Mutation, RealVector>>().Duration.ShouldBeSameAs(measurement);

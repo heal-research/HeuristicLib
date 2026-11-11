@@ -86,14 +86,14 @@ public class RefinerEvaluatorAccountingTests
     [Fact]
     public void InAPipeline_OnlyTheStageWithAnEvaluatorEvaluates()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
         var refiner = PipelineRefiner.Create(
             new AddOffsetRefiner(-1),
             new AddOffsetRefiner(-5).CheckedForImprovement(observed));
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(observed), new CountingOperatorAdvice(counter, OperatorCountMetric.Candidates)));
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(
+            refiner.Counting(observed, out var evaluations, OperatorCountMetric.Candidates));
+        var counter = scope.Results.Result(evaluations);
         var problem = CreateProblem();
 
         executor.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);

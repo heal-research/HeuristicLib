@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Execution;
 
 public partial class ResolutionScope
 {
-    /// <summary>Builds an algorithm's executor for the run's types and applies the matching algorithm advice.</summary>
+    /// <summary>Builds an algorithm's executor for the run's types, or returns the one this scope already built for it.</summary>
     /// <remarks>
     /// The algorithm and its declared children must support the run, and the algorithm must produce the requested search state. A
     /// mismatch names every configuration responsible, such as an operator written for another search space. An algorithm
@@ -31,8 +31,6 @@ public partial class ResolutionScope
         var root = node.Parent is null && node.Tree.EnteredOutsideConstruction;
         var owner = Owner(algorithm);
         var existing = Existing(owner, algorithm, static executor => executor is IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
-        var applicable = MatchingAdvice(algorithm);
-        // This scope's advice for the algorithm is fixed from here on, also for its own construction.
         node.MarkResolved(algorithm);
         try
         {
@@ -41,15 +39,6 @@ public partial class ResolutionScope
             var executor = (IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>?)existing
                 ?? Build(owner, algorithm, scope => algorithm.CreateExecutor(scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()));
 #pragma warning restore HLib0001
-            foreach (var (_, advice) in applicable)
-                executor = advice switch
-                {
-                    AlgorithmAdvice<TCandidate, TSearchState> typed => typed.Wrap(executor, algorithm),
-                    // Advice for another search state of a configuration producing several.
-                    IAlgorithmAdvice => executor,
-                    _ => throw new InvalidOperationException($"{advice.GetType().FullName} cannot wrap algorithm {algorithm.GetType().Name}. " +
-                        "Algorithm advice derives from AlgorithmAdvice<TCandidate, TSearchState>.")
-                };
             return root ? new ElapsedTimeExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(executor, node.Tree.Results) : executor;
         }
         catch
@@ -81,7 +70,7 @@ public partial class ResolutionScope
             .DefaultIfEmpty("no search state"));
 }
 
-// Adds the time spent inside each call that advances the root algorithm, including its advice, to the run's elapsed
+// Adds the time spent inside each call that advances the root algorithm, including its wrappers, to the run's elapsed
 // time. Everything else passes through unchanged, so the stream completes, fails and is disposed exactly as the wrapped
 // one is, and the wrapped executor's controls stay reachable.
 file sealed class ElapsedTimeExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(

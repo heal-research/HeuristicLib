@@ -27,16 +27,16 @@ public sealed class RoleResolutionTests
         var source = CreateMutator(arity, () => preparations++);
         var outerReports = new List<double>();
         var innerReports = new List<double>();
+        var observed = new ReportingMutator(source, outerReports.Add);
         var parent = ResolutionScope.Create();
-        parent.AddAspect(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(outerReports.Add)));
-        var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
+        var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(observed);
         Next(outer).ShouldBe(1);
         Next(outer).ShouldBe(2);
         Next(outer).ShouldBe(3);
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new ObservingMutatorAdvice(innerReports.Add)));
-        var inner = child.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(source);
+        var inner = child.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>()
+            .Resolve(observed.Substitute(source, mutator => new ReportingMutator(mutator, innerReports.Add)));
         Next(inner).ShouldBe(1);
         Next(inner).ShouldBe(2);
 
@@ -231,19 +231,15 @@ public sealed class RoleResolutionTests
     }
 
     [Fact]
-    public void AlgorithmAdvice_ForAnotherSearchStateOfTheSelectedAlgorithm_IsSkipped_AndAScopeBuildsOneOfTheStates()
+    public void ATwoStateAlgorithm_IsBuiltForOneOfItsStatesInAScope()
     {
         var source = new TwoStateAlgorithm();
-        var advice = new CountingSingleSolutionAdvice();
         var scope = ResolutionScope.Create();
-        scope.AddAspect(Aspect.Create(Pointcut.Reference(source), advice));
 
         scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(source).ShouldNotBeNull();
-        advice.Wraps.ShouldBe(0);
         scope.TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, out _, out var reason).ShouldBeFalse();
         reason.ShouldContain("already built in this resolution scope");
         scope.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
-        advice.Wraps.ShouldBe(1);
     }
 
     private static IOperator<Mutation, RealVector> CreateMutator(int arity, Action prepare) => arity switch
@@ -322,12 +318,20 @@ public sealed class RoleResolutionTests
         }
     }
 
-    private sealed class ObservingMutatorAdvice(Action<double> report) : MutatorAdvice<RealVector>
+    // Reports the first coordinate of each successful call's first offspring.
+    private sealed record ReportingMutator : WrappingOperator<Mutation, RealVector>
     {
-        protected override IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>
-            Wrap<TRunSearchSpace, TRunProblem>(IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor,
-                IOperator<Mutation, RealVector> mutator) =>
-            new Executor<TRunSearchSpace, TRunProblem>(executor, report);
+        public ReportingMutator(IOperator<Mutation, RealVector> childMutator, Action<double> report)
+            : base(childMutator)
+        {
+            Report = report;
+        }
+
+        public Action<double> Report { get; init; }
+
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Report);
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
             : IMutationExecutor<RealVector, TSearchSpace, TProblem>
@@ -398,20 +402,6 @@ public sealed class RoleResolutionTests
         IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, PopulationState<RealVector>> IAlgorithm<RealVector, PopulationState<RealVector>>.CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, PopulationState<RealVector>> scope) =>
             new ProbeAlgorithmExecutor<TSearchSpace, TProblem, PopulationState<RealVector>>();
-    }
-
-    private sealed class CountingSingleSolutionAdvice : AlgorithmAdvice<RealVector, SingleSolutionState<RealVector>>
-    {
-        public int Wraps { get; private set; }
-
-        public override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>
-            Wrap<TSearchSpace, TProblem>(
-                IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> executor,
-                IAlgorithm<RealVector, SingleSolutionState<RealVector>> source)
-        {
-            Wraps++;
-            return executor;
-        }
     }
 
     private sealed class ProbeAlgorithmExecutor<TSearchSpace, TProblem, TSearchState> : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, TSearchState>

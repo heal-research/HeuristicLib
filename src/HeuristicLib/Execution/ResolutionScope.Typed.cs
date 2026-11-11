@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// name them again at every call.
 /// </summary>
 /// <remarks>
-/// It is a view of the scope it was created from: it resolves, adds aspects and shares exactly like that scope and adds
+/// It is a view of the scope it was created from: it resolves and shares exactly like that scope and adds
 /// only the types. <c>CreateChildScope</c> keeps them.
 /// </remarks>
 public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionScope
@@ -94,7 +94,7 @@ public static class ResolutionScopeExtensions
 
     /// <summary>Resolves an operator for its operation and this scope's types, reporting a rejection as a reason instead of throwing.</summary>
     /// <remarks>
-    /// A rejection before anything is built, such as a signature mismatch or an advice check, becomes a reason and leaves
+    /// A rejection before anything is built, such as a signature mismatch, becomes a reason and leaves
     /// the scope usable. A construction failure ends the scope tree and propagates. The executor variable's type, the operation's executor interface, selects the type the result is returned as, so an
     /// operation's <c>TryResolve</c> extension passes its own variables and names no type argument.
     /// </remarks>

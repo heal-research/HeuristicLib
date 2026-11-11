@@ -10,7 +10,7 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Analysis;
 
-// Instruments define what a run collects, such as a counter or a trace. Attach them with Advised or place them
+// Instruments define what a run collects, such as a counter or a trace. Attach them with AnalyzedBy or place them
 // with a wrapper where they are written, and read each run's own result from the run.
 public class InstrumentSpecs
 {

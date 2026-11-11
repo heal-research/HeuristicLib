@@ -13,9 +13,9 @@ A meta-algorithm splits into a configuration record and an executor, exactly as 
 ## Resolve child algorithms through the scope
 
 ::: warning Resolve child algorithms through the scope
-Obtain a child algorithm's executor with `scope.Resolve(childAlgorithm)`. Calling the child's `CreateExecutor` directly bypasses its contextual advice and construction checks.
+Obtain a child algorithm's executor with `scope.Resolve(childAlgorithm)`. Calling the child's `CreateExecutor` directly bypasses the scope's construction checks and sharing.
 
-`ResolutionScope.Resolve` applies matching advice from the current aspects, including [analyzer observations](/guide/execution/observability-and-analysis). Bypassing a child's resolution means an analyzer observing that child misses its states.
+`ResolutionScope.Resolve` builds one executor per configuration in a scope, checks it against the run and honors sharing. Bypassing a child's resolution builds a second executor whose private data the scope does not know, beside the one other requests receive.
 
 The `HLib0001` analyzer reports direct child `CreateExecutor` calls in construction hooks, custom resolvers and deferred execution methods. It does not prove correct state ownership or follow configurations passed through arbitrary helper code. Keep child construction on the scope's resolution path.
 :::
@@ -136,7 +136,7 @@ Resolve fixed children through the scope received by `CreateExecutor`. Retain th
 var execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm);
 ```
 
-A typed scope created with `For<TCandidate, TSearchSpace, TProblem, TSearchState>()` avoids repeating the type arguments. `With(aspects)` adds contextual advice using the same resource table.
+A typed scope created with `For<TCandidate, TSearchSpace, TProblem, TSearchState>()` avoids repeating the type arguments.
 
 Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executors for each turn and carries search state forward. Share a configuration on the Cycle to keep one executor for it across turns:
 
@@ -144,7 +144,7 @@ Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executor
 var cycle = first.CycleWith(second, maximumCycles: 3).Sharing(first, second);
 ```
 
-Sharing is local to one executor of the sharing node and uses configuration reference identity, so `Cycle(A, A)` shared on A uses one A executor. Equal but distinct configurations keep separate executors. A shared executor preserves its private fields and resolved children, and every turn applies the Cycle's current advice around it. A separately constructed Cycle starts independently. Share any configuration the same way, for example a cached evaluator used by both algorithms, to keep only that part across turns while terminators and budgets restart.
+Sharing is local to one executor of the sharing node and uses configuration reference identity, so `Cycle(A, A)` shared on A uses one A executor. Equal but distinct configurations keep separate executors. A shared executor preserves its private fields and resolved children. A separately constructed Cycle starts independently. Share any configuration the same way, for example a cached evaluator used by both algorithms, to keep only that part across turns while terminators and budgets restart.
 
 A Cycle turn is one call of an inner algorithm. Observe the inner algorithms' `Calls` to record starts and outcomes, including a turn that yields no state; see [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns).
 

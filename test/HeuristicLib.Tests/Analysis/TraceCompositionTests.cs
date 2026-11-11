@@ -27,18 +27,6 @@ public class TraceCompositionTests
     }
 
     [Fact]
-    public void InstallationFailure_LeavesCollectedDataAvailable()
-    {
-        var problem = CreateProblem();
-        var algorithm = CreateAlgorithm(problem, maximumGenerations: 1);
-        var trace = algorithm.Iterations.TracePopulationQuality();
-        var run = algorithm.Advised(new FailingModule()).AnalyzedBy(trace).CreateRun(problem, RandomNumberGenerator.Create(42));
-        Should.Throw<InvalidOperationException>(() => run.Stream());
-        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
-        run.Result(trace).Snapshot().ShouldBeEmpty();
-    }
-
-    [Fact]
     public void ResolutionFailure_LeavesCollectedDataAvailable()
     {
         var problem = CreateProblem();
@@ -56,14 +44,14 @@ public class TraceCompositionTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var trace = algorithm.Iterations.TracePopulationQuality();
-        var advised = algorithm.AnalyzedBy(trace);
-        var run = advised.CreateRun(problem, RandomNumberGenerator.Create(42));
+        var analyzed = algorithm.AnalyzedBy(trace);
+        var run = analyzed.CreateRun(problem, RandomNumberGenerator.Create(42));
         await using (var stream = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
                                      .GetAsyncEnumerator(TestContext.Current.CancellationToken))
             (await stream.MoveNextAsync()).ShouldBeTrue();
         run.LifecycleState.ShouldBe(RunLifecycleState.Paused);
         run.Result(trace).SampleCount.ShouldBe(1);
-        var another = advised.CreateRun(problem, RandomNumberGenerator.Create(43));
+        var another = analyzed.CreateRun(problem, RandomNumberGenerator.Create(43));
         await another.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         another.Result(trace).SampleCount.ShouldBe(3);
         run.Result(trace).SampleCount.ShouldBe(1);
@@ -88,25 +76,6 @@ public class TraceCompositionTests
 
         run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
         run.Result(trace).SampleCount.ShouldBe(3);
-    }
-
-    private sealed class FailingModule : Aspect
-    {
-        public FailingModule()
-        {
-            Advices = [(Pointcut.OfType<IOperator<Creation, RealVector>>(), new FailingAdvice())];
-        }
-    }
-
-    private sealed class FailingAdvice : CreatorAdvice<RealVector>
-    {
-        protected override void Check<TRunSearchSpace, TRunProblem>(IOperator<Creation, RealVector> creator) =>
-            throw new InvalidOperationException("Advice preparation failed.");
-
-        protected override ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>
-            Wrap<TRunSearchSpace, TRunProblem>(ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor,
-                IOperator<Creation, RealVector> creator) => executor;
-
     }
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
@@ -160,11 +129,11 @@ public class TraceCompositionTests
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 2);
         var trace = algorithm.Iterations.TracePopulationCandidates();
-        var advised = algorithm.AnalyzedBy(trace);
-        var firstRun = advised.CreateRun(problem, RandomNumberGenerator.Create(42));
+        var analyzed = algorithm.AnalyzedBy(trace);
+        var firstRun = analyzed.CreateRun(problem, RandomNumberGenerator.Create(42));
         await firstRun.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         var first = firstRun.Result(trace).Snapshot();
-        var secondRun = advised.CreateRun(problem, RandomNumberGenerator.Create(43));
+        var secondRun = analyzed.CreateRun(problem, RandomNumberGenerator.Create(43));
         await secondRun.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
         first.Count.ShouldBe(2);
         firstRun.Result(trace).SampleCount.ShouldBe(2);
@@ -462,7 +431,7 @@ public class TraceCompositionTests
         run.Result(best).By(evaluations).Select(point => point.Time).ShouldBeInOrder();
     }
 
-    /// <summary>A custom analyzer can install a module for an execution boundary the library does not observe.</summary>
+    /// <summary>A custom analyzer can place its own wrapper at an execution boundary the library does not observe.</summary>
     [Fact]
     public async Task CustomAnalyzer_ObservesABoundaryTheLibraryDoesNotCover()
     {
@@ -470,7 +439,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var created = new CreatorCountAnalyzer(algorithm.Creator);
 
-        var run = algorithm.Advised(created).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.AnalyzedBy(created).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // The creator fills the initial population once, so one firing of 16 candidates.
@@ -512,23 +481,28 @@ public class TraceCompositionTests
         protected override long Read(CountAccumulator result) => result.CurrentCount;
     }
 
-    private sealed class CreatorCountAnalyzer
-        : Aspect
+    private sealed class CreatorCountAnalyzer(IOperator<Creation, RealVector> creator) : ISubstitutionBundle
     {
         public int CreatedCandidates { get; private set; }
 
-        public CreatorCountAnalyzer(IOperator<Creation, RealVector> creator)
-        {
-            Advices = [(Pointcut.Reference(creator), new ObservingCreatorAdvice(count => CreatedCandidates += count))];
-        }
+        public IReadOnlyList<Substitution> Substitutions =>
+            [Substitution.Of(creator, child => new ObservedCreator(child, count => CreatedCandidates += count))];
     }
 
-    private sealed class ObservingCreatorAdvice(Action<int> observe) : CreatorAdvice<RealVector>
+    // Reports how many candidates each call of the creator it wraps returned.
+    private sealed record ObservedCreator : WrappingOperator<Creation, RealVector>
     {
-        protected override ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem>
-            Wrap<TRunSearchSpace, TRunProblem>(ICreationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor,
-                IOperator<Creation, RealVector> creator) =>
-            new Executor<TRunSearchSpace, TRunProblem>(executor, observe);
+        public ObservedCreator(IOperator<Creation, RealVector> childCreator, Action<int> observe)
+            : base(childCreator)
+        {
+            Observe = observe;
+        }
+
+        public Action<int> Observe { get; init; }
+
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Observe);
 
         private sealed class Executor<TSearchSpace, TProblem>(
             ICreationExecutor<RealVector, TSearchSpace, TProblem> childCreator,

@@ -38,27 +38,6 @@ public interface IAlgorithmExecutor<TCandidate, in TSearchSpace, in TProblem, TS
     IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 }
 
-/// <summary>Advice that wraps every executor built for the algorithms its pointcut selects, such as observing each yielded state.</summary>
-/// <remarks>
-/// Advice owned runtime data is shared wherever the advice instance is reused, including fresh activations inside a
-/// meta-algorithm. Supply concrete dependencies through the constructor and assemble separate advice for independent runs.
-/// </remarks>
-public abstract class AlgorithmAdvice<TCandidate, TSearchState> : Advice<IAlgorithm<TCandidate, TSearchState>>, IAlgorithmAdvice
-    where TSearchState : class, ISearchState
-{
-    /// <summary>Wraps one executor built for a selected algorithm and returns the executor its callers use.</summary>
-    /// <param name="executor">The executor built for this resolution, possibly already wrapped by earlier advice.</param>
-    /// <param name="source">The configuration the pointcut selected.</param>
-    public abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-        IAlgorithm<TCandidate, TSearchState> source)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>;
-}
-
-// Lets resolution skip advice for another search state without treating arbitrary Advice subclasses as supported.
-internal interface IAlgorithmAdvice;
-
 public static class AlgorithmResolutionExtensions
 {
     extension<TCandidate, TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)

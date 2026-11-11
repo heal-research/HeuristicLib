@@ -33,10 +33,10 @@ public class PredefinedCandidatesCreatorTests
         var parent = ResolutionScope.Create();
         var outer = parent.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
         outer.Create(1, random, problem.SearchSpace, problem).ShouldBe([10]);
-        var observedFallbackCalls = new CountAccumulator();
+        var observing = creator.Counting(fallback, out var fallbackCalls);
+        var observedFallbackCalls = parent.Results.Result(fallbackCalls);
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(fallback), new CountingOperatorAdvice(observedFallbackCalls, OperatorCountMetric.Invocations)));
-        var inner = child.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
+        var inner = child.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(observing);
 
         inner.ShouldNotBeSameAs(outer);
         inner.Create(4, random, problem.SearchSpace, problem).ShouldBe([10, 20, 30, 99]);

@@ -17,11 +17,11 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 | Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                          |
 | Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                                   |
 | Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An instrument attached with `AnalyzedBy`                                                                     |
-| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | An aspect attached with `Advised`                                                                            |
+| Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | A [wrapper](/guide/extending/writing-wrappers) placed with `Substitute`                                      |
 | A count or duration that stops or limits the run                                            | Inspection such as `Invocations.CountCandidates()` or `LimitedToCandidates`, read by terminators and budgets |
 | The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                            |
 
-Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. General aspects may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
+Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. Wrappers of your own may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
 
 Inspection of creation, crossover, mutation, evaluation, selection, refinement and replacement passes on the selected executor's controls. Generic naming and retry wrappers do too, so inspection through those wrappers keeps mutation-strength adaptation. Composites expose their own controls.
 
@@ -55,19 +55,19 @@ The callback runs on the thread that invoked the operator, inside the wrapped in
 
 ## Select configurations by properties or names
 
-`Pointcut.Predicate<TConfiguration>(predicate)` matches configuration data without a custom subclass. Combine pointcuts through `And`/`Or` or `&`/`|`, and negate them through `Not()` or `!`. Negation stays within the declared configuration type. Predicates are runtime-only delegates, rather than persistable configuration strategies.
+A predicate passed to `Substitute` or `Substitution.Of` selects configurations by their data, and the type of its parameter selects the role. Combine conditions with `&&`, `||` and `!`. Predicates are runtime-only delegates, rather than persistable configuration strategies.
 
 Name a configured operator through `.Named(name)` and select that boundary explicitly:
 
-<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-named-pointcuts{csharp}
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-named-selection{csharp}
 
 The receiver here is an `IOperator<Mutation, RealVector>`. Named wrappers exist for creators, crossovers, evaluators, mutators, refiners, replacers, selectors, interceptors, terminators and algorithms. Mutation and evaluation use `Named.Create(child, name)`; other roles retain their role-specific construction companions. A consumer-defined configuration can implement `INamedConfiguration` directly.
 
-Names compare exactly and case-sensitively. Several nodes may share a name, and all match. The wrapper and its child are separate configuration nodes: name matching selects the wrapper, while a broad role pointcut can select both boundaries. Names do not change execution sharing or create caller paths. The child's concrete properties remain on the child configuration.
+Names compare exactly and case-sensitively. Several nodes may share a name, and all match. The wrapper and its child are separate configuration nodes: a name selects the wrapper, while a selection by role type can select both boundaries. Names do not change execution sharing or create caller paths. The child's concrete properties remain on the child configuration.
 
 ## Ownership and reads
 
-Attach instruments through `AnalyzedBy` and aspects through `Advised` before creating a run. `AnalyzedBy` places what the instruments need into the configuration it returns, so create the run from that configuration. Instruments are reusable definitions; each run creates a fresh result, clock state and retention state. A definition repeated within one `AnalyzedBy` call is placed once. Separate calls place it again, and every placement collects into that run's single result. Shared advice applies once by reference. Raw aspects retain any caller-owned dependencies supplied to their advice constructors.
+Attach instruments through `AnalyzedBy` and place wrappers through `Substitute` before creating a run. `AnalyzedBy` places what the instruments need into the configuration it returns, so create the run from that configuration. Instruments are reusable definitions; each run creates a fresh result, clock state and retention state. A definition repeated within one `AnalyzedBy` call is placed once. Separate calls place it again, and every placement collects into that run's single result. Wrappers of your own retain any caller-owned dependencies supplied to their constructors.
 
 `LifecycleState` reports whether a run is `Ready`, `Running`, `Paused`, `Completed`, `Canceled`, `Failed` or `Stopped`. The returned run accepts no further attachments. Each returned execution stream has one consumer. The run itself can continue through a later `Stream()` call after the consumer stops at a yielded root-algorithm state.
 
@@ -145,7 +145,7 @@ A turn is one call of an inner algorithm. Its `Calls` source reports `Started`, 
 
 ## Experiments
 
-Attach analysis definitions to the algorithms before constructing an experiment, then read each trial's result through `trial.Run.Result(definition)`. See [Experiments](/guide/execution/experiments) for advised grids and repetition.
+Attach analysis definitions to the algorithms before constructing an experiment, then read each trial's result through `trial.Run.Result(definition)`. See [Experiments](/guide/execution/experiments) for analyzed grids and repetition.
 
 ## Observe an operation of your own
 
@@ -155,7 +155,7 @@ An operation you define becomes observable when it declares an observation recor
 
 `AnalyzedBy` attaches counters, durations and callbacks:
 
-<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-aspects{csharp}
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-analyzers{csharp}
 
 Pass everything in one `AnalyzedBy` call and apply budgets afterwards, because one call resolves every target against the same configuration. Later entries sit closer to the operator, so in the example the timing finishes before the observation callback runs. A clock shared by several traces of one call ticks once and before them. Each call places what it lists, so a clock shared across separate `AnalyzedBy` calls ticks twice. Counting updates after success; timing also records failed calls.
 
@@ -171,18 +171,16 @@ The run stops after two successful mutation invocations and `run.Result(mutation
 
 ### Select several configurations
 
-`Aspect.Create` pairs a pointcut with advice. Attach aspects with `algorithm.Advised(aspect)` or call `scope.AddAspect(aspect)` before direct resolution. To select several configurations, pair a pointcut with role advice:
+`Substitute` places a wrapper wherever a selection matches. Select by the type of the lambda's parameter to wrap every configuration of a role:
 
-<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-role-advice{csharp}
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-type-selection{csharp}
 
-Custom selection derives a small class:
+Pass a predicate before the replacement to select by properties:
 
-<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-custom-pointcut{csharp}
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-predicate-selection{csharp}
 
-Reference, type and custom pointcuts of the same configuration type combine with `And`/`&` and `Or`/`|`. Matching short-circuits from left to right. The pointcut sees configurations that resolution reaches, including those created later by a meta-algorithm.
+Apply either with `algorithm.Substitute(counting)` and read the counter through the run. A selection by type or predicate that matches nothing changes nothing, while a target given by reference must be held by the configuration. A selection reaches the configurations the graph declares, including a cycle's inner algorithms, but not those a delegate creates at run time.
 
-An aspect stores its pointcut/advice pairs in `Advices`. Within an aspect, earlier pairs wrap closer to the executor. Matching precedes reference deduplication, and the closest effective occurrence of an advice instance wins.
+Substitutions apply one after another, and a later one sits closer to the node it matches. Instrument results remain run-bound across child activations, while a wrapper of your own may intentionally retain caller-owned runtime dependencies. An observation's own numbers, such as `Iteration`, describe the call it observes.
 
-Child-scope advice wraps closer than inherited advice. A scope receives later added aspects closer to the executor. Instrument results remain run-bound across child activations, while raw advice may intentionally retain caller-owned runtime dependencies. An observation's own numbers, such as `Iteration`, describe the call it observes.
-
-Continue with [Writing custom advice](/guide/extending/writing-advice) for complete role-specific and general advice examples and run attachment.
+Continue with [Writing wrappers](/guide/extending/writing-wrappers) for complete typed and general wrapper examples and their placement.

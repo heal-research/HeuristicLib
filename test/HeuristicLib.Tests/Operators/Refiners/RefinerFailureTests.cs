@@ -58,13 +58,13 @@ public class RefinerFailureTests
     public void WhenARunFailsPartWay_InspectionKeepsWhatItRecordedBefore()
     {
         var problem = CreateProblem();
-        var counter = new CountAccumulator();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2) };
+        var run = algorithm.Counting(algorithm.Refiner, out var counter).CreateRun(problem, RandomNumberGenerator.Create(42));
 
-        Should.Throw<InvalidOperationException>(() => algorithm.Advised(Aspect.Create(Pointcut.Reference(algorithm.Refiner!), new CountingOperatorAdvice(counter, OperatorCountMetric.Invocations))).CreateRun(problem, RandomNumberGenerator.Create(42)).Complete(cancellationToken: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => run.Complete(cancellationToken: TestContext.Current.CancellationToken));
 
         // The two completed batches are counted; the failing one is not, because the counter increments on success.
-        counter.CurrentCount.ShouldBe(2);
+        run.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));

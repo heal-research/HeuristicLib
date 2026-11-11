@@ -268,9 +268,11 @@ public sealed class DynamicRacingResolutionTests
     }
 
     // Under an update policy that waits for iterations, only contenders that end their iterations on the problem let the
-    // race's epoch end, and the builder is where they are wrapped.
-    [Fact]
-    public async Task ContendersApplyingIterationUpdates_EndTheRacesEpoch()
+    // race's epoch end. Racing wraps its contenders itself, and a builder that wraps them too changes nothing.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Contenders_EndTheRacesEpochWhetherOrNotTheBuilderAppliesIterationUpdates(bool builderApplies)
     {
         using var problem = new EpochProblem(epochLength: 3, updatePolicy: UpdatePolicy.AfterEachIteration);
         var moves = 0;
@@ -287,7 +289,7 @@ public sealed class DynamicRacingResolutionTests
         var racing = new DynamicRacingAlgorithm<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>, IAlgorithm<int, PopulationState<int>>>(
             new MetaSpace(new BoundedRealVectorSearchSpace(1, 0, 1), new IntegerVectorSearchSpace(1, [0], [1])),
             new MetaCreator(), new MetaMutator(), new BestPopulationStateMerger<int>(),
-            _ => contender.ApplyingIterationUpdates(), _ => contender.Evaluator)
+            _ => builderApplies ? contender.ApplyingIterationUpdates() : contender, _ => contender.Evaluator)
         {
             NoRacers = 2,
             BurnInEpochs = 0,

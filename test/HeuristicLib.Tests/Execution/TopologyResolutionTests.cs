@@ -26,8 +26,7 @@ public sealed class TopologyResolutionTests
         Next(outer).ShouldBe(1);
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
-        var inner = Resolve(child, source);
+        var inner = Resolve(child, source.Substitute(leaf, mutator => new ObservingMutator(mutator, reports.Add)));
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(1);
         Next(outer).ShouldBe(2);
@@ -40,27 +39,24 @@ public sealed class TopologyResolutionTests
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public void CompositeTargetAdviceWrapsEachRequestAroundTheExecutorOfItsScope(bool chooseOne)
+    public void CompositeTargetWrapperWrapsTheOneExecutorOfItsScope(bool chooseOne)
     {
         var preparations = 0;
-        var wraps = 0;
         var leaf = new CountingLeaf(() => preparations++);
         IOperator<Mutation, RealVector> source = chooseOne ? new ChoosePerItem<Mutation, RealVector>([leaf]) : new PipelineMutator<RealVector>([leaf]);
-        var calls = new CountAccumulator();
+        var calls = new Counter();
+        var counted = source.Counted(calls);
         var root = ResolutionScope.Create();
-        root.AddAspect(Aspect.Create(Pointcut.Reference(source), new WrapCountingAdvice(calls, () => wraps++)));
-        var first = Resolve(root, source);
-        var second = Resolve(root, source);
-        first.ShouldNotBeSameAs(second);
+        var first = Resolve(root, counted);
+        var second = Resolve(root, counted);
+        first.ShouldBeSameAs(second);
         Next(first).ShouldBe(1);
         Next(second).ShouldBe(2);
         var reports = new List<double>();
         var child = root.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(source), new ObservingWrapperAdvice(reports.Add)));
-        Next(Resolve(child, source)).ShouldBe(1);
-        calls.CurrentCount.ShouldBe(3);
+        Next(Resolve(child, new ObservingMutator(counted, reports.Add))).ShouldBe(1);
+        root.Results.Result(calls).CurrentCount.ShouldBe(3);
         reports.ShouldBe([1]);
-        wraps.ShouldBe(3);
         preparations.ShouldBe(2);
     }
 
@@ -111,8 +107,7 @@ public sealed class TopologyResolutionTests
         Next(outer).ShouldBe(101);
 
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
-        var inner = Resolve(child, source);
+        var inner = Resolve(child, source.Substitute(leaf, mutator => new ObservingMutator(mutator, reports.Add)));
         inner.ShouldNotBeSameAs(outer);
         Next(inner).ShouldBe(101);
         reports.ShouldBe([1]);
@@ -137,13 +132,13 @@ public sealed class TopologyResolutionTests
         var parent = ResolutionScope.Create();
         var reports = new List<double>();
         var child = parent.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(reports.Add)));
-        var localLeaf = Resolve(child, leaf);
+        var observedLeaf = new ObservingMutator(leaf, reports.Add);
+        var localLeaf = Resolve(child, observedLeaf);
         Next(localLeaf).ShouldBe(1);
 
         var outer = Resolve(parent, source);
         Next(outer).ShouldBe(101);
-        var inner = Resolve(child, source);
+        var inner = Resolve(child, source.Substitute(leaf, _ => observedLeaf));
         Next(inner).ShouldBe(102);
         Next(outer).ShouldBe(202);
         Next(localLeaf).ShouldBe(3);
@@ -207,8 +202,7 @@ public sealed class TopologyResolutionTests
         var retry = ResolutionScope.Create();
         Next(Resolve(retry, source)).ShouldBe(101);
         var child = retry.CreateChildScope();
-        child.AddAspect(Aspect.Create(Pointcut.Reference(leaf), new ObservingWrapperAdvice(static _ => { })));
-        Next(Resolve(child, source)).ShouldBe(101);
+        Next(Resolve(child, source.Substitute(leaf, mutator => new ObservingMutator(mutator, static _ => { })))).ShouldBe(101);
         preparations.ShouldBe(3);
         childPreparations.ShouldBe(3);
         bindings.ShouldBe(3);
@@ -350,40 +344,26 @@ public sealed class TopologyResolutionTests
 
     }
 
-    private sealed class WrapCountingAdvice(CountAccumulator counter, Action wrapped) : OperatorAdvice<Mutation, RealVector>
+    // Reports the first coordinate of each successful call's first offspring.
+    private sealed record ObservingMutator : WrappingOperator<Mutation, RealVector>
     {
-        private readonly CountingOperatorAdvice<Mutation, RealVector> counting = new(counter, OperatorCountMetric.Invocations);
-
-        public override IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor,
-            OperationInfo operation,
-            IOperator<Mutation, RealVector> source)
+        public ObservingMutator(IOperator<Mutation, RealVector> childMutator, Action<double> report)
+            : base(childMutator)
         {
-            wrapped();
-            return counting.Wrap<TSearchSpace, TProblem, TSearchState>(executor, operation, source);
-        }
-    }
-
-    private sealed class ObservingWrapperAdvice : MutatorAdvice<RealVector>
-    {
-        private readonly Action<double> report;
-
-        public ObservingWrapperAdvice(Action<double> report)
-        {
-            this.report = report;
+            Report = report;
         }
 
-        protected override IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem>
-            Wrap<TRunSearchSpace, TRunProblem>(IMutationExecutor<RealVector, TRunSearchSpace, TRunProblem> executor,
-                IOperator<Mutation, RealVector> mutator) =>
-            new Executor<TRunSearchSpace, TRunProblem>(executor, report);
+        public Action<double> Report { get; init; }
+
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Report);
 
         private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
             : IMutationExecutor<RealVector, TSearchSpace, TProblem>
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            private int invocations;
-
             public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
             {
                 var result = child.Mutate(parents, random, searchSpace, problem);

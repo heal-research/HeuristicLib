@@ -26,7 +26,7 @@ Discuss architectural changes with the developer and obtain explicit acceptance 
 
 - adds, removes or reshapes a public or shared type, interface, base class, generic parameter, role or child slot;
 - moves a responsibility, dependency, or state ownership or lifetime across types, layers or packages;
-- changes a contract, or how execution, resolution or advice work;
+- changes a contract, or how execution, resolution or substitution work;
 - introduces a new pattern, wrapper, adapter, registry or execution mechanism.
 
 Routine changes that follow established patterns may proceed. Before editing code, state in one line whether the change is routine or architectural.
