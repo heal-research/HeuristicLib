@@ -1,6 +1,6 @@
 namespace HEAL.HeuristicLib.Execution;
 
-/// <summary>The results of one run: one per instrument, and the time the run's root algorithm has spent executing.</summary>
+/// <summary>The results of one run: one per instrument, and the time the run has spent advancing its algorithm.</summary>
 /// <remarks>
 /// <para>
 /// The root scope of a resolution tree owns the run's results, so direct resolution without an <c>AlgorithmRun</c> has
@@ -8,9 +8,10 @@ namespace HEAL.HeuristicLib.Execution;
 /// construction failure. Lookup is synchronized; each result defines how it may be read while the run writes to it.
 /// </para>
 /// <para>
-/// <see cref="Elapsed"/> counts the time spent inside the calls that advance the algorithm resolved at the root, outside
-/// any construction: pauses and the time a consumer spends between streamed states are excluded, and overlapping calls
-/// count once.
+/// <c>AlgorithmRun</c> measures each call advancing its retained iterator. <see cref="Elapsed"/> includes time inside an
+/// active call, also one that fails or is canceled. Executor construction before the first advance, pauses and
+/// consumer time between states are excluded. Deferred child construction during an advance is included.
+/// Direct scope execution leaves it at zero; use <c>algorithm.Timed(duration)</c> for explicit measurement there.
 /// </para>
 /// </remarks>
 public sealed class RunResults
@@ -19,7 +20,7 @@ public sealed class RunResults
     private readonly HashSet<Instrument> creating = new(ReferenceEqualityComparer.Instance);
     private readonly TimeProvider timeProvider;
     private readonly Lock elapsedSync = new();
-    private int activeCalls;
+    private bool active;
     private long activeSince;
     private TimeSpan elapsed;
 
@@ -43,13 +44,14 @@ public sealed class RunResults
     public TResult Result<TResult>(IConfigurationNode<TResult> configuration) where TResult : class, IRunResult =>
         Root!.RunResult(configuration);
 
-    /// <summary>The time the root algorithm has spent executing so far.</summary>
+    /// <summary>The time the run has spent advancing its algorithm, including the current call.</summary>
+    /// <remarks>Zero for direct scope execution without an <c>AlgorithmRun</c>.</remarks>
     public TimeSpan Elapsed
     {
         get
         {
             lock (elapsedSync)
-                return activeCalls == 0 ? elapsed : elapsed + timeProvider.GetElapsedTime(activeSince);
+                return active ? elapsed + timeProvider.GetElapsedTime(activeSince) : elapsed;
         }
     }
 
@@ -57,8 +59,8 @@ public sealed class RunResults
     {
         lock (elapsedSync)
         {
-            if (activeCalls++ == 0)
-                activeSince = timeProvider.GetTimestamp();
+            activeSince = timeProvider.GetTimestamp();
+            active = true;
         }
     }
 
@@ -66,8 +68,8 @@ public sealed class RunResults
     {
         lock (elapsedSync)
         {
-            if (--activeCalls == 0)
-                elapsed += timeProvider.GetElapsedTime(activeSince);
+            elapsed += timeProvider.GetElapsedTime(activeSince);
+            active = false;
         }
     }
 

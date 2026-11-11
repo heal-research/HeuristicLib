@@ -90,88 +90,139 @@ public sealed class RunResultsTests
         Should.Throw<InvalidOperationException>(() => Resolve(root, algorithm)).Message.ShouldContain("failed in this resolution scope tree");
     }
 
-    // Elapsed time counts the time inside the root algorithm's calls only, so the time before it starts and the time a
-    // consumer spends between states are excluded, and direct resolution without a run measures it too.
     [Fact]
-    public async Task Elapsed_CountsOnlyTheTimeInsideTheRootAlgorithm()
+    public async Task Elapsed_CountsOnlyCallsAdvancingTheRunIterator()
     {
         var time = new ManualTimeProvider();
-        var root = ResolutionScope.Create(time);
-        var executor = Resolve(root, new SteppingAlgorithm(time, Steps: 3));
+        var run = CreateRun(new SteppingAlgorithm(time, Steps: 3), time);
+        var results = run.Result(new ResultsInstrument());
         time.Advance(TimeSpan.FromSeconds(100));
+        results.Elapsed.ShouldBe(TimeSpan.Zero);
 
-        await using var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
-            .GetAsyncEnumerator(TestContext.Current.CancellationToken);
-        (await states.MoveNextAsync()).ShouldBeTrue();
-        root.Results.Elapsed.ShouldBe(TimeSpan.FromSeconds(1));
+        await using var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        results.Elapsed.ShouldBe(TimeSpan.Zero);
         time.Advance(TimeSpan.FromSeconds(100));
-        root.Results.Elapsed.ShouldBe(TimeSpan.FromSeconds(1));
+        (await states.MoveNextAsync()).ShouldBeTrue();
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(1));
+        time.Advance(TimeSpan.FromSeconds(100));
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(1));
         (await states.MoveNextAsync()).ShouldBeTrue();
         (await states.MoveNextAsync()).ShouldBeTrue();
         (await states.MoveNextAsync()).ShouldBeFalse();
 
-        root.Results.Elapsed.ShouldBe(TimeSpan.FromSeconds(3));
+        // The final call takes two seconds without yielding a state.
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
+        run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
+        time.Advance(TimeSpan.FromSeconds(100));
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
-    public async Task Elapsed_IsNotMeasuredBelowTheRoot()
+    public async Task DirectScopeExecution_LeavesElapsedAndElapsedClockAtZero()
     {
         var time = new ManualTimeProvider();
+        var algorithm = new SteppingAlgorithm(time, Steps: 2);
+        var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
+        var duration = new Duration(time);
         var root = ResolutionScope.Create(time);
+        var configured = algorithm.AnalyzedBy(steps).Timed(duration);
+        var executor = Resolve(root, configured);
+        Resolve(root, configured).ShouldBeSameAs(executor);
 
-        await Run(Resolve(root.CreateChildScope(), new SteppingAlgorithm(time, Steps: 2)));
+        await Run(executor);
 
         root.Results.Elapsed.ShouldBe(TimeSpan.Zero);
+        root.Results.Result(steps).By(Clock.Elapsed).Select(point => point.Time)
+            .ShouldBe([TimeSpan.Zero, TimeSpan.Zero]);
+        root.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(4));
     }
 
-    [Fact]
-    public async Task Elapsed_CountsOverlappingRootCallsOnce()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Elapsed_PauseAndCancellationExcludeTimeBeforeResume(bool cancel)
+    {
+        var time = new ManualTimeProvider();
+        var algorithm = new SteppingAlgorithm(time, Steps: 3);
+        var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
+        var run = CreateRun(algorithm.AnalyzedBy(steps), time);
+        var results = run.Result(new ResultsInstrument());
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        await using (var states = run.Stream(cancellationToken: cancellation.Token).GetAsyncEnumerator(TestContext.Current.CancellationToken))
+        {
+            (await states.MoveNextAsync()).ShouldBeTrue();
+            if (cancel)
+            {
+                await cancellation.CancelAsync();
+                time.Advance(TimeSpan.FromSeconds(100));
+                await Should.ThrowAsync<OperationCanceledException>(async () => await states.MoveNextAsync());
+            }
+        }
+
+        run.LifecycleState.ShouldBe(RunLifecycleState.Paused);
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(1));
+        time.Advance(TimeSpan.FromSeconds(100));
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(1));
+        var remaining = await run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToListAsync(TestContext.Current.CancellationToken);
+
+        remaining.Select(state => state.Population.EvaluatedCandidates.Single().Candidate).ShouldBe([2, 3]);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
+        run.Result(steps).By(Clock.Elapsed).Select(point => point.Time)
+            .ShouldBe([TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3)]);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Elapsed_StaysLiveDuringAnAwaitAndStopsAfterFailureOrTerminalCancellation(bool canceled)
     {
         var time = new ManualTimeProvider();
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var root = ResolutionScope.Create(time);
-        var algorithm = new GatedAlgorithm(gate.Task);
-        await using var first = Resolve(root, algorithm).RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
-            .GetAsyncEnumerator(TestContext.Current.CancellationToken);
-        await using var second = Resolve(root, algorithm).RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
-            .GetAsyncEnumerator(TestContext.Current.CancellationToken);
-
-        var firstMove = first.MoveNextAsync();
-        var secondMove = second.MoveNextAsync();
+        var run = CreateRun(new GatedAlgorithm(gate.Task), time);
+        var results = run.Result(new ResultsInstrument());
+        var readClock = Clock.Elapsed.Bind(results);
+        await using var states = run.StreamForTerminalCancellation(null, TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        var move = states.MoveNextAsync();
         time.Advance(TimeSpan.FromSeconds(5));
-        gate.SetResult();
-        (await firstMove).ShouldBeTrue();
-        (await secondMove).ShouldBeTrue();
 
-        root.Results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
+        readClock().ShouldBe(TimeSpan.FromSeconds(5));
+        Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException("Execution failed.");
+        gate.SetException(failure);
+        var thrown = await Record.ExceptionAsync(async () => await move);
+
+        thrown.ShouldBeSameAs(failure);
+        run.LifecycleState.ShouldBe(canceled ? RunLifecycleState.Canceled : RunLifecycleState.Failed);
+        time.Advance(TimeSpan.FromSeconds(100));
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
+        readClock().ShouldBe(TimeSpan.FromSeconds(5));
     }
 
-    // Measuring elapsed time at the root keeps the root executor's own controls reachable.
-    [Fact]
-    public async Task TheRootAlgorithmsControls_PassThroughTheElapsedTimeMeasurement()
-    {
-        var executor = Resolve(ResolutionScope.Create(), new ControlledAlgorithm());
-
-        ExecutorControls.Find<IStepControl>(executor).ShouldNotBeNull().Steps = 2;
-
-        (await Run(executor)).Count.ShouldBe(2);
-    }
-
-    // A trace reading the elapsed clock records the time of each state inside the call that produced it.
     [Fact]
     public async Task ElapsedClock_ReadsTheTimeOfEachObservation()
     {
         var time = new ManualTimeProvider();
         var algorithm = new SteppingAlgorithm(time, Steps: 3);
         var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
-        var root = ResolutionScope.Create(time);
-        var states = Resolve(root, algorithm.AnalyzedBy(steps)).RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
+        var run = CreateRun(algorithm.AnalyzedBy(steps), time);
 
-        await foreach (var _ in states)
+        await foreach (var _ in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
             time.Advance(TimeSpan.FromSeconds(10));
 
-        root.Results.Result(steps).By(Clock.Elapsed).Select(point => point.Time)
+        run.Result(steps).By(Clock.Elapsed).Select(point => point.Time)
             .ShouldBe([TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(3)]);
+    }
+
+    private static AlgorithmRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateRun(
+        IAlgorithm<int, PopulationState<int>> algorithm, TimeProvider time) =>
+        new(algorithm, Problem, RandomNumberGenerator.Create(1), time);
+
+    private sealed class ResultsInstrument : Instrument<RunResults>
+    {
+        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+
+        protected override RunResults CreateResult(RunResults results) => results;
     }
 
     private static IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Resolve(
@@ -313,8 +364,11 @@ public sealed class RunResultsTests
     private sealed record SteppingAlgorithm(ManualTimeProvider Time, int Steps) : Algorithm<SteppingAlgorithm, int, PopulationState<int>>
     {
         protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
-            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(Time, Steps);
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
+        {
+            Time.Advance(TimeSpan.FromSeconds(100));
+            return new Executor<TSearchSpace, TProblem>(Time, Steps);
+        }
 
         private sealed class Executor<TSearchSpace, TProblem>(ManualTimeProvider time, int steps)
             : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
@@ -329,6 +383,7 @@ public sealed class RunResultsTests
                     time.Advance(TimeSpan.FromSeconds(1));
                     yield return Population.From([step.ToEvaluated(new ObjectiveVector(step))]).ToPopulationState();
                 }
+                time.Advance(TimeSpan.FromSeconds(2));
                 await Task.CompletedTask;
             }
         }
@@ -351,34 +406,6 @@ public sealed class RunResultsTests
             {
                 await gate;
                 yield return Population.From([1.ToEvaluated(new ObjectiveVector(1))]).ToPopulationState();
-            }
-        }
-    }
-
-    private interface IStepControl
-    {
-        int Steps { get; set; }
-    }
-
-    // Yields as many states as its executor's control asks for.
-    private sealed record ControlledAlgorithm : Algorithm<ControlledAlgorithm, int, PopulationState<int>>
-    {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
-            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>();
-
-        private sealed class Executor<TSearchSpace, TProblem> : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>, IStepControl
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
-        {
-            public int Steps { get; set; } = 1;
-
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-            {
-                for (var step = 1; step <= Steps; step++)
-                    yield return Population.From([step.ToEvaluated(new ObjectiveVector(step))]).ToPopulationState();
-                await Task.CompletedTask;
             }
         }
     }

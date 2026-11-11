@@ -163,8 +163,7 @@ public class CycleAlgorithmTests
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
         var fresh = CycleAlgorithm.Create(algorithm) with { MaximumCycles = 2 };
         IAlgorithm<int, PopulationState<int>> cycle = shared ? fresh.Sharing(algorithm) : fresh;
-        // The root measures elapsed time around each request of its algorithm, so the one executor shows below the root.
-        var scope = ResolutionScope.Create().CreateChildScope();
+        var scope = ResolutionScope.Create();
         var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
         var concrete = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
         concrete.ShouldBeSameAs(general);

@@ -129,7 +129,13 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     public IRandomNumberGenerator Random { get; }
 
     public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
-        : base(ResolutionScope.Create(), algorithm)
+        : this(algorithm, problem, random, TimeProvider.System)
+    {
+    }
+
+    internal AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random,
+        TimeProvider timeProvider)
+        : base(ResolutionScope.Create(timeProvider), algorithm)
     {
         Algorithm = algorithm;
         Problem = problem;
@@ -165,7 +171,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                 throw new InvalidOperationException("An initial state can only be supplied when a run starts.");
             }
 
-            return new(Track(cancellationToken, cancellationTerminatesRun), cancellationToken);
+            return new(Track(execution, scope.Results, cancellationToken, cancellationTerminatesRun), cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -195,6 +201,8 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     }
 
     private async IAsyncEnumerable<TSearchState> Track(
+        IAsyncEnumerator<TSearchState> iterator,
+        RunResults results,
         CancellationToken streamCancellation,
         bool cancellationTerminatesRun,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken enumerationCancellation = default)
@@ -211,7 +219,15 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    hasNext = await execution!.MoveNextAsync();
+                    results.EnterCall();
+                    try
+                    {
+                        hasNext = await iterator.MoveNextAsync();
+                    }
+                    finally
+                    {
+                        results.ExitCall();
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -230,11 +246,10 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                 if (!hasNext)
                 {
                     ended = true;
-                    var completedExecution = execution;
                     execution = null;
                     try
                     {
-                        await completedExecution.DisposeAsync();
+                        await iterator.DisposeAsync();
                     }
                     catch
                     {
@@ -245,7 +260,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                     yield break;
                 }
 
-                yield return execution.Current;
+                yield return iterator.Current;
             }
         }
         finally

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -101,6 +102,42 @@ public static class SearchConfigurationValidation
             $"{ExecutionSignature.Name(configuration.GetType())} cannot run over {execution}:{Environment.NewLine}" +
             string.Join(Environment.NewLine, diagnostics.Select(diagnostic => $"  - {diagnostic}")));
     }
+
+    /// <summary>
+    /// Returns <paramref name="source"/> as an algorithm producing <typeparamref name="TSearchState"/>, or throws when it
+    /// does not produce that state or when it or a declared child does not support <paramref name="execution"/>.
+    /// </summary>
+    internal static IAlgorithm<TCandidate, TSearchState> RequireSupport<TCandidate, TSearchState>(IAlgorithm<TCandidate> source, ExecutionSignature execution)
+        where TSearchState : class, ISearchState
+    {
+        if (source is not IAlgorithm<TCandidate, TSearchState> algorithm)
+            throw new InvalidOperationException($"{ExecutionSignature.Name(source.GetType())} produces {ProducedSearchStates(source)}, " +
+                $"and cannot run producing {ExecutionSignature.Name(typeof(TSearchState))}.");
+        if (!execution.Supports(algorithm))
+            throw Mismatch(algorithm, execution);
+        return algorithm;
+    }
+
+    /// <summary>Throws when <paramref name="source"/> or a declared child does not support <paramref name="execution"/>.</summary>
+    /// <remarks>When the operator itself is written for the execution, a child is responsible, so the failure names the child.</remarks>
+    internal static void RequireSupport<TOperation, TCandidate>(IOperator<TOperation, TCandidate> source, ExecutionSignature execution)
+        where TOperation : IOperation<TOperation>
+    {
+        if (execution.Supports(source))
+            return;
+        if (source.Supports(execution))
+            throw Mismatch(source, execution);
+        throw ExecutionSignature.Mismatch(source,
+            source is Operator<TOperation, TCandidate> authored ? authored.SupportedExecutionDescription : "its declared signature",
+            execution.ToString());
+    }
+
+    // Reflection only to word the exception.
+    private static string ProducedSearchStates(IConfigurationNode source) =>
+        string.Join(" or ", source.GetType().GetInterfaces()
+            .Where(contract => contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IAlgorithm<,>))
+            .Select(contract => ExecutionSignature.Name(contract.GetGenericArguments()[1]))
+            .DefaultIfEmpty("no search state"));
 
     /// <summary>
     /// Reports the node and everything below it, returning the invariants already reported in this subtree.

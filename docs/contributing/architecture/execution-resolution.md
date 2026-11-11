@@ -60,7 +60,7 @@ The configuration states the order of wrappers: a wrapper written inside another
 
 Cycle resolves fresh children for every turn while forwarding search state. Sharing a child configuration on the Cycle, `cycle.Sharing(child)`, keeps one executor for that child across turns, including its private fields and children. A separately resolved Cycle has its own shared executors.
 
-Pipeline stages and dynamic racing contenders resolve fresh children through child scopes of their current scope. Every scope in the tree sees the same run results. Pause/resume continues the retained iterator and executors.
+Pipeline stages and dynamic racing contenders resolve fresh children through child scopes of their current scope. Every scope in the tree sees the same run results. Pause/resume continues the retained iterator and executors. `AlgorithmRun` measures each call advancing that iterator in `try`/`finally`. Executor construction before the first advance, pauses and consumer work between states are excluded. Deferred child construction during an advance, such as a fresh Cycle turn, is included. The resolver returns the executor itself and measures no elapsed time. Direct scope execution leaves `scope.Results.Elapsed` and `Clock.Elapsed` at zero; use `algorithm.Timed(duration)` for explicit measurement.
 
 ## Controls, failures and lifetime
 

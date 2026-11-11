@@ -109,16 +109,15 @@ public class AlgorithmAuthoringSpecs
 
     /// <summary>
     /// An algorithm builds its executor in the protected <c>CreateExecutor</c> hook, resolving the interceptor and other
-    /// children through the scope it receives. Callers resolve the algorithm through a scope; the root scope of a run also
-    /// measures the root algorithm's elapsed time around it, so below the root a request receives the hook's executor
-    /// itself.
+    /// children through the scope it receives. Callers resolve the algorithm through a scope and receive the hook's
+    /// executor itself.
     /// </summary>
     [Fact]
     public void Algorithm_ResolvesThroughTheScopeToTheExecutorItsHookBuilds()
     {
         var algorithm = new SingleCreateAlgorithm { Creator = new CountingCreator() };
 
-        var executor = ResolutionScope.Create().CreateChildScope()
+        var executor = ResolutionScope.Create()
             .Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(algorithm);
 
         executor.ShouldBeAssignableTo<IterativeAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>>();

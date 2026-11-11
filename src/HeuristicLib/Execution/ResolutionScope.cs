@@ -32,7 +32,7 @@ public partial class ResolutionScope
     /// <summary>Creates the root of a new scope tree, with the results of a new run.</summary>
     public static ResolutionScope Create() => Create(TimeProvider.System);
 
-    // The time provider measures the root algorithm's elapsed time; tests pass a controllable one.
+    // AlgorithmRun uses this provider for elapsed time; direct scope execution does not start measurement.
     internal static ResolutionScope Create(TimeProvider timeProvider)
     {
         var results = new RunResults(timeProvider);
@@ -229,9 +229,6 @@ public partial class ResolutionScope
         public Lock Sync => Results.Sync;
         public RunResults Results { get; } = results;
         public bool Failed => failure is not null;
-
-        // Called while the lock is held: whether the configuration just entered is the only one under construction.
-        public bool EnteredOutsideConstruction => constructing.Count == 1;
 
         public void ThrowIfFailed()
         {

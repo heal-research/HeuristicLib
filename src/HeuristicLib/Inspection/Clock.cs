@@ -46,10 +46,12 @@ public abstract class Clock<TTime, TResult> : Instrument<TResult>, IClock<TTime>
 /// </remarks>
 public static class Clock
 {
-    /// <summary>The time the run's root algorithm has spent executing, read from <see cref="RunResults.Elapsed"/>.</summary>
+    /// <summary>The time the run has spent advancing its algorithm, read from <see cref="RunResults.Elapsed"/>.</summary>
     /// <remarks>
-    /// Like a stopwatch, it stops while the run is paused and while a consumer handles a streamed state. It needs no
-    /// placement, so attaching it does nothing.
+    /// It includes the current call advancing the run's iterator, including deferred child construction during that
+    /// advance. Executor construction before the first advance, pauses and consumer time between states are excluded.
+    /// Direct scope execution leaves it at zero; use <c>algorithm.Timed(duration)</c> for explicit measurement there.
+    /// It needs no placement, so attaching it does nothing.
     /// </remarks>
     public static IClock<TimeSpan> Elapsed { get; } = new ElapsedClock();
 

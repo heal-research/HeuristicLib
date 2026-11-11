@@ -33,7 +33,7 @@ Ready-made traces are extensions on sources, such as `evaluator.Invocations` or 
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-boundary-and-clock{csharp}
 
-A clock gives each recorded entry its time. `algorithm.Iterations.Count()` counts yielded states, `algorithm.Calls.Count()` counts started calls, and `source.Invocations.Count()` or `CountCandidates()` counts successful operator calls or their candidate work. `Clock.Elapsed` measures time spent advancing the root algorithm, excluding pauses and consumer work. Counts accumulate across fresh executor activations within one run.
+A clock gives each recorded entry its time. `algorithm.Iterations.Count()` counts yielded states, `algorithm.Calls.Count()` counts started calls, and `source.Invocations.Count()` or `CountCandidates()` counts successful operator calls or their candidate work. `Clock.Elapsed` reads the time a run spends advancing its algorithm, including a call in progress. Executor construction before the first advance, pauses and consumer work are excluded. Deferred child construction during an advance, such as a fresh Cycle turn, is included. Direct scope execution leaves it and `scope.Results.Elapsed` at zero; use `algorithm.Timed(duration)` for explicit measurement there. Counts accumulate across fresh executor activations within one run.
 
 Several traces may share the same clock in one run. One `AnalyzedBy` call places it once. Use that same clock object to project the trace; constructing another clock does not identify the original axis.
 
