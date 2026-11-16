@@ -98,8 +98,8 @@ public sealed class AlpsMutationCompositionTests
     };
 
     private static ValueTask<AlpsState<int>[]> States(ResolutionScope scope, IAlgorithm<int, AlpsState<int>> algorithm) =>
-        scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, AlpsState<int>>(algorithm)
-            .RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
+        scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, AlpsState<int>>(algorithm, Problem)
+            .RunStreamingAsync(RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
             .ToArrayAsync(TestContext.Current.CancellationToken);
 
     private sealed record ConstantCreator : SingleCandidateCreator<int>

@@ -37,12 +37,12 @@ public class MoveResolutionTests
 
         int Next(ResolutionScope scope) => source switch
         {
-            IOperator<MoveCreation<int>, int> creator => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(creator)
-                .Moves(0, Random, SearchSpace, Problem).Single(),
-            IOperator<MoveApplication<int>, int> applier => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(applier)
-                .Apply(0, 0, Random, SearchSpace, Problem),
-            IOperator<MoveEvaluation<int>, int> evaluator => (int)scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator)
-                .Evaluate(new ObjectiveVector(0), 0, 0, Random, SearchSpace, Problem)[0],
+            IOperator<MoveCreation<int>, int> creator => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(creator, Problem)
+                .Moves(0, Random).Single(),
+            IOperator<MoveApplication<int>, int> applier => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(applier, Problem)
+                .Apply(0, 0, Random),
+            IOperator<MoveEvaluation<int>, int> evaluator => (int)scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator, Problem)
+                .Evaluate(new ObjectiveVector(0), 0, 0, Random)[0],
             _ => throw new InvalidOperationException()
         };
     }
@@ -55,10 +55,10 @@ public class MoveResolutionTests
         var candidates = new Counter();
         var scope = ResolutionScope.Create();
         var executor = scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(
-            evaluator.Counted(candidates, OperatorCountMetric.Candidates));
+            evaluator.Counted(candidates, OperatorCountMetric.Candidates), Problem);
 
-        executor.Evaluate(new ObjectiveVector(0), 0, 0, Random, SearchSpace, Problem);
-        executor.Evaluate(new ObjectiveVector(0), 0, 1, Random, SearchSpace, Problem);
+        executor.Evaluate(new ObjectiveVector(0), 0, 0, Random);
+        executor.Evaluate(new ObjectiveVector(0), 0, 1, Random);
 
         scope.Results.Result(candidates).CurrentCount.ShouldBe(2);
     }
@@ -71,18 +71,18 @@ public class MoveResolutionTests
     private sealed record CountingCreator(Preparations Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
 
-        protected override IMoveCreationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
+        protected override IMoveCreationExecutor<int, int> CreateExecutor<TRunSearchState>(ResolutionScope<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, TRunSearchState> scope)
         {
             Preparations.Value++;
             return new Executor();
         }
 
         private sealed class Executor
-            : IMoveCreationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+            : IMoveCreationExecutor<int, int>
         {
             private int value;
 
-            public IEnumerable<int> Moves(int candidate, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem)
+            public IEnumerable<int> Moves(int candidate, IRandomNumberGenerator random)
             {
                 yield return ++value;
             }
@@ -92,38 +92,38 @@ public class MoveResolutionTests
     private sealed record CountingApplier(Preparations Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
 
-        protected override IMoveApplicationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
+        protected override IMoveApplicationExecutor<int, int> CreateExecutor<TRunSearchState>(ResolutionScope<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, TRunSearchState> scope)
         {
             Preparations.Value++;
             return new Executor();
         }
 
         private sealed class Executor
-            : IMoveApplicationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+            : IMoveApplicationExecutor<int, int>
         {
             private int value;
 
-            public int Apply(int candidate, int move, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => ++value;
+            public int Apply(int candidate, int move, IRandomNumberGenerator random) => ++value;
         }
     }
 
     private sealed record CountingEvaluator(Preparations Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
     {
 
-        protected override IMoveEvaluationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int> CreateExecutor(ResolutionScope scope)
+        protected override IMoveEvaluationExecutor<int, int> CreateExecutor<TRunSearchState>(ResolutionScope<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, TRunSearchState> scope)
         {
             Preparations.Value++;
             return new Executor();
         }
 
         private sealed class Executor
-            : IMoveEvaluationExecutor<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+            : IMoveEvaluationExecutor<int, int>
         {
             private int value;
 
-            public ObjectiveVector Evaluate(ObjectiveVector oldQuality, int candidate, int move, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => new(++value);
+            public ObjectiveVector Evaluate(ObjectiveVector oldQuality, int candidate, int move, IRandomNumberGenerator random) => new(++value);
 
-            public ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random, UnrestrictedSearchSpace<int> searchSpace, IProblem<int, UnrestrictedSearchSpace<int>> problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
+            public ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
         }
     }
 }

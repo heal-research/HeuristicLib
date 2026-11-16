@@ -65,11 +65,11 @@ public class ChildResolutionCodeFixTests
             file sealed record RecursiveLeaf : HEAL.HeuristicLib.Operators.Mutators.Mutator<int>
             {
                 public required RecursiveLeaf Child { get; init; }
-                protected override IMutationExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) =>
+                protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) =>
                     Child.CreateExecutor(scope);
             }
             """);
-        fixedSource.Replace(" ", "").ShouldContain("scope.Resolve<int,SS,P>(Child)");
+        fixedSource.Replace(" ", "").ShouldContain("scope.Resolve(Child)");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
@@ -80,12 +80,12 @@ public class ChildResolutionCodeFixTests
             file sealed record BypassingTerminator : HEAL.HeuristicLib.Operators.Terminators.Terminator<int, SS, P, PopulationState<int>>
             {
                 public required BypassingTerminator Child { get; init; }
-                protected override ITerminationExecutor<int, SS, P, PopulationState<int>> CreateExecutor(ResolutionScope scope) =>
+                protected override ITerminationExecutor<PopulationState<int>> CreateExecutor(ResolutionScope<int, SS, P, PopulationState<int>> scope) =>
                     Child.CreateExecutor(scope);
             }
             """);
 
-        fixedSource.Replace(" ", "").ShouldContain("scope.Resolve<int,SS,P,PopulationState<int>>(Child)");
+        fixedSource.Replace(" ", "").ShouldContain("scope.Resolve(Child)");
         await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
@@ -114,7 +114,7 @@ public class ChildResolutionCodeFixTests
             file sealed record BypassingAlgorithm : {{algorithmBase}}
             {
                 public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
-                protected override IAlgorithmExecutor<int, {{runTypes}}, PopulationState<int>> CreateExecutor{{hookParameters}}(ResolutionScope<int, {{runTypes}}, PopulationState<int>> scope) =>
+                protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor{{hookParameters}}(ResolutionScope<int, {{runTypes}}, PopulationState<int>> scope) =>
                     Child.CreateExecutor(scope);
             }
             """);

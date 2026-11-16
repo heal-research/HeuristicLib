@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>Base for an operation's wrapping executor, which passes each call of the executor it wraps to an invocation wrapper.</summary>
 /// <remarks>
-/// An operation's <see cref="IOperation{TSelf}.Wrap{TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper}"/> returns
+/// An operation's <see cref="IOperation{TSelf}.Wrap{TCandidate, TSearchState, TWrapper}"/> returns
 /// a sealed class that derives from this base and implements the operation's executor interface. Its named method, such
 /// as Mutate, passes each call to <see cref="Wrapper"/> as the operation's invocation over <see cref="Executor"/>. The
 /// base forwards the wrapped executor's controls, unless the wrapper implements <see cref="IExecutorControlProvider"/>

@@ -31,15 +31,15 @@ public class MoveRoleResolutionTests
         var (creations, applications, evaluations) = (new Counter(), new Counter(), new Counter());
         var root = ResolutionScope.Create();
         var scope = root
-            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
         var random = RandomNumberGenerator.Create(1);
         var candidate = new RealVector(0.0, 0.0);
 
-        var move = scope.Resolve(neighborhood.MoveCreator.Counted(creations)).Moves(candidate, random, SearchSpace, problem).First();
-        scope.Resolve(neighborhood.MoveApplier.Counted(applications)).Apply(candidate, move, random, SearchSpace, problem);
+        var move = scope.Resolve(neighborhood.MoveCreator.Counted(creations)).Moves(candidate, random).First();
+        scope.Resolve(neighborhood.MoveApplier.Counted(applications)).Apply(candidate, move, random);
         var evaluator = scope.Resolve(neighborhood.MoveEvaluator.Counted(evaluations));
-        evaluator.Evaluate(new ObjectiveVector(0.0), candidate, move, random, SearchSpace, problem);
-        evaluator.Evaluate(candidate, random, SearchSpace, problem);
+        evaluator.Evaluate(new ObjectiveVector(0.0), candidate, move, random);
+        evaluator.Evaluate(candidate, random);
 
         neighborhood.MoveEvaluator.ShouldBeSameAs(neighborhood);
         (root.Results.Result(creations).CurrentCount, root.Results.Result(applications).CurrentCount, root.Results.Result(evaluations).CurrentCount)
@@ -65,15 +65,15 @@ public class MoveRoleResolutionTests
             .Counting(neighborhood.MoveApplier, out var applications)
             .Counting(neighborhood.MoveEvaluator, out var evaluations);
         var root = ResolutionScope.Create();
-        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
         var random = RandomNumberGenerator.Create(1);
         var candidate = new RealVector(0.0, 0.0);
 
-        var move = scope.Resolve(counted.Creator).Moves(candidate, random, SearchSpace, problem).First();
-        scope.Resolve(counted.Applier).Apply(candidate, move, random, SearchSpace, problem);
+        var move = scope.Resolve(counted.Creator).Moves(candidate, random).First();
+        scope.Resolve(counted.Applier).Apply(candidate, move, random);
         var evaluator = scope.Resolve(counted.Evaluator);
-        evaluator.Evaluate(new ObjectiveVector(0.0), candidate, move, random, SearchSpace, problem);
-        evaluator.Evaluate(candidate, random, SearchSpace, problem);
+        evaluator.Evaluate(new ObjectiveVector(0.0), candidate, move, random);
+        evaluator.Evaluate(candidate, random);
 
         (root.Results.Result(creations).CurrentCount, root.Results.Result(applications).CurrentCount, root.Results.Result(evaluations).CurrentCount).ShouldBe((1, 1, 2));
     }
@@ -99,7 +99,7 @@ public class MoveRoleResolutionTests
     public void BoundMoveOperators_ResolveOverTheirOwnSearchSpaceAndProblem()
     {
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
-        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(new TestFunctionProblem(new HEAL.HeuristicLib.Problems.TestFunctions.SphereFunction(1)));
 
         scope.Resolve(neighborhood.MoveCreator).ShouldNotBeNull();
         scope.Resolve(neighborhood.MoveApplier).ShouldNotBeNull();
@@ -111,7 +111,7 @@ public class MoveRoleResolutionTests
     {
         INeighborhood<RealVector, int> neighborhood = new ShiftNeighborhood();
         var scope = ResolutionScope.Create()
-            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
+            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(new TestFunctionProblem(new HEAL.HeuristicLib.Problems.TestFunctions.SphereFunction(1)));
 
         scope.TryResolve(neighborhood.MoveCreator, out _, out var reason).ShouldBeFalse();
         reason.ShouldContain(nameof(ShiftNeighborhood));
@@ -124,16 +124,16 @@ public class MoveRoleResolutionTests
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 2));
         var neighborhood = new ShiftNeighborhood();
-        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
         var creator = scope.Resolve(((INeighborhood<RealVector, int>)neighborhood).MoveCreator);
         var applier = scope.Resolve(((INeighborhood<RealVector, int>)neighborhood).MoveApplier);
         var random = RandomNumberGenerator.Create(1);
 
         var candidate = new RealVector(0.0, 0.0);
-        var moves = creator.Moves(candidate, random, SearchSpace, problem).ToList();
+        var moves = creator.Moves(candidate, random).ToList();
 
         moves.ShouldBe([0, 1]);
-        applier.Apply(candidate, 1, random, SearchSpace, problem).ShouldBe(new RealVector(0.0, 0.5));
+        applier.Apply(candidate, 1, random).ShouldBe(new RealVector(0.0, 0.5));
     }
 
     /// <summary>Written for one search space and problem; a move is the index to shift.</summary>

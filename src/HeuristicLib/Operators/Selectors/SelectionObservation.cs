@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -23,20 +24,19 @@ public sealed record SelectionObservation<TCandidate>(
     : IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Selection, TCandidate> source, Action<SelectionObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((ISelectionExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Selection, TCandidate> source, Action<SelectionObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((ISelectionExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Selection, TCandidate> selector, Action<SelectionObservation<TCandidate>> observe)
-        : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate> executor,
+        IOperator<Selection, TCandidate> selector, Action<SelectionObservation<TCandidate>> observe, TProblem problem)
+        : SelectionExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective,
-            int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
-            var selected = executor.Select(population, objective, count, random, searchSpace, problem);
-            observe(new SelectionObservation<TCandidate>(selector, population, objective, count, selected, searchSpace, problem));
+            var selected = executor.Select(population, objective, count, random);
+            observe(new SelectionObservation<TCandidate>(selector, population, objective, count, selected, SearchSpace, Problem));
             return selected;
         }
 

@@ -16,21 +16,19 @@ public sealed record PipelineMutator<TCandidate> : MultiOperator<Mutation, TCand
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        ImmutableArray<IMutationExecutor<TCandidate, TRunSearchSpace, TRunProblem>> childMutators = [.. ChildOperators.Select(child => scope.Resolve(child))];
-        return new Executor<TRunSearchSpace, TRunProblem>(childMutators);
+        ImmutableArray<IMutationExecutor<TCandidate>> childMutators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor(childMutators);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> childMutators)
-        : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ImmutableArray<IMutationExecutor<TCandidate>> childMutators)
+        : MutationExecutor<TCandidate>
     {
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
             var current = parents;
             foreach (var mutator in childMutators)
             {
-                current = mutator.Mutate(current, random, searchSpace, problem);
+                current = mutator.Mutate(current, random);
             }
 
             return current;

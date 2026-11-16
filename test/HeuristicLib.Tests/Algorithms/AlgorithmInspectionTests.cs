@@ -22,10 +22,10 @@ public sealed class AlgorithmInspectionTests
         var scope = ResolutionScope.Create();
         var analyzed = new CountingCompletions(algorithm.AnalyzedBy(algorithm.Iterations.Observing(observation => observed.Add(observation.Algorithm))), completions);
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>().Resolve(analyzed.Timed(duration));
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(problem).Resolve(analyzed.Timed(duration));
         var count = scope.Results.Result(completions);
         var measured = scope.Results.Result(duration);
-        await using var iterator = executor.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
+        await using var iterator = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         (await iterator.MoveNextAsync()).ShouldBeTrue();
@@ -59,17 +59,14 @@ public sealed class AlgorithmInspectionTests
 
     private sealed record ProbeAlgorithm(ManualTimeProvider Time, bool Fail) : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(Time, Fail);
+            new Executor(Time, Fail);
 
-        private sealed class Executor<TSearchSpace, TProblem>(ManualTimeProvider time, bool fail)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ManualTimeProvider time, bool fail)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 time.Advance(2);
                 yield return Population.From([1.ToEvaluated(1)]).ToPopulationState();
@@ -86,24 +83,21 @@ public sealed class AlgorithmInspectionTests
     private sealed record CountingCompletions(IAlgorithm<int, PopulationState<int>> Child, Counter Completions)
         : WrappingAlgorithm<int, PopulationState<int>>(Child)
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             var completions = scope.Resolve(Completions);
             var child = scope.Resolve(ChildAlgorithm);
-            return new Executor<TSearchSpace, TProblem>(child, completions);
+            return new Executor(child, completions);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(
-            IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> child, CountAccumulator completions)
-            : WrappingAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>(child)
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(
+            IAlgorithmExecutor<PopulationState<int>> child, CountAccumulator completions)
+            : WrappingAlgorithmExecutor<PopulationState<int>>(child)
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
-                await foreach (var state in ChildAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
+                await foreach (var state in ChildAlgorithm.RunStreamingAsync(random, initialState, ct))
                     yield return state;
                 completions.IncrementBy(1);
             }

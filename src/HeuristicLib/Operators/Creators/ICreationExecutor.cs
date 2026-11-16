@@ -7,53 +7,50 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ICreationExecutor<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public interface ICreationExecutor<TCandidate> : IOperatorExecutor
 {
-    IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
 }
 
 public static class CreationOperationResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IOperator<Creation, TCandidate> source)
+        public ICreationExecutor<TCandidate> Resolve<TCandidate, TSearchSpace, TProblem>(IOperator<Creation, TCandidate> source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().Resolve(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).Resolve(source);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IOperator<Creation, TCandidate>? source)
+        public ICreationExecutor<TCandidate>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IOperator<Creation, TCandidate>? source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().ResolveOptional(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).ResolveOptional(source);
 
-        public bool TryResolve<TCandidate, TSearchSpace, TProblem>(IOperator<Creation, TCandidate> source,
-            [NotNullWhen(true)] out ICreationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
+        public bool TryResolve<TCandidate, TSearchSpace, TProblem>(IOperator<Creation, TCandidate> source, TProblem problem,
+            [NotNullWhen(true)] out ICreationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().TryResolve(source, out executor, out reason);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).TryResolve(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Creation, TCandidate> source) =>
-            (ICreationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+        public ICreationExecutor<TCandidate> Resolve(IOperator<Creation, TCandidate> source) =>
+            (ICreationExecutor<TCandidate>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Creation, TCandidate> source, out TControl? control)
+        public ICreationExecutor<TCandidate> Resolve<TControl>(IOperator<Creation, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (ICreationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            var executor = (ICreationExecutor<TCandidate>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Creation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public ICreationExecutor<TCandidate>? ResolveOptional(IOperator<Creation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Creation, TCandidate> source,
-            [NotNullWhen(true)] out ICreationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out ICreationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 
@@ -62,22 +59,22 @@ public static class CreationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
     {
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Creation, TCandidate> source) =>
-            (ICreationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        public ICreationExecutor<TCandidate> Resolve(IOperator<Creation, TCandidate> source) =>
+            (ICreationExecutor<TCandidate>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
 
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Creation, TCandidate> source, out TControl? control)
+        public ICreationExecutor<TCandidate> Resolve<TControl>(IOperator<Creation, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (ICreationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            var executor = (ICreationExecutor<TCandidate>)scope.ResolveOperator<Creation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public ICreationExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Creation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public ICreationExecutor<TCandidate>? ResolveOptional(IOperator<Creation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Creation, TCandidate> source,
-            [NotNullWhen(true)] out ICreationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out ICreationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 }

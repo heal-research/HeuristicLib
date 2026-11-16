@@ -5,18 +5,18 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
-/// <remarks>
-/// A move applier that carries no mutable execution data is its own executor, so it needs no separate instance
-/// type. The type arguments are still the search space and problem it is written for, and a run it was not written
-/// for is reported when the execution graph is built.
-/// </remarks>
+/// <summary>A stateless move operator whose executor retains its bound problem.</summary>
 public abstract record StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, TMove>
-    : Operator<MoveApplication<TMove>, TCandidate, TSearchSpace, TProblem, IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>,
-      IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveApplication<TMove>, TCandidate, TSearchSpace, TProblem, IMoveApplicationExecutor<TCandidate, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove> CreateExecutor(ResolutionScope scope) => this;
+    protected sealed override IMoveApplicationExecutor<TCandidate, TMove> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, TMove> configuration, TProblem problem) : IMoveApplicationExecutor<TCandidate, TMove>
+    {
+        public TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random) => configuration.Apply(candidate, move, random, problem.SearchSpace, problem);
+    }
 }

@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -21,19 +22,19 @@ public sealed record EvaluationObservation<TCandidate>(
     : IInvocationObservation<Evaluation, TCandidate, EvaluationObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Evaluation, TCandidate, EvaluationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Evaluation, TCandidate> source, Action<EvaluationObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Evaluation, TCandidate> source, Action<EvaluationObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((IEvaluationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Evaluation, TCandidate> evaluator, Action<EvaluationObservation<TCandidate>> observe)
-        : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate> executor,
+        IOperator<Evaluation, TCandidate> evaluator, Action<EvaluationObservation<TCandidate>> observe, TProblem problem)
+        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            var objectiveVectors = executor.Evaluate(candidates, random, searchSpace, problem);
-            observe(new EvaluationObservation<TCandidate>(evaluator, candidates, objectiveVectors, searchSpace, problem));
+            var objectiveVectors = executor.Evaluate(candidates, random);
+            observe(new EvaluationObservation<TCandidate>(evaluator, candidates, objectiveVectors, SearchSpace, Problem));
             return objectiveVectors;
         }
 

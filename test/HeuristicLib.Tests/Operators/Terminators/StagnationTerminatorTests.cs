@@ -9,24 +9,24 @@ public class StagnationTerminatorTests
     public void TerminatesWhenConsecutiveNonImprovingStatesReachThreshold()
     {
         var problem = CreateProblem();
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2), problem);
 
-        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
     public void StrictImprovementResetsConsecutiveNonImprovingStateCount()
     {
         var problem = CreateProblem();
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, stagnationThreshold: 2), problem);
 
-        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Theory]
@@ -35,9 +35,9 @@ public class StagnationTerminatorTests
     public void NonPositiveThresholdTerminatesOnFirstCheckedProducedState(int threshold)
     {
         var problem = CreateProblem();
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, threshold));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(StagnationTerminator.For(problem, threshold), problem);
 
-        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(3), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

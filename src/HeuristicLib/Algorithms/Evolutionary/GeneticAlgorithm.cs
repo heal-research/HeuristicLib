@@ -86,61 +86,61 @@ public record GeneticAlgorithm<TCandidate>
         var terminator = scope.ResolveOptional(Terminator);
         var refiner = scope.ResolveOptional(Refiner);
         return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, terminator, refiner,
-            PopulationSize, MaximumGenerations, Elites, MutationRate);
+            PopulationSize, MaximumGenerations, Elites, MutationRate, scope.Problem);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selector,
-        ITerminationExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? terminator,
-        IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? refiner,
+        IInterceptionExecutor<PopulationState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate> evaluator,
+        ICreationExecutor<TCandidate> creator,
+        ICrossoverExecutor<TCandidate> crossover,
+        IMutationExecutor<TCandidate> mutator,
+        ISelectionExecutor<TCandidate> selector,
+        ITerminationExecutor<PopulationState<TCandidate>>? terminator,
+        IRefinementExecutor<TCandidate>? refiner,
         int populationSize,
         int? maximumGenerations,
         int elites,
-        double mutationRate)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        double mutationRate, TProblem problem)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private readonly WeightedRouter<IMutationExecutor<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
+        private readonly WeightedRouter<IMutationExecutor<TCandidate>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
 
-        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
+        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
-        protected override bool IsTerminalState(PopulationState<TCandidate> state, int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random) =>
-            terminator?.IsTerminalState(state, random, problem.SearchSpace, problem) == true;
+        protected override bool IsTerminalState(PopulationState<TCandidate> state, int yieldedStateCount, PopulationState<TCandidate>? previousState, IRandomNumberGenerator random) =>
+            terminator?.IsTerminalState(state, random) == true;
 
-        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, IRandomNumberGenerator random)
         {
             if (previousState is null)
             {
-                var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialSolutions = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialSolutions = refiner.Refine(initialSolutions, random, problem.SearchSpace, problem);
+                    initialSolutions = refiner.Refine(initialSolutions, random);
                 }
 
-                var initialObjectiveVectors = evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem);
+                var initialObjectiveVectors = evaluator.Evaluate(initialSolutions, random);
                 return Population.From(initialSolutions.ToEvaluated(initialObjectiveVectors)).ToPopulationState();
             }
 
             var oldPopulation = previousState.Population.EvaluatedCandidates;
             var parentCount = populationSize * 2;
-            var parents = selector.Select(oldPopulation, problem.Objective, parentCount, random, problem.SearchSpace, problem).Select(x => x.Candidate).ToList();
-            var offspring = crossover.Cross(parents.ToParentPairs(), random, problem.SearchSpace, problem);
+            var parents = selector.Select(oldPopulation, Problem.Objective, parentCount, random).Select(x => x.Candidate).ToList();
+            var offspring = crossover.Cross(parents.ToParentPairs(), random);
             offspring = mutationRouter.Route(offspring, random, (selected, batch) =>
-                selected is null ? batch : selected.Mutate(batch, random, problem.SearchSpace, problem));
+                selected is null ? batch : selected.Mutate(batch, random));
             if (refiner is not null)
             {
-                offspring = refiner.Refine(offspring, random, problem.SearchSpace, problem);
+                offspring = refiner.Refine(offspring, random);
             }
 
-            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random, problem.SearchSpace, problem));
-            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, populationSize, elites);
+            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random));
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, Problem.Objective, populationSize, elites);
             return Population.From(newPopulation).ToPopulationState();
         }
     }

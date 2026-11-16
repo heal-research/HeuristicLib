@@ -11,7 +11,7 @@ namespace HEAL.HeuristicLib.Operators.Evaluators;
 /// Use <see cref="StatelessEvaluator{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
 /// </remarks>
 public abstract record Evaluator<TCandidate, TSearchSpace, TProblem>
-    : Operator<Evaluation, TCandidate, TSearchSpace, TProblem, IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>>
+    : Operator<Evaluation, TCandidate, TSearchSpace, TProblem, IEvaluationExecutor<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
@@ -23,28 +23,38 @@ public abstract record Evaluator<TCandidate>
     : Evaluator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
 public abstract class EvaluationExecutor<TCandidate, TSearchSpace, TProblem>
-    : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
+    : IEvaluationExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected TProblem Problem { get; }
+    protected TSearchSpace SearchSpace { get; }
+
+    protected EvaluationExecutor(TProblem problem)
+    {
+        Problem = problem;
+        SearchSpace = problem.SearchSpace;
+    }
+
+    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }
 
 public abstract class EvaluationExecutor<TCandidate, TSearchSpace>
-    : IEvaluationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    : IEvaluationExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected TSearchSpace SearchSpace { get; }
 
-    IReadOnlyList<ObjectiveVector> IEvaluationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Evaluate(candidates, random, searchSpace);
+    protected EvaluationExecutor(TSearchSpace searchSpace)
+    {
+        SearchSpace = searchSpace;
+    }
+
+    public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }
 
 public abstract class EvaluationExecutor<TCandidate>
-    : IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    : IEvaluationExecutor<TCandidate>
 {
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
-
-    IReadOnlyList<ObjectiveVector> IEvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Evaluate(candidates, random);
 }

@@ -25,20 +25,19 @@ public class ObservationResolutionTests
         var parentObservations = new List<AlgorithmObservation<int, PopulationState<int>>>();
         var observed = algorithm.AnalyzedBy(algorithm.Iterations.Observing(parentObservations.Add));
         var root = ResolutionScope.Create();
-        var original = root.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed);
+        var original = root.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed, problem);
         var parentInitial = CreateState(1);
-        await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), parentInitial,
-            TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
+        await using var paused = original.RunStreamingAsync(RandomNumberGenerator.Create(1), parentInitial, TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var parentFirst = paused.Current;
 
         // A child scope builds its own executors for the same graph, observation wrapper included.
         var child = root.CreateChildScope();
-        var rebound = child.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed);
+        var rebound = child.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed, problem);
         rebound.ShouldNotBeSameAs(original);
         var childInitial = CreateState(10);
         var childStates = new List<PopulationState<int>>();
-        await foreach (var state in rebound.RunStreamingAsync(problem, RandomNumberGenerator.Create(2), childInitial, TestContext.Current.CancellationToken))
+        await foreach (var state in rebound.RunStreamingAsync(RandomNumberGenerator.Create(2), childInitial, TestContext.Current.CancellationToken))
             childStates.Add(state);
 
         (await paused.MoveNextAsync()).ShouldBeTrue();
@@ -55,8 +54,8 @@ public class ObservationResolutionTests
         // A separate root selects a separate execution for the same configuration.
         var independent = ResolutionScope.Create();
         var independentStates = new List<PopulationState<int>>();
-        await foreach (var state in independent.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed)
-            .RunStreamingAsync(problem, RandomNumberGenerator.Create(3), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in independent.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed, problem)
+            .RunStreamingAsync(RandomNumberGenerator.Create(3), ct: TestContext.Current.CancellationToken))
             independentStates.Add(state);
         independentStates.Select(state => state.Population.EvaluatedCandidates.Single().Candidate).ShouldBe([1, 2]);
         parentObservations.Select(observation => observation.Iteration).ShouldBe([1L, 1L, 2L, 2L, 1L, 2L]);
@@ -79,8 +78,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed),
-            executor => executor.Mutate(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(parents));
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
+            executor => executor.Mutate(parents, RandomNumberGenerator.Create(1)).ShouldBeSameAs(parents));
     }
 
     [Fact]
@@ -101,8 +100,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed),
-            executor => executor.Cross(parents, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(offspring));
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
+            executor => executor.Cross(parents, RandomNumberGenerator.Create(1)).ShouldBeSameAs(offspring));
     }
 
     [Fact]
@@ -123,8 +122,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed),
-            executor => executor.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(objectiveVectors));
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
+            executor => executor.Evaluate(candidates, RandomNumberGenerator.Create(1)).ShouldBeSameAs(objectiveVectors));
     }
 
     [Fact]
@@ -147,8 +146,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed),
-            executor => executor.Transform(current, previous, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(transformed));
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed, problem),
+            executor => executor.Transform(current, previous, RandomNumberGenerator.Create(1)).ShouldBeSameAs(transformed));
     }
 
     [Fact]
@@ -168,8 +167,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed),
-            executor => executor.Create(2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(created));
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
+            executor => executor.Create(2, RandomNumberGenerator.Create(1)).ShouldBeSameAs(created));
     }
 
     [Fact]
@@ -192,8 +191,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed),
-            executor => executor.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
+            executor => executor.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(1))
                 .ShouldBeSameAs(selected));
     }
 
@@ -215,8 +214,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed),
-            executor => executor.Refine(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeSameAs(refined));
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
+            executor => executor.Refine(candidates, RandomNumberGenerator.Create(1)).ShouldBeSameAs(refined));
     }
 
     [Fact]
@@ -241,8 +240,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed),
-            executor => executor.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
+            executor => executor.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1))
                 .ShouldBeSameAs(replaced));
     }
 
@@ -262,8 +261,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed),
-            executor => executor.IsTerminalState(state, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBeTrue());
+            (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed, problem),
+            executor => executor.IsTerminalState(state, RandomNumberGenerator.Create(1)).ShouldBeTrue());
     }
 
     /// <summary>
@@ -285,8 +284,8 @@ public class ObservationResolutionTests
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
-            (scope, observed) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(observed),
-            executor => executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(17));
+            (scope, observed) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(observed),
+            executor => executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(17));
     }
 
     // The observation reports after the operation returned, from the wrapper the analyzer placed around the source.
@@ -320,9 +319,9 @@ public class ObservationResolutionTests
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(this);
 
-        private sealed class Executor(RecordingChecksum source) : IChecksumExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+        private sealed class Executor(RecordingChecksum source) : IChecksumExecutor
         {
-            public int Read(IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem)
+            public int Read(IRandomNumberGenerator random)
             {
                 source.Events.Add("operation");
                 return source.Value;
@@ -409,24 +408,21 @@ public class ObservationResolutionTests
     {
         public IOperator<Evaluation, int> Evaluator { get; } = new ProblemEvaluator<int>();
 
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator));
+            new Executor(scope.Resolve(Evaluator));
 
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator)
-            : IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(IEvaluationExecutor<int> evaluator)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 var start = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
                 for (var step = 1; step <= 2; step++)
                 {
                     ct.ThrowIfCancellationRequested();
                     var candidate = start + step;
-                    var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem).Single();
+                    var objective = evaluator.Evaluate([candidate], random).Single();
                     yield return Population.From([candidate.ToEvaluated(objective)]).ToPopulationState();
                 }
                 await Task.CompletedTask;

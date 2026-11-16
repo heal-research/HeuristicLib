@@ -147,10 +147,10 @@ public sealed class ConcreteAlgorithmResolutionTests
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>
         algorithm is HillClimber<int>
-            ? scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, SingleSolutionState<int>>(algorithm)
-                .RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
-            : scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm)
-                .RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken);
+            ? scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, SingleSolutionState<int>>(algorithm, Problem)
+                .RunStreamingAsync(RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
+            : scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, Problem)
+                .RunStreamingAsync(RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken);
 
     private static async Task<int> Next(ResolutionScope scope, IAlgorithm<int> algorithm)
     {
@@ -164,7 +164,7 @@ public sealed class ConcreteAlgorithmResolutionTests
     private sealed record CounterCreator(Action Prepare) : Creator<int>
     {
 
-        protected override ICreationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+        protected override ICreationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, TRunSearchState> scope)
         {
             Prepare();
             return new Executor();
@@ -192,14 +192,12 @@ public sealed class ConcreteAlgorithmResolutionTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor<TSearchSpace, TProblem>();
+            return new Executor();
         }
 
-        private sealed class Executor<TSearchSpace, TProblem> : IInterceptionExecutor<int, TSearchSpace, TProblem, TSearchState>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor : IInterceptionExecutor<TSearchState>
         {
-            public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => currentState;
+            public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => currentState;
         }
 
     }

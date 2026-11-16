@@ -15,58 +15,41 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
     where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace>
 {
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; }
-    public TProblem SourceProblem { get; init; }
 
     public static Parameter<ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
-        new(nameof(Evaluator), static interceptor => interceptor.Evaluator, static (interceptor, value) => interceptor with { Evaluator = value })
-        {
-            ChildExecution = static _ => ExecutionSignature.For<TSearchSpace, TProblem, ISearchState>()
-        };
+        new(nameof(Evaluator), static interceptor => interceptor.Evaluator, static (interceptor, value) => interceptor with { Evaluator = value });
 
-    public static SettingParameter<ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState>, TProblem> SourceProblemParameter { get; } =
-        new(nameof(SourceProblem), static interceptor => interceptor.SourceProblem, static (interceptor, value) => interceptor with { SourceProblem = value });
+    public static IReadOnlyList<IParameter> Parameters { get; } = [EvaluatorParameter];
 
-    public static IReadOnlyList<IParameter> Parameters { get; } = [EvaluatorParameter, SourceProblemParameter];
+    public ReevaluationInterceptor(IOperator<Evaluation, TCandidate> evaluator)
+    {
+        Evaluator = evaluator;
+    }
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    public ReevaluationInterceptor(IOperator<Evaluation, TCandidate> evaluator, TProblem sourceProblem)
+    protected override IInterceptionExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        Evaluator = evaluator;
-        SourceProblem = sourceProblem;
+        var evaluator = scope.Resolve(Evaluator);
+        return new Executor(evaluator, scope.Problem);
     }
 
-    protected override IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope scope)
+    private sealed class Executor(IEvaluationExecutor<TCandidate> evaluator, TProblem problem)
+        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
     {
-        var evaluator = scope.Resolve<TCandidate, TSearchSpace, TProblem>(Evaluator);
-        return new Executor(evaluator, SourceProblem);
-    }
+        private int consumedEpoch = problem.CurrentEpoch;
 
-    private sealed class Executor(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, TProblem sourceProblem)
-        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    {
-        private int consumedEpoch = sourceProblem.CurrentEpoch;
-
-        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
         {
-            var epoch = sourceProblem.CurrentEpoch;
+            var epoch = Problem.CurrentEpoch;
             if (Interlocked.Exchange(ref consumedEpoch, epoch) == epoch)
             {
                 return currentState;
             }
 
             var candidates = currentState.Population.Candidates.ToArray();
-            var objectiveVectors = evaluator.Evaluate(candidates, random, searchSpace, problem);
+            var objectiveVectors = evaluator.Evaluate(candidates, random);
             return currentState with { Population = Population.From(candidates.ToEvaluated(objectiveVectors)) };
         }
     }
-}
-
-public static class ReevaluationInterceptor
-{
-    public static ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Evaluation, TCandidate> evaluator, TProblem sourceProblem)
-        where TSearchState : PopulationState<TCandidate>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : DynamicProblem<TProblem, TCandidate, TSearchSpace> =>
-        new(evaluator, sourceProblem);
 }

@@ -8,46 +8,38 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure.OperatorFoundation;
 
-public interface IChecksumExecutor<TCandidate, in TSearchSpace, in TProblem> : IExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public interface IChecksumExecutor : IExecutor
 {
-    int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    int Read(IRandomNumberGenerator random);
 }
 
 // This operation is compiled in the consumer, never in the backend.
 public sealed class Checksum : IOperation<Checksum>
 {
-    static bool IOperation<Checksum>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(IExecutor executor) =>
-        executor is IChecksumExecutor<TCandidate, TSearchSpace, TProblem>;
+    static bool IOperation<Checksum>.IsExecutor<TCandidate, TSearchState>(IExecutor executor) =>
+        executor is IChecksumExecutor;
 
-    static IExecutor IOperation<Checksum>.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
-        new WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(executor, wrapper);
+    static IExecutor IOperation<Checksum>.Wrap<TCandidate, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
+        new WrappedExecutor<TWrapper>(executor, wrapper);
 
-    private readonly struct Invocation<TCandidate, TSearchSpace, TProblem>(IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<int>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private readonly struct Invocation(IChecksumExecutor executor,
+        IRandomNumberGenerator random) : IInvocation<int>
     {
-        private readonly IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+        private readonly IChecksumExecutor executor = executor;
         private readonly IRandomNumberGenerator random = random;
 
         public IRandomNumberGenerator Random => random;
-        public ISearchSpace SearchSpace => searchSpace;
-        public IProblem Problem => problem;
 
         public int Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-            ((IChecksumExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Read(random ?? this.random, searchSpace, problem);
+            ((IChecksumExecutor?)executor ?? this.executor).Read(random ?? this.random);
     }
 
-    private sealed class WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(IExecutor executor, TWrapper wrapper)
-        : WrappingExecutor<IChecksumExecutor<TCandidate, TSearchSpace, TProblem>, TWrapper>(executor, wrapper), IChecksumExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class WrappedExecutor<TWrapper>(IExecutor executor, TWrapper wrapper)
+        : WrappingExecutor<IChecksumExecutor, TWrapper>(executor, wrapper), IChecksumExecutor
         where TWrapper : struct, IInvocationWrapper
     {
-        public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            Wrapper.Invoke<Invocation<TCandidate, TSearchSpace, TProblem>, int>(new(Executor, random, searchSpace, problem));
+        public int Read(IRandomNumberGenerator random) =>
+            Wrapper.Invoke<Invocation, int>(new(Executor, random));
     }
 }
 
@@ -57,8 +49,8 @@ public static class ChecksumResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IChecksumExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Checksum, TCandidate> source) =>
-            (IChecksumExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator(source);
+        public IChecksumExecutor Resolve(IOperator<Checksum, TCandidate> source) =>
+            (IChecksumExecutor)scope.ResolveOperator(source);
     }
 }
 

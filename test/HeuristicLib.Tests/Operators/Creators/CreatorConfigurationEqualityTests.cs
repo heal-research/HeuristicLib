@@ -233,17 +233,15 @@ public class CreatorConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<ICreationExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TRunSearchSpace, TRunProblem>(children);
+            ImmutableArray<ICreationExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(children);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICreationExecutor<int, TSearchSpace, TProblem>> childCreators)
-            : ICreationExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ImmutableArray<ICreationExecutor<int>> childCreators)
+            : ICreationExecutor<int>
         {
-            public IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                childCreators[0].Create(count, random, searchSpace, problem);
+            public IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) =>
+                childCreators[0].Create(count, random);
         }
     }
     private sealed record IdentityCreator : WrappingOperator<Creation, int>

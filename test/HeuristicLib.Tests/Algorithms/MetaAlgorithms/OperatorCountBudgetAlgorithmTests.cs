@@ -576,9 +576,9 @@ public class OperatorCountBudgetAlgorithmTests
     private static bool IsTerminal(IOperator<Termination, RealVector> terminator, ResolutionScope scope)
     {
         var problem = CreateProblem();
-        var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>().Resolve(terminator);
+        var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(problem).Resolve(terminator);
         var state = SingleSolutionState.From(new RealVector(0.0), new ObjectiveVector(0));
-        return executor.IsTerminalState(state, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        return executor.IsTerminalState(state, RandomNumberGenerator.Create(42));
     }
 
     /// <summary>

@@ -125,11 +125,11 @@ public class PreflightValidationSpecs
         SearchConfigurationValidation.Validate(mutator, Constrained).IsValid.ShouldBeFalse();
 
         var executor = ResolutionScope.Create()
-            .Resolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>>(mutator);
+            .Resolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>>(mutator, ConstrainedProblem());
         var inSpace = BoolVector.Create(true, true, false, false);
         Constrained.Contains(inSpace).ShouldBeTrue();
 
-        var mutated = executor.Mutate([inSpace], RandomNumberGenerator.Create(1), Constrained, null!)[0];
+        var mutated = executor.Mutate([inSpace], RandomNumberGenerator.Create(1))[0];
 
         // Nothing checked or complained at this level; the candidate simply left the space.
         Constrained.Contains(mutated).ShouldBeFalse();

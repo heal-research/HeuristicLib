@@ -140,10 +140,10 @@ public class CycleAlgorithmTests
         var fresh = CycleAlgorithm.Create(algorithm) with { MaximumCycles = 2 };
         IAlgorithm<int, PopulationState<int>> cycle = newExecutionInstancesPerCycle ? fresh : fresh.Sharing(algorithm);
         var scope = ResolutionScope.Create();
-        _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var cycleExecutor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
+        _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, problem);
+        var cycleExecutor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle, problem);
 
-        var states = cycleExecutor.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycleExecutor.Stream(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
         algorithm.ExecutionCount.ShouldBe(expectedAlgorithmExecutions);
@@ -164,12 +164,12 @@ public class CycleAlgorithmTests
         var fresh = CycleAlgorithm.Create(algorithm) with { MaximumCycles = 2 };
         IAlgorithm<int, PopulationState<int>> cycle = shared ? fresh.Sharing(algorithm) : fresh;
         var scope = ResolutionScope.Create();
-        var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
-        var concrete = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle);
+        var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle, problem);
+        var concrete = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle, problem);
         concrete.ShouldBeSameAs(general);
 
-        general.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
-        concrete.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+        general.Stream(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+        concrete.Stream(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
 
         algorithm.ExecutionCount.ShouldBe(expectedAlgorithmExecutions);
     }
@@ -199,18 +199,17 @@ public class CycleAlgorithmTests
         public int ExecutionCount { get; private set; }
 
         // Counts the executors it builds, one per activation.
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             ExecutionCount++;
-            return new Executor<TSearchSpace, TProblem>();
+            return new Executor();
         }
 
-        private sealed class Executor<TSearchSpace, TProblem> : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 await Task.CompletedTask;
                 yield break;
@@ -222,15 +221,17 @@ public class CycleAlgorithmTests
         : Interceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
 
-        protected override IInterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>> CreateExecutor(ResolutionScope scope) =>
-        new Executor();
+        protected override IInterceptionExecutor<PopulationState<RealVector>> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>> scope) =>
+        new Executor(scope.Problem);
 
         private sealed class Executor
             : InterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
         {
+            public Executor(TestFunctionProblem problem) : base(problem) { }
+
             private int yieldedStateCount;
 
-            public override PopulationState<RealVector> Transform(PopulationState<RealVector> currentState, PopulationState<RealVector>? previousState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public override PopulationState<RealVector> Transform(PopulationState<RealVector> currentState, PopulationState<RealVector>? previousState, IRandomNumberGenerator random)
             {
                 yieldedStateCount++;
                 var objectiveVector = new ObjectiveVector(yieldedStateCount);

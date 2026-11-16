@@ -160,9 +160,9 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         {
             if (execution is null)
             {
-                var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+                var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, Problem);
                 var executionCancellation = cancellationTerminatesRun ? cancellationToken : CancellationToken.None;
-                execution = algorithmExecutor.RunStreamingAsync(Problem, Random, initialState, executionCancellation)
+                execution = algorithmExecutor.RunStreamingAsync(Random, initialState, executionCancellation)
                                              .GetAsyncEnumerator(executionCancellation);
             }
             else if (initialState is not null)

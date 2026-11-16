@@ -86,8 +86,8 @@ public sealed class DeferredAlgorithmResolutionTests
             true => [1, 1, 2, 2]
         });
         states[0].Data.ShouldNotBeSameAs(states[1].Data);
-        var direct = root.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(shared);
-        direct.Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1]);
+        var direct = root.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(shared, problem);
+        direct.Mutate([0], RandomNumberGenerator.Create(1)).ShouldBe([1]);
     }
 
     [Theory]
@@ -228,7 +228,7 @@ public sealed class DeferredAlgorithmResolutionTests
             : new PipelineAlgorithm<int, ProbeState>([algorithm, algorithm]);
         var root = ResolutionScope.Create();
         var original = Resolve(root, source);
-        await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+        await using var paused = original.RunStreamingAsync(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var values = new List<int> { paused.Current.Value };
@@ -258,7 +258,7 @@ public sealed class DeferredAlgorithmResolutionTests
             : algorithm.LimitedToInvocations(algorithm.Mutator, 3);
         var root = ResolutionScope.Create();
         var original = Resolve(root.CreateChildScope(), budget);
-        await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+        await using var paused = original.RunStreamingAsync(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observing = budget.Counting(algorithm.Mutator, out var calls);
@@ -363,7 +363,7 @@ public sealed class DeferredAlgorithmResolutionTests
             ? analyzed.LimitedToDuration(algorithm.Mutator, TimeSpan.FromSeconds(3), clock)
             : analyzed.LimitedToInvocations(algorithm.Mutator, 3);
         var root = ResolutionScope.Create();
-        await using var paused = Resolve(root.CreateChildScope(), budget).RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+        await using var paused = Resolve(root.CreateChildScope(), budget).RunStreamingAsync(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         var observed = 0;
@@ -406,7 +406,7 @@ public sealed class DeferredAlgorithmResolutionTests
         var budget = algorithm.LimitedToDuration(TimeSpan.FromSeconds(2), clock);
         var root = ResolutionScope.Create();
         var original = Resolve(root, budget);
-        await using var paused = original.RunStreamingAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+        await using var paused = original.RunStreamingAsync(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await paused.MoveNextAsync()).ShouldBeTrue();
         paused.Current.Value.ShouldBe(1);
@@ -430,13 +430,13 @@ public sealed class DeferredAlgorithmResolutionTests
         return reset ? cycle : cycle.Sharing(algorithm);
     }
 
-    private static IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> Resolve(ResolutionScope scope, IAlgorithm<int, ProbeState> algorithm) =>
-        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>(algorithm);
+    private static IAlgorithmExecutor<ProbeState> Resolve(ResolutionScope scope, IAlgorithm<int, ProbeState> algorithm) =>
+        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>(algorithm, problem);
 
-    private static async Task<List<ProbeState>> Run(IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> executor, IRandomNumberGenerator? random = null)
+    private static async Task<List<ProbeState>> Run(IAlgorithmExecutor<ProbeState> executor, IRandomNumberGenerator? random = null)
     {
         var states = new List<ProbeState>();
-        await foreach (var state in executor.RunStreamingAsync(problem, random ?? RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in executor.RunStreamingAsync(random ?? RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
             states.Add(state);
         return states;
     }
@@ -462,21 +462,19 @@ public sealed class DeferredAlgorithmResolutionTests
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), MutatorParameter];
 
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<ProbeState> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, ProbeState> scope)
         {
             Building(scope);
             var data = new ProbeData();
             Prepared(data);
-            return new Executor<TSearchSpace, TProblem>(data, scope.Resolve(Mutator), Steps);
+            return new Executor(data, scope.Resolve(Mutator), Steps);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ProbeData data, IMutationExecutor<int, TSearchSpace, TProblem> mutator, int steps)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ProbeData data, IMutationExecutor<int> mutator, int steps)
+            : AlgorithmExecutor<ProbeState>
         {
-            public override async IAsyncEnumerable<ProbeState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, ProbeState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<ProbeState> RunStreamingAsync(IRandomNumberGenerator random, ProbeState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 data.Starts++;
                 var value = initialState?.Value ?? 0;
@@ -485,7 +483,7 @@ public sealed class DeferredAlgorithmResolutionTests
                     for (var index = 0; index < steps; index++)
                     {
                         ct.ThrowIfCancellationRequested();
-                        value = mutator.Mutate([value + 1], random, problem.SearchSpace, problem).Single();
+                        value = mutator.Mutate([value + 1], random).Single();
                         yield return new ProbeState(value, ++data.Invocations, data);
                         await Task.CompletedTask;
                     }
@@ -530,7 +528,7 @@ public sealed class DeferredAlgorithmResolutionTests
     private sealed record CountingMutations : Mutator<int>
     {
 
-        protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+        protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, TRunSearchState> scope) =>
         new Executor();
 
         private sealed class Executor

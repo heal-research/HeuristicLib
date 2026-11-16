@@ -18,7 +18,7 @@ namespace HEAL.HeuristicLib.Operators.Interceptors;
 /// </para>
 /// </remarks>
 public abstract record Interceptor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Operator<Interception<TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState, IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>>
+    : Operator<Interception<TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState, IInterceptionExecutor<TSearchState>>
     where TSearchState : class, ISearchState
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -37,31 +37,41 @@ public abstract record Interceptor<TCandidate, TSearchState>
     where TSearchState : class, ISearchState;
 
 public abstract class InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchState : class, ISearchState
+    : IInterceptionExecutor<TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
-    public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected TProblem Problem { get; }
+    protected TSearchSpace SearchSpace { get; }
+
+    protected InterceptionExecutor(TProblem problem)
+    {
+        Problem = problem;
+        SearchSpace = problem.SearchSpace;
+    }
+
+    public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random);
 }
 
 public abstract class InterceptionExecutor<TCandidate, TSearchSpace, TSearchState>
-    : IInterceptionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
-    where TSearchState : class, ISearchState
+    : IInterceptionExecutor<TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TSearchState : class, ISearchState
 {
-    public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected TSearchSpace SearchSpace { get; }
 
-    TSearchState IInterceptionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Transform(currentState, previousState, random, searchSpace);
+    protected InterceptionExecutor(TSearchSpace searchSpace)
+    {
+        SearchSpace = searchSpace;
+    }
+
+    public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random);
 }
 
-public abstract class InterceptionExecutor<TCandidate, TSearchState>
-    : IInterceptionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
+public abstract class InterceptionExecutor<TSearchState>
+    : IInterceptionExecutor<TSearchState>
     where TSearchState : class, ISearchState
 {
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random);
-
-    TSearchState IInterceptionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Transform(currentState, previousState, random);
 }

@@ -1,8 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -36,17 +34,15 @@ public record PredefinedCandidatesCreator<TCandidate>
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         var creatorForRemainingCandidates = scope.Resolve(CreatorForRemainingCandidates);
-        return new Executor<TRunSearchSpace, TRunProblem>(creatorForRemainingCandidates, PredefinedCandidates);
+        return new Executor(creatorForRemainingCandidates, PredefinedCandidates);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
-        : CreationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ICreationExecutor<TCandidate> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
+        : CreationExecutor<TCandidate>
     {
         private int currentCandidateIndex;
 
-        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random)
         {
             var candidates = new TCandidate[count];
             var countPredefined = Math.Min(predefinedCandidates.Count - currentCandidateIndex, count);
@@ -66,7 +62,7 @@ public record PredefinedCandidatesCreator<TCandidate>
                 return candidates;
             }
 
-            var remaining = creatorForRemainingCandidates.Create(countRemaining, random, searchSpace, problem);
+            var remaining = creatorForRemainingCandidates.Create(countRemaining, random);
             for (var i = 0; i < remaining.Count; i++)
             {
                 candidates[countPredefined + i] = remaining[i];

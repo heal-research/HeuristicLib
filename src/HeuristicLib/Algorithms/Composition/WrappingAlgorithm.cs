@@ -19,22 +19,29 @@ public abstract record WrappingAlgorithm<TCandidate, TSearchState>(IAlgorithm<TC
 
     public virtual bool Supports(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
-    IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(
+    IAlgorithmExecutor<TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => CreateExecutor(scope);
 
     /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
-    protected abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected abstract IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 }
 
 public abstract class WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm)
-    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    IAlgorithmExecutor<TSearchState> childAlgorithm, TProblem problem)
+    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    protected IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> ChildAlgorithm { get; } = childAlgorithm;
+    protected IAlgorithmExecutor<TSearchState> ChildAlgorithm { get; } = childAlgorithm;
+}
+
+public abstract class WrappingAlgorithmExecutor<TSearchState>(IAlgorithmExecutor<TSearchState> childAlgorithm)
+    : AlgorithmExecutor<TSearchState>
+    where TSearchState : class, ISearchState
+{
+    protected IAlgorithmExecutor<TSearchState> ChildAlgorithm { get; } = childAlgorithm;
 }

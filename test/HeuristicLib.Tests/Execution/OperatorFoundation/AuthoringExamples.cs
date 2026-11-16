@@ -20,21 +20,20 @@ public sealed record IdentityMutation : StatelessMutator<RealVector>
 public sealed record SphereEvaluation : StatelessEvaluator<RealVector>
 {
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates,
-        IRandomNumberGenerator random, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
+        IRandomNumberGenerator random) =>
         candidates.Select(candidate => (ObjectiveVector)(candidate[0] * candidate[0])).ToArray();
 }
 
 public sealed record CountingMutation : Mutator<RealVector>
 {
-    protected override IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope) =>
+    protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, TRunSearchState> scope) =>
             new Executor();
 
     private sealed class Executor : HEAL.HeuristicLib.Operators.Mutators.MutationExecutor<RealVector>
     {
         private int invocations;
 
-        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents,
-            IRandomNumberGenerator random)
+        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
         {
             invocations++;
             return parents.Select(_ => new RealVector((double)invocations)).ToArray();
@@ -45,16 +44,14 @@ public sealed record CountingMutation : Mutator<RealVector>
 public sealed record ContextualMutation(IOperator<Mutation, RealVector> ChildOperator)
     : Mutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    protected override IMutationExecutor<RealVector, BoundedRealVectorSearchSpace,
-        TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
-        new Executor(scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(ChildOperator));
+    protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+        new Executor(scope.Resolve(ChildOperator));
 
-    private sealed class Executor(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> child)
-        : IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+    private sealed class Executor(IMutationExecutor<RealVector> child)
+        : IMutationExecutor<RealVector>
     {
-        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random,
-            BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-            child.Mutate(parents, random, searchSpace, problem);
+        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
+            child.Mutate(parents, random);
     }
 }
 
@@ -91,23 +88,19 @@ public sealed record SharedOperations(ProbeLog Log) : IOperator<Mutation, RealVe
     }
 
     private sealed class Executor : ILiveValue,
-        IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
-        IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
-        IEvaluationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>,
-        ITerminationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ISearchState>
+        IChecksumExecutor,
+        IMutationExecutor<RealVector>,
+        IEvaluationExecutor<RealVector>,
+        ITerminationExecutor<ISearchState>
     {
         public int Value { get; set; } = 3;
 
-        public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace,
-            IProblem<RealVector, ISearchSpace<RealVector>> problem) => Value;
-        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random,
-            ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
+        public int Read(IRandomNumberGenerator random) => Value;
+        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             parents.Select(_ => new RealVector((double)Value)).ToArray();
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random,
-            ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
             candidates.Select(_ => (ObjectiveVector)(double)Value).ToArray();
-        public bool IsTerminalState(ISearchState state, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace,
-            IProblem<RealVector, ISearchSpace<RealVector>> problem) => Value >= 10;
+        public bool IsTerminalState(ISearchState state, IRandomNumberGenerator random) => Value >= 10;
     }
 
 }
@@ -125,11 +118,9 @@ public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception<
         return new Executor();
     }
 
-    private sealed class Executor : IInterceptionExecutor<RealVector, ISearchSpace<RealVector>,
-        IProblem<RealVector, ISearchSpace<RealVector>>, ProbeState>
+    private sealed class Executor : IInterceptionExecutor<ProbeState>
     {
-        public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random,
-            ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) => currentState;
+        public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random) => currentState;
     }
 
 }
@@ -137,15 +128,12 @@ public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception<
 // An external test probe numbers constructions without adding shared operator data.
 public sealed record NodeTokenMutation(ProbeLog Log) : Mutator<RealVector>
 {
-    protected override IMutationExecutor<RealVector, ISearchSpace<RealVector>,
-        IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope) =>
+    protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, TRunSearchState> scope) =>
         new Executor(++Log.Constructions);
 
-    private sealed class Executor(int token) : IMutationExecutor<RealVector, ISearchSpace<RealVector>,
-        IProblem<RealVector, ISearchSpace<RealVector>>>
+    private sealed class Executor(int token) : IMutationExecutor<RealVector>
     {
-        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random,
-            ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
+        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             parents.Select(_ => new RealVector((double)token)).ToArray();
     }
 }

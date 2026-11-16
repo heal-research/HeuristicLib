@@ -81,7 +81,6 @@ public class AutoEcPaperScenarioTests
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
             new UniformOnePositionMutator());
         var evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
-            problem,
             new ActivatedTravelingSalesmanExactBestKnownProvider(
                 new ConcordeTravelingSalesmanExactSolver(concordePath)));
 

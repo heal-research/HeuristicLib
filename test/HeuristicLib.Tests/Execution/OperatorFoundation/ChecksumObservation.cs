@@ -17,18 +17,20 @@ public sealed record ChecksumObservation<TCandidate>(
     : IInvocationObservation<Checksum, TCandidate, ChecksumObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Checksum, TCandidate, ChecksumObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Checksum, TCandidate> source, Action<ChecksumObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((IChecksumExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Checksum, TCandidate> source, Action<ChecksumObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((IChecksumExecutor)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IChecksumExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Checksum, TCandidate> checksum, Action<ChecksumObservation<TCandidate>> observe)
-        : IChecksumExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(IChecksumExecutor executor,
+        IOperator<Checksum, TCandidate> checksum, Action<ChecksumObservation<TCandidate>> observe, TProblem problem)
+        : IChecksumExecutor, IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        private readonly TSearchSpace searchSpace = problem.SearchSpace;
+
+        public int Read(IRandomNumberGenerator random)
         {
-            var result = executor.Read(random, searchSpace, problem);
+            var result = executor.Read(random);
             observe(new ChecksumObservation<TCandidate>(checksum, result, searchSpace, problem));
             return result;
         }

@@ -20,10 +20,10 @@ public class OperatorCountClockTests
         var candidates = scorer.Invocations.CountCandidates();
         var invocations = scorer.Invocations.Count();
         var scope = ResolutionScope.Create();
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(scorer.AnalyzedBy(candidates, invocations));
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(scorer.AnalyzedBy(candidates, invocations));
 
-        executor.Score([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Score([4, 5], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Score([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Score([4, 5], RandomNumberGenerator.Create(1));
 
         scope.Results.Result(candidates).CurrentCount.ShouldBe(5L);
         scope.Results.Result(invocations).CurrentCount.ShouldBe(2L);
@@ -45,7 +45,7 @@ public class OperatorCountClockTests
     public void CountedCandidates_RejectsAnOperationWithoutCandidateWorkBeforeBuildingIt()
     {
         var checksum = new ConstructionRecordingChecksum();
-        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateProblem());
 
         var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve(checksum.Counted(new Counter(), OperatorCountMetric.Candidates)));
 
@@ -60,10 +60,10 @@ public class OperatorCountClockTests
         var problem = CreateProblem();
         var invocations = checksum.Invocations.Count();
         var scope = ResolutionScope.Create();
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(checksum.AnalyzedBy(invocations));
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(checksum.AnalyzedBy(invocations));
 
-        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Read(RandomNumberGenerator.Create(1));
+        executor.Read(RandomNumberGenerator.Create(1));
 
         scope.Results.Result(invocations).CurrentCount.ShouldBe(2L);
     }
@@ -82,9 +82,9 @@ public class OperatorCountClockTests
             return new Executor();
         }
 
-        private sealed class Executor : IChecksumExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+        private sealed class Executor : IChecksumExecutor
         {
-            public int Read(IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => 1;
+            public int Read(IRandomNumberGenerator random) => 1;
         }
     }
 
@@ -93,58 +93,49 @@ public class OperatorCountClockTests
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
 
-        private sealed class Executor : IScoringExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+        private sealed class Executor : IScoringExecutor<int>
         {
-            public IReadOnlyList<double> Score(IReadOnlyList<int> candidates, IRandomNumberGenerator random, ISearchSpace<int> searchSpace,
-                IProblem<int, ISearchSpace<int>> problem) => [.. candidates.Select(candidate => (double)candidate)];
+            public IReadOnlyList<double> Score(IReadOnlyList<int> candidates, IRandomNumberGenerator random) => [.. candidates.Select(candidate => (double)candidate)];
         }
     }
 }
 
-public interface IScoringExecutor<TCandidate, in TSearchSpace, in TProblem> : IExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public interface IScoringExecutor<TCandidate> : IExecutor
 {
-    IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }
 
 // A batch operation defined outside the library that reports one unit of candidate work per scored candidate.
 public sealed class Scoring : IOperation<Scoring>
 {
-    static bool IOperation<Scoring>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(IExecutor executor) =>
-        executor is IScoringExecutor<TCandidate, TSearchSpace, TProblem>;
+    static bool IOperation<Scoring>.IsExecutor<TCandidate, TSearchState>(IExecutor executor) =>
+        executor is IScoringExecutor<TCandidate>;
 
-    static IExecutor IOperation<Scoring>.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
-        new WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(executor, wrapper);
+    static IExecutor IOperation<Scoring>.Wrap<TCandidate, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
+        new WrappedExecutor<TCandidate, TWrapper>(executor, wrapper);
 
     static bool IOperation<Scoring>.SupportsCandidateWork => true;
 
-    private readonly struct Invocation<TCandidate, TSearchSpace, TProblem>(IScoringExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<double>>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private readonly struct Invocation<TCandidate>(IScoringExecutor<TCandidate> executor,
+        IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) : IInvocation<IReadOnlyList<double>>
     {
-        private readonly IScoringExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+        private readonly IScoringExecutor<TCandidate> executor = executor;
         private readonly IRandomNumberGenerator random = random;
 
         public IRandomNumberGenerator Random => random;
-        public ISearchSpace SearchSpace => searchSpace;
-        public IProblem Problem => problem;
 
         public IReadOnlyList<double> Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-            ((IScoringExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Score(candidates, random ?? this.random, searchSpace, problem);
+            ((IScoringExecutor<TCandidate>?)executor ?? this.executor).Score(candidates, random ?? this.random);
 
         public int CountCandidateWork(IReadOnlyList<double> result) => result.Count;
     }
 
-    private sealed class WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(IExecutor executor, TWrapper wrapper)
-        : WrappingExecutor<IScoringExecutor<TCandidate, TSearchSpace, TProblem>, TWrapper>(executor, wrapper), IScoringExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class WrappedExecutor<TCandidate, TWrapper>(IExecutor executor, TWrapper wrapper)
+        : WrappingExecutor<IScoringExecutor<TCandidate>, TWrapper>(executor, wrapper), IScoringExecutor<TCandidate>
         where TWrapper : struct, IInvocationWrapper
     {
-        public IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            Wrapper.Invoke<Invocation<TCandidate, TSearchSpace, TProblem>, IReadOnlyList<double>>(new(Executor, candidates, random, searchSpace, problem));
+        public IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+            Wrapper.Invoke<Invocation<TCandidate>, IReadOnlyList<double>>(new(Executor, candidates, random));
     }
 }
 
@@ -154,8 +145,8 @@ public static class ScoringResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IScoringExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Scoring, TCandidate> source) =>
-            (IScoringExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator(source);
+        public IScoringExecutor<TCandidate> Resolve(IOperator<Scoring, TCandidate> source) =>
+            (IScoringExecutor<TCandidate>)scope.ResolveOperator(source);
     }
 }
 
@@ -164,17 +155,15 @@ public sealed record ScoringObservation<TCandidate>(IReadOnlyList<TCandidate> Ca
     : IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Scoring, TCandidate> source, Action<ScoringObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((IScoringExecutor<TCandidate, TSearchSpace, TProblem>)executor, record);
+        IExecutor executor, IOperator<Scoring, TCandidate> source, Action<ScoringObservation<TCandidate>> record, TProblem problem) =>
+        new Executor((IScoringExecutor<TCandidate>)executor, record);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IScoringExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        Action<ScoringObservation<TCandidate>> observe) : IScoringExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IScoringExecutor<TCandidate> executor,
+        Action<ScoringObservation<TCandidate>> observe) : IScoringExecutor<TCandidate>
     {
-        public IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            var scores = executor.Score(candidates, random, searchSpace, problem);
+            var scores = executor.Score(candidates, random);
             observe(new ScoringObservation<TCandidate>(candidates, scores));
             return scores;
         }

@@ -149,8 +149,8 @@ public class SubstitutedBudgetTests
         static void ResolveBoth(IAlgorithm<int, PopulationState<int>> one, IAlgorithm<int, PopulationState<int>> two)
         {
             var scope = ResolutionScope.Create();
-            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(one).ShouldNotBeNull();
-            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(two).ShouldNotBeNull();
+            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(one, Problem).ShouldNotBeNull();
+            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(two, Problem).ShouldNotBeNull();
         }
     }
 
@@ -232,8 +232,8 @@ public class SubstitutedBudgetTests
         var a = NewCaller("A", 3, 1, m, box);
         var scope = ResolutionScope.Create();
 
-        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a.LimitedToInvocations(m, 5));
-        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a);
+        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a.LimitedToInvocations(m, 5), Problem);
+        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(a, Problem);
 
         box.Log.ShouldBe("build A build A");
     }
@@ -493,21 +493,21 @@ public class SubstitutedBudgetTests
             where TSearchState : class, ISearchState
         {
             Box.Builds++;
-            return new Executor<TSearchSpace, TProblem>(Box);
+            return new Executor<TSearchSpace, TProblem>(Box, scope.Problem);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(Recording box)
-            : IEvaluationExecutor<int, TSearchSpace, TProblem>, IMutationExecutor<int, TSearchSpace, TProblem>
+        private sealed class Executor<TSearchSpace, TProblem>(Recording box, TProblem problem)
+            : IEvaluationExecutor<int>, IMutationExecutor<int>
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 box.Calls++;
                 return problem.Evaluate(candidates, random).ToArray();
             }
 
-            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
             {
                 box.Calls++;
                 return parents;
@@ -528,20 +528,17 @@ public class SubstitutedBudgetTests
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), scope.Resolve(Mutator));
+            new Executor(scope.Resolve(Evaluator), scope.Resolve(Mutator));
 
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, IMutationExecutor<int, TSearchSpace, TProblem> mutator)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(IEvaluationExecutor<int> evaluator, IMutationExecutor<int> mutator)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
-                var offspring = mutator.Mutate([1], random, problem.SearchSpace, problem);
-                var quality = evaluator.Evaluate(offspring, random, problem.SearchSpace, problem).Single();
+                var offspring = mutator.Mutate([1], random);
+                var quality = evaluator.Evaluate(offspring, random).Single();
                 yield return Population.From([offspring[0].ToEvaluated(quality)]).ToPopulationState();
                 await Task.CompletedTask;
             }

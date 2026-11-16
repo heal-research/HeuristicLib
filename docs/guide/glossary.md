@@ -22,6 +22,8 @@ A problem defines the optimization task that an algorithm operates on.
 
 A problem defines the search space, the evaluation semantics that produce an objective vector, the objective directions and the concrete data or parameters needed for evaluation.
 
+The search space and objective stay fixed for a problem object's lifetime. Mutable instance data may change, as in a dynamic problem. Algorithms and operators bind their executors to that problem object during construction.
+
 See also: Candidate, Evaluation, Objective, Objective direction, Objective directions, Objective value, Objective vector, Problem instance, Search space.
 
 ### Problem instance
@@ -361,7 +363,7 @@ Status: `Canonical`
 
 An operation invocation is one call to an operation method, such as `Mutate`. Names use invocation, as in `IInvocation<TResult>`, an operator's `Invocations` source and `ChoosePerInvocation`. One invocation is one method call regardless of batch size; its candidate work counts what it produced or evaluated.
 
-Every invocation carries its primary inputs followed by a random number generator, search space and problem. `IInvocation<TResult>` exposes that random number generator, search space and problem to invocation wrappers, the latter two without their run types, and can repeat the call with the same arguments.
+Every invocation carries its primary inputs followed by a random number generator. Its executor was bound to a problem during construction. `IInvocation<TResult>` exposes that random number generator to invocation wrappers and can repeat the call with the same arguments. A wrapper that needs the problem reads it from the typed scope during construction.
 
 An executor can receive many invocations. A duration measurement around an operation call measures that invocation rather than the lifetime of its executor.
 
@@ -548,7 +550,7 @@ A configuration node is a configuration considered as a node in the configuratio
 
 Configuration is accepted shorthand for configuration node when the context is clear. Use node when graph membership needs emphasis, or a role-specific term such as mutator when the role is known. The common interface is `IConfigurationNode`, including its generic form. Role-specific configuration names such as `IOperator` and `IOperator<Mutation, TCandidate>` do not acquire a `Node` suffix.
 
-`IOperator<TOperation, TCandidate>` builds its executor through one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` hook, which it inherits from `IOperator<TCandidate>`. The hook resolves children and looks up run-bound results through the typed scope. Multi-operation configurations implement the hook once and use one executor per scope. Wrapping and multi bases expose `ChildOperator` and `ChildOperators`.
+`IOperator<TOperation, TCandidate>` builds its executor through one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` hook, which it inherits from `IOperator<TCandidate>`. The hook resolves children and looks up run-bound results through the typed scope. Multi-operation configurations implement the hook once and use one executor per problem in a scope. Wrapping and multi bases expose `ChildOperator` and `ChildOperators`.
 
 Algorithms and consumer-defined roles build the same way. An algorithm's `CreateExecutor<TSearchSpace, TProblem>(scope)` receives a scope typed to the run and its search state; an algorithm bound to a search space and problem overrides a `CreateExecutor` typed to them instead. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope scope)`. The hook is runtime machinery, not a configuration value strategy.
 
@@ -662,7 +664,7 @@ Status: `Canonical`
 
 An executor is a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It holds resolved children, private fields and any explicitly shared resources. Private data lives with its executor.
 
-Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Use explicit `Sharing` to keep an executor across child scopes. A stateless configuration can also serve as its own executor.
+Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Use explicit `Sharing` to keep an executor across child scopes. A context-free stateless configuration can also serve as its own executor; other stateless helpers retain the binding in a small executor.
 
 The common interface is `IExecutor`. Operation-specific interfaces include `IMutationExecutor` and `IEvaluationExecutor`; algorithms use `IAlgorithmExecutor`. The term does not give the object scheduling, threading, disposal or run-lifecycle responsibilities.
 
@@ -726,7 +728,7 @@ Status: `Canonical`
 
 An execution graph is a graph of executors created from a configuration graph during a run.
 
-A run may contain more than one execution graph over time or through different observation contexts. A shared configuration has one executor for all its uses within the sharing node.
+A run may contain more than one execution graph over time or through different observation contexts. A shared configuration has one executor per problem reference for its uses within the sharing node.
 
 See also: Configuration graph, Executor, Run.
 
@@ -736,7 +738,7 @@ Status: `Canonical`
 
 A resolution scope resolves configurations to executors during a run.
 
-The scope holds one executor per configuration reference and the root's run results. `CreateChildScope()` inherits explicit sharing while constructing independent executors for other configurations. `Share` selects configurations retained for child scopes. Independent roots have separate results.
+The scope holds one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. All its problem views use the root's run results. `For<TCandidate, TSearchSpace, TProblem>(problem)` is a view of the same scope; only `CreateChildScope()` creates a fresh activation. `CreateChildScope()` inherits explicit sharing while constructing independent executors for other configurations. `Share` selects configurations retained for child scopes. Independent roots have separate results.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for state, construction and observation rules.
 
@@ -746,7 +748,7 @@ See also: Configuration, Wrapper chain, Execution graph, Executor, Run.
 
 Status: `Canonical`
 
-A shared configuration resolves to one executor in the nearest scope that shares it. Its first construction uses a dedicated child scope of that owner, and every request receives that executor. Other configurations have one executor per requesting scope. A new root or sharing owner creates independent data.
+A shared algorithm or operator configuration resolves to one executor per problem reference in the nearest scope that shares it. Plain configuration nodes keep configuration-only identity. Its first construction uses a dedicated child scope of that owner, and every request for that binding receives that executor. Other configurations have one executor per requesting scope. A new root or sharing owner creates independent data.
 
 The configuration reference identifies what is shared. Sharing preserves private executor fields and resolved children for that owner's lifetime.
 
@@ -782,7 +784,7 @@ Status: `Canonical`
 
 An invocation wrapper adds behavior such as retry, timing, counting or per-invocation choice around each call to an executor's named method. The operation builds it into one wrapping executor through `IOperation<TSelf>.Wrap`, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
 
-`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `Proceed(executor, random)` to run the call on another executor of the same operation or with another generator; `ChoosePerInvocation` proceeds on a child it samples with that generator. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each operation writes its invocation as a private struct. Each wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>` and holds its own wrapped executor, so another binding gets its own children. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
+`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `Proceed(executor, random)` to run the call on another executor of the same operation, or with another generator; `ChoosePerInvocation` proceeds on a child it samples with that generator. Each executor runs against the problem it was bound to. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each operation writes its invocation as a private struct. Each wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>` and holds its own wrapped executor, so another binding gets its own children. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
 
 See also: Operation invocation, Executor, Wrapper chain, Retry.
 
@@ -938,7 +940,7 @@ An observation is a read-only capture at a defined algorithm or operator boundar
 
 An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run.
 
-Each operation defines the record of one successful invocation, such as `CrossoverObservation<TCandidate>` with `Parents` and `Offspring`; an algorithm's record is `AlgorithmObservation<TCandidate, TSearchState>`. A record holds the call's inputs and outputs in their original types, plus the call's search space and problem, typed as the call receives them. A record of a call without them holds none. An observation of a configuration of your own may be any value, such as the temperature a cooling schedule returned.
+Each operation defines the record of one successful invocation, such as `CrossoverObservation<TCandidate>` with `Parents` and `Offspring`; an algorithm's record is `AlgorithmObservation<TCandidate, TSearchState>`. A record holds the call's inputs and outputs in their original types, plus the executor's bound search space and problem. A record of a call without them holds none. An observation of a configuration of your own may be any value, such as the temperature a cooling schedule returned.
 
 Related terms:
 

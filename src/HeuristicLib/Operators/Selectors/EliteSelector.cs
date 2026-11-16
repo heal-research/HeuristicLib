@@ -1,9 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -49,22 +47,20 @@ public record EliteSelector<TCandidate>
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         var selectorForRemaining = scope.Resolve(SelectorForRemaining);
-        return new Executor<TRunSearchSpace, TRunProblem>(selectorForRemaining, Elites);
+        return new Executor(selectorForRemaining, Elites);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selectorForRemaining, int elites)
-        : SelectionExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ISelectionExecutor<TCandidate> selectorForRemaining, int elites)
+        : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
             var selectedElites = BestSelector.Select(population, objective, Math.Min(elites, count));
             var remainingCount = count - selectedElites.Count;
             if (remainingCount <= 0)
                 return selectedElites;
 
-            var selectedRemaining = selectorForRemaining.Select(population, objective, remainingCount, random, searchSpace, problem);
+            var selectedRemaining = selectorForRemaining.Select(population, objective, remainingCount, random);
 
             return selectedElites.Concat(selectedRemaining).ToArray();
         }

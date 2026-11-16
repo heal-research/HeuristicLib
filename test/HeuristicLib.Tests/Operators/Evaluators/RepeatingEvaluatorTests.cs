@@ -23,8 +23,8 @@ public class RepeatingEvaluatorTests
         var evaluator = observed.AsRepeated(3);
 
         var scope = ResolutionScope.Create();
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counting(observed, out var counter))
-            .Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counting(observed, out var counter), problem)
+            .Evaluate([1], RandomNumberGenerator.Create(1));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
@@ -34,9 +34,9 @@ public class RepeatingEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new RandomEvaluator().AsRepeated(5);
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var actual = executor.Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var actual = executor.Evaluate([1, 2], RandomNumberGenerator.Create(42));
         var rootRandom = RandomNumberGenerator.Create(42);
         var repeated = Enumerable.Range(0, 5)
             .Select(repetition => Enumerable.Range(0, 2)
@@ -57,10 +57,10 @@ public class RepeatingEvaluatorTests
         var sequential = new RandomEvaluator().AsRepeated(32);
         var concurrent = sequential with { Concurrency = ExecutionConcurrency.Concurrent(4) };
 
-        var sequentialResult = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sequential)
-            .Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
-        var concurrentResult = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(concurrent)
-            .Evaluate([1, 2], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var sequentialResult = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sequential, problem)
+            .Evaluate([1, 2], RandomNumberGenerator.Create(42));
+        var concurrentResult = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(concurrent, problem)
+            .Evaluate([1, 2], RandomNumberGenerator.Create(42));
 
         concurrentResult.ShouldBe(sequentialResult);
     }
@@ -82,8 +82,8 @@ public class RepeatingEvaluatorTests
         Should.Throw<InvalidOperationException>(() => Resolve(reconfigured));
     }
 
-    private static IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> Resolve(IOperator<Evaluation, int> evaluator) =>
-        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+    private static IEvaluationExecutor<int> Resolve(IOperator<Evaluation, int> evaluator) =>
+        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, CreateProblem());
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);

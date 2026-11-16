@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace HEAL.HeuristicLib.Tests.Architecture;
 
 /// <summary>
-/// The configuration layer names only the candidate, and the execution layer names everything.
+/// The configuration layer names only the candidate, and executors name only their invocation inputs and outputs.
 /// </summary>
 /// <remarks>
 /// This split is what the arity reduction bought, and nothing else in the suite fails if it is lost: a role that
@@ -91,12 +91,11 @@ public sealed class RoleContractArityTests
 
     [Theory]
     [MemberData(nameof(ExecutionContracts))]
-    public void ItsExecution_StillNamesTheSearchSpaceAndProblem(Type executionContract)
+    public void ItsExecution_OmitsTheBoundSearchSpaceAndProblem(Type executionContract)
     {
         var named = executionContract.GetGenericArguments().Select(argument => argument.Name).ToArray();
 
-        named.Take(3).ShouldBe(["TCandidate", "TSearchSpace", "TProblem"]);
-        named.Skip(3).ShouldBeSubsetOf(["TSearchState"]);
+        named.ShouldHaveSingleItem().ShouldBeOneOf("TCandidate", "TSearchState");
     }
 
     /// <summary>

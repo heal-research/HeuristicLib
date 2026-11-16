@@ -34,10 +34,10 @@ public sealed class OperatorLifecycleTests
     private static void ThrowFailure(Exception failure) => throw failure;
 
     private static ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Typed(ResolutionScope scope) =>
-        scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Problem);
 
-    private static void InvokeOperation(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> operation) =>
-        operation.Mutate(Input, RandomNumberGenerator.Create(4), Problem.SearchSpace, Problem);
+    private static void InvokeOperation(IMutationExecutor<RealVector> operation) =>
+        operation.Mutate(Input, RandomNumberGenerator.Create(4));
 
     [Fact]
     public void FailureMatrix()
@@ -109,22 +109,21 @@ public sealed class OperatorLifecycleTests
         var scope = ResolutionScope.Create();
         var mutation = Typed(scope).Resolve(new Lifecycle<Mutation>(source, probe), out ILiveValue? control);
         control!.Value = 14;
-        Check(mutation.Mutate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)[0][0] == 14,
+        Check(mutation.Mutate(Input, RandomNumberGenerator.Create(1))[0][0] == 14,
             "invocation wrappers preserve the live state used by the callable operation");
-        _ = Typed(scope).Resolve(new Lifecycle<Evaluation>(source, probe)).Evaluate([Input[0], Input[0]],
-            RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem);
-        Check(Typed(scope).Resolve(new Lifecycle<Checksum>(source, probe)).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 14,
+        _ = Typed(scope).Resolve(new Lifecycle<Evaluation>(source, probe)).Evaluate([Input[0], Input[0]], RandomNumberGenerator.Create(1));
+        Check(Typed(scope).Resolve(new Lifecycle<Checksum>(source, probe)).Read(RandomNumberGenerator.Create(1)) == 14,
             "an external scalar adapter uses the same wrapper around the scope's one executor");
-        var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
-        var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
-        _ = broad.Resolve(new Lifecycle<Termination>(source, probe)).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
-        _ = narrow.Resolve(new Lifecycle<Termination>(source, probe).Named("term")).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem);
+        var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>(Problem);
+        var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>(Problem);
+        _ = broad.Resolve(new Lifecycle<Termination>(source, probe)).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0));
+        _ = narrow.Resolve(new Lifecycle<Termination>(source, probe).Named("term")).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0));
         Check(probe.Wraps == 5 && source.Log.Preparations == 1, "the wrappers wrap the scope's one executor, whichever operation or state view they name");
         var interceptor = new IdentityInterceptor(new ProbeLog());
         var interceptScope = ResolutionScope.Create();
         var state = new ProbeState();
-        Check(ReferenceEquals(state, interceptScope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>()
-            .Resolve(new Lifecycle<Interception<ProbeState>>(interceptor, probe)).Transform(state, null, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)),
+        Check(ReferenceEquals(state, interceptScope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>(Problem)
+            .Resolve(new Lifecycle<Interception<ProbeState>>(interceptor, probe)).Transform(state, null, RandomNumberGenerator.Create(1))),
             "interception keeps its exact state result through a wrapper");
         Check(probe.Work.SequenceEqual(new[] { 1, 2, 0, 0, 0, 0 }) && probe.SuccessCalls == 6,
             "a wrapper reads declared candidate work only where the operation supports it");
@@ -238,7 +237,7 @@ public sealed class OperatorLifecycleTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             Probe.Wraps++;
-            var operation = OperationInfo.For<TOperation, RealVector, TSearchSpace, TProblem, TSearchState>();
+            var operation = OperationInfo.For<TOperation, RealVector, TSearchState>();
             return operation.Wrap(scope.ResolveOperator(ChildOperator), new LifecycleWrapper(Probe, operation.SupportsCandidateWork));
         }
     }

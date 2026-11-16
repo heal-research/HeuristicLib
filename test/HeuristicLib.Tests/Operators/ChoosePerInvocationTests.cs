@@ -63,8 +63,8 @@ public class ChoosePerInvocationTests
 
         for (var seed = 0; seed < 64; seed++)
         {
-            mutation.Mutate([0], RandomNumberGenerator.Create(seed), Problem.SearchSpace, Problem);
-            selection.Select(population, Problem.Objective, 1, RandomNumberGenerator.Create(seed), Problem.SearchSpace, Problem);
+            mutation.Mutate([0], RandomNumberGenerator.Create(seed));
+            selection.Select(population, Problem.Objective, 1, RandomNumberGenerator.Create(seed));
         }
 
         mutations.ShouldBe(selections);
@@ -85,7 +85,7 @@ public class ChoosePerInvocationTests
         var random = RandomNumberGenerator.Create(5);
 
         for (var call = 0; call < 200; call++)
-            executor.Mutate([0], random, Problem.SearchSpace, Problem);
+            executor.Mutate([0], random);
 
         calls.Select(call => call.Index).Distinct().Order().ShouldBe(chosen);
     }
@@ -98,13 +98,11 @@ public class ChoosePerInvocationTests
         IReadOnlyList<int> parents = [1, 2];
         var random = RandomNumberGenerator.Create(3);
 
-        executor.Mutate(parents, random, Problem.SearchSpace, Problem).ShouldBeSameAs(parents);
+        executor.Mutate(parents, random).ShouldBeSameAs(parents);
 
         observed.ShouldHaveSingleItem().ShouldSatisfyAllConditions(
             call => call.Parents.ShouldBeSameAs(parents),
-            call => call.Random.ShouldBeSameAs(random),
-            call => call.SearchSpace.ShouldBeSameAs(Problem.SearchSpace),
-            call => call.Problem.ShouldBeSameAs(Problem));
+            call => call.Random.ShouldBeSameAs(random));
     }
 
     [Fact]
@@ -113,7 +111,7 @@ public class ChoosePerInvocationTests
         var choice = ChoosePerInvocation.Create([new ConstantEvaluator(10.0), new ConstantEvaluator(20.0)], [0.0, 1.0]);
         var executor = CreateScope().Resolve(choice);
 
-        var objectives = executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem);
+        var objectives = executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1));
 
         objectives.Select(objective => objective[0]).ShouldBe([20.0, 20.0, 20.0]);
     }
@@ -131,11 +129,11 @@ public class ChoosePerInvocationTests
             .Counted(choiceCalls);
         var scope = ResolutionScope.Create();
         var executor = scope
-            .For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(counted);
+            .For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(Problem).Resolve(counted);
         var random = RandomNumberGenerator.Create(1);
 
         for (var call = 0; call < 3; call++)
-            executor.Mutate([1, 2], random, Problem.SearchSpace, Problem);
+            executor.Mutate([1, 2], random);
 
         scope.Results.Result(firstCalls).CurrentCount.ShouldBe(3);
         scope.Results.Result(secondCalls).CurrentCount.ShouldBe(0);
@@ -149,13 +147,13 @@ public class ChoosePerInvocationTests
         var child = new IndexMutator(0, []);
         var choice = ChoosePerInvocation.Create(child);
         var root = ResolutionScope.Create();
-        var plain = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice);
+        var plain = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(Problem).Resolve(choice);
         var countedScope = root.CreateChildScope();
-        var counted = countedScope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(choice.Counting(child, out var calls));
+        var counted = countedScope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(Problem).Resolve(choice.Counting(child, out var calls));
         var random = RandomNumberGenerator.Create(1);
 
-        plain.Mutate([1], random, Problem.SearchSpace, Problem);
-        counted.Mutate([1], random, Problem.SearchSpace, Problem);
+        plain.Mutate([1], random);
+        counted.Mutate([1], random);
 
         root.Results.Result(calls).CurrentCount.ShouldBe(1);
     }
@@ -180,13 +178,13 @@ public class ChoosePerInvocationTests
     {
         var choice = ChoosePerInvocation.Create([new ChecksumValue(10), new ChecksumValue(20)], [0.0, 1.0]);
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var executor = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(choice);
+        var executor = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(choice);
 
-        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(20);
+        executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(20);
     }
 
     private static ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateScope() =>
-        ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
+        ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(Problem);
 
     private sealed record IndexMutator(int Index, List<(int Index, double NextDraw)> Invocations) : StatelessMutator<int>
     {
@@ -232,11 +230,11 @@ public class ChoosePerInvocationTests
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
 
-        private sealed class Executor : IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>, ILevelControl
+        private sealed class Executor : IMutationExecutor<int>, ILevelControl
         {
             public int Level { get; set; }
 
-            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) =>
+            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
                 parents;
         }
     }
@@ -246,9 +244,9 @@ public class ChoosePerInvocationTests
         IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Value);
 
-        private sealed class Executor(int value) : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+        private sealed class Executor(int value) : IChecksumExecutor
         {
-            public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) => value;
+            public int Read(IRandomNumberGenerator random) => value;
         }
     }
 }

@@ -91,17 +91,15 @@ public class EvaluatorConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TSearchSpace, TProblem>(children);
+            System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(children);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IEvaluationExecutor<int, TSearchSpace, TProblem>> childEvaluators)
-            : IEvaluationExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ImmutableArray<IEvaluationExecutor<int>> childEvaluators)
+            : IEvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                childEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+                childEvaluators[0].Evaluate(candidates, random);
         }
     }
     private sealed record IdentityEvaluator : WrappingOperator<Evaluation, int>

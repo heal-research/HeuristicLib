@@ -1,8 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Crossovers;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -30,18 +28,16 @@ public record TransformedCrossover<TCandidate>(IOperator<Crossover, TCandidate> 
     {
         var sourceCrossover = scope.Resolve(SourceCrossover);
         var transformationMutator = scope.Resolve(TransformationMutator);
-        return new Executor<TRunSearchSpace, TRunProblem>(sourceCrossover, transformationMutator);
+        return new Executor(sourceCrossover, transformationMutator);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
-        : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ICrossoverExecutor<TCandidate> crossover, IMutationExecutor<TCandidate> mutator)
+        : CrossoverExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random)
         {
-            var candidates = crossover.Cross(parents, random, searchSpace, problem);
-            return mutator.Mutate(candidates, random, searchSpace, problem);
+            var candidates = crossover.Cross(parents, random);
+            return mutator.Mutate(candidates, random);
         }
     }
 }

@@ -29,15 +29,13 @@ public record NoSameMatesSelector<TCandidate>
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         var childSelector = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
+        return new Executor(childSelector, MaxAttempts);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
-        : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ISelectionExecutor<TCandidate> childSelector, int maxAttempts)
+        : SelectionExecutor<TCandidate>
     {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
             var selectedParents = 0;
             var poolCount = 0;
@@ -46,7 +44,7 @@ public record NoSameMatesSelector<TCandidate>
             var parentsPool = new EvaluatedCandidate<TCandidate>[count];
             for (var attempts = 1; attempts <= maxAttempts && selectedParents < count; attempts++)
             {
-                var parents = childSelector.Select(population, objective, count, random, searchSpace, problem);
+                var parents = childSelector.Select(population, objective, count, random);
                 for (int indexParent1 = 0, indexParent2 = 1; indexParent1 < parents.Count - 1 && selectedParents < count - 1; indexParent1 += 2, indexParent2 += 2)
                 {
                     var qualityParent1 = parents[indexParent1].ObjectiveVector;

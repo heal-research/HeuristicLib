@@ -97,19 +97,17 @@ public static class AlgorithmExtensions
             algorithm.CreateRun(problem, random, validate).Complete(initialState, ct);
     }
 
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithmExecutor)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TSearchState>(
+        IAlgorithmExecutor<TSearchState> algorithmExecutor)
         where TSearchState : class, ISearchState
     {
-        public async Task<TSearchState> CompleteAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
-            await algorithmExecutor.RunStreamingAsync(problem, random, initialState, ct).LastAsync(ct);
+        public async Task<TSearchState> CompleteAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
+            await algorithmExecutor.RunStreamingAsync(random, initialState, ct).LastAsync(ct);
 
-        public IEnumerable<TSearchState> Stream(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
-            algorithmExecutor.RunStreamingAsync(problem, random, initialState, ct).ToBlockingEnumerable(ct);
+        public IEnumerable<TSearchState> Stream(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
+            algorithmExecutor.RunStreamingAsync(random, initialState, ct).ToBlockingEnumerable(ct);
 
-        public TSearchState Complete(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
-            algorithmExecutor.CompleteAsync(problem, random, initialState, ct).GetAwaiter().GetResult();
+        public TSearchState Complete(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default) =>
+            algorithmExecutor.CompleteAsync(random, initialState, ct).GetAwaiter().GetResult();
     }
 }

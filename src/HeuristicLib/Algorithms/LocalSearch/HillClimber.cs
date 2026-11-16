@@ -52,36 +52,36 @@ public record HillClimber<TCandidate>
         var creator = scope.Resolve(Creator);
         var mutator = scope.Resolve(Mutator);
         var refiner = scope.ResolveOptional(Refiner);
-        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, mutator, refiner, Direction, MaxNeighbors, BatchSize);
+        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, mutator, refiner, Direction, MaxNeighbors, BatchSize, scope.Problem);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>? interceptor,
-        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator,
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator,
-        IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? refiner,
+        IInterceptionExecutor<SingleSolutionState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate> evaluator,
+        ICreationExecutor<TCandidate> creator,
+        IMutationExecutor<TCandidate> mutator,
+        IRefinementExecutor<TCandidate>? refiner,
         LocalSearchDirection direction,
         int maxNeighbors,
-        int batchSize)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor)
+        int batchSize, TProblem problem)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random) =>
-            TryExecuteStep(previousState, problem, random, out var nextState)
+        protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, IRandomNumberGenerator random) =>
+            TryExecuteStep(previousState, random, out var nextState)
                 ? nextState
                 : throw new InvalidOperationException("HillClimber has structurally completed and cannot produce another step.");
 
-        protected override bool TryExecuteStep(SingleSolutionState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out SingleSolutionState<TCandidate>? nextState)
+        protected override bool TryExecuteStep(SingleSolutionState<TCandidate>? previousState, IRandomNumberGenerator random, [NotNullWhen(true)] out SingleSolutionState<TCandidate>? nextState)
         {
             if (previousState is null)
             {
-                nextState = CreateInitialState(problem, random);
+                nextState = CreateInitialState(random);
                 return true;
             }
 
-            if (!TryFindImprovement(previousState.EvaluatedCandidate, problem, random, out var improvement))
+            if (!TryFindImprovement(previousState.EvaluatedCandidate, random, out var improvement))
             {
                 nextState = null;
                 return false;
@@ -91,35 +91,35 @@ public record HillClimber<TCandidate>
             return true;
         }
 
-        private SingleSolutionState<TCandidate> CreateInitialState(TProblem problem, IRandomNumberGenerator random)
+        private SingleSolutionState<TCandidate> CreateInitialState(IRandomNumberGenerator random)
         {
-            var created = creator.Create(1, random, problem.SearchSpace, problem);
+            var created = creator.Create(1, random);
             if (refiner is not null)
             {
-                created = refiner.Refine(created, random, problem.SearchSpace, problem);
+                created = refiner.Refine(created, random);
             }
 
             var initialSolution = created[0];
-            var initialCandidate = initialSolution.ToEvaluated(evaluator.Evaluate([initialSolution], random, problem.SearchSpace, problem)[0]);
+            var initialCandidate = initialSolution.ToEvaluated(evaluator.Evaluate([initialSolution], random)[0]);
             return ToState(initialCandidate);
         }
 
-        private bool TryFindImprovement(EvaluatedCandidate<TCandidate> current, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out EvaluatedCandidate<TCandidate>? improvement)
+        private bool TryFindImprovement(EvaluatedCandidate<TCandidate> current, IRandomNumberGenerator random, [NotNullWhen(true)] out EvaluatedCandidate<TCandidate>? improvement)
         {
             improvement = null;
 
             for (var i = 0; i < maxNeighbors; i += batchSize)
             {
-                var candidates = mutator.Mutate(Enumerable.Repeat(current.Candidate, batchSize).ToArray(), random, problem.SearchSpace, problem);
+                var candidates = mutator.Mutate(Enumerable.Repeat(current.Candidate, batchSize).ToArray(), random);
                 if (refiner is not null)
                 {
-                    candidates = refiner.Refine(candidates, random, problem.SearchSpace, problem);
+                    candidates = refiner.Refine(candidates, random);
                 }
 
-                var objectiveVectors = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
-                var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
+                var objectiveVectors = evaluator.Evaluate(candidates, random);
+                var bestIndex = BestSelector.Select(objectiveVectors, Problem.Objective, count: 1)[0];
 
-                if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
+                if (Problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
                 {
                     continue;
                 }

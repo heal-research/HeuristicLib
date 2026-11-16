@@ -1,9 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -42,20 +40,18 @@ public record GenderSpecificSelector<TCandidate>
     {
         var femaleSelector = scope.Resolve(FemaleSelector);
         var maleSelector = scope.Resolve(MaleSelector);
-        return new Executor<TRunSearchSpace, TRunProblem>(femaleSelector, maleSelector);
+        return new Executor(femaleSelector, maleSelector);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectionExecutor<TCandidate, TSearchSpace, TProblem> maleSelector)
-        : SelectionExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ISelectionExecutor<TCandidate> femaleSelector, ISelectionExecutor<TCandidate> maleSelector)
+        : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
             var pairCount = count / 2;
             var femaleCount = count - pairCount;
-            var females = femaleSelector.Select(population, objective, femaleCount, random, searchSpace, problem);
-            var males = maleSelector.Select(population, objective, pairCount, random, searchSpace, problem);
+            var females = femaleSelector.Select(population, objective, femaleCount, random);
+            var males = maleSelector.Select(population, objective, pairCount, random);
 
             var result = new EvaluatedCandidate<TCandidate>[count];
             for (var i = 0; i < pairCount; i++)

@@ -6,10 +6,11 @@ namespace HEAL.HeuristicLib.Tests.Algorithms;
 
 public class IterativeAlgorithmExecutionTests
 {
+    private static readonly FuncProblem<int, DummySearchSpace<int>> Problem = FuncProblem.Create((int value) => value, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
     [Fact]
     public async Task HasCompleted_IsCheckedBeforeExecutingAStep()
     {
-        var executor = new ProbeExecutor { CompleteAtCount = 0 };
+        var executor = new ProbeExecutor(Problem) { CompleteAtCount = 0 };
 
         var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
@@ -21,7 +22,7 @@ public class IterativeAlgorithmExecutionTests
     [Fact]
     public async Task Cancellation_IsCheckedBeforeExecutingAStep()
     {
-        var executor = new ProbeExecutor();
+        var executor = new ProbeExecutor(Problem);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
 
@@ -33,7 +34,7 @@ public class IterativeAlgorithmExecutionTests
     [Fact]
     public async Task RandomForks_UseTheYieldedStateCount()
     {
-        var executor = new ProbeExecutor { CompleteAtCount = 2 };
+        var executor = new ProbeExecutor(Problem) { CompleteAtCount = 2 };
         var random = new RecordingRandom();
 
         _ = await Collect(executor, random, ct: TestContext.Current.CancellationToken);
@@ -45,7 +46,7 @@ public class IterativeAlgorithmExecutionTests
     public async Task TryExecuteStepReturningFalse_DoesNotYieldOrIntercept()
     {
         var interceptor = new RecordingInterceptor();
-        var executor = new ProbeExecutor(interceptor) { StopBeforeFirstStep = true };
+        var executor = new ProbeExecutor(Problem, interceptor) { StopBeforeFirstStep = true };
 
         var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
@@ -57,7 +58,7 @@ public class IterativeAlgorithmExecutionTests
     public async Task Interception_PrecedesTerminalStateEvaluation()
     {
         var interceptor = new RecordingInterceptor();
-        var executor = new ProbeExecutor(interceptor) { TerminalAtValue = 2 };
+        var executor = new ProbeExecutor(Problem, interceptor) { TerminalAtValue = 2 };
 
         var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
@@ -70,7 +71,7 @@ public class IterativeAlgorithmExecutionTests
     {
         var interceptor = new RecordingInterceptor();
         var random = new RecordingRandom();
-        var executor = new ProbeExecutor(interceptor) { TerminalAtValue = 2 };
+        var executor = new ProbeExecutor(Problem, interceptor) { TerminalAtValue = 2 };
 
         _ = await Collect(executor, random, ct: TestContext.Current.CancellationToken);
 
@@ -82,7 +83,7 @@ public class IterativeAlgorithmExecutionTests
     {
         var interceptor = new RecordingInterceptor();
         var random = RandomNumberGenerator.Create(1);
-        var executor = new ProbeExecutor(interceptor) { TerminalAtValue = 2 };
+        var executor = new ProbeExecutor(Problem, interceptor) { TerminalAtValue = 2 };
 
         _ = await Collect(executor, random, ct: TestContext.Current.CancellationToken);
 
@@ -93,7 +94,7 @@ public class IterativeAlgorithmExecutionTests
     [Fact]
     public async Task TerminalState_IsYieldedOnceBeforeCompletion()
     {
-        var executor = new ProbeExecutor { TerminalAtValue = 1 };
+        var executor = new ProbeExecutor(Problem) { TerminalAtValue = 1 };
 
         var states = await Collect(executor, ct: TestContext.Current.CancellationToken);
 
@@ -105,7 +106,7 @@ public class IterativeAlgorithmExecutionTests
     public async Task InitialState_IsPassedAsThePreviousState()
     {
         var initialState = new ProbeState(41);
-        var executor = new ProbeExecutor { TerminalAtValue = 42 };
+        var executor = new ProbeExecutor(Problem) { TerminalAtValue = 42 };
 
         var states = await Collect(executor, initialState: initialState, ct: TestContext.Current.CancellationToken);
 
@@ -115,9 +116,9 @@ public class IterativeAlgorithmExecutionTests
 
     private static async Task<List<ProbeState>> Collect(ProbeExecutor executor, IRandomNumberGenerator? random = null, ProbeState? initialState = null, CancellationToken ct = default)
     {
-        var problem = FuncProblem.Create((int value) => value, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+
         var states = new List<ProbeState>();
-        await foreach (var state in executor.RunStreamingAsync(problem, random ?? new RecordingRandom(), initialState, ct))
+        await foreach (var state in executor.RunStreamingAsync(random ?? new RecordingRandom(), initialState, ct))
         {
             states.Add(state);
         }
@@ -127,8 +128,8 @@ public class IterativeAlgorithmExecutionTests
 
     private sealed record ProbeState(int Value) : ISearchState;
 
-    private sealed class ProbeExecutor(IInterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>? interceptor = null)
-        : IterativeAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>(interceptor)
+    private sealed class ProbeExecutor(FuncProblem<int, DummySearchSpace<int>> problem, IInterceptionExecutor<ProbeState>? interceptor = null)
+        : IterativeAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>(interceptor, problem)
     {
         public int? CompleteAtCount { get; init; }
         public int? TerminalAtValue { get; init; }
@@ -138,7 +139,7 @@ public class IterativeAlgorithmExecutionTests
         public IRandomNumberGenerator? TerminalStateRandom { get; private set; }
         public List<string> Events { get; } = [];
 
-        protected override ProbeState ExecuteStep(ProbeState? previousState, FuncProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random)
+        protected override ProbeState ExecuteStep(ProbeState? previousState, IRandomNumberGenerator random)
         {
             Events.Add("step");
             StepCalls++;
@@ -146,7 +147,7 @@ public class IterativeAlgorithmExecutionTests
             return new ProbeState((previousState?.Value ?? 0) + 1);
         }
 
-        protected override bool TryExecuteStep(ProbeState? previousState, FuncProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, [NotNullWhen(true)] out ProbeState? nextState)
+        protected override bool TryExecuteStep(ProbeState? previousState, IRandomNumberGenerator random, [NotNullWhen(true)] out ProbeState? nextState)
         {
             if (StopBeforeFirstStep)
             {
@@ -154,17 +155,17 @@ public class IterativeAlgorithmExecutionTests
                 return false;
             }
 
-            nextState = ExecuteStep(previousState, problem, random);
+            nextState = ExecuteStep(previousState, random);
             return true;
         }
 
-        protected override bool HasCompleted(int yieldedStateCount, ProbeState? previousState, FuncProblem<int, DummySearchSpace<int>> problem)
+        protected override bool HasCompleted(int yieldedStateCount, ProbeState? previousState)
         {
             Events.Add($"complete:{yieldedStateCount}");
             return yieldedStateCount == CompleteAtCount;
         }
 
-        protected override bool IsTerminalState(ProbeState state, int yieldedStateCount, ProbeState? previousState, FuncProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random)
+        protected override bool IsTerminalState(ProbeState state, int yieldedStateCount, ProbeState? previousState, IRandomNumberGenerator random)
         {
             Events.Add($"terminal:{state.Value}");
             TerminalStateRandom = random;
@@ -172,12 +173,12 @@ public class IterativeAlgorithmExecutionTests
         }
     }
 
-    private sealed class RecordingInterceptor : IInterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
+    private sealed class RecordingInterceptor : IInterceptionExecutor<ProbeState>
     {
         public int Invocations { get; private set; }
         public IRandomNumberGenerator? Random { get; private set; }
 
-        public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+        public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random)
         {
             Invocations++;
             Random = random;

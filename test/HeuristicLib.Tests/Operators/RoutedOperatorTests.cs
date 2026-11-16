@@ -55,10 +55,9 @@ public class RoutedOperatorTests
         var creator = ChoosePerItem.Create(
             [new ConstantCreator(100), new ConstantCreator(200)],
             [1.0, 1.0]);
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveCreator(creator);
 
-        var result = executor.Create(3, new SequenceRandomNumberGenerator(0.2, 0.8, 0.3), DummySearchSpace<int>.Instance, problem);
+        var result = executor.Create(3, new SequenceRandomNumberGenerator(0.2, 0.8, 0.3));
 
         result.ShouldBe([100, 200, 100]);
     }
@@ -67,10 +66,9 @@ public class RoutedOperatorTests
     public void TransformedCreator_ShouldApplyMutatorToCreatedCandidates()
     {
         var creator = new ConstantCreator(5).TransformWith(new AddOffsetMutator(10));
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveCreator(creator);
 
-        var result = executor.Create(3, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
+        var result = executor.Create(3, RandomNumberGenerator.Create(0));
 
         result.ShouldBe([15, 15, 15]);
     }
@@ -79,10 +77,9 @@ public class RoutedOperatorTests
     public void TransformedCrossover_ShouldAlwaysApplyMutatorToCrossedCandidates()
     {
         var crossover = new FirstParentCrossover(100).TransformWith(new AddOffsetMutator(10));
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveCrossover(crossover);
 
-        var result = executor.Cross([Parents.From(1, 10), Parents.From(2, 20)], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
+        var result = executor.Cross([Parents.From(1, 10), Parents.From(2, 20)], RandomNumberGenerator.Create(0));
 
         result.ShouldBe([111, 112]);
     }
@@ -94,14 +91,10 @@ public class RoutedOperatorTests
             [new AddOffsetMutator(100), new AddOffsetMutator(200)],
             [1.0, 1.0]);
 
-        var problem = FuncProblem.Create(
-            evaluateFunc: (int x) => x,
-            encoding: DummySearchSpace<int>.Instance,
-            objective: SingleObjective.Minimize);
         var rng = new SequenceRandomNumberGenerator(0.2, 0.8, 0.3);
         var executor = ResolutionScope.Create().ResolveMutator(mutator);
 
-        var result = executor.Mutate([1, 2, 3], rng, DummySearchSpace<int>.Instance, problem);
+        var result = executor.Mutate([1, 2, 3], rng);
 
         result.ShouldBe([101, 202, 103]);
     }
@@ -112,10 +105,9 @@ public class RoutedOperatorTests
         var evaluator = ChoosePerItem.Create(
             [new OffsetEvaluator(100), new OffsetEvaluator(200)],
             [1.0, 1.0]);
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveEvaluator(evaluator);
 
-        var objectives = executor.Evaluate([1, 2, 3], new SequenceRandomNumberGenerator(0.2, 0.8, 0.3), problem.SearchSpace, problem);
+        var objectives = executor.Evaluate([1, 2, 3], new SequenceRandomNumberGenerator(0.2, 0.8, 0.3));
 
         objectives.Select(vector => vector[0]).ShouldBe([101.0, 202.0, 103.0]);
     }
@@ -130,7 +122,7 @@ public class RoutedOperatorTests
         var population = CreateEvaluatedCandidates(1, 2, 3);
         var executor = ResolutionScope.Create().ResolveSelector(selector);
 
-        var selected = executor.Select(population, problem.Objective, 2, new SequenceRandomNumberGenerator(0.8), problem.SearchSpace, problem);
+        var selected = executor.Select(population, problem.Objective, 2, new SequenceRandomNumberGenerator(0.8));
 
         selected.Select(candidate => candidate.Candidate).ShouldBe([2, 3]);
     }
@@ -144,7 +136,7 @@ public class RoutedOperatorTests
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveReplacer(replacer);
 
-        var replaced = executor.Replace(CreateEvaluatedCandidates(1, 2), CreateEvaluatedCandidates(3, 4), problem.Objective, 2, new SequenceRandomNumberGenerator(0.8), problem.SearchSpace, problem);
+        var replaced = executor.Replace(CreateEvaluatedCandidates(1, 2), CreateEvaluatedCandidates(3, 4), problem.Objective, 2, new SequenceRandomNumberGenerator(0.8));
 
         replaced.Select(candidate => candidate.Candidate).ShouldBe([3, 4]);
     }
@@ -346,12 +338,11 @@ public class RoutedOperatorTests
     public void MutatorWithRate_UsesThresholdSemantics(double mutationRate, int expected)
     {
         var mutator = new AddOffsetMutator(100).AppliedAtRate(mutationRate);
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveMutator(mutator);
 
         // A low draw selects the first entry under uniform fallback, so a rate that fails to make the
         // mutator unselectable is detected instead of being masked by an accidental fallback draw.
-        var result = executor.Mutate([1], new SequenceRandomNumberGenerator(0.1), problem.SearchSpace, problem);
+        var result = executor.Mutate([1], new SequenceRandomNumberGenerator(0.1));
 
         result.ShouldBe([expected]);
     }
@@ -365,10 +356,9 @@ public class RoutedOperatorTests
     public void CrossoverWithRate_UsesThresholdSemantics(double crossoverRate, int expected)
     {
         var crossover = new FirstParentCrossover(100).AppliedAtRate(crossoverRate);
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveCrossover(crossover);
 
-        var result = executor.Cross([Parents.From(1, 10)], new SequenceRandomNumberGenerator(0.1), problem.SearchSpace, problem);
+        var result = executor.Cross([Parents.From(1, 10)], new SequenceRandomNumberGenerator(0.1));
 
         result.ShouldBe([expected]);
     }
@@ -380,18 +370,12 @@ public class RoutedOperatorTests
             [new FirstParentCrossover(100), new SecondParentCrossover(200)],
             [1.0, 1.0]);
 
-        var problem = FuncProblem.Create(
-            evaluateFunc: (int x) => x,
-            encoding: DummySearchSpace<int>.Instance,
-            objective: SingleObjective.Minimize);
         var rng = new SequenceRandomNumberGenerator(0.2, 0.8, 0.3);
         var executor = ResolutionScope.Create().ResolveCrossover(crossover);
 
         var result = executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
-            rng,
-            DummySearchSpace<int>.Instance,
-            problem);
+            rng);
 
         result.ShouldBe([101, 220, 103]);
     }
@@ -401,13 +385,9 @@ public class RoutedOperatorTests
     {
         var mutator = new AddOffsetMutator(10).Then(new AddOffsetMutator(100));
 
-        var problem = FuncProblem.Create(
-            evaluateFunc: (int x) => x,
-            encoding: DummySearchSpace<int>.Instance,
-            objective: SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveMutator(mutator);
 
-        var result = executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
+        var result = executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(0));
 
         result.ShouldBe([111, 112, 113]);
     }
@@ -437,9 +417,9 @@ public class RoutedOperatorTests
             stageOrder.Add(2);
             return actualParents;
         });
-        var executor = PipelineMutator.Create(first, second).CreateMutatorExecutor();
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(PipelineMutator.Create(first, second), problem);
 
-        var result = executor.Mutate(parents, random, problem.SearchSpace, problem);
+        var result = executor.Mutate(parents, random);
 
         result.ShouldBeSameAs(parents);
         stageOrder.ShouldBe([1, 2]);
@@ -449,7 +429,6 @@ public class RoutedOperatorTests
     public void PipelineMutator_ShouldStopAfterAStageThrows()
     {
         var finalStageCalled = false;
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var first = new CallbackExecutionMutator((parents, _, _, _) => parents);
         var throwing = new CallbackExecutionMutator((_, _, _, _) => throw new InvalidOperationException());
         var final = new CallbackExecutionMutator((parents, _, _, _) =>
@@ -460,7 +439,7 @@ public class RoutedOperatorTests
         var executor = PipelineMutator.Create(first, throwing, final).CreateMutatorExecutor();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Mutate([1], RandomNumberGenerator.Create(0), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(0)));
 
         finalStageCalled.ShouldBeFalse();
     }
@@ -471,14 +450,10 @@ public class RoutedOperatorTests
         var countingMutator = new CountingExecutionMutator();
         var mutator = PipelineMutator.Create(countingMutator);
 
-        var problem = FuncProblem.Create(
-            evaluateFunc: (int x) => x,
-            encoding: DummySearchSpace<int>.Instance,
-            objective: SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveMutator(mutator);
 
-        var first = executor.Mutate([1], RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
-        var second = executor.Mutate([1], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem);
+        var first = executor.Mutate([1], RandomNumberGenerator.Create(0));
+        var second = executor.Mutate([1], RandomNumberGenerator.Create(1));
 
         countingMutator.ExecutionsCreated.ShouldBe(1);
         first.ShouldBe([2]);
@@ -494,13 +469,9 @@ public class RoutedOperatorTests
         var scope = ResolutionScope.Create();
         var firstExecutor = scope.CreateChildScope().ResolveMutator(firstWrapper);
         var secondExecutor = scope.CreateChildScope().ResolveMutator(secondWrapper);
-        var problem = FuncProblem.Create(
-            evaluateFunc: (int x) => x,
-            encoding: DummySearchSpace<int>.Instance,
-            objective: SingleObjective.Minimize);
 
-        var first = firstExecutor.Mutate([1], RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
-        var second = secondExecutor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var first = firstExecutor.Mutate([1], RandomNumberGenerator.Create(0));
+        var second = secondExecutor.Mutate([1], RandomNumberGenerator.Create(1));
 
         innerOperator.ExecutionsCreated.ShouldBe(2);
         first.ShouldBe([2]);
@@ -524,9 +495,8 @@ public class RoutedOperatorTests
         var pipeline = new PipelineMutator<int>([]);
         var executor = ResolutionScope.Create().ResolveMutator(pipeline);
         var parents = new[] { 1, 2, 3 };
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
 
-        var result = executor.Mutate(parents, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        var result = executor.Mutate(parents, RandomNumberGenerator.Create(0));
 
         result.ShouldBeSameAs(parents);
     }
@@ -550,9 +520,9 @@ public class RoutedOperatorTests
             evaluateFunc: (int x) => x,
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(interceptor);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(interceptor, problem);
 
-        var result = executor.Transform(new TestAlgorithmState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem);
+        var result = executor.Transform(new TestAlgorithmState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1));
 
         result.Value.ShouldBe(111);
     }
@@ -562,10 +532,10 @@ public class RoutedOperatorTests
     {
         var interceptor = new PipelineInterceptor<int, TestAlgorithmState>([]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(interceptor);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(interceptor, problem);
         var state = new TestAlgorithmState { Value = 1 };
 
-        executor.Transform(state, previousState: null, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, problem).ShouldBeSameAs(state);
+        executor.Transform(state, previousState: null, RandomNumberGenerator.Create(1)).ShouldBeSameAs(state);
     }
 
     [Fact]
@@ -577,8 +547,8 @@ public class RoutedOperatorTests
         var previousState = new TestAlgorithmState { Value = 0 };
         var random = RandomNumberGenerator.Create(1);
 
-        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(interceptor)
-            .Transform(new TestAlgorithmState { Value = 1 }, previousState, random, DummySearchSpace<int>.Instance, problem);
+        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(interceptor, problem)
+            .Transform(new TestAlgorithmState { Value = 1 }, previousState, random);
 
         observations.Count.ShouldBe(2);
         observations.ShouldAllBe(observation => ReferenceEquals(observation.PreviousState, previousState));
@@ -591,11 +561,11 @@ public class RoutedOperatorTests
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var state = new TestAlgorithmState { Value = 1 };
         var scope = ResolutionScope.Create();
-        var any = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(true).Or(new ThrowingTerminator()));
-        var all = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(false).And(new ThrowingTerminator()));
+        var any = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(true).Or(new ThrowingTerminator()), problem);
+        var all = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new ConstantTerminator(false).And(new ThrowingTerminator()), problem);
 
-        any.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeTrue();
-        all.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeFalse();
+        any.IsTerminalState(state, RandomNumberGenerator.Create(0)).ShouldBeTrue();
+        all.IsTerminalState(state, RandomNumberGenerator.Create(0)).ShouldBeFalse();
     }
 
     [Fact]
@@ -604,11 +574,11 @@ public class RoutedOperatorTests
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var state = new TestAlgorithmState { Value = 1 };
         var scope = ResolutionScope.Create();
-        var any = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new AnyTerminator<int>());
-        var all = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new AllTerminator<int>());
+        var any = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new AnyTerminator<int>(), problem);
+        var all = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TestAlgorithmState>(new AllTerminator<int>(), problem);
 
-        any.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeFalse();
-        all.IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem).ShouldBeTrue();
+        any.IsTerminalState(state, RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        all.IsTerminalState(state, RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Theory]
@@ -666,33 +636,31 @@ public class RoutedOperatorTests
 
     private static IReadOnlyList<int> Routed(string role, SingleResultOperator source, int count)
     {
-        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
-        var space = DummySearchSpace<int>.Instance;
+        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(RoutingProblem);
         var random = new SequenceRandomNumberGenerator();
         var inputs = Enumerable.Range(0, count).ToArray();
         return role switch
         {
-            "creation" => scope.Resolve(new ChoosePerItem<Creation, int>([(IOperator<Creation, int>)source])).Create(count, random, space, RoutingProblem),
-            "crossover" => scope.Resolve(new ChoosePerItem<Crossover, int>([(IOperator<Crossover, int>)source])).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random, space, RoutingProblem),
-            "mutation" => scope.Resolve(new ChoosePerItem<Mutation, int>([(IOperator<Mutation, int>)source])).Mutate(inputs, random, space, RoutingProblem),
-            "refinement" => scope.Resolve(new ChoosePerItem<Refinement, int>([(IOperator<Refinement, int>)source])).Refine(inputs, random, space, RoutingProblem),
+            "creation" => scope.Resolve(new ChoosePerItem<Creation, int>([(IOperator<Creation, int>)source])).Create(count, random),
+            "crossover" => scope.Resolve(new ChoosePerItem<Crossover, int>([(IOperator<Crossover, int>)source])).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random),
+            "mutation" => scope.Resolve(new ChoosePerItem<Mutation, int>([(IOperator<Mutation, int>)source])).Mutate(inputs, random),
+            "refinement" => scope.Resolve(new ChoosePerItem<Refinement, int>([(IOperator<Refinement, int>)source])).Refine(inputs, random),
             _ => throw new ArgumentOutOfRangeException(nameof(role))
         };
     }
 
     private static (IReadOnlyList<int> Results, int NextDraw) DrawingRouting(string role, ExecutionConcurrency concurrency, IReadOnlyList<double>? suppliedWeights = null)
     {
-        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>();
-        var space = DummySearchSpace<int>.Instance;
+        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(RoutingProblem);
         var random = RandomNumberGenerator.Create(42);
         var inputs = Enumerable.Range(0, 32).ToArray();
         IReadOnlyList<double> weights = suppliedWeights ?? [1, 3];
         IReadOnlyList<int> result = role switch
         {
-            "creation" => scope.Resolve(ChoosePerItem.Create([new DrawingCreator(100) { Concurrency = concurrency }, new DrawingCreator(200) { Concurrency = concurrency }], weights)).Create(32, random, space, RoutingProblem),
-            "crossover" => scope.Resolve(ChoosePerItem.Create([new DrawingCrossover(100) { Concurrency = concurrency }, new DrawingCrossover(200) { Concurrency = concurrency }], weights)).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random, space, RoutingProblem),
-            "mutation" => scope.Resolve(ChoosePerItem.Create([new DrawingMutator(100) { Concurrency = concurrency }, new DrawingMutator(200) { Concurrency = concurrency }], weights)).Mutate(inputs, random, space, RoutingProblem),
-            "refinement" => scope.Resolve(ChoosePerItem.Create([new DrawingRefiner(100) { Concurrency = concurrency }, new DrawingRefiner(200) { Concurrency = concurrency }], weights)).Refine(inputs, random, space, RoutingProblem),
+            "creation" => scope.Resolve(ChoosePerItem.Create([new DrawingCreator(100) { Concurrency = concurrency }, new DrawingCreator(200) { Concurrency = concurrency }], weights)).Create(32, random),
+            "crossover" => scope.Resolve(ChoosePerItem.Create([new DrawingCrossover(100) { Concurrency = concurrency }, new DrawingCrossover(200) { Concurrency = concurrency }], weights)).Cross(inputs.Select(x => Parents.From(x, x)).ToArray(), random),
+            "mutation" => scope.Resolve(ChoosePerItem.Create([new DrawingMutator(100) { Concurrency = concurrency }, new DrawingMutator(200) { Concurrency = concurrency }], weights)).Mutate(inputs, random),
+            "refinement" => scope.Resolve(ChoosePerItem.Create([new DrawingRefiner(100) { Concurrency = concurrency }, new DrawingRefiner(200) { Concurrency = concurrency }], weights)).Refine(inputs, random),
             _ => throw new ArgumentOutOfRangeException(nameof(role))
         };
         return (result, random.NextInt());
@@ -817,11 +785,11 @@ public class RoutedOperatorTests
             return new Executor();
         }
 
-        private sealed class Executor : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor : IMutationExecutor<int>
         {
             private int invocations;
 
-            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
             {
                 var calls = ++invocations;
                 return parents.Select(parent => parent + calls).ToArray();
@@ -836,22 +804,18 @@ public class RoutedOperatorTests
         IProblem<int, DummySearchSpace<int>> problem);
 
     private sealed record CallbackExecutionMutator(MutationCallback Callback)
-        : IOperator<Mutation, int>
+        : Mutator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => CreateBoundExecutor();
+        protected override IMutationExecutor<int> CreateExecutor<TSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TSearchState> scope) =>
+            new Executor(Callback, scope.Problem);
 
-        private IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecutor() =>
-            new Executor(Callback);
-
-        private sealed class Executor(MutationCallback callback)
-            : IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(MutationCallback callback, IProblem<int, DummySearchSpace<int>> problem)
+            : IMutationExecutor<int>
         {
+            private readonly DummySearchSpace<int> searchSpace = problem.SearchSpace;
+
             public IReadOnlyList<int> Mutate(
-                IReadOnlyList<int> parents,
-                IRandomNumberGenerator random,
-                DummySearchSpace<int> searchSpace,
-                IProblem<int, DummySearchSpace<int>> problem) =>
+                IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
                 callback(parents, random, searchSpace, problem);
         }
     }
@@ -870,42 +834,43 @@ public class RoutedOperatorTests
 /// </summary>
 file static class OperatorResolution
 {
+    private static readonly FuncProblem<int, DummySearchSpace<int>> Problem = FuncProblem.Create(static (int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
     extension(ResolutionScope scope)
     {
-        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(IOperator<Creation, int> creator) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
+        public ICreationExecutor<int> ResolveCreator(IOperator<Creation, int> creator) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator, Problem);
 
-        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(IOperator<Crossover, int> crossover) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
+        public ICrossoverExecutor<int> ResolveCrossover(IOperator<Crossover, int> crossover) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover, Problem);
 
-        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IOperator<Mutation, int> mutator) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+        public IMutationExecutor<int> ResolveMutator(IOperator<Mutation, int> mutator) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, Problem);
 
-        public IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveEvaluator(IOperator<Evaluation, int> evaluator) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        public IEvaluationExecutor<int> ResolveEvaluator(IOperator<Evaluation, int> evaluator) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, Problem);
 
-        public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(IOperator<Selection, int> selector) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        public ISelectionExecutor<int> ResolveSelector(IOperator<Selection, int> selector) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector, Problem);
 
-        public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IOperator<Replacement, int> replacer) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
+        public IReplacementExecutor<int> ResolveReplacer(IOperator<Replacement, int> replacer) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer, Problem);
     }
 
     extension(IOperator<Creation, int> creator)
     {
-        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorExecutor() =>
+        public ICreationExecutor<int> CreateCreatorExecutor() =>
             ResolutionScope.Create().ResolveCreator(creator);
     }
 
     extension(IOperator<Crossover, int> crossover)
     {
-        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverExecutor() =>
+        public ICrossoverExecutor<int> CreateCrossoverExecutor() =>
             ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
     extension(IOperator<Mutation, int> mutator)
     {
-        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecutor() =>
+        public IMutationExecutor<int> CreateMutatorExecutor() =>
             ResolutionScope.Create().ResolveMutator(mutator);
     }
 }

@@ -187,8 +187,8 @@ public static class SearchConfigurationValidation
     /// <paramref name="execution"/>, and returns whether it was responsible at all.
     /// </summary>
     /// <remarks>
-    /// A subtree that answers yes is not descended into at all. Each child is asked about the execution its parameter says
-    /// it runs under, so a composition that runs a child under other types reports the child against those types.
+    /// A subtree that answers yes is not descended into at all. Each child is asked about the execution its configuration
+    /// and then its parameter hand it, so a child is reported against the same types it receives during construction.
     /// </remarks>
     private static bool ReportMismatch(IConfigurationNode node, string path, ExecutionSignature execution, ImmutableArray<ValidationDiagnostic>.Builder diagnostics)
     {
@@ -200,7 +200,7 @@ public static class SearchConfigurationValidation
         var blamedAChild = false;
         foreach (var (child, childPath, parameter) in Children(node, path))
         {
-            blamedAChild |= ReportMismatch(child, childPath, parameter.ChildExecution(execution), diagnostics);
+            blamedAChild |= ReportMismatch(child, childPath, parameter.ChildExecution(node.ChildExecution(execution)), diagnostics);
         }
 
         if (!blamedAChild)

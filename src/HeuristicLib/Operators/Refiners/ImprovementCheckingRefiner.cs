@@ -81,30 +81,30 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     {
         var refiner = scope.Resolve(Refiner);
         var evaluator = scope.Resolve(Evaluator);
-        return new Executor<TRunSearchSpace, TRunProblem>(refiner, evaluator, Criterion);
+        return new Executor<TRunSearchSpace, TRunProblem>(refiner, evaluator, Criterion, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner, IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IImprovementCriterion criterion)
-        : RefinementExecutor<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate> refiner, IEvaluationExecutor<TCandidate> evaluator, IImprovementCriterion criterion, TProblem problem)
+        : RefinementExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             if (candidates.Count == 0)
                 return candidates;
 
-            var originalObjectiveVectors = evaluator.Evaluate(candidates, random, searchSpace, problem);
-            var refined = refiner.Refine(candidates, random, searchSpace, problem);
+            var originalObjectiveVectors = evaluator.Evaluate(candidates, random);
+            var refined = refiner.Refine(candidates, random);
             if (refined.Count != candidates.Count)
                 throw new InvalidOperationException($"The refiner returned {refined.Count} candidates for {candidates.Count} candidates. A refiner must return exactly one candidate for each candidate it receives.");
 
-            var refinedObjectiveVectors = evaluator.Evaluate(refined, random, searchSpace, problem);
+            var refinedObjectiveVectors = evaluator.Evaluate(refined, random);
 
             var accepted = new TCandidate[candidates.Count];
             for (var index = 0; index < accepted.Length; index++)
             {
-                accepted[index] = criterion.IsImprovement(refinedObjectiveVectors[index], originalObjectiveVectors[index], problem.Objective)
+                accepted[index] = criterion.IsImprovement(refinedObjectiveVectors[index], originalObjectiveVectors[index], Problem.Objective)
                     ? refined[index]
                     : candidates[index];
             }

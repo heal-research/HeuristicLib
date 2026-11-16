@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -21,20 +22,20 @@ public sealed record TerminationObservation<TCandidate>(
     : IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Termination, TCandidate> source, Action<TerminationObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem, TSearchState>((ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)executor, source, record);
+        IExecutor executor, IOperator<Termination, TCandidate> source, Action<TerminationObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem, TSearchState>((ITerminationExecutor<TSearchState>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-        IOperator<Termination, TCandidate> terminator, Action<TerminationObservation<TCandidate>> observe)
-        : ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ITerminationExecutor<TSearchState> executor,
+        IOperator<Termination, TCandidate> terminator, Action<TerminationObservation<TCandidate>> observe, TProblem problem)
+        : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random)
         {
-            var isTerminal = executor.IsTerminalState(state, random, searchSpace, problem);
-            observe(new TerminationObservation<TCandidate>(terminator, state, isTerminal, searchSpace, problem));
+            var isTerminal = executor.IsTerminalState(state, random);
+            observe(new TerminationObservation<TCandidate>(terminator, state, isTerminal, SearchSpace, Problem));
             return isTerminal;
         }
 

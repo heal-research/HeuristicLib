@@ -63,7 +63,7 @@ Author an executor with fields for mutable counters, cursors and adaptation valu
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
 
-Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and reads run-bound instrument results through `scope.Results.Result(instrument)`. A fixed-signature leaf using the explicit executor base instead overrides `CreateExecutor(ResolutionScope scope)`.
+Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and reads run-bound instrument results through `scope.Results.Result(instrument)`. A fixed-signature leaf using an explicit executor instead overrides `CreateExecutor` with a typed scope exposing its bound `Problem` and `SearchSpace`.
 
 A wrapper for one operation derives from `WrappingOperator<TOperation, TCandidate>` for that operation and wraps its typed executor. A wrapper for every operation stays generic in its operation and passes a struct `IInvocationWrapper` to the operation's `Wrap`. Place either with `Substitute`. See [Write wrappers](/guide/extending/writing-wrappers) for complete examples.
 

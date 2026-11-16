@@ -33,10 +33,10 @@ public sealed class OperatorOwnershipTests
     }
 
     private static ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Typed(ResolutionScope scope) =>
-        scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Problem);
 
-    private static double Invoke(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> executor) =>
-        executor.Mutate(Input, RandomNumberGenerator.Create(7), Problem.SearchSpace, Problem)[0][0];
+    private static double Invoke(IMutationExecutor<RealVector> executor) =>
+        executor.Mutate(Input, RandomNumberGenerator.Create(7))[0][0];
 
     [Fact]
     public void PublicApi()
@@ -46,9 +46,9 @@ public sealed class OperatorOwnershipTests
         IOperator<Evaluation, RealVector> evaluation = new SphereEvaluation();
         var named = mutation.Named("inner").Named("outer");
         Check(ReferenceEquals(typed.Resolve(mutation), typed.Resolve(named)), "names add no callable node");
-        Check(ReferenceEquals(Input, typed.Resolve(named).Mutate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem)),
+        Check(ReferenceEquals(Input, typed.Resolve(named).Mutate(Input, RandomNumberGenerator.Create(1))),
             "stateless author overrides only its domain method");
-        Check(typed.Resolve(evaluation).Evaluate(Input, RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem).Count == 1,
+        Check(typed.Resolve(evaluation).Evaluate(Input, RandomNumberGenerator.Create(1)).Count == 1,
             "evaluation keeps objective-vector results");
         Check(named is INamedConfiguration { Name: "outer" }, "a generic name carries the name a substitution selects it by");
         Check(!ReferenceEquals(mutation, named), "wrapper and child remain separate configurations");
@@ -60,7 +60,7 @@ public sealed class OperatorOwnershipTests
             "TryResolve needs no explicit executor type");
 
         IOperator<Checksum, RealVector> checksum = new SharedOperations(new ProbeLog());
-        Check(typed.Resolve(new Forward<Checksum, RealVector>(checksum).Named("external")).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 3,
+        Check(typed.Resolve(new Forward<Checksum, RealVector>(checksum).Named("external")).Read(RandomNumberGenerator.Create(1)) == 3,
             "external operation and topology use public APIs across the assembly boundary");
         var recommendation = new ChecksumRecommendation();
         Check(recommendation.TryCreateRecommendedOperator(out var first) &&
@@ -85,12 +85,12 @@ public sealed class OperatorOwnershipTests
             Check(control is not null && control.Value == 3, "control projects from the selected executor");
             control!.Value = 12;
             _ = typed.Resolve(evaluation);
-            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1), Problem.SearchSpace, Problem) == 12,
+            Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1)) == 12,
                 "every operation of a configuration uses its one executor in a scope");
             var named = typed.Resolve(mutation.Named("one").Named("two"), out ILiveValue? namedControl);
             // The names resolve their child in the same scope, and forwarding preserves that executor's control.
             Check(namedControl is not null && namedControl.Value == 12 && Invoke(named) == 12, "forwarding preserves controls and operation");
-            _ = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>().Resolve(mutation);
+            _ = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>(Problem).Resolve(mutation);
             Check(log.Preparations == 1, "a view for another compatible state uses the same executor");
             _ = typed.Resolve(mutation);
             Check(log.Constructions == 1, "a scope builds a configuration's executor once");
@@ -107,24 +107,22 @@ public sealed class OperatorOwnershipTests
             var source = new SharedOperations(new ProbeLog());
             IOperator<Termination, RealVector> termination = source;
             var scope = ResolutionScope.Create();
-            var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
-            var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
+            var broad = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>(Problem);
+            var narrow = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>(Problem);
             if (narrowFirst)
                 _ = narrow.Resolve(termination.Named("narrow"));
             _ = broad.Resolve(termination.Named("broad"));
             _ = narrow.Resolve(termination.Named("narrow"));
             Check(source.Log.Preparations == 1, "compatible state views use the executor built first");
-            Check(!narrow.Resolve(termination).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0), Problem.SearchSpace, Problem), "terminator remains callable");
+            Check(!narrow.Resolve(termination).IsTerminalState(new ProbeState(), RandomNumberGenerator.Create(0)), "terminator remains callable");
         }
         var interceptor = new IdentityInterceptor(new ProbeLog());
         var root = ResolutionScope.Create();
-        var exact = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>();
-        var broadState = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>();
+        var exact = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>(Problem);
+        var broadState = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ISearchState>(Problem);
         var state = new ProbeState();
-        Check(ReferenceEquals(state, broadState.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
-            Problem.SearchSpace, Problem)), "a scope over another state resolves the interceptor over the state its operation names");
-        Check(ReferenceEquals(state, exact.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1),
-            Problem.SearchSpace, Problem)), "the exact scope resolves the same interceptor");
+        Check(ReferenceEquals(state, broadState.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1))), "a scope over another state resolves the interceptor over the state its operation names");
+        Check(ReferenceEquals(state, exact.Resolve(interceptor).Transform(state, null, RandomNumberGenerator.Create(1))), "the exact scope resolves the same interceptor");
         Check(interceptor.Log.Preparations == 1 && interceptor.Log.Constructions == 1,
             "both state views of one scope use one executor");
     }

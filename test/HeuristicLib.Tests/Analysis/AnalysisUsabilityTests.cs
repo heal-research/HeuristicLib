@@ -87,10 +87,10 @@ public class AnalysisUsabilityTests
         var mutations = mutator.Invocations.Trace(observation => observation.Offspring.Count);
         var evaluations = evaluator.Invocations.Trace(observation => observation.Candidates.Count);
         var root = ResolutionScope.Create();
-        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
 
-        scope.Resolve(mutator.AnalyzedBy(mutations)).Mutate([new RealVector(2.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        scope.Resolve(evaluator.AnalyzedBy(evaluations)).Evaluate([new RealVector(2.0), new RealVector(3.0)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve(mutator.AnalyzedBy(mutations)).Mutate([new RealVector(2.0)], RandomNumberGenerator.Create(1));
+        scope.Resolve(evaluator.AnalyzedBy(evaluations)).Evaluate([new RealVector(2.0), new RealVector(3.0)], RandomNumberGenerator.Create(1));
 
         root.Results.Result(mutations).Snapshot().Select(entry => entry.Value).ShouldBe([1]);
         root.Results.Result(evaluations).Snapshot().Select(entry => entry.Value).ShouldBe([2]);
@@ -220,7 +220,7 @@ public class AnalysisUsabilityTests
     }
 
     private static void Evaluate(ResolutionScope scope, IOperator<Evaluation, int> evaluator, params int[] candidates) =>
-        scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator).Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, TestProblem.Instance);
+        scope.Resolve<int, DummySearchSpace<int>, TestProblem>(evaluator, TestProblem.Instance).Evaluate(candidates, RandomNumberGenerator.Create(1));
 
     private sealed class SeparateEvaluatorAnalyzer : ISubstitutionBundle
     {
@@ -241,12 +241,11 @@ public class AnalysisUsabilityTests
 
     private sealed record ManualEvaluator : Evaluator<int, DummySearchSpace<int>, TestProblem>
     {
-        protected override IEvaluationExecutor<int, DummySearchSpace<int>, TestProblem> CreateExecutor(ResolutionScope scope) => new Executor();
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, TestProblem, TRunSearchState> scope) => new Executor();
 
-        private sealed class Executor : IEvaluationExecutor<int, DummySearchSpace<int>, TestProblem>
+        private sealed class Executor : IEvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
-                DummySearchSpace<int> searchSpace, TestProblem problem) =>
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
                 [.. candidates.Select(candidate => new ObjectiveVector(candidate))];
         }
     }

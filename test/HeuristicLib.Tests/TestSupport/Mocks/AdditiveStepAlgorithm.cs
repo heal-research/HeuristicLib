@@ -14,24 +14,22 @@ public sealed record AdditiveStepAlgorithm(int Increment)
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
 
-    protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-        new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), Increment);
+        new Executor(scope.Resolve(Evaluator), Increment);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, int increment)
-        : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-        where TSearchSpace : class, ISearchSpace<int>
-        where TProblem : class, IProblem<int, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<int> evaluator, int increment)
+        : AlgorithmExecutor<PopulationState<int>>
     {
-        private readonly IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator = evaluator;
+        private readonly IEvaluationExecutor<int> evaluator = evaluator;
 
-        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
 
             var current = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
             var next = current + increment;
-            var objectiveVector = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
+            var objectiveVector = evaluator.Evaluate([next], random).Single();
 
             yield return Population.From([next.ToEvaluated(objectiveVector)]).ToPopulationState();
 

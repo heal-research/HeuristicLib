@@ -15,11 +15,20 @@ public interface IConfigurationNode
     /// nothing is constructed, which is what lets validation reach children a run would only build later.
     /// <para>
     /// It answers for this configuration alone. <see cref="ExecutionSignature.Supports(IConfigurationNode)"/> asks the
-    /// declared children too, so a composition writes no code to answer for them. One that runs a child under other types
-    /// states them through <see cref="Parameter{TOwner, TValue}.ChildExecution"/>.
+    /// declared children too, using <see cref="ChildExecution"/> followed by each parameter's
+    /// <see cref="Parameter{TOwner, TValue}.ChildExecution"/> mapping. Fixed-signature bases hand their declared types to
+    /// children; a composition running a child under other types states them on the parameter.
     /// </para>
     /// </remarks>
     bool Supports(ExecutionSignature execution) => true;
+
+    /// <summary>The execution this configuration hands to the children it declares.</summary>
+    /// <remarks>
+    /// The default returns <paramref name="execution"/> unchanged. Fixed-signature bases return their declared types,
+    /// matching the typed scope their construction hook receives. Each child parameter applies its own
+    /// <see cref="Parameter{TOwner, TValue}.ChildExecution"/> mapping after this one.
+    /// </remarks>
+    ExecutionSignature ChildExecution(ExecutionSignature execution) => execution;
 
     /// <summary>The parameters this configuration declares, including inherited ones.</summary>
     /// <remarks>

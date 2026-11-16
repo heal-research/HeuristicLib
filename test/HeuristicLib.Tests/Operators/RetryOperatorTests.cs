@@ -35,8 +35,8 @@ public sealed class RetryOperatorTests
         Counter innerCalls = new(), outerWork = new();
         var scope = ResolutionScope.Create();
         var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Timed(outerTime).Substitute(
-            Substitution.Counting(leaf, innerCalls), Substitution.Counting(retry, outerWork, OperatorCountMetric.Candidates)));
-        executor.Mutate(parents, random, Space.Instance, Problem()).ShouldBeSameAs(parents);
+            Substitution.Counting(leaf, innerCalls), Substitution.Counting(retry, outerWork, OperatorCountMetric.Candidates)), Problem());
+        executor.Mutate(parents, random).ShouldBeSameAs(parents);
         attempts.ShouldBe(failures + 1);
         scope.Results.Result(innerCalls).CurrentCount.ShouldBe(1);
         scope.Results.Result(outerWork).CurrentCount.ShouldBe(2);
@@ -66,8 +66,8 @@ public sealed class RetryOperatorTests
         var retry = leaf.Retry(3);
         var scope = ResolutionScope.Create();
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Counted(calls));
-        Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()))
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Counted(calls), Problem());
+        Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1)))
             .ShouldBeSameAs(failure);
         attempts.ShouldBe(expectedAttempts);
         scope.Results.Result(calls).CurrentCount.ShouldBe(0);
@@ -81,7 +81,7 @@ public sealed class RetryOperatorTests
         var preparations = 0;
         var source = new PreparationProbe(() => preparations++);
         Should.Throw<InvalidOperationException>(() => ResolutionScope.Create()
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Retry(attempts)));
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Retry(attempts), Problem()));
         preparations.ShouldBe(0);
     }
 
@@ -90,10 +90,10 @@ public sealed class RetryOperatorTests
     {
         var attempts = 0;
         var source = new ScalarSource(() => ++attempts < 3 ? throw new RetryableOperationException("again") : 17);
-        var executor = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>()
-            .Resolve(source.Retry(3).Named("scalar"));
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        executor.Read(RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe(17);
+        var executor = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem)
+            .Resolve(source.Retry(3).Named("scalar"));
+        executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(17);
         attempts.ShouldBe(3);
     }
 
@@ -107,8 +107,8 @@ public sealed class RetryOperatorTests
         Counter childCalls = new(), innerCalls = new(), outerCalls = new();
         var counted = outer.Substitute(Substitution.Counting(leaf, childCalls), Substitution.Counting(inner, innerCalls)).Counted(outerCalls);
         var scope = ResolutionScope.Create();
-        scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(counted)
-            .Mutate([0], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBe([4]);
+        scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(counted, Problem())
+            .Mutate([0], RandomNumberGenerator.Create(1)).ShouldBe([4]);
         attempts.ShouldBe(4);
         scope.Results.Result(childCalls).CurrentCount.ShouldBe(1);
         scope.Results.Result(innerCalls).CurrentCount.ShouldBe(1);
@@ -121,9 +121,9 @@ public sealed class RetryOperatorTests
         var result = new UncountableList();
         var attempts = 0;
         var source = new CallbackMutator((_, _) => { attempts++; return result; }).Retry(3);
-        var executor = ResolutionScope.Create().Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source);
+        var executor = ResolutionScope.Create().Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source, Problem());
 
-        executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBeSameAs(result);
+        executor.Mutate([1], RandomNumberGenerator.Create(1)).ShouldBeSameAs(result);
         attempts.ShouldBe(1);
     }
 
@@ -135,9 +135,9 @@ public sealed class RetryOperatorTests
         var calls = new Counter();
         var scope = ResolutionScope.Create();
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Counted(calls).Timed(new Duration()));
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Counted(calls).Timed(new Duration()), Problem());
 
-        executor.Mutate([1], RandomNumberGenerator.Create(1), Space.Instance, Problem()).ShouldBeSameAs(result);
+        executor.Mutate([1], RandomNumberGenerator.Create(1)).ShouldBeSameAs(result);
         scope.Results.Result(calls).CurrentCount.ShouldBe(1);
     }
 
@@ -147,18 +147,18 @@ public sealed class RetryOperatorTests
         var leaf = new CallbackMutator(static (parents, _) => parents);
         var source = leaf.Retry(3).Named("inspected");
         var scope = ResolutionScope.Create();
+        var problem = Problem();
         var executor = scope
-            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Timed(new Duration()).Counting(leaf, out var counted));
+            .Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(source.Timed(new Duration()).Counting(leaf, out var counted), problem);
         var counter = scope.Results.Result(counted);
         var random = RandomNumberGenerator.Create(1);
-        var problem = Problem();
         IReadOnlyList<int> input = [1];
         IReadOnlyList<int>? result = null;
         for (var i = 0; i < 20_000; i++)
-            result = executor.Mutate(input, random, Space.Instance, problem);
+            result = executor.Mutate(input, random);
         var before = GC.GetAllocatedBytesForCurrentThread();
         for (var i = 0; i < 10_000; i++)
-            result = executor.Mutate(input, random, Space.Instance, problem);
+            result = executor.Mutate(input, random);
         var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
         allocated.ShouldBe(0);
         result.ShouldBeSameAs(input);
@@ -181,7 +181,7 @@ public sealed class RetryOperatorTests
 
     private sealed record PreparationProbe(Action Prepare) : Mutator<int>
     {
-        protected override IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+        protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, TRunSearchState> scope)
         {
             Prepare();
             throw new InvalidOperationException("must not construct");
@@ -192,9 +192,9 @@ public sealed class RetryOperatorTests
     {
         IExecutor IOperator<RealVector>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Read);
-        private sealed class Executor(Func<int> read) : IChecksumExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+        private sealed class Executor(Func<int> read) : IChecksumExecutor
         {
-            public int Read(IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) => read();
+            public int Read(IRandomNumberGenerator random) => read();
         }
     }
 

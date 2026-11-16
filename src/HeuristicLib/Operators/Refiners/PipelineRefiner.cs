@@ -17,21 +17,19 @@ public sealed record PipelineRefiner<TCandidate>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        ImmutableArray<IRefinementExecutor<TCandidate, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-        return new Executor<TRunSearchSpace, TRunProblem>(children);
+        ImmutableArray<IRefinementExecutor<TCandidate>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor(children);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IRefinementExecutor<TCandidate, TSearchSpace, TProblem>> childRefiners)
-        : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ImmutableArray<IRefinementExecutor<TCandidate>> childRefiners)
+        : RefinementExecutor<TCandidate>
     {
-        public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var current = candidates;
             foreach (var refiner in childRefiners)
             {
-                current = refiner.Refine(current, random, searchSpace, problem);
+                current = refiner.Refine(current, random);
             }
 
             return current;

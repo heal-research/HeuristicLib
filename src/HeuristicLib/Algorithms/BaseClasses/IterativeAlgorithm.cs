@@ -60,8 +60,8 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
 
     /// <summary>Builds this algorithm's executor for the types it is written for, resolving the interceptor and other children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
-    /// executor. Validate the configuration first and look up run-bound instrument results through the scope.
+    /// Resolution calls this once per configuration and problem in a scope, on the first request; later requests for that
+    /// pair receive the same executor. Validate the configuration first and look up run-bound instrument results through the scope.
     /// Keep private mutable data in executor fields; explicit sharing retains the executor across child scopes.
     /// </remarks>
     protected abstract override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
@@ -73,51 +73,52 @@ public abstract class IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProb
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
+    private readonly IInterceptionExecutor<TSearchState>? interceptor;
 
-    protected IterativeAlgorithmExecutor(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor)
+    protected IterativeAlgorithmExecutor(IInterceptionExecutor<TSearchState>? interceptor, TProblem problem)
+        : base(problem)
     {
         this.interceptor = interceptor;
     }
 
-    protected abstract TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random);
+    protected abstract TSearchState ExecuteStep(TSearchState? previousState, IRandomNumberGenerator random);
 
-    protected virtual bool TryExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
+    protected virtual bool TryExecuteStep(TSearchState? previousState, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
     {
-        nextState = ExecuteStep(previousState, problem, random);
+        nextState = ExecuteStep(previousState, random);
         return true;
     }
 
-    protected virtual bool HasCompleted(int yieldedStateCount, TSearchState? previousState, TProblem problem) => false;
+    protected virtual bool HasCompleted(int yieldedStateCount, TSearchState? previousState) => false;
 
     /// <summary>Decides whether the run stops after yielding the state just produced.</summary>
     /// <remarks><paramref name="random"/> is the iteration's generator, which the step and the interceptor also received.</remarks>
-    protected virtual bool IsTerminalState(TSearchState state, int yieldedStateCount, TSearchState? previousState, TProblem problem, IRandomNumberGenerator random) => false;
+    protected virtual bool IsTerminalState(TSearchState state, int yieldedStateCount, TSearchState? previousState, IRandomNumberGenerator random) => false;
 
-    public sealed override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public sealed override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var previousState = initialState;
 
         foreach (var yieldedStateCount in Enumerable.InfiniteSequence(0, 1))
         {
-            if (HasCompleted(yieldedStateCount, previousState, problem))
+            if (HasCompleted(yieldedStateCount, previousState))
             {
                 yield break;
             }
 
             ct.ThrowIfCancellationRequested();
             var iterationRandom = random.Fork(yieldedStateCount);
-            if (!TryExecuteStep(previousState, problem, iterationRandom, out var newState))
+            if (!TryExecuteStep(previousState, iterationRandom, out var newState))
             {
                 yield break;
             }
 
             if (interceptor is not null)
             {
-                newState = interceptor.Transform(newState, previousState, iterationRandom, problem.SearchSpace, problem);
+                newState = interceptor.Transform(newState, previousState, iterationRandom);
             }
 
-            var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, problem, iterationRandom);
+            var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, iterationRandom);
             yield return newState;
 
             if (isTerminalState)

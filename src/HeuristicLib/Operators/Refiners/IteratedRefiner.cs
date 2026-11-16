@@ -43,20 +43,18 @@ public sealed record IteratedRefiner<TCandidate>
         if (Iterations <= 0)
             throw new InvalidOperationException("Iterations must be positive.");
         var childRefiner = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childRefiner, Iterations);
+        return new Executor(childRefiner, Iterations);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> childRefiner, int iterations)
-        : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IRefinementExecutor<TCandidate> childRefiner, int iterations)
+        : RefinementExecutor<TCandidate>
     {
-        public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var current = candidates;
             for (var i = 0; i < iterations; i++)
             {
-                current = childRefiner.Refine(current, random.Fork(i), searchSpace, problem);
+                current = childRefiner.Refine(current, random.Fork(i));
             }
 
             return current;

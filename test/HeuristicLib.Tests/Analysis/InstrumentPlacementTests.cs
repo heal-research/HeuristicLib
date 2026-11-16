@@ -38,7 +38,7 @@ public sealed class InstrumentPlacementTests
         var executor = Resolve(scope, placed);
 
         for (var call = 0; call < 4; call++)
-            Record.Exception(() => executor.Evaluate([1, 2], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem));
+            Record.Exception(() => executor.Evaluate([1, 2], RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(invocations).CurrentCount.ShouldBe(2);
         scope.Results.Result(candidates).CurrentCount.ShouldBe(4);
@@ -62,7 +62,7 @@ public sealed class InstrumentPlacementTests
         var executor = Resolve(scope, placed);
 
         for (var call = 1; call <= 3; call++)
-            executor.Evaluate([.. Enumerable.Range(0, call)], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
+            executor.Evaluate([.. Enumerable.Range(0, call)], RandomNumberGenerator.Create(1));
 
         var trace = scope.Results.Result(batches);
         trace.Snapshot().Values.ShouldBe([1, 2, 3]);
@@ -129,16 +129,16 @@ public sealed class InstrumentPlacementTests
         var terminator = new AfterOperatorCountTerminator<int>(evaluations, 2);
         var scope = ResolutionScope.Create();
         var placed = attached ? evaluator.AnalyzedBy(evaluations) : evaluator.Counted(evaluations);
-        var typed = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>();
+        var typed = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(IntegerProblem);
         var termination = terminatorFirst ? typed.Resolve(terminator) : null;
         var evaluation = typed.Resolve(placed);
         termination ??= typed.Resolve(terminator);
         var state = Population.From([0.ToEvaluated(new ObjectiveVector(0))]).ToPopulationState();
 
-        evaluation.Evaluate([1], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
-        termination.IsTerminalState(state, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem).ShouldBeFalse();
-        evaluation.Evaluate([2], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
-        termination.IsTerminalState(state, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem).ShouldBeTrue();
+        evaluation.Evaluate([1], RandomNumberGenerator.Create(1));
+        termination.IsTerminalState(state, RandomNumberGenerator.Create(1)).ShouldBeFalse();
+        evaluation.Evaluate([2], RandomNumberGenerator.Create(1));
+        termination.IsTerminalState(state, RandomNumberGenerator.Create(1)).ShouldBeTrue();
     }
 
     // Reusing one configuration for several runs gives each run fresh results through both paths, including a best so
@@ -181,8 +181,8 @@ public sealed class InstrumentPlacementTests
         var root = ResolutionScope.Create();
         var executor = Resolve(root, evaluator.AnalyzedBy(outer, inner));
 
-        executor.Evaluate([1, 2], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
-        executor.Evaluate([3, 4, 5], RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
+        executor.Evaluate([1, 2], RandomNumberGenerator.Create(1));
+        executor.Evaluate([3, 4, 5], RandomNumberGenerator.Create(1));
 
         root.Results.Result(first).By(candidates).Select(point => point.Time).ShouldBe([2L, 5L]);
         root.Results.Result(second).By(candidates).Select(point => point.Time).ShouldBe([2L, 5L]);
@@ -201,10 +201,10 @@ public sealed class InstrumentPlacementTests
         var values = checksum.Invocations.Trace(observation => observation.Result, [reads]);
         var scope = ResolutionScope.Create();
         var placed = attached ? checksum.AnalyzedBy(values) : checksum.Counted(reads).Observed(values);
-        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(placed);
+        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(IntegerProblem).Resolve(placed);
 
-        executor.Read(RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem).ShouldBe(1);
-        executor.Read(RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem).ShouldBe(2);
+        executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(1);
+        executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(2);
 
         scope.Results.Result(values).By(reads).ShouldBe([new(1L, 1), new(2L, 2)]);
     }
@@ -220,8 +220,8 @@ public sealed class InstrumentPlacementTests
         var observed = first.Observed(reads) with { ChildOperator = second };
         var scope = ResolutionScope.Create();
 
-        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(observed)
-            .Read(RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, IntegerProblem);
+        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(IntegerProblem).Resolve(observed)
+            .Read(RandomNumberGenerator.Create(1));
 
         scope.Results.Result(reads).Snapshot().Values.ShouldHaveSingleItem().ShouldBeSameAs(second);
     }
@@ -260,8 +260,8 @@ public sealed class InstrumentPlacementTests
         log.ShouldBe(["outer", "second", "first"]);
     }
 
-    private static IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IOperator<Evaluation, int> evaluator) =>
-        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(evaluator);
+    private static IEvaluationExecutor<int> Resolve(ResolutionScope scope, IOperator<Evaluation, int> evaluator) =>
+        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(IntegerProblem).Resolve(evaluator);
 
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem, int maximumGenerations) =>
         new()
@@ -278,15 +278,14 @@ public sealed class InstrumentPlacementTests
     // Spends one second in each call and fails every first attempt with a retryable exception.
     private sealed record FlakyEvaluator(ManualTimeProvider Time) : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
-            new Executor(Time);
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
+            new Executor(Time, scope.Problem);
 
-        private sealed class Executor(ManualTimeProvider time) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(ManualTimeProvider time, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(problem)
         {
             private int calls;
 
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
-                DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 time.Advance(TimeSpan.FromSeconds(1));
                 if (++calls % 2 == 1)
@@ -302,11 +301,11 @@ public sealed class InstrumentPlacementTests
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
 
-        private sealed class Executor : IChecksumExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+        private sealed class Executor : IChecksumExecutor
         {
             private int value;
 
-            public int Read(IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => ++value;
+            public int Read(IRandomNumberGenerator random) => ++value;
         }
     }
 
@@ -314,7 +313,7 @@ public sealed class InstrumentPlacementTests
     private sealed record ResolutionCounting(IAlgorithm<int, PopulationState<int>> ChildAlgorithm, CountAccumulator Resolutions)
         : WrappingAlgorithm<int, PopulationState<int>>(ChildAlgorithm)
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Resolutions.IncrementBy(1);

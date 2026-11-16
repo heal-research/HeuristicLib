@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -20,19 +21,19 @@ public sealed record MutationObservation<TCandidate>(
     : IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Mutation, TCandidate> source, Action<MutationObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((IMutationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Mutation, TCandidate> source, Action<MutationObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((IMutationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Mutation, TCandidate> mutator, Action<MutationObservation<TCandidate>> observe)
-        : IMutationExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<TCandidate> executor,
+        IOperator<Mutation, TCandidate> mutator, Action<MutationObservation<TCandidate>> observe, TProblem problem)
+        : MutationExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
-            var offspring = executor.Mutate(parents, random, searchSpace, problem);
-            observe(new MutationObservation<TCandidate>(mutator, parents, offspring, searchSpace, problem));
+            var offspring = executor.Mutate(parents, random);
+            observe(new MutationObservation<TCandidate>(mutator, parents, offspring, SearchSpace, Problem));
             return offspring;
         }
 

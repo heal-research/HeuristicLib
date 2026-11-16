@@ -8,56 +8,51 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IReplacementExecutor<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public interface IReplacementExecutor<TCandidate> : IOperatorExecutor
 {
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
-      ObjectiveDirections objective, int count,
-      IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
 }
 
 public static class ReplacementOperationResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IOperator<Replacement, TCandidate> source)
+        public IReplacementExecutor<TCandidate> Resolve<TCandidate, TSearchSpace, TProblem>(IOperator<Replacement, TCandidate> source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().Resolve(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).Resolve(source);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IOperator<Replacement, TCandidate>? source)
+        public IReplacementExecutor<TCandidate>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IOperator<Replacement, TCandidate>? source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().ResolveOptional(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).ResolveOptional(source);
 
-        public bool TryResolve<TCandidate, TSearchSpace, TProblem>(IOperator<Replacement, TCandidate> source,
-            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
+        public bool TryResolve<TCandidate, TSearchSpace, TProblem>(IOperator<Replacement, TCandidate> source, TProblem problem,
+            [NotNullWhen(true)] out IReplacementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().TryResolve(source, out executor, out reason);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).TryResolve(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Replacement, TCandidate> source) =>
-            (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+        public IReplacementExecutor<TCandidate> Resolve(IOperator<Replacement, TCandidate> source) =>
+            (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Replacement, TCandidate> source, out TControl? control)
+        public IReplacementExecutor<TCandidate> Resolve<TControl>(IOperator<Replacement, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            var executor = (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public IReplacementExecutor<TCandidate>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Replacement, TCandidate> source,
-            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out IReplacementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 
@@ -66,22 +61,22 @@ public static class ReplacementOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
     {
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Replacement, TCandidate> source) =>
-            (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        public IReplacementExecutor<TCandidate> Resolve(IOperator<Replacement, TCandidate> source) =>
+            (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
 
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Replacement, TCandidate> source, out TControl? control)
+        public IReplacementExecutor<TCandidate> Resolve<TControl>(IOperator<Replacement, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            var executor = (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public IReplacementExecutor<TCandidate>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Replacement, TCandidate> source,
-            [NotNullWhen(true)] out IReplacementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out IReplacementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 }

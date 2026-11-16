@@ -21,18 +21,18 @@ public class CompositeResolutionTests
         var right = new PredefinedCandidatesCreator<string>(["x", "y", "z"], fallback);
         var source = searchSpace.CombineCreators(left, right);
         var root = ResolutionScope.Create();
-        var outer = root.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
+        var outer = root.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source, problem);
         var calls = new CountAccumulator();
         var observed = source.AnalyzedBy(left.Invocations.Observing(_ => calls.IncrementBy(1)));
         var child = root.CreateChildScope();
-        var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(observed);
+        var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(observed, problem);
 
-        outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));
-        inner.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));
-        outer.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("b", "y"));
+        outer.Create(1, RandomNumberGenerator.Create(1)).Single().ShouldBe(new CompositeCandidate("a", "x"));
+        inner.Create(1, RandomNumberGenerator.Create(1)).Single().ShouldBe(new CompositeCandidate("a", "x"));
+        outer.Create(1, RandomNumberGenerator.Create(1)).Single().ShouldBe(new CompositeCandidate("b", "y"));
         calls.CurrentCount.ShouldBe(1);
-        var independent = ResolutionScope.Create().Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source);
-        independent.Create(1, RandomNumberGenerator.Create(1), searchSpace, problem).Single().ShouldBe(new CompositeCandidate("a", "x"));
+        var independent = ResolutionScope.Create().Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source, problem);
+        independent.Create(1, RandomNumberGenerator.Create(1)).Single().ShouldBe(new CompositeCandidate("a", "x"));
     }
 
     [Fact]
@@ -40,7 +40,7 @@ public class CompositeResolutionTests
     {
         var searchSpace = new CompositeSpace(UnrestrictedSearchSpace<string>.Instance, UnrestrictedSearchSpace<string>.Instance);
         var source = searchSpace.CombineCreators(new FallbackCreator(), new FallbackCreator());
-        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<CompositeCandidate, UnrestrictedSearchSpace<CompositeCandidate>, IProblem<CompositeCandidate, UnrestrictedSearchSpace<CompositeCandidate>>>(source));
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<CompositeCandidate, UnrestrictedSearchSpace<CompositeCandidate>, IProblem<CompositeCandidate, UnrestrictedSearchSpace<CompositeCandidate>>>(source, new NoProblem<CompositeCandidate, UnrestrictedSearchSpace<CompositeCandidate>>(UnrestrictedSearchSpace<CompositeCandidate>.Instance)));
     }
 
     // A part is written for the search space of its side, which is not the composite's, so the outer execution would reject it.

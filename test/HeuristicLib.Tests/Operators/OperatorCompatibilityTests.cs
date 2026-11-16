@@ -287,29 +287,8 @@ public class OperatorCompatibilityTests
             return false;
         }
 
-        var tryResolve = typeof(CrossoverOperationResolutionExtensions)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(method => method.Name == nameof(CrossoverOperationResolutionExtensions.TryResolve)
-                && method.GetParameters() is [{ ParameterType.Name: nameof(ResolutionScope) }, _, _, _])
-            .MakeGenericMethod(candidate, searchSpace, problem);
+        return new ExecutionSignature(searchSpace, problem, typeof(SearchState)).Supports((IConfigurationNode)@operator);
 
-        var arguments = new[] { ResolutionScope.Create(), @operator, null, null };
-        var validates = (bool)tryResolve.Invoke(null, arguments)!;
-
-        // The contract the check carries: a true result hands back the instance the run will use, and a false result
-        // says why. Asserting both here is what makes "validated" mean "creation will work".
-        if (validates)
-        {
-            arguments[2].ShouldNotBeNull();
-            arguments[3].ShouldBeNull();
-        }
-        else
-        {
-            arguments[2].ShouldBeNull();
-            arguments[3].ShouldNotBeNull();
-        }
-
-        return validates;
     }
 
 }
@@ -320,7 +299,7 @@ internal record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algor
 {
     public IOperator<Crossover, TCandidate> Crossover { get; set; } = new IndependentCrossover<TCandidate>();
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record IndependentAlgorithm<TCandidate, TSearchSpace> : IndependentAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
@@ -333,7 +312,7 @@ internal record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<Permu
 {
     public IOperator<Crossover, Permutation> Crossover { get; set; } = new PermutationSpecificCrossover();
 
-    protected override IAlgorithmExecutor<Permutation, PermutationSearchSpace, TProblem, SearchState> CreateExecutor(ResolutionScope<Permutation, PermutationSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<Permutation, PermutationSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
@@ -342,7 +321,7 @@ public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSal
 {
     public IOperator<Crossover, Permutation> Crossover { get; set; } = new TspSpecificCrossover();
 
-    protected override IAlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> CreateExecutor(ResolutionScope<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> scope) => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVectorEncodingSpecificAlgorithm<TProblem>, RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>
@@ -350,7 +329,7 @@ internal record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVe
 {
     public IOperator<Crossover, RealVector> Crossover { get; set; } = new RealVectorSpecificCrossover();
 
-    protected override IAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, BoundedRealVectorSearchSpace>>;
@@ -359,7 +338,7 @@ public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProbl
 {
     public IOperator<Crossover, RealVector> Crossover { get; set; } = new TestFunctionProblemSpecificCrossover();
 
-    protected override IAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState> scope) => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record IndependentCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>

@@ -15,17 +15,17 @@ public class RefinerEvaluatorAccountingTests
         var shared = CreateEvaluator().LimitEvaluations(1);
         var separateButEqual = shared with { };
         var scope = ResolutionScope.Create();
-
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared).ShouldBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
         var problem = CreateProblem();
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared)
-            .Evaluate([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared)
-            .Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).ShouldBe([problem.Objective.Worst]);
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual)
-            .Evaluate([10], RandomNumberGenerator.Create(3), problem.SearchSpace, problem).ShouldNotBe([problem.Objective.Worst]);
+
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared, problem).ShouldBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared, problem));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared, problem)
+            .Evaluate([10], RandomNumberGenerator.Create(1));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared, problem)
+            .Evaluate([10], RandomNumberGenerator.Create(2)).ShouldBe([problem.Objective.Worst]);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual, problem)
+            .Evaluate([10], RandomNumberGenerator.Create(3)).ShouldNotBe([problem.Objective.Worst]);
         separateButEqual.ShouldBe(shared);
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(separateButEqual, problem).ShouldNotBeSameAs(scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(shared, problem));
     }
 
     // Composition example 2: one shared budget instance, so the comparison evaluations consume it.
@@ -35,13 +35,13 @@ public class RefinerEvaluatorAccountingTests
         var problem = CreateProblem();
         var sharedEvaluator = CreateEvaluator().LimitEvaluations(2);
         var scope = ResolutionScope.Create();
-        var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator));
-        var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator);
+        var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(sharedEvaluator), problem);
+        var algorithmEvaluator = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(sharedEvaluator, problem);
 
         // One original and one refined candidate exhaust the budget of two.
-        refiner.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        refiner.Refine([10], RandomNumberGenerator.Create(1));
 
-        algorithmEvaluator.Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem)
+        algorithmEvaluator.Evaluate([10], RandomNumberGenerator.Create(2))
             .ShouldBe([problem.Objective.Worst]);
     }
 
@@ -52,12 +52,12 @@ public class RefinerEvaluatorAccountingTests
         var problem = CreateProblem();
         var algorithmEvaluator = CreateEvaluator().LimitEvaluations(2);
         var scope = ResolutionScope.Create();
-        var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().LimitEvaluations(2)));
-        var evaluatorExecutor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator);
+        var refiner = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(new AddOffsetRefiner(-5).CheckedForImprovement(CreateEvaluator().LimitEvaluations(2)), problem);
+        var evaluatorExecutor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(algorithmEvaluator, problem);
 
-        refiner.Refine([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        refiner.Refine([10], RandomNumberGenerator.Create(1));
 
-        evaluatorExecutor.Evaluate([10], RandomNumberGenerator.Create(2), problem.SearchSpace, problem)
+        evaluatorExecutor.Evaluate([10], RandomNumberGenerator.Create(2))
             .ShouldBe([new ObjectiveVector(10.0)]);
     }
 
@@ -67,18 +67,18 @@ public class RefinerEvaluatorAccountingTests
     public void WrapperOrder_DecidesWhetherCacheHitsConsumeTheBudget()
     {
         var problem = CreateProblem();
-        var limitOutside = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().Cached().LimitEvaluations(2));
-        var cacheOutside = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().LimitEvaluations(2).Cached());
+        var limitOutside = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().Cached().LimitEvaluations(2), problem);
+        var cacheOutside = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(CreateEvaluator().LimitEvaluations(2).Cached(), problem);
 
         for (var request = 0; request < 2; request++)
         {
-            limitOutside.Evaluate([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-            cacheOutside.Evaluate([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+            limitOutside.Evaluate([10], RandomNumberGenerator.Create(1));
+            cacheOutside.Evaluate([10], RandomNumberGenerator.Create(1));
         }
 
-        limitOutside.Evaluate([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
+        limitOutside.Evaluate([10], RandomNumberGenerator.Create(1))
             .ShouldBe([problem.Objective.Worst]);
-        cacheOutside.Evaluate([10], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)
+        cacheOutside.Evaluate([10], RandomNumberGenerator.Create(1))
             .ShouldBe([new ObjectiveVector(10.0)]);
     }
 
@@ -91,12 +91,12 @@ public class RefinerEvaluatorAccountingTests
             new AddOffsetRefiner(-1),
             new AddOffsetRefiner(-5).CheckedForImprovement(observed));
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(
-            refiner.Counting(observed, out var evaluations, OperatorCountMetric.Candidates));
-        var counter = scope.Results.Result(evaluations);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(
+            refiner.Counting(observed, out var evaluations, OperatorCountMetric.Candidates), problem);
+        var counter = scope.Results.Result(evaluations);
 
-        executor.Refine([10, 20], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Refine([10, 20], RandomNumberGenerator.Create(1));
 
         // Two candidates, evaluated once as supplied and once as refined, by the checking stage alone.
         counter.CurrentCount.ShouldBe(4);

@@ -12,6 +12,7 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
 public sealed class TopologyResolutionTests
 {
+    private static readonly TestFunctionProblem Problem = new(new SphereFunction(1));
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
@@ -242,19 +243,18 @@ public sealed class TopologyResolutionTests
     private static IOperator<Mutation, RealVector> CreateComposite(bool multi, IOperator<Mutation, RealVector> child, Action prepare, Action bind) =>
         multi ? new CountingMulti([child], prepare, bind) : new CountingWrapper(child, prepare, bind);
 
-    private static IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Resolve(ResolutionScope scope, IOperator<Mutation, RealVector> source) =>
-        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
+    private static IMutationExecutor<RealVector> Resolve(ResolutionScope scope, IOperator<Mutation, RealVector> source) =>
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem);
 
-    private static double Next(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> executor, double input = 0)
+    private static double Next(IMutationExecutor<RealVector> executor, double input = 0)
     {
-        var problem = new TestFunctionProblem(new RastriginFunction(1));
-        return executor.Mutate([RealVector.Repeat(input, 1)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)[0][0];
+        return executor.Mutate([RealVector.Repeat(input, 1)], RandomNumberGenerator.Create(1))[0][0];
     }
 
     private sealed record CountingLeaf(Action Prepare) : Mutator<RealVector>
     {
 
-        protected override IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope)
+        protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, TRunSearchState> scope)
         {
             Prepare();
             return new Executor();
@@ -287,19 +287,17 @@ public sealed class TopologyResolutionTests
             prepare();
             var child = scope.Resolve(ChildOperator);
             bind();
-            return new Executor<TSearchSpace, TProblem>(child);
+            return new Executor(child);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child)
-            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(IMutationExecutor<RealVector> child)
+            : IMutationExecutor<RealVector>
         {
             private int invocations;
 
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
-                var result = child.Mutate(parents, random, searchSpace, problem);
+                var result = child.Mutate(parents, random);
                 return [RealVector.Repeat(result[0][0] + 100 * ++invocations, 1)];
             }
         }
@@ -321,23 +319,21 @@ public sealed class TopologyResolutionTests
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             prepare();
-            ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            ImmutableArray<IMutationExecutor<RealVector>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
             bind();
-            return new Executor<TSearchSpace, TProblem>(children);
+            return new Executor(children);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<RealVector, TSearchSpace, TProblem>> children)
-            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(ImmutableArray<IMutationExecutor<RealVector>> children)
+            : IMutationExecutor<RealVector>
         {
             private int invocations;
 
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
                 var result = parents;
                 foreach (var child in children)
-                    result = child.Mutate(result, random, searchSpace, problem);
+                    result = child.Mutate(result, random);
                 return [RealVector.Repeat(result[0][0] + 100 * ++invocations, 1)];
             }
         }
@@ -357,16 +353,14 @@ public sealed class TopologyResolutionTests
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Report);
+            new Executor(scope.Resolve(ChildOperator), Report);
 
-        private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
-            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(IMutationExecutor<RealVector> child, Action<double> report)
+            : IMutationExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
-                var result = child.Mutate(parents, random, searchSpace, problem);
+                var result = child.Mutate(parents, random);
                 report(result[0][0]);
                 return result;
             }

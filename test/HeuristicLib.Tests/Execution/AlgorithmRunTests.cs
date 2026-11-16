@@ -226,7 +226,7 @@ public class AlgorithmRunTests
     private sealed record FailingResolution(IAlgorithm<int, PopulationState<int>> ChildAlgorithm, Exception Failure)
         : WrappingAlgorithm<int, PopulationState<int>>(ChildAlgorithm)
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             _ = scope.Resolve(ChildAlgorithm);
@@ -250,12 +250,12 @@ public class AlgorithmRunTests
     private sealed record DisposalTrackingAlgorithm(Func<ValueTask> Dispose)
         : Algorithm<DisposalTrackingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutor(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor(
             ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> scope) =>
             new Executor(Dispose);
 
         private sealed class Executor(Func<ValueTask> dispose)
-            : AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>,
+            : AlgorithmExecutor<PopulationState<int>>,
               IAsyncEnumerable<PopulationState<int>>, IAsyncEnumerator<PopulationState<int>>
         {
             private bool yielded;
@@ -263,10 +263,7 @@ public class AlgorithmRunTests
             public PopulationState<int> Current => Population.From([1.ToEvaluated(1)]).ToPopulationState();
 
             public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-                IProblem<int, DummySearchSpace<int>> problem,
-                IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null,
-                CancellationToken ct = default) => this;
+                IRandomNumberGenerator random, PopulationState<int>? initialState = null, CancellationToken ct = default) => this;
 
             public IAsyncEnumerator<PopulationState<int>> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
 
@@ -284,18 +281,16 @@ public class AlgorithmRunTests
     private sealed record SequenceAlgorithm
         : Algorithm<SequenceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutor(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor(
             ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> scope) =>
             new Executor();
 
         private sealed class Executor
-            : AlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+            : AlgorithmExecutor<PopulationState<int>>
         {
+
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-                IProblem<int, DummySearchSpace<int>> problem,
-                IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null,
-                [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+                IRandomNumberGenerator random, PopulationState<int>? initialState = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
             {
                 foreach (var value in Enumerable.Range(1, 3))
                 {

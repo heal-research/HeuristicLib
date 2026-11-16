@@ -10,10 +10,10 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
 {
     public record TreeSearchContext(
         TP Problem,
-        IMoveCreationExecutor<T, TS, TP, TM> Creator,
-        IMoveApplicationExecutor<T, TS, TP, TM> Applier,
-        IMoveEvaluationExecutor<T, TS, TP, TM> Evaluator,
-        IMoveEvaluationExecutor<T, TS, TP, TM> BoundEvaluator);
+        IMoveCreationExecutor<T, TM> Creator,
+        IMoveApplicationExecutor<T, TM> Applier,
+        IMoveEvaluationExecutor<T, TM> Evaluator,
+        IMoveEvaluationExecutor<T, TM> BoundEvaluator);
 
 
     protected GenotypeAwareTreeSearchState(TreeSearchContext context)
@@ -29,10 +29,10 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
     protected TreeSearchContext Context { get; }
 
     protected TP Problem => Context.Problem;
-    protected IMoveCreationExecutor<T, TS, TP, TM> Creator => Context.Creator;
-    protected IMoveApplicationExecutor<T, TS, TP, TM> Applier => Context.Applier;
-    protected IMoveEvaluationExecutor<T, TS, TP, TM> Evaluator => Context.Evaluator;
-    protected IMoveEvaluationExecutor<T, TS, TP, TM> BoundsEvaluator => Context.BoundEvaluator;
+    protected IMoveCreationExecutor<T, TM> Creator => Context.Creator;
+    protected IMoveApplicationExecutor<T, TM> Applier => Context.Applier;
+    protected IMoveEvaluationExecutor<T, TM> Evaluator => Context.Evaluator;
+    protected IMoveEvaluationExecutor<T, TM> BoundsEvaluator => Context.BoundEvaluator;
 
     protected abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Copy();
     protected abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Branch(TM move);

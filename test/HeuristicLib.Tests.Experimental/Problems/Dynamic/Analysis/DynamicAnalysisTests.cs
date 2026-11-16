@@ -15,15 +15,15 @@ public class DynamicAnalysisTests
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);
         var provider = new EpochBestKnown();
-        var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(problem, provider);
-        var executor = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
+        var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(provider);
+        var executor = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator, problem);
 
         executor.ShouldNotBeAssignableTo<IDisposable>();
-        executor.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.Evaluate([2, 2], RandomNumberGenerator.Create(0))
             .Select(value => value[0]).ShouldBe([1d, 1d]);
-        executor.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.Evaluate([2], RandomNumberGenerator.Create(0))
             .Single()[0].ShouldBe(0);
-        executor.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.Evaluate([2], RandomNumberGenerator.Create(0))
             .Single()[0].ShouldBe(0);
         provider.Epochs.ShouldBe([0, 1]);
     }
@@ -272,9 +272,9 @@ public class DynamicAnalysisTests
         var scope = ResolutionScope.Create();
         var space = new IntegerSearchSpace();
         var problem = FuncProblem.Create((int candidate) => candidate, space, SingleObjective.Minimize);
-        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator.AnalyzedBy(analysis));
+        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator.AnalyzedBy(analysis), problem);
 
-        var error = Should.Throw<InvalidOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1), space, problem));
+        var error = Should.Throw<InvalidOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1)));
 
         error.Message.ShouldContain(nameof(IntegerDynamicProblem));
         scope.Results.Result(analysis).BestBeforeChange.ShouldBeEmpty();
@@ -348,7 +348,7 @@ public class DynamicAnalysisTests
     // Runs over every problem over integers, so only a wrapper restricts the problems it supports. It is never run.
     private sealed record AnyProblemAlgorithm : Algorithm<AnyProblemAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
             throw new NotSupportedException();
     }
@@ -363,25 +363,22 @@ public class DynamicAnalysisTests
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
 
-        protected override IAlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>> CreateExecutor(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor(
             ResolutionScope<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>> scope) =>
             new Executor(scope.Resolve(Evaluator), Batches);
 
         private sealed class Executor(
-            IEvaluationExecutor<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,
+            IEvaluationExecutor<int> evaluator,
             IReadOnlyList<IReadOnlyList<int>> batches)
-            : AlgorithmExecutor<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
+            : AlgorithmExecutor<PopulationState<int>>
         {
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-                IntegerDynamicProblem problem,
-                IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null,
-                [EnumeratorCancellation] CancellationToken ct = default)
+                IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 foreach (var batch in batches)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var objectiveVectors = evaluator.Evaluate(batch, random, problem.SearchSpace, problem);
+                    var objectiveVectors = evaluator.Evaluate(batch, random);
 
                     yield return Population.From(batch.ToEvaluated(objectiveVectors)).ToPopulationState();
                     await Task.CompletedTask;

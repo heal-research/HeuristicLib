@@ -56,7 +56,7 @@ public sealed class MutatorParameterSemanticsTests
         var gaussian = new GaussianMutator(mutationRate: 1, mutationStrength: value);
         var polynomial = new PolynomialMutator { Eta = value };
         var executor = ResolutionScope.Create()
-            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>()
+            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(FuncProblem.Create(static (RealVector _) => 0.0, emptyRealSearchSpace, SingleObjective.Minimize))
             .Resolve(gaussian)
             .ShouldBeAssignableTo<IMutationStrengthControl>();
 

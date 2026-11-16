@@ -14,6 +14,6 @@ namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 /// </para>
 /// </remarks>
 public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove>
-    : Operator<MoveApplication<TMove>, TCandidate, TSearchSpace, TProblem, IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
+    : Operator<MoveApplication<TMove>, TCandidate, TSearchSpace, TProblem, IMoveApplicationExecutor<TCandidate, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;

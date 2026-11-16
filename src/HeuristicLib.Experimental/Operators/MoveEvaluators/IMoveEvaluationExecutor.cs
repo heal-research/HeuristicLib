@@ -8,57 +8,46 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface IMoveEvaluationExecutor<in TCandidate, in TSearchSpace, in TProblem, in TMove>
-    : IOperatorExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public interface IMoveEvaluationExecutor<in TCandidate, in TMove> : IOperatorExecutor
 {
     ObjectiveVector Evaluate(
-        ObjectiveVector oldQuality,
-        TCandidate candidate,
-        TMove move,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem);
+        ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random);
 
     ObjectiveVector Evaluate(
-        TCandidate candidate,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem);
+        TCandidate candidate, IRandomNumberGenerator random);
 }
 
 public static class MoveEvaluationOperationResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source)
+        public IMoveEvaluationExecutor<TCandidate, TMove> Resolve<TCandidate, TSearchSpace, TProblem, TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().Resolve(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).Resolve(source);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IOperator<MoveEvaluation<TMove>, TCandidate>? source)
+        public IMoveEvaluationExecutor<TCandidate, TMove>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TMove>(IOperator<MoveEvaluation<TMove>, TCandidate>? source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().ResolveOptional(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).ResolveOptional(source);
 
-        public bool TryResolve<TCandidate, TSearchSpace, TProblem, TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source,
-            [NotNullWhen(true)] out IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason)
+        public bool TryResolve<TCandidate, TSearchSpace, TProblem, TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source, TProblem problem,
+            [NotNullWhen(true)] out IMoveEvaluationExecutor<TCandidate, TMove>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().TryResolve(source, out executor, out reason);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).TryResolve(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source) =>
-            (IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>)scope.ResolveOperator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+        public IMoveEvaluationExecutor<TCandidate, TMove> Resolve<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source) =>
+            (IMoveEvaluationExecutor<TCandidate, TMove>)scope.ResolveOperator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public IMoveEvaluationExecutor<TCandidate, TMove>? ResolveOptional<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source,
-            [NotNullWhen(true)] out IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out IMoveEvaluationExecutor<TCandidate, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 
@@ -67,14 +56,14 @@ public static class MoveEvaluationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
     {
-        public IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove> Resolve<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source) =>
-            (IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>)scope.ResolveOperator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        public IMoveEvaluationExecutor<TCandidate, TMove> Resolve<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source) =>
+            (IMoveEvaluationExecutor<TCandidate, TMove>)scope.ResolveOperator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? ResolveOptional<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public IMoveEvaluationExecutor<TCandidate, TMove>? ResolveOptional<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve<TMove>(IOperator<MoveEvaluation<TMove>, TCandidate> source,
-            [NotNullWhen(true)] out IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out IMoveEvaluationExecutor<TCandidate, TMove>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 }

@@ -10,7 +10,7 @@ public partial class ResolutionScope
 {
     /// <summary>Resolves an operator's executor for one operation and the run's types.</summary>
     /// <remarks>The result implements the operation's executor interface; operation-specific resolution extensions cast it.</remarks>
-    public IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<TOperation, TCandidate> source)
+    public IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<TOperation, TCandidate> source, TProblem problem)
         where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
@@ -20,7 +20,7 @@ public partial class ResolutionScope
         SearchConfigurationValidation.RequireSupport(source, ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>());
         using var building = node.Tree.Enter(source);
         var owner = Owner(source);
-        var existing = Existing(owner, source, TOperation.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>);
+        var existing = Existing(owner, source, TOperation.IsExecutor<TCandidate, TSearchState>, problem);
         node.MarkResolved(source);
         try
         {
@@ -28,9 +28,9 @@ public partial class ResolutionScope
                 return existing;
             // The resolver is the one place that constructs executors; the delegate only chooses the constructing scope.
 #pragma warning disable HLib0001
-            var executor = Build(owner, source, scope => source.CreateExecutor(scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>()));
+            var executor = Build(owner, source, scope => source.CreateExecutor(scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)), problem);
 #pragma warning restore HLib0001
-            OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>().RequireExecutor(executor, source);
+            OperationInfo.RequireExecutor<TOperation, TCandidate, TSearchState>(executor, source);
             return executor;
         }
         catch
@@ -46,12 +46,12 @@ public partial class ResolutionScope
     /// the scope tree and propagates. <typeparamref name="TExecutor"/> is the operation's executor interface for the
     /// run types.
     /// </remarks>
-    public bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(IOperator<TOperation, TCandidate> source,
+    public bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(IOperator<TOperation, TCandidate> source, TProblem problem,
         [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
         where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
         where TExecutor : class, IExecutor =>
-        Attempt(() => (TExecutor)ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source), out executor, out reason);
+        Attempt(() => (TExecutor)ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source, problem), out executor, out reason);
 }

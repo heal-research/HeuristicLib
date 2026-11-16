@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Terminators;
@@ -35,10 +36,10 @@ public sealed record AfterOperatorCountTerminator<TCandidate> : Terminator<TCand
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override TerminationExecutor<TCandidate> CreateExecutor(ResolutionScope scope) =>
+    protected override TerminationExecutor CreateExecutor(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> scope) =>
         new Executor(scope.Resolve(Counter), MaximumCount);
 
-    private sealed class Executor(CountAccumulator counter, int maximumCount) : TerminationExecutor<TCandidate>
+    private sealed class Executor(CountAccumulator counter, int maximumCount) : TerminationExecutor
     {
         public override bool IsTerminalState() => counter.CurrentCount >= maximumCount;
     }

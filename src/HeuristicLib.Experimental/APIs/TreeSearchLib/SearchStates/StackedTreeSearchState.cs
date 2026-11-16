@@ -21,7 +21,7 @@ public class StackedTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchStat
     public StackedTreeSearchState(T genotype, TreeSearchContext context) : base(context)
     {
         candidate = genotype;
-        bound = BoundsEvaluator.Evaluate(candidate, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        bound = BoundsEvaluator.Evaluate(candidate, RandomHelpers.NoRandom);
         var t = isTerminal = Problem.IsTerminal(genotype, RandomHelpers.NoRandom);
         if (!t)
             return;
@@ -31,16 +31,14 @@ public class StackedTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchStat
 
     public StackedTreeSearchState(StackedTreeSearchState<T, TS, TP, TM> parent, TM move) : base(parent.Context)
     {
-        var g = candidate = Applier.Apply(parent.Genotype, move, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
-        bound = BoundsEvaluator.Evaluate(parent.Bound, parent.Genotype, move, RandomHelpers.NoRandom,
-            Problem.SearchSpace, Problem);
+        var g = candidate = Applier.Apply(parent.Genotype, move, RandomHelpers.NoRandom);
+        bound = BoundsEvaluator.Evaluate(parent.Bound, parent.Genotype, move, RandomHelpers.NoRandom);
         var t = isTerminal = Problem.IsTerminal(g, RandomHelpers.NoRandom);
         if (!t)
             return;
 
         if (parent.Quality != null)
-            quality = Evaluator.Evaluate(parent.Quality, parent.Genotype, move, RandomHelpers.NoRandom,
-                Problem.SearchSpace, Problem);
+            quality = Evaluator.Evaluate(parent.Quality, parent.Genotype, move, RandomHelpers.NoRandom);
         else
             quality = Problem.Evaluate([g], RandomHelpers.NoRandom)[0];
     }
@@ -61,7 +59,7 @@ public class StackedTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchStat
     protected override StackedTreeSearchState<T, TS, TP, TM> Copy() => new(this);
 
     protected override IEnumerable<TM> Branches() =>
-        Creator.Moves(Genotype, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        Creator.Moves(Genotype, RandomHelpers.NoRandom);
 
     protected override StackedTreeSearchState<T, TS, TP, TM> Branch(TM move) => new(this, move);
 

@@ -50,12 +50,12 @@ public sealed record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         scope.Share(Duration);
-        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
-        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Resolve(Duration), MaximumDuration);
+        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, scope.Problem);
+        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Resolve(Duration), MaximumDuration, scope.Problem);
     }
 }
 
@@ -65,20 +65,21 @@ public sealed class OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchS
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecutor<TSearchState> algorithm;
     private readonly DurationAccumulator duration;
     private readonly TimeSpan maximumDuration;
 
-    public OperatorDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
+    public OperatorDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration, TProblem problem)
+        : base(problem)
     {
         this.algorithm = algorithm;
         this.duration = duration;
         this.maximumDuration = maximumDuration;
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        await foreach (var state in algorithm.RunStreamingAsync(problem, random, initialState, ct))
+        await foreach (var state in algorithm.RunStreamingAsync(random, initialState, ct))
         {
             yield return state;
 

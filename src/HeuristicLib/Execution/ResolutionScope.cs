@@ -1,12 +1,14 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Problems;
 
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>Resolves configurations into executors.</summary>
 /// <remarks>
-/// A scope is the sharing unit: within one scope, each configuration reference resolves to one executor, built on its
-/// first request. Building one configuration never changes how another is built: <see cref="Share"/>, the one change a
+/// A scope is the sharing unit: within one scope, each configuration/problem reference pair resolves to one executor,
+/// built on its first request. A configuration whose executor needs no problem, such as a counter, uses only the
+/// configuration. Building one configuration never changes how another is built: <see cref="Share"/>, the one change a
 /// construction can make to its scope, changes only how long an executor lives. A child scope from
 /// <see cref="CreateChildScope"/> keeps the shared configurations of its ancestors and builds its own executors for
 /// everything else. <see cref="Share"/> lets child scopes use one executor of a configuration, kept in this scope's table
@@ -84,13 +86,13 @@ public partial class ResolutionScope
         node.Tree.ThrowIfFailed();
         using var building = node.Tree.Enter(configuration);
         var owner = Owner(configuration);
-        var existing = Existing(owner, configuration, static executor => executor is TExecutor);
+        var existing = Existing(owner, configuration, static executor => executor is TExecutor, problem: null);
         node.MarkResolved(configuration);
         try
         {
             // The resolver is the one place that constructs executors; the delegate only chooses the constructing scope.
 #pragma warning disable HLib0001
-            return (TExecutor?)existing ?? Build(owner, configuration, scope => configuration.CreateExecutor(scope));
+            return (TExecutor?)existing ?? Build(owner, configuration, scope => configuration.CreateExecutor(scope), problem: null);
 #pragma warning restore HLib0001
         }
         catch
@@ -153,35 +155,35 @@ public partial class ResolutionScope
         var root = node;
         while (root.Parent is { } parent)
             root = parent;
-        if (root.Executors.TryGetValue(configuration, out var existing))
+        if (root.Executors.TryGetValue(new(configuration, null), out var existing))
             return (TResult)existing;
         using var building = node.Tree.Building(configuration);
         // The resolver is the one place that constructs executors.
 #pragma warning disable HLib0001
         var executor = configuration.CreateExecutor(new ResolutionScope(root));
 #pragma warning restore HLib0001
-        root.Executors.Add(configuration, executor);
+        root.Executors.Add(new(configuration, null), executor);
         return executor;
     }
 
     // Called while the construction lock is held. Returns the owner's executor of the configuration, or null if
-    // it has none yet. A scope holds one executor per configuration, so a request it does not fit is rejected before
+    // it has none yet. Each binding has one executor, so a request it does not fit is rejected before
     // anything is built.
-    private static IExecutor? Existing(Node owner, IConfigurationNode configuration, Func<IExecutor, bool> fits)
+    private static IExecutor? Existing(Node owner, IConfigurationNode configuration, Func<IExecutor, bool> fits, IProblem? problem)
     {
-        if (!owner.Executors.TryGetValue(configuration, out var existing))
+        if (!owner.Executors.TryGetValue(new(configuration, problem), out var existing))
             return null;
         return fits(existing)
             ? existing
             : throw new InvalidOperationException($"{configuration.GetType().Name} was already built in this resolution scope for other run types " +
-                "or another operation than this request. A scope holds one executor per configuration, so every use must request an executor " +
+                "or another operation than this request. A scope holds one executor per configuration/problem reference pair, so every use of that binding must request an executor " +
                 "that the first one also implements.");
     }
 
     // Called while the construction lock is held. Builds the configuration's executor and keeps it in its owner's table. A
     // shared configuration is built in a new child scope of its owner, the scope it would have had as a child activation,
     // so its children stay its own.
-    private static TExecutor Build<TExecutor>(Node owner, IConfigurationNode configuration, Func<ResolutionScope, TExecutor> create)
+    private static TExecutor Build<TExecutor>(Node owner, IConfigurationNode configuration, Func<ResolutionScope, TExecutor> create, IProblem? problem)
         where TExecutor : class, IExecutor
     {
         var building = owner;
@@ -190,7 +192,7 @@ public partial class ResolutionScope
         var executor = create(new ResolutionScope(building));
         // A construction that caught a nested failure must not publish an executor from the failed tree.
         owner.Tree.ThrowIfFailed();
-        owner.Executors.Add(configuration, executor);
+        owner.Executors.Add(new(configuration, problem), executor);
         return executor;
     }
 
@@ -200,8 +202,8 @@ public partial class ResolutionScope
         public Tree Tree { get; } = tree;
         public Node? Parent { get; } = parent;
 
-        // The executors this scope built, by configuration reference.
-        public Dictionary<IConfigurationNode, IExecutor> Executors { get; } = new(ReferenceEqualityComparer.Instance);
+        // The executors this scope built, by configuration and optional problem reference.
+        public Dictionary<ExecutorKey, IExecutor> Executors { get; } = new();
 
         // The configurations whose executor this scope builds for its child scopes too. Null while it shares nothing.
         public HashSet<IConfigurationNode>? Shared { get; set; }
@@ -271,5 +273,14 @@ public partial class ResolutionScope
                 tree.Sync.Exit();
             }
         }
+    }
+
+    private readonly struct ExecutorKey(IConfigurationNode configuration, IProblem? problem) : IEquatable<ExecutorKey>
+    {
+        private readonly IConfigurationNode configuration = configuration;
+        private readonly IProblem? problem = problem;
+        public bool Equals(ExecutorKey other) => ReferenceEquals(configuration, other.configuration) && ReferenceEquals(problem, other.problem);
+        public override bool Equals(object? obj) => obj is ExecutorKey other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(RuntimeHelpers.GetHashCode(configuration), problem is null ? 0 : RuntimeHelpers.GetHashCode(problem));
     }
 }

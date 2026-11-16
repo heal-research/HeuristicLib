@@ -23,19 +23,19 @@ public sealed partial class OperatorPreparationSpecs
         var reads = ReadSource(source).Count();
         var counted = ((IOperator<ReadValue, RealVector>)source).AnalyzedBy(reads);
         var root = ResolutionScope.Create();
-        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
         var problem = new TestFunctionProblem(new SphereFunction(1));
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
         var random = RandomNumberGenerator.Create(1);
 
         var read = Read(scope, counted);
         var mutation = scope.Resolve((IOperator<Mutation, RealVector>)source);
-        read.Read(random, problem.SearchSpace, problem).ShouldBe(1);
-        mutation.Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(2);
-        Read(scope, counted).Read(random, problem.SearchSpace, problem).ShouldBe(3);
+        read.Read(random).ShouldBe(1);
+        mutation.Mutate([new(0.0)], random)[0][0].ShouldBe(2);
+        Read(scope, counted).Read(random).ShouldBe(3);
 
         var child = scope.CreateChildScope();
-        child.Resolve((IOperator<Mutation, RealVector>)source).Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(1);
-        Read(child, counted).Read(random, problem.SearchSpace, problem).ShouldBe(2);
+        child.Resolve((IOperator<Mutation, RealVector>)source).Mutate([new(0.0)], random)[0][0].ShouldBe(1);
+        Read(child, counted).Read(random).ShouldBe(2);
         root.Results.Result(reads).CurrentCount.ShouldBe(3);
     }
 
@@ -45,17 +45,17 @@ public sealed partial class OperatorPreparationSpecs
         var source = new CountingSource();
         var root = ResolutionScope.Create();
         root.Share(source);
-        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
         var first = scope.CreateChildScope();
         var second = scope.CreateChildScope();
-        var problem = new TestFunctionProblem(new SphereFunction(1));
         var random = RandomNumberGenerator.Create(1);
 
-        Read(first, source).Read(random, problem.SearchSpace, problem).ShouldBe(1);
-        second.Resolve((IOperator<Mutation, RealVector>)source).Mutate([new(0.0)], random, problem.SearchSpace, problem)[0][0].ShouldBe(2);
-        Read(second, source).Read(random, problem.SearchSpace, problem).ShouldBe(3);
-        Read(ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(), source)
-            .Read(random, problem.SearchSpace, problem).ShouldBe(1);
+        Read(first, source).Read(random).ShouldBe(1);
+        second.Resolve((IOperator<Mutation, RealVector>)source).Mutate([new(0.0)], random)[0][0].ShouldBe(2);
+        Read(second, source).Read(random).ShouldBe(3);
+        Read(ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem), source)
+            .Read(random).ShouldBe(1);
     }
 
     [Fact]
@@ -78,9 +78,9 @@ public sealed partial class OperatorPreparationSpecs
         run.Trials.Select(trial => trial.Run.Result(calls)).Distinct(ReferenceEqualityComparer.Instance).Count().ShouldBe(3);
     }
 
-    private static IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> Read(
+    private static IReadValueExecutor Read(
         ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> scope, IOperator<ReadValue, RealVector> source) =>
-        (IReadValueExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>)scope.ResolveOperator(source);
+        (IReadValueExecutor)scope.ResolveOperator(source);
 
     private static InvocationSource<ReadValue, RealVector, ReadObservation> ReadSource(CountingSource source) =>
         ObservationSource.Create<ReadValue, RealVector, ReadObservation>(source);
@@ -88,8 +88,8 @@ public sealed partial class OperatorPreparationSpecs
     private sealed record ReadObservation : IInvocationObservation<ReadValue, RealVector, ReadObservation>
     {
         static IExecutor IInvocationObservation<ReadValue, RealVector, ReadObservation>.Wrap<TSearchSpace, TProblem, TSearchState>(
-            IExecutor executor, IOperator<ReadValue, RealVector> source, Action<ReadObservation> record) =>
-            OperationInfo.For<ReadValue, RealVector, TSearchSpace, TProblem, TSearchState>().Wrap(executor, new Reporter(record));
+            IExecutor executor, IOperator<ReadValue, RealVector> source, Action<ReadObservation> record, TProblem problem) =>
+            OperationInfo.For<ReadValue, RealVector, TSearchState>().Wrap(executor, new Reporter(record));
 
         private readonly struct Reporter(Action<ReadObservation> record) : IInvocationWrapper
         {
@@ -109,16 +109,14 @@ public sealed partial class OperatorPreparationSpecs
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
             where TSearchState : class, ISearchState =>
-            new Executor<TSearchSpace, TProblem>();
+            new Executor();
 
-        private sealed class Executor<TSearchSpace, TProblem>
-            : IReadValueExecutor<RealVector, TSearchSpace, TProblem>, IMutationExecutor<RealVector, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor
+            : IReadValueExecutor, IMutationExecutor<RealVector>
         {
             private int count;
-            public int Read(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => ++count;
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
+            public int Read(IRandomNumberGenerator random) => ++count;
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
                 [new(++count)];
         }
     }
@@ -131,23 +129,20 @@ public sealed partial class OperatorPreparationSpecs
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
 
-        protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope)
         {
             var evaluator = scope.Resolve(Evaluator);
-            return new Executor<TSearchSpace, TProblem>(evaluator, Candidate);
+            return new Executor(evaluator, Candidate);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<RealVector, TSearchSpace, TProblem> evaluator, RealVector candidate)
-            : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(IEvaluationExecutor<RealVector> evaluator, RealVector candidate)
+            : AlgorithmExecutor<SingleSolutionState<RealVector>>
         {
-            public override async IAsyncEnumerable<SingleSolutionState<RealVector>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                SingleSolutionState<RealVector>? initialState = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<SingleSolutionState<RealVector>> RunStreamingAsync(IRandomNumberGenerator random, SingleSolutionState<RealVector>? initialState = null, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct = default)
             {
                 for (var i = 0; i < 3; i++)
-                    yield return SingleSolutionState.From(candidate, evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0]);
+                    yield return SingleSolutionState.From(candidate, evaluator.Evaluate([candidate], random)[0]);
                 await Task.CompletedTask;
             }
         }

@@ -19,7 +19,8 @@ public interface IInvocationObservation<TOperation, TCandidate, TSelf>
     /// <param name="executor">The executor to wrap, which performs the operation for the run types.</param>
     /// <param name="source">The configuration the observation names.</param>
     /// <param name="record">Receives each observation.</param>
-    static abstract IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, IOperator<TOperation, TCandidate> source, Action<TSelf> record)
+    /// <param name="problem">The problem bound to the executor, also reported in observations.</param>
+    static abstract IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, IOperator<TOperation, TCandidate> source, Action<TSelf> record, TProblem problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, Problems.IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState;
@@ -38,8 +39,9 @@ public interface IAlgorithmObservation<TCandidate, TSearchState, TSelf>
     /// <param name="executor">The executor to wrap.</param>
     /// <param name="source">The configuration the observation names.</param>
     /// <param name="record">Receives each observation.</param>
-    static abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<TSelf> record)
+    /// <param name="problem">The problem bound to the executor, also reported in observations.</param>
+    static abstract IAlgorithmExecutor<TSearchState> Wrap<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<TSelf> record, TProblem problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, Problems.IProblem<TCandidate, TSearchSpace>;
 }

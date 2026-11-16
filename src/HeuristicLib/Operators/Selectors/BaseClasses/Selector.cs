@@ -17,7 +17,7 @@ namespace HEAL.HeuristicLib.Operators.Selectors;
 /// </para>
 /// </remarks>
 public abstract record Selector<TCandidate, TSearchSpace, TProblem>
-    : Operator<Selection, TCandidate, TSearchSpace, TProblem, ISelectionExecutor<TCandidate, TSearchSpace, TProblem>>
+    : Operator<Selection, TCandidate, TSearchSpace, TProblem, ISelectionExecutor<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
@@ -29,28 +29,38 @@ public abstract record Selector<TCandidate>
     : Selector<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
 public abstract class SelectionExecutor<TCandidate, TSearchSpace, TProblem>
-    : ISelectionExecutor<TCandidate, TSearchSpace, TProblem>
+    : ISelectionExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected TProblem Problem { get; }
+    protected TSearchSpace SearchSpace { get; }
+
+    protected SelectionExecutor(TProblem problem)
+    {
+        Problem = problem;
+        SearchSpace = problem.SearchSpace;
+    }
+
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
 }
 
 public abstract class SelectionExecutor<TCandidate, TSearchSpace>
-    : ISelectionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    : ISelectionExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected TSearchSpace SearchSpace { get; }
 
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> ISelectionExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Select(population, objective, count, random, searchSpace);
+    protected SelectionExecutor(TSearchSpace searchSpace)
+    {
+        SearchSpace = searchSpace;
+    }
+
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
 }
 
 public abstract class SelectionExecutor<TCandidate>
-    : ISelectionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    : ISelectionExecutor<TCandidate>
 {
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
-
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> ISelectionExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Select(population, objective, count, random);
 }

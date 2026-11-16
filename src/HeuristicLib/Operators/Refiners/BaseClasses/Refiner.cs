@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Operators.Refiners;
 /// </para>
 /// </remarks>
 public abstract record Refiner<TCandidate, TSearchSpace, TProblem>
-    : Operator<Refinement, TCandidate, TSearchSpace, TProblem, IRefinementExecutor<TCandidate, TSearchSpace, TProblem>>
+    : Operator<Refinement, TCandidate, TSearchSpace, TProblem, IRefinementExecutor<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
@@ -28,28 +28,38 @@ public abstract record Refiner<TCandidate>
     : Refiner<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
 public abstract class RefinementExecutor<TCandidate, TSearchSpace, TProblem>
-    : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
+    : IRefinementExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected TProblem Problem { get; }
+    protected TSearchSpace SearchSpace { get; }
+
+    protected RefinementExecutor(TProblem problem)
+    {
+        Problem = problem;
+        SearchSpace = problem.SearchSpace;
+    }
+
+    public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }
 
 public abstract class RefinementExecutor<TCandidate, TSearchSpace>
-    : IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    : IRefinementExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected TSearchSpace SearchSpace { get; }
 
-    IReadOnlyList<TCandidate> IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Refine(candidates, random, searchSpace);
+    protected RefinementExecutor(TSearchSpace searchSpace)
+    {
+        SearchSpace = searchSpace;
+    }
+
+    public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }
 
 public abstract class RefinementExecutor<TCandidate>
-    : IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    : IRefinementExecutor<TCandidate>
 {
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
-
-    IReadOnlyList<TCandidate> IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Refine(candidates, random);
 }

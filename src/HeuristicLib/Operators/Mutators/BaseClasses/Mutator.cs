@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 /// </para>
 /// </remarks>
 public abstract record Mutator<TCandidate, TSearchSpace, TProblem>
-    : Operator<Mutation, TCandidate, TSearchSpace, TProblem, IMutationExecutor<TCandidate, TSearchSpace, TProblem>>
+    : Operator<Mutation, TCandidate, TSearchSpace, TProblem, IMutationExecutor<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
@@ -28,28 +28,38 @@ public abstract record Mutator<TCandidate>
     : Mutator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
 public abstract class MutationExecutor<TCandidate, TSearchSpace, TProblem>
-    : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
+    : IMutationExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected TProblem Problem { get; }
+    protected TSearchSpace SearchSpace { get; }
+
+    protected MutationExecutor(TProblem problem)
+    {
+        Problem = problem;
+        SearchSpace = problem.SearchSpace;
+    }
+
+    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
 }
 
 public abstract class MutationExecutor<TCandidate, TSearchSpace>
-    : IMutationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    : IMutationExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected TSearchSpace SearchSpace { get; }
 
-    IReadOnlyList<TCandidate> IMutationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Mutate(parents, random, searchSpace);
+    protected MutationExecutor(TSearchSpace searchSpace)
+    {
+        SearchSpace = searchSpace;
+    }
+
+    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
 }
 
 public abstract class MutationExecutor<TCandidate>
-    : IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    : IMutationExecutor<TCandidate>
 {
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
-
-    IReadOnlyList<TCandidate> IMutationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Mutate(parents, random);
 }

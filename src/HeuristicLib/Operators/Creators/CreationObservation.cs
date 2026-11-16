@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -20,19 +21,19 @@ public sealed record CreationObservation<TCandidate>(
     : IInvocationObservation<Creation, TCandidate, CreationObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Creation, TCandidate, CreationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Creation, TCandidate> source, Action<CreationObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((ICreationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Creation, TCandidate> source, Action<CreationObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((ICreationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Creation, TCandidate> creator, Action<CreationObservation<TCandidate>> observe)
-        : ICreationExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate> executor,
+        IOperator<Creation, TCandidate> creator, Action<CreationObservation<TCandidate>> observe, TProblem problem)
+        : CreationExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random)
         {
-            var candidates = executor.Create(count, random, searchSpace, problem);
-            observe(new CreationObservation<TCandidate>(creator, count, candidates, searchSpace, problem));
+            var candidates = executor.Create(count, random);
+            observe(new CreationObservation<TCandidate>(creator, count, candidates, SearchSpace, Problem));
             return candidates;
         }
 

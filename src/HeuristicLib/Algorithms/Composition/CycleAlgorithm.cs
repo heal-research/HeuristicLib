@@ -40,12 +40,12 @@ public record CycleAlgorithm<TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         if (Algorithms.Count == 0)
             throw new InvalidOperationException("A cycle needs at least one algorithm.");
-        return new CycleAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, MaximumCycles);
+        return new CycleAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, MaximumCycles, scope.Problem);
     }
 }
 
@@ -78,17 +78,18 @@ public class CycleAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchS
     where TSearchState : class, ISearchState
 {
     private readonly ResolutionScope scope;
-    protected readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> Algorithms;
-    protected readonly int? MaximumCycles;
+    protected ImmutableArray<IAlgorithm<TCandidate, TSearchState>> Algorithms { get; }
+    protected int? MaximumCycles { get; }
 
-    public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms, int? maximumCycles)
+    public CycleAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms, int? maximumCycles, TProblem problem)
+        : base(problem)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
         MaximumCycles = maximumCycles;
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var state = initialState;
 
@@ -105,9 +106,9 @@ public class CycleAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchS
             {
                 ct.ThrowIfCancellationRequested();
                 var algorithmRng = cycleRng.Fork(algorithmIndex);
-                var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+                var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, Problem);
 
-                await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algorithmRng, state, ct))
+                await foreach (var newState in algorithmExecutor.RunStreamingAsync(algorithmRng, state, ct))
                 {
                     producedState = true;
                     state = newState;

@@ -53,18 +53,18 @@ public sealed record LimitEvaluator<TCandidate>
     {
         var counter = new CountAccumulator();
         var childEvaluator = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter)
-        : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter, TProblem problem)
+        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var remainingEvaluations = maxEvaluations - counter.CurrentCount;
-            var fallback = fallbackObjectiveVector ?? problem.Objective.Worst;
+            var fallback = fallbackObjectiveVector ?? Problem.Objective.Worst;
 
             if (remainingEvaluations <= 0)
             {
@@ -74,14 +74,14 @@ public sealed record LimitEvaluator<TCandidate>
             if (enforceLimitWithinBatch && remainingEvaluations < candidates.Count)
             {
                 var candidatesToEvaluate = candidates.Take((int)remainingEvaluations).ToList();
-                var evaluated = childEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
+                var evaluated = childEvaluator.Evaluate(candidatesToEvaluate, random);
                 counter.IncrementBy(candidatesToEvaluate.Count);
                 var skipped = Enumerable.Repeat(fallback, candidates.Count - candidatesToEvaluate.Count);
 
                 return evaluated.Concat(skipped).ToArray();
             }
 
-            var result = childEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            var result = childEvaluator.Evaluate(candidates, random);
             counter.IncrementBy(candidates.Count);
             return result;
         }

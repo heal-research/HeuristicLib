@@ -225,15 +225,15 @@ public sealed class RunResultsTests
         protected override RunResults CreateResult(RunResults results) => results;
     }
 
-    private static IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Resolve(
+    private static IAlgorithmExecutor<PopulationState<int>> Resolve(
         ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm) =>
-        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, Problem);
 
     private static async Task<List<PopulationState<int>>> Run(
-        IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> executor)
+        IAlgorithmExecutor<PopulationState<int>> executor)
     {
         var states = new List<PopulationState<int>>();
-        await foreach (var state in executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states.Add(state);
         return states;
     }
@@ -288,7 +288,7 @@ public sealed class RunResultsTests
     public void AResultOfAFailedRun_StaysReadableEvenIfNeverBuilt()
     {
         var scope = ResolutionScope.Create();
-        Should.Throw<InvalidOperationException>(() => scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new FailingEvaluator()));
+        Should.Throw<InvalidOperationException>(() => scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(new FailingEvaluator(), Problem));
 
         scope.Results.Result(new Counter()).CurrentCount.ShouldBe(0);
     }
@@ -356,27 +356,24 @@ public sealed class RunResultsTests
 
     private sealed record FailingEvaluator : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
             throw new InvalidOperationException("Evaluator construction failed.");
     }
 
     // Spends one second inside each call that produces a state.
     private sealed record SteppingAlgorithm(ManualTimeProvider Time, int Steps) : Algorithm<SteppingAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Time.Advance(TimeSpan.FromSeconds(100));
-            return new Executor<TSearchSpace, TProblem>(Time, Steps);
+            return new Executor(Time, Steps);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ManualTimeProvider time, int steps)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ManualTimeProvider time, int steps)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 for (var step = 1; step <= steps; step++)
                 {
@@ -392,17 +389,14 @@ public sealed class RunResultsTests
     // Produces one state once the gate opens.
     private sealed record GatedAlgorithm(Task Gate) : Algorithm<GatedAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(Gate);
+            new Executor(Gate);
 
-        private sealed class Executor<TSearchSpace, TProblem>(Task gate)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(Task gate)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 await gate;
                 yield return Population.From([1.ToEvaluated(new ObjectiveVector(1))]).ToPopulationState();

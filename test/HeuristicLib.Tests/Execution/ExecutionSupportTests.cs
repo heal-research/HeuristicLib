@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -116,7 +117,7 @@ public class ExecutionSupportTests
     [Fact]
     public void AResolveFailingOnAChild_NamesTheChild()
     {
-        var scope = ResolutionScope.Create().For<int, RunSpace, IProblem<int, RunSpace>>();
+        var scope = ResolutionScope.Create().For<int, RunSpace, IProblem<int, RunSpace>>(FuncProblem.Create(static (int x) => x, new RunSpace(), SingleObjective.Minimize));
 
         var message = Should.Throw<InvalidOperationException>(() => scope.Resolve(new EliteSelector<int>(new SelectorFor<InnerSpace>()))).Message;
 
@@ -127,7 +128,7 @@ public class ExecutionSupportTests
     [Fact]
     public void AResolveFailingOnTheOperatorItself_NamesWhatItIsWrittenFor()
     {
-        var scope = ResolutionScope.Create().For<int, RunSpace, IProblem<int, RunSpace>>();
+        var scope = ResolutionScope.Create().For<int, RunSpace, IProblem<int, RunSpace>>(FuncProblem.Create(static (int x) => x, new RunSpace(), SingleObjective.Minimize));
 
         var message = Should.Throw<InvalidOperationException>(() => scope.Resolve(ForInner)).Message;
 
@@ -139,6 +140,58 @@ public class ExecutionSupportTests
     public void AnUndeclaredChild_IsNotAsked()
     {
         Run.Supports(new Undeclared(ForInner)).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void AFixedSignatureParent_RejectsASubclassOnlyChildBeforeConstruction()
+    {
+        var problem = new SubProblem();
+        var scope = ResolutionScope.Create().For<int, RunSpace, SubProblem>(problem);
+        var probe = new ConstructionProbe();
+        var child = new ProbedEvaluator<SubProblem>(probe);
+        var parent = new FixedParent<BaseProblem>(child, probe);
+
+        var exception = Should.Throw<InvalidOperationException>(() => scope.Resolve(parent));
+        exception.Message.ShouldContain(nameof(FixedParent<BaseProblem>.Child));
+        scope.TryResolve(parent, out var rejected, out var reason).ShouldBeFalse();
+        rejected.ShouldBeNull();
+        reason.ShouldContain(nameof(FixedParent<BaseProblem>.Child));
+        reason.ShouldContain(nameof(BaseProblem));
+        probe.Constructions.ShouldBe(0);
+
+        var report = SearchConfigurationValidation.Validate(parent, problem.SearchSpace,
+            ExecutionSignature.For<RunSpace, SubProblem, ISearchState>());
+        var diagnostic = report.Diagnostics.ShouldHaveSingleItem();
+        diagnostic.Path.ShouldEndWith($".{nameof(FixedParent<BaseProblem>.Child)}");
+        diagnostic.Message.ShouldContain(nameof(BaseProblem));
+        diagnostic.Message.ShouldNotContain(nameof(SubProblem));
+
+        scope.Resolve(child).Evaluate([7], RandomNumberGenerator.Create(1)).ShouldBe([new ObjectiveVector(7)]);
+        probe.Constructions.ShouldBe(1);
+    }
+
+    [Fact]
+    public void AFixedSignatureParent_ResolvesAndRunsWithAMatchingSubclassChild()
+    {
+        var problem = new SubProblem();
+        var probe = new ConstructionProbe();
+        var parent = new FixedParent<SubProblem>(new ProbedEvaluator<SubProblem>(probe), probe);
+        var scope = ResolutionScope.Create().For<int, RunSpace, SubProblem>(problem);
+
+        scope.Resolve(parent).Evaluate([7], RandomNumberGenerator.Create(1)).ShouldBe([new ObjectiveVector(7)]);
+        probe.Constructions.ShouldBe(2);
+    }
+
+    [Fact]
+    public void AFixedSignatureParent_ResolvesAChildWrittenForAWiderProblem()
+    {
+        var problem = new SubProblem();
+        var probe = new ConstructionProbe();
+        var parent = new FixedParent<SubProblem>(new ProbedEvaluator<BaseProblem>(probe), probe);
+        var scope = ResolutionScope.Create().For<int, RunSpace, SubProblem>(problem);
+
+        scope.Resolve(parent).Evaluate([7], RandomNumberGenerator.Create(1)).ShouldBe([new ObjectiveVector(7)]);
+        probe.Constructions.ShouldBe(2);
     }
 
     private sealed class RunSpace : ISearchSpace<int>
@@ -172,6 +225,52 @@ public class ExecutionSupportTests
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
             population;
+    }
+
+    private class BaseProblem : IProblem<int, RunSpace>
+    {
+        public RunSpace SearchSpace { get; } = new();
+        public ObjectiveDirections Objective => SingleObjective.Minimize;
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            candidates.Select(candidate => new ObjectiveVector(candidate)).ToArray();
+    }
+
+    private sealed class SubProblem : BaseProblem;
+
+    private sealed class ConstructionProbe
+    {
+        public int Constructions { get; set; }
+    }
+
+    private sealed record FixedParent<TProblem>(IOperator<Evaluation, int> Child, ConstructionProbe Probe)
+        : Evaluator<int, RunSpace, TProblem> where TProblem : BaseProblem
+    {
+        public static Parameter<FixedParent<TProblem>, IOperator<Evaluation, int>> ChildParameter { get; } =
+            new(nameof(Child), static parent => parent.Child, static (parent, value) => parent with { Child = value });
+
+        public override IReadOnlyList<IParameter> GetParameters() => [ChildParameter];
+
+        protected override IEvaluationExecutor<int> CreateExecutor<TSearchState>(ResolutionScope<int, RunSpace, TProblem, TSearchState> scope)
+        {
+            Probe.Constructions++;
+            return scope.Resolve(Child);
+        }
+    }
+
+    private sealed record ProbedEvaluator<TProblem>(ConstructionProbe Probe) : Evaluator<int, RunSpace, TProblem>
+        where TProblem : BaseProblem
+    {
+        protected override IEvaluationExecutor<int> CreateExecutor<TSearchState>(ResolutionScope<int, RunSpace, TProblem, TSearchState> scope)
+        {
+            Probe.Constructions++;
+            return new Executor(scope.Problem);
+        }
+
+        private sealed class Executor(TProblem boundProblem) : EvaluationExecutor<int, RunSpace, TProblem>(boundProblem)
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+                Problem.Evaluate(candidates, random);
+        }
     }
 
     private sealed record Passing(IConfigurationNode Child) : IConfigurationNode

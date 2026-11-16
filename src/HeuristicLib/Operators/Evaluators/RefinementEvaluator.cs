@@ -1,9 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -64,17 +62,15 @@ public sealed record RefinementEvaluator<TCandidate>
     {
         var evaluator = scope.Resolve(Evaluator);
         var refiner = scope.Resolve(Refiner);
-        return new Executor<TRunSearchSpace, TRunProblem>(evaluator, refiner);
+        return new Executor(evaluator, refiner);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator, IRefinementExecutor<TCandidate, TSearchSpace, TProblem> refiner)
-        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<TCandidate> evaluator, IRefinementExecutor<TCandidate> refiner)
+        : EvaluationExecutor<TCandidate>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            var refined = refiner.Refine(candidates, random, searchSpace, problem);
+            var refined = refiner.Refine(candidates, random);
 
             // Refiners map a population to a population and are free to change its size. This evaluator is not: it owes
             // its caller one objective vector per supplied candidate, in that order, so it needs a refiner that keeps
@@ -83,7 +79,7 @@ public sealed record RefinementEvaluator<TCandidate>
             if (refined.Count != candidates.Count)
                 throw new InvalidOperationException($"The refiner returned {refined.Count} candidates for {candidates.Count} candidates. Transient refinement measures one refined candidate for each supplied candidate, so its refiner must preserve the population size and order.");
 
-            return evaluator.Evaluate(refined, random, searchSpace, problem);
+            return evaluator.Evaluate(refined, random);
         }
     }
 }

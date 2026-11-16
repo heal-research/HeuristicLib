@@ -38,7 +38,7 @@ public sealed record ChoosePerItem<TOperation, TCandidate> : MultiOperator<TOper
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        TOperation.Route<TCandidate, TSearchSpace, TProblem, TSearchState>(
+        TOperation.Route<TCandidate, TSearchState>(
             new WeightedRouter<IExecutor>(WeightedChoice.ResolveChildren(ChildOperators, Weights, scope), Weights));
 }
 

@@ -17,7 +17,7 @@ public sealed class AlgorithmCallTests
         var algorithm = new ScriptedAlgorithm(States: 2);
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
         var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
-        await using var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
+        await using var states = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         events.ShouldBeEmpty();
@@ -61,7 +61,7 @@ public sealed class AlgorithmCallTests
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
         var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
 
-        await using (var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
+        await using (var states = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
                          .GetAsyncEnumerator(TestContext.Current.CancellationToken))
             (await states.MoveNextAsync()).ShouldBeTrue();
 
@@ -96,7 +96,7 @@ public sealed class AlgorithmCallTests
         var executor = Resolve(root, algorithm.AnalyzedBy(calls, iterations));
 
         await Run(executor);
-        await using (var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
+        await using (var states = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
                          .GetAsyncEnumerator(TestContext.Current.CancellationToken))
         {
             (await states.MoveNextAsync()).ShouldBeTrue();
@@ -181,7 +181,7 @@ public sealed class AlgorithmCallTests
         var algorithm = new FailingDisposalAlgorithm();
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
         var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
-        var states = executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
+        var states = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
         (await states.MoveNextAsync()).ShouldBeTrue();
 
@@ -193,14 +193,14 @@ public sealed class AlgorithmCallTests
     private static IAlgorithm<int, PopulationState<int>> ObservingCalls(IAlgorithm<int, PopulationState<int>> algorithm, List<AlgorithmCallObservation<int, PopulationState<int>>> events) =>
         algorithm.AnalyzedBy(algorithm.Calls.Observing(events.Add));
 
-    private static IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> Resolve(
+    private static IAlgorithmExecutor<PopulationState<int>> Resolve(
         ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm) =>
-        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, Problem);
 
-    private static async Task<int> Run(IAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> executor)
+    private static async Task<int> Run(IAlgorithmExecutor<PopulationState<int>> executor)
     {
         var states = 0;
-        await foreach (var _ in executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var _ in executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states++;
         return states;
     }
@@ -208,17 +208,14 @@ public sealed class AlgorithmCallTests
     // Yields the given number of states, counting up from the state it starts from, then fails if given a failure.
     private sealed record ScriptedAlgorithm(int States, Exception? Failure = null) : Algorithm<ScriptedAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(States, Failure);
+            new Executor(States, Failure);
 
-        private sealed class Executor<TSearchSpace, TProblem>(int states, Exception? failure)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(int states, Exception? failure)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 var current = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
                 for (var state = 0; state < states; state++)
@@ -236,16 +233,14 @@ public sealed class AlgorithmCallTests
     // Fails when its stream is requested, before any state is asked for.
     private sealed record FailingToStartAlgorithm : Algorithm<FailingToStartAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>();
+            new Executor();
 
-        private sealed class Executor<TSearchSpace, TProblem> : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor : AlgorithmExecutor<PopulationState<int>>
         {
-            public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, CancellationToken ct = default) =>
+
+            public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, CancellationToken ct = default) =>
                 throw new InvalidOperationException("The stream cannot start.");
         }
     }
@@ -253,16 +248,14 @@ public sealed class AlgorithmCallTests
     // Yields states until its caller stops, and fails when its stream is disposed.
     private sealed record FailingDisposalAlgorithm : Algorithm<FailingDisposalAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>();
+            new Executor();
 
-        private sealed class Executor<TSearchSpace, TProblem> : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor : AlgorithmExecutor<PopulationState<int>>
         {
-            public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, CancellationToken ct = default) =>
+
+            public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, CancellationToken ct = default) =>
                 new States();
         }
 

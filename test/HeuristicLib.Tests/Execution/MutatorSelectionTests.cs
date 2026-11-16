@@ -109,8 +109,8 @@ public sealed class MutatorSelectionTests
         mutated.ShouldBeInRange(1, 15);
         count.CurrentCount.ShouldBe(mutated);
         // Another caller reaches the same source without the algorithm's mutation rate.
-        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(countedSource)
-            .Mutate([100], RandomNumberGenerator.Create(7), Problem.SearchSpace, Problem).ShouldBe([99]);
+        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Problem).Resolve(countedSource)
+            .Mutate([100], RandomNumberGenerator.Create(7)).ShouldBe([99]);
         count.CurrentCount.ShouldBe(mutated + 1);
     }
 
@@ -198,16 +198,16 @@ public sealed class MutatorSelectionTests
     };
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm) =>
-        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm)
-            .RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken);
+        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, Problem)
+            .RunStreamingAsync(RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken);
 
     private static ValueTask<PopulationState<int>[]> States(ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm) =>
         Run(scope, algorithm).ToArrayAsync(TestContext.Current.CancellationToken);
 
     private static async Task RunToCompletion(ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm)
     {
-        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
-        await executor.RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
+        var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, Problem);
+        await executor.RunStreamingAsync(RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
             .LastAsync(TestContext.Current.CancellationToken);
     }
 

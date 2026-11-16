@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -17,18 +18,16 @@ public sealed record AnyTerminator<TCandidate>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        ImmutableArray<ITerminationExecutor<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> childTerminators = [.. ChildOperators.Select(child => scope.Resolve(child))];
-        return new Executor<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
+        ImmutableArray<ITerminationExecutor<TRunSearchState>> childTerminators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor<TRunSearchState>(childTerminators);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childTerminators)
-        : ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor<TSearchState>(ImmutableArray<ITerminationExecutor<TSearchState>> childTerminators)
+        : TerminationExecutor<TSearchState>
         where TSearchState : class, ISearchState
     {
-        public bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            childTerminators.Any(terminator => terminator.IsTerminalState(state, random, searchSpace, problem));
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) =>
+            childTerminators.Any(terminator => terminator.IsTerminalState(state, random));
     }
 }
 

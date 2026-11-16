@@ -47,20 +47,20 @@ public sealed record RepeatingEvaluator<TCandidate>
         if (Repetitions <= 0)
             throw new InvalidOperationException("Repetitions must be positive.");
         var childEvaluator = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, Repetitions, Aggregator, Concurrency);
+        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, Repetitions, Aggregator, Concurrency, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)
-        : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency, TProblem problem)
+        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var repetitionResults = BatchExecution.Execute(
                 repetitions,
-                (childEvaluator, candidates, searchSpace, problem),
-                static (itemRandom, state) => state.childEvaluator.Evaluate(state.candidates, itemRandom, state.searchSpace, state.problem),
+                (childEvaluator, candidates, SearchSpace, Problem),
+                static (itemRandom, state) => state.childEvaluator.Evaluate(state.candidates, itemRandom),
                 random,
                 concurrency);
 
@@ -71,7 +71,7 @@ public sealed record RepeatingEvaluator<TCandidate>
                     for (var repetition = 0; repetition < repetitions; repetition++)
                         objectiveVectors[repetition] = repetitionResults[repetition][candidateIndex];
 
-                    return aggregator.Aggregate(objectiveVectors, problem.Objective);
+                    return aggregator.Aggregate(objectiveVectors, Problem.Objective);
                 })
                 .ToArray();
         }

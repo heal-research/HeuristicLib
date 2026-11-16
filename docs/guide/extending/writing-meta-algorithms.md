@@ -15,7 +15,7 @@ A meta-algorithm splits into a configuration record and an executor, exactly as 
 ::: warning Resolve child algorithms through the scope
 Obtain a child algorithm's executor with `scope.Resolve(childAlgorithm)`. Calling the child's `CreateExecutor` directly bypasses the scope's construction checks and sharing.
 
-`ResolutionScope.Resolve` builds one executor per configuration in a scope, checks it against the run and honors sharing. Bypassing a child's resolution builds a second executor whose private data the scope does not know, beside the one other requests receive.
+`ResolutionScope.Resolve` builds one executor per configuration/problem reference pair in a scope, checks it against the run and honors sharing. Bypassing a child's resolution builds a second executor whose private data the scope does not know, beside the one other requests receive.
 
 The `HLib0001` analyzer reports direct child `CreateExecutor` calls in construction hooks, custom resolvers and deferred execution methods. It does not prove correct state ownership or follow configurations passed through arbitrary helper code. Keep child construction on the scope's resolution path.
 :::
@@ -50,36 +50,33 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), FirstParameter, SecondParameter];
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var first = scope.Resolve(First);
         var second = scope.Resolve(Second);
-        return new Executor<TSearchSpace, TProblem>(first, second);
+        return new Executor(first, second);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> first,
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> second)
-        : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(
+        IAlgorithmExecutor<TSearchState> first,
+        IAlgorithmExecutor<TSearchState> second)
+        : AlgorithmExecutor<TSearchState>
     {
         public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(
-            TProblem problem,
             IRandomNumberGenerator random,
             TSearchState? initialState = null,
             [EnumeratorCancellation] CancellationToken ct = default)
         {
             var state = initialState;
 
-            await foreach (var nextState in first.RunStreamingAsync(problem, random.Fork(0), state, ct))
+            await foreach (var nextState in first.RunStreamingAsync(random.Fork(0), state, ct))
             {
                 state = nextState;
                 yield return nextState;
             }
 
-            await foreach (var nextState in second.RunStreamingAsync(problem, random.Fork(1), state, ct))
+            await foreach (var nextState in second.RunStreamingAsync(random.Fork(1), state, ct))
             {
                 yield return nextState;
             }
@@ -94,7 +91,7 @@ Five details carry the design:
 - **Both children are resolved in `CreateExecutor`.** Each build receives children with the requesting context's observations, with independent private fields and any explicitly shared resources.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
-- **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those as the method type arguments `TSearchSpace` and `TProblem` on `CreateExecutor`. They are threaded into the nested executor class. The scope the hook receives is typed to them, which keeps the two `Resolve` calls free of type arguments.
+- **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those as the method type arguments `TSearchSpace` and `TProblem` on `CreateExecutor`. The resolved children retain their problem bindings, so the nested executor derives from `AlgorithmExecutor<TSearchState>` and needs only the search state. A wrapper that only forwards to one child can derive from `WrappingAlgorithmExecutor<TSearchState>` and use its protected `ChildAlgorithm`. The scope the hook receives is typed to them, which keeps the two `Resolve` calls free of type arguments.
 
 Use it by naming the two stages:
 
@@ -130,13 +127,13 @@ var run = staged.AnalyzedBy(exploreQuality, wholeRun).CreateRun(problem, RandomN
 
 ## Deferred children and shared executors
 
-Resolve fixed children through the scope received by `CreateExecutor`. Retain that scope on the executor when child construction is deferred. Each call constructs fresh private fields while using the same run results:
+Resolve fixed children through the scope received by `CreateExecutor`. Retain that scope on the executor when child construction is deferred. Create a child scope when an activation needs fresh private fields while keeping the same run results:
 
 ```csharp
-var execution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm);
+var execution = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm, problem);
 ```
 
-A typed scope created with `For<TCandidate, TSearchSpace, TProblem, TSearchState>()` avoids repeating the type arguments.
+A typed scope created with `For<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)` avoids repeating the type arguments. It is a view of the same scope, not a child scope. To bind a child to another subproblem, create a view with that problem and declare its signature on the child parameter with `ChildExecution`.
 
 Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executors for each turn and carries search state forward. Share a configuration on the Cycle to keep one executor for it across turns:
 

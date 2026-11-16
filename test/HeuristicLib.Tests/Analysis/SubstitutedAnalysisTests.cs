@@ -380,10 +380,10 @@ public class SubstitutedAnalysisTests
         var reads = checksum.Invocations.Count();
         var values = checksum.Invocations.Trace(observation => observation.Result, [reads]);
         var scope = ResolutionScope.Create();
-        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(checksum.AnalyzedBy(values));
+        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Problem).Resolve(checksum.AnalyzedBy(values));
 
-        executor.Read(Rng, DummySearchSpace<int>.Instance, Problem).ShouldBe(1);
-        executor.Read(Rng, DummySearchSpace<int>.Instance, Problem).ShouldBe(2);
+        executor.Read(Rng).ShouldBe(1);
+        executor.Read(Rng).ShouldBe(2);
 
         scope.Results.Result(values).By(reads).ShouldBe([new(1L, 1), new(2L, 2)]);
     }
@@ -394,9 +394,9 @@ public class SubstitutedAnalysisTests
         IOperator<Checksum, int> checksum = new IncrementingChecksum();
         var counted = checksum.Counting(checksum, out var reads);
         var scope = ResolutionScope.Create();
-        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(counted);
+        var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Problem).Resolve(counted);
 
-        executor.Read(Rng, DummySearchSpace<int>.Instance, Problem);
+        executor.Read(Rng);
 
         scope.Results.Result(reads).CurrentCount.ShouldBe(1);
     }
@@ -511,7 +511,7 @@ public class SubstitutedAnalysisTests
 
     private sealed record BrokenAlgorithm : Algorithm<BrokenAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
             throw new InvalidOperationException("broken");
     }
@@ -522,11 +522,11 @@ public class SubstitutedAnalysisTests
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
 
-        private sealed class Executor : IChecksumExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+        private sealed class Executor : IChecksumExecutor
         {
             private int value;
 
-            public int Read(IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => ++value;
+            public int Read(IRandomNumberGenerator random) => ++value;
         }
     }
 }

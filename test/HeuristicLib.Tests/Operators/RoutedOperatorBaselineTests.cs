@@ -37,7 +37,7 @@ public sealed class RoutedOperatorBaselineTests
     private static Dictionary<string, string> Capture()
     {
         var problem = FuncProblem.Create((int x) => x, new Space(), SingleObjective.Minimize);
-        var scope = ResolutionScope.Create().For<int, Space, IProblem<int, Space>>();
+        var scope = ResolutionScope.Create().For<int, Space, IProblem<int, Space>>(problem);
         int[] inputs = Enumerable.Range(0, 12).ToArray();
         var population = inputs.Select(x => new EvaluatedCandidate<int>(x, new ObjectiveVector(x))).ToArray();
         var parents = inputs.Select(x => Parents.From(x, x + 1000)).ToArray();
@@ -49,27 +49,27 @@ public sealed class RoutedOperatorBaselineTests
             void Save(string role, IEnumerable<int> values) => snapshots.Add(role + seed,
                 string.Join(",", values) + ";next=" + random.NextInt() + ";calls=" + string.Join("/", log));
             Save("creation", scope.Resolve(ChoosePerItem.Create([new Creator(100, log), new Creator(200, log)], [1.0, 3.0]))
-                .Create(12, random, problem.SearchSpace, problem));
+                .Create(12, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
             Save("crossover", scope.Resolve(ChoosePerItem.Create([new DrawingCross(100, log), new DrawingCross(200, log)], [1.0, 3.0]))
-                .Cross(parents, random, problem.SearchSpace, problem));
+                .Cross(parents, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
             Save("mutation", scope.Resolve(ChoosePerItem.Create([new DrawingMutate(100, log), new DrawingMutate(200, log)], [1.0, 3.0]))
-                .Mutate(inputs, random, problem.SearchSpace, problem));
+                .Mutate(inputs, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
             Save("refinement", scope.Resolve(ChoosePerItem.Create([new DrawingRefine(100, log), new DrawingRefine(200, log)], [1.0, 3.0]))
-                .Refine(inputs, random, problem.SearchSpace, problem));
+                .Refine(inputs, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
             Save("selection", scope.Resolve(ChoosePerInvocation.Create<Selection, int>([new DrawingSelect(100, log), new DrawingSelect(200, log)], [1.0, 3.0]))
-                .Select(population, problem.Objective, 12, random, problem.SearchSpace, problem).Select(x => x.Candidate));
+                .Select(population, problem.Objective, 12, random).Select(x => x.Candidate));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
             Save("replacement", scope.Resolve(ChoosePerInvocation.Create<Replacement, int>([new DrawingReplace(100, log), new DrawingReplace(200, log)], [1.0, 3.0]))
-                .Replace(population, population, problem.Objective, 12, random, problem.SearchSpace, problem).Select(x => x.Candidate));
+                .Replace(population, population, problem.Objective, 12, random).Select(x => x.Candidate));
         }
         return snapshots;
     }

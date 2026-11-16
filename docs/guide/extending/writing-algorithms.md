@@ -9,7 +9,9 @@ An algorithm has two parts:
 1. An immutable configuration record that holds operators and settings.
 2. An executor bound to resolved operators and the interceptor, with private fields and references to any run-bound results it uses.
 
-Each call to `Stream` or `CompleteAsync` starts an independent root execution. Each scope keeps one executor per configuration reference. Child scopes construct their own executors unless an ancestor explicitly shares a configuration through `Sharing`.
+Each call to `Stream` or `CompleteAsync` starts an independent root execution. Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes construct their own executors unless an ancestor explicitly shares a configuration through `Sharing`.
+
+For custom streaming control flow, derive the executor from `AlgorithmExecutor<TSearchState>` when it reads neither the search space nor the problem. Use `AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` when it needs those bound contracts. Its protected get-only `Problem` and `SearchSpace` properties retain the constructor context for derived executors. A wrapper can use the corresponding `WrappingAlgorithmExecutor<TSearchState>` or problem-bound `WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` to retain its resolved `ChildAlgorithm`.
 
 ## Implement an iterative algorithm
 
@@ -47,24 +49,23 @@ public sealed record SingleCreateAlgorithm
         var interceptor = scope.ResolveOptional(Interceptor);
         var creator = scope.Resolve(Creator);
         var evaluator = scope.Resolve(Evaluator);
-        return new Executor<TSearchSpace, TProblem>(interceptor, creator, evaluator);
+        return new Executor<TSearchSpace, TProblem>(interceptor, creator, evaluator, scope.Problem);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IInterceptionExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>? interceptor,
-        ICreationExecutor<RealVector, TSearchSpace, TProblem> creator,
-        IEvaluationExecutor<RealVector, TSearchSpace, TProblem> evaluator)
-        : IterativeAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>(interceptor)
+        IInterceptionExecutor<SingleSolutionState<RealVector>>? interceptor,
+        ICreationExecutor<RealVector> creator,
+        IEvaluationExecutor<RealVector> evaluator, TProblem problem)
+        : IterativeAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>(interceptor, problem)
         where TSearchSpace : class, ISearchSpace<RealVector>
         where TProblem : class, IProblem<RealVector, TSearchSpace>
     {
         protected override SingleSolutionState<RealVector> ExecuteStep(
             SingleSolutionState<RealVector>? previousState,
-            TProblem problem,
             IRandomNumberGenerator random)
         {
-            var candidate = creator.Create(1, random, problem.SearchSpace, problem)[0];
-            var objective = evaluator.Evaluate([candidate], random, problem.SearchSpace, problem)[0];
+            var candidate = creator.Create(1, random)[0];
+            var objective = evaluator.Evaluate([candidate], random)[0];
 
             return SingleSolutionState.From(candidate, objective);
         }
@@ -78,13 +79,13 @@ Pre-flight validation and substitution reach a child only through its declared p
 
 ### Why the configuration names only the candidate
 
-`SingleCreateAlgorithm` never reads a member of a particular problem. It hands the search space and the problem straight to its operators, so it does not need to name either, and the base above takes three type arguments: the algorithm's own type, the candidate, and the state it produces.
+`SingleCreateAlgorithm` never reads a member of a particular problem. It binds its operators through the supplied scope, so it does not need to name either, and the base above takes three type arguments: the algorithm's own type, the candidate, and the state it produces.
 
 Operator slots, including terminators, name their operation and candidate. An interceptor slot also names the search state its operation returns, as the inherited `IOperator<Interception<SingleSolutionState<RealVector>>, RealVector>? Interceptor` does. `IOperator<Creation, RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the executor is created.
 
-The run's search space and problem arrive as method type arguments on `CreateExecutor`, together with a scope typed to them. The nested executor class is generic in them and carries the matching constraints. Configurations omit the run types from operator slots.
+The run's search space and problem arrive as method type arguments on `CreateExecutor`, together with a scope typed to them whose `Problem` property supplies the object. The nested executor class is generic in them and carries the matching constraints. Configurations omit the run types from operator slots.
 
-Resolution calls this protected hook for every build. Return an executor derived from `IterativeAlgorithmExecutor`; this base's hook declares only `IAlgorithmExecutor`, so the compiler does not check it. Resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state. `ExecuteStep`, the interceptor and the protected `IsTerminalState` hook receive the same per-iteration random number generator, so an algorithm that owns a terminator passes that generator on.
+Resolution calls this protected hook for every build. The hook returns `IterativeAlgorithmExecutor`, so the compiler requires an executor that applies the interceptor. Resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state. `ExecuteStep`, the interceptor and the protected `IsTerminalState` hook receive the same per-iteration random number generator, so an algorithm that owns a terminator passes that generator on.
 
 ### When to name the search space and problem instead
 

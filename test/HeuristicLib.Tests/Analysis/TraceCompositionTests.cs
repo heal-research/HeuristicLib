@@ -80,7 +80,7 @@ public class TraceCompositionTests
 
     private sealed record FailingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override ICreationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
+        protected override ICreationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
             throw new InvalidOperationException("Resolution failed.");
     }
 
@@ -502,17 +502,15 @@ public class TraceCompositionTests
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Observe);
+            new Executor(scope.Resolve(ChildOperator), Observe);
 
-        private sealed class Executor<TSearchSpace, TProblem>(
-            ICreationExecutor<RealVector, TSearchSpace, TProblem> childCreator,
-            Action<int> observe) : ICreationExecutor<RealVector, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(
+            ICreationExecutor<RealVector> childCreator,
+            Action<int> observe) : ICreationExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random)
             {
-                var candidates = childCreator.Create(count, random, searchSpace, problem);
+                var candidates = childCreator.Create(count, random);
                 observe(candidates.Count);
                 return candidates;
             }

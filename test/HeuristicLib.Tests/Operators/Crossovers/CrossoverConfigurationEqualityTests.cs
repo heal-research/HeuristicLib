@@ -233,17 +233,15 @@ public class CrossoverConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<ICrossoverExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TRunSearchSpace, TRunProblem>(children);
+            ImmutableArray<ICrossoverExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(children);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<ICrossoverExecutor<int, TSearchSpace, TProblem>> childCrossovers)
-            : ICrossoverExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ImmutableArray<ICrossoverExecutor<int>> childCrossovers)
+            : ICrossoverExecutor<int>
         {
-            public IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                childCrossovers[0].Cross(parents, random, searchSpace, problem);
+            public IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) =>
+                childCrossovers[0].Cross(parents, random);
         }
     }
     private sealed record IdentityCrossover : WrappingOperator<Crossover, int>

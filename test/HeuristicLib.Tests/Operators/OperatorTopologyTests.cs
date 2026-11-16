@@ -41,22 +41,21 @@ public class OperatorTopologyTests
     /// remain here.
     /// </summary>
     [Theory]
-    [InlineData(typeof(ICreationExecutor<,,>))]
-    [InlineData(typeof(ICrossoverExecutor<,,>))]
-    [InlineData(typeof(IRefinementExecutor<,,>))]
-    [InlineData(typeof(IEvaluationExecutor<,,>))]
-    [InlineData(typeof(IMutationExecutor<,,>))]
-    [InlineData(typeof(IReplacementExecutor<,,>))]
-    [InlineData(typeof(ISelectionExecutor<,,>))]
-    [InlineData(typeof(IInterceptionExecutor<,,,>))]
-    [InlineData(typeof(ITerminationExecutor<,,,>))]
-    public void OperatorRoleContracts_PreserveCandidateAndUseContravariantContext(Type roleContract)
+    [InlineData(typeof(ICreationExecutor<>))]
+    [InlineData(typeof(ICrossoverExecutor<>))]
+    [InlineData(typeof(IRefinementExecutor<>))]
+    [InlineData(typeof(IEvaluationExecutor<>))]
+    [InlineData(typeof(IMutationExecutor<>))]
+    [InlineData(typeof(IReplacementExecutor<>))]
+    [InlineData(typeof(ISelectionExecutor<>))]
+    [InlineData(typeof(IInterceptionExecutor<>))]
+    [InlineData(typeof(ITerminationExecutor<>))]
+    public void OperatorRoleContracts_OmitTheBoundContext(Type roleContract)
     {
         var typeParameters = roleContract.GetGenericArguments();
 
-        Variance(typeParameters[0]).ShouldBe(GenericParameterAttributes.None);
-        Variance(typeParameters[1]).ShouldBe(GenericParameterAttributes.Contravariant);
-        Variance(typeParameters[2]).ShouldBe(GenericParameterAttributes.Contravariant);
+        typeParameters.ShouldHaveSingleItem();
+        typeParameters[0].Name.ShouldBeOneOf("TCandidate", "TSearchState");
     }
 
     /// <summary>
@@ -64,11 +63,11 @@ public class OperatorTopologyTests
     /// an interceptor returns it and therefore cannot be contravariant in it.
     /// </summary>
     [Theory]
-    [InlineData(typeof(IInterceptionExecutor<,,,>), GenericParameterAttributes.None)]
-    [InlineData(typeof(ITerminationExecutor<,,,>), GenericParameterAttributes.Contravariant)]
+    [InlineData(typeof(IInterceptionExecutor<>), GenericParameterAttributes.None)]
+    [InlineData(typeof(ITerminationExecutor<>), GenericParameterAttributes.Contravariant)]
     public void SearchStateAwareRoleContracts_DeclareExpectedSearchStateVariance(Type roleContract, GenericParameterAttributes expectedVariance)
     {
-        var searchState = roleContract.GetGenericArguments()[3];
+        var searchState = roleContract.GetGenericArguments()[0];
 
         Variance(searchState).ShouldBe(expectedVariance);
     }

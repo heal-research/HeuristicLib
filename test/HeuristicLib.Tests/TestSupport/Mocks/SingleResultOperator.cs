@@ -31,12 +31,12 @@ public sealed class SingleResultOperator
     }
 
     private sealed class Executor(SingleResultOperator owner)
-        : ICreationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
-        ICrossoverExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
-        IMutationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
-        ISelectionExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
-        IRefinementExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>,
-        IReplacementExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>
+        : ICreationExecutor<int>,
+        ICrossoverExecutor<int>,
+        IMutationExecutor<int>,
+        ISelectionExecutor<int>,
+        IRefinementExecutor<int>,
+        IReplacementExecutor<int>
     {
         private int invocations;
 
@@ -46,12 +46,12 @@ public sealed class SingleResultOperator
             return ++invocations;
         }
 
-        public IReadOnlyList<int> Create(int count, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [Next()];
-        public IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [Next()];
-        public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [Next()];
-        public IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [Next()];
-        public IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [new(Next(), new ObjectiveVector(0))];
-        public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<int> searchSpace, IProblem<int, ISearchSpace<int>> problem) => [new(Next(), new ObjectiveVector(0))];
+        public IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) => [Next()];
+        public IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) => [Next()];
+        public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) => [Next()];
+        public IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random) => [Next()];
+        public IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) => [new(Next(), new ObjectiveVector(0))];
+        public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) => [new(Next(), new ObjectiveVector(0))];
     }
 
 }

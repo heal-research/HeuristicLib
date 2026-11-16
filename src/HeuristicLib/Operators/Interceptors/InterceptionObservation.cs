@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -26,20 +27,19 @@ public sealed record InterceptionObservation<TCandidate, TSearchState>(
     where TSearchState : class, ISearchState
 {
     static IExecutor IInvocationObservation<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem, TRunSearchState>(
-        IExecutor executor, IOperator<Interception<TSearchState>, TCandidate> source, Action<InterceptionObservation<TCandidate, TSearchState>> record) =>
-        new Executor<TSearchSpace, TProblem>((IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)executor, source, record);
+        IExecutor executor, IOperator<Interception<TSearchState>, TCandidate> source, Action<InterceptionObservation<TCandidate, TSearchState>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((IInterceptionExecutor<TSearchState>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor,
-        IOperator<Interception<TSearchState>, TCandidate> interceptor, Action<InterceptionObservation<TCandidate, TSearchState>> observe)
-        : IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(IInterceptionExecutor<TSearchState> executor,
+        IOperator<Interception<TSearchState>, TCandidate> interceptor, Action<InterceptionObservation<TCandidate, TSearchState>> observe, TProblem problem)
+        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace,
-            TProblem problem)
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
         {
-            var state = executor.Transform(currentState, previousState, random, searchSpace, problem);
-            observe(new InterceptionObservation<TCandidate, TSearchState>(interceptor, currentState, previousState, state, searchSpace, problem));
+            var state = executor.Transform(currentState, previousState, random);
+            observe(new InterceptionObservation<TCandidate, TSearchState>(interceptor, currentState, previousState, state, SearchSpace, Problem));
             return state;
         }
 

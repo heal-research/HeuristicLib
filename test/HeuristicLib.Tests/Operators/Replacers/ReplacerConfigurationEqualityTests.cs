@@ -79,17 +79,15 @@ public class ReplacerConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<IReplacementExecutor<int, TRunSearchSpace, TRunProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TRunSearchSpace, TRunProblem>(children);
+            ImmutableArray<IReplacementExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(children);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IReplacementExecutor<int, TSearchSpace, TProblem>> childReplacers)
-            : IReplacementExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ImmutableArray<IReplacementExecutor<int>> childReplacers)
+            : IReplacementExecutor<int>
         {
-            public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                childReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+                childReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random);
         }
     }
     private sealed record IdentityReplacer : WrappingOperator<Replacement, int>

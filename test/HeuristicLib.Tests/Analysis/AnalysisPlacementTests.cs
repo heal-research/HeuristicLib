@@ -115,11 +115,11 @@ public sealed class AnalysisPlacementTests
         run.Result(trace).SampleCount.ShouldBe(0);
     }
 
-    private static IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IOperator<Evaluation, int> evaluator) =>
-        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>().Resolve(evaluator);
+    private static IEvaluationExecutor<int> Resolve(ResolutionScope scope, IOperator<Evaluation, int> evaluator) =>
+        scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Problem).Resolve(evaluator);
 
-    private static void Evaluate(IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> executor, params int[] candidates) =>
-        executor.Evaluate(candidates, RandomNumberGenerator.Create(1), DummySearchSpace<int>.Instance, Problem);
+    private static void Evaluate(IEvaluationExecutor<int> executor, params int[] candidates) =>
+        executor.Evaluate(candidates, RandomNumberGenerator.Create(1));
 
     private sealed class NoPlacement : Instrument<object>
     {
@@ -137,7 +137,7 @@ public sealed class AnalysisPlacementTests
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), BuildParameter];
 
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) => scope.Resolve(ChildAlgorithm);
     }
 }

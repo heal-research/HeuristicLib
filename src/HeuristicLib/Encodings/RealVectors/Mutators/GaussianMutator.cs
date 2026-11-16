@@ -45,19 +45,19 @@ public record GaussianMutator
     /// The raw execution offers <see cref="IMutationStrengthControl"/> over its persistent strength.
     /// Algorithms project this control during resolution and invoke mutation through the wrapped execution.
     /// </summary>
-    protected override IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutor(ResolutionScope scope) =>
-        new Executor(MutationRate, MutationStrength);
+    protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, TRunSearchState> scope) =>
+        new Executor(MutationRate, MutationStrength, searchSpace: scope.SearchSpace);
 
-    private sealed class Executor(double mutationRate, double mutationStrength)
-        : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>, IMutationStrengthControl
+    private sealed class Executor(double mutationRate, double mutationStrength, BoundedRealVectorSearchSpace searchSpace)
+        : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>(searchSpace: searchSpace), IMutationStrengthControl
     {
         public double CurrentMutationStrength { get; set; } = mutationStrength;
 
-        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
+        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             BatchExecution.Sequential(
                 parents,
-                (searchSpace, mutationRate, mutationStrength: CurrentMutationStrength),
-                static (parent, itemRandom, parameters) => GaussianMutator.Mutate(parent, itemRandom, parameters.searchSpace, parameters.mutationRate, parameters.mutationStrength),
+                (SearchSpace, mutationRate, mutationStrength: CurrentMutationStrength),
+                static (parent, itemRandom, parameters) => GaussianMutator.Mutate(parent, itemRandom, parameters.SearchSpace, parameters.mutationRate, parameters.mutationStrength),
                 random);
     }
 

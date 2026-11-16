@@ -23,10 +23,10 @@ public class ChildResolutionAnalyzerTests
 
         file record ChildCrossover : Crossover<int>
         {
-            protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => new Executor();
-            private sealed class Executor : CrossoverExecutor<int, SS, P>
+            protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => new Executor();
+            private sealed class Executor : CrossoverExecutor<int>
             {
-                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) => [];
+                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) => [];
             }
         }
 
@@ -35,15 +35,15 @@ public class ChildResolutionAnalyzerTests
         """;
 
     [Theory]
-    [InlineData("IOperator<Crossover, int>", "(ICrossoverExecutor<int, SS, P>)Child.CreateExecutor(scope.For<int, SS, P, ISearchState>())")]
-    [InlineData("ChildCrossover", "(ICrossoverExecutor<int, SS, P>)((IOperator<Crossover, int>)Child).CreateExecutor(scope.For<int, SS, P, ISearchState>())")]
+    [InlineData("IOperator<Crossover, int>", "(ICrossoverExecutor<int>)Child.CreateExecutor(scope.For<int, SS, P, ISearchState>(scope.Problem))")]
+    [InlineData("ChildCrossover", "(ICrossoverExecutor<int>)((IOperator<Crossover, int>)Child).CreateExecutor(scope.For<int, SS, P, ISearchState>(scope.Problem))")]
     public async Task Reports_WhenALeafHookCreatesItsChildDirectly(string childType, string construction)
     {
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record BypassingCrossover : Crossover<int>
             {
                 public required {{childType}} Child { get; init; }
-                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => {{construction}};
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => {{construction}};
             }
             """);
 
@@ -78,7 +78,7 @@ public class ChildResolutionAnalyzerTests
             file sealed record BypassingAlgorithm : {{algorithmBase}}
             {
                 public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
-                protected override IAlgorithmExecutor<int, {{runTypes}}, PopulationState<int>> CreateExecutor{{hookParameters}}(ResolutionScope<int, {{runTypes}}, PopulationState<int>> scope) =>
+                protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor{{hookParameters}}(ResolutionScope<int, {{runTypes}}, PopulationState<int>> scope) =>
                     Child.CreateExecutor(scope);
             }
             """);
@@ -93,7 +93,7 @@ public class ChildResolutionAnalyzerTests
             file sealed record ResolvingAlgorithm : Algorithm<ResolvingAlgorithm, int, PopulationState<int>>
             {
                 public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
-                protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+                protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
                     scope.Resolve(Child);
             }
             """);
@@ -108,7 +108,7 @@ public class ChildResolutionAnalyzerTests
             file sealed record ResolvingCrossover : Crossover<int>
             {
                 public required IOperator<Crossover, int> Child { get; init; }
-                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => scope.Resolve<int, SS, P>(Child);
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => scope.Resolve(Child);
             }
             """);
 
@@ -121,7 +121,7 @@ public class ChildResolutionAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file static class DeliberateCaller
             {
-                public static ICrossoverExecutor<int, SS, P> Create(IOperator<Crossover, int> crossover) => (ICrossoverExecutor<int, SS, P>)crossover.CreateExecutor(ResolutionScope.Create().For<int, SS, P, ISearchState>());
+                public static ICrossoverExecutor<int> Create(IOperator<Crossover, int> crossover, P problem) => (ICrossoverExecutor<int>)crossover.CreateExecutor(ResolutionScope.Create().For<int, SS, P, ISearchState>(problem));
             }
             """);
 
@@ -137,8 +137,8 @@ public class ChildResolutionAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + $$"""
             file sealed record DelegatingCrossover : ChildCrossover
             {
-                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) => {{construction}};
-                private ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope, int unused) => base.CreateExecutor(scope);
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => {{construction}};
+                private ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope, int unused) where TRunSearchState : class, ISearchState => base.CreateExecutor(scope);
             }
             """);
 
@@ -181,7 +181,7 @@ public class ChildResolutionAnalyzerTests
             file sealed record RecursiveCrossover : ChildCrossover
             {
                 public RecursiveCrossover? Child { get; init; }
-                protected override ICrossoverExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) =>
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) =>
                     Child is null ? base.CreateExecutor(scope) : Child.CreateExecutor(scope);
             }
             """);
@@ -193,11 +193,11 @@ public class ChildResolutionAnalyzerTests
     public async Task Reports_WhenTheConstructionIsDeferredToAnExecutionMethod()
     {
         var diagnostics = await AnalyzeAsync(Preamble + """
-            file sealed class DeferredExecutor(IOperator<Crossover, int> child, ResolutionScope scope) : CrossoverExecutor<int, SS, P>
+            file sealed class DeferredExecutor(IOperator<Crossover, int> child, ResolutionScope<int, SS, P> scope) : CrossoverExecutor<int>
             {
-                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, SS searchSpace, P problem) =>
-                    Activate().Cross(parents, random, searchSpace, problem);
-                private ICrossoverExecutor<int, SS, P> Activate() => (ICrossoverExecutor<int, SS, P>)child.CreateExecutor(scope.For<int, SS, P, ISearchState>());
+                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) =>
+                    Activate().Cross(parents, random);
+                private ICrossoverExecutor<int> Activate() => (ICrossoverExecutor<int>)child.CreateExecutor(scope.For<int, SS, P, ISearchState>(scope.Problem));
             }
             """);
 
@@ -271,7 +271,7 @@ public class ChildResolutionAnalyzerTests
             file sealed record RecursiveLeaf : HEAL.HeuristicLib.Operators.Mutators.Mutator<int>
             {
                 public RecursiveLeaf? Child { get; init; }
-                protected override IMutationExecutor<int, SS, P> CreateExecutor(ResolutionScope scope) =>
+                protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) =>
                     Child is null ? throw new System.InvalidOperationException() : Child.CreateExecutor(scope);
             }
             """);

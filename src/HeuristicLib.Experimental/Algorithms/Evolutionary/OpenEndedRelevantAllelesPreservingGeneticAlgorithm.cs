@@ -72,40 +72,40 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
         var selector = scope.Resolve(Selector);
         var refiner = scope.ResolveOptional(Refiner);
         return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
-            PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness);
+            PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness, scope.Problem);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selector,
-        IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? refiner,
+        IInterceptionExecutor<PopulationState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate> evaluator,
+        ICreationExecutor<TCandidate> creator,
+        ICrossoverExecutor<TCandidate> crossover,
+        IMutationExecutor<TCandidate> mutator,
+        ISelectionExecutor<TCandidate> selector,
+        IRefinementExecutor<TCandidate>? refiner,
         int populationSize,
         int elites,
         int maxEffort,
         int? maximumGenerations,
-        double strictness)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        double strictness, TProblem problem)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
+        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
-        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, IRandomNumberGenerator random)
         {
             if (previousState is null)
             {
-                var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialSolutions = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialSolutions = refiner.Refine(initialSolutions, random, problem.SearchSpace, problem);
+                    initialSolutions = refiner.Refine(initialSolutions, random);
                 }
 
-                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem));
+                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random));
                 return Population.From(initialPopulation).ToPopulationState();
             }
 
@@ -114,31 +114,31 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
 
             if (oldPopulation.Count <= 0)
             {
-                var initialCandidates = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialCandidates = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialCandidates = refiner.Refine(initialCandidates, random, problem.SearchSpace, problem);
+                    initialCandidates = refiner.Refine(initialCandidates, random);
                 }
 
-                newPop = initialCandidates.ToEvaluated(evaluator.Evaluate(initialCandidates, random, problem.SearchSpace, problem));
+                newPop = initialCandidates.ToEvaluated(evaluator.Evaluate(initialCandidates, random));
             }
             else
             {
-                var selected = selector.Select(oldPopulation, problem.Objective, maxEffort * 2, random, problem.SearchSpace, problem);
-                var population = crossover.Cross(selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
-                population = mutator.Mutate(population, random, problem.SearchSpace, problem);
+                var selected = selector.Select(oldPopulation, Problem.Objective, maxEffort * 2, random);
+                var population = crossover.Cross(selected.ToParents(Problem.Objective), random);
+                population = mutator.Mutate(population, random);
                 if (refiner is not null)
                 {
-                    population = refiner.Refine(population, random, problem.SearchSpace, problem);
+                    population = refiner.Refine(population, random);
                 }
 
-                newPop = population.ToEvaluated(evaluator.Evaluate(population, random, problem.SearchSpace, problem)).Zip(selected.ToEvaluatedCandidatesPairs())
-                    .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, problem.Objective, strictness), problem.Objective))
+                newPop = population.ToEvaluated(evaluator.Evaluate(population, random)).Zip(selected.ToEvaluatedCandidatesPairs())
+                    .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, Problem.Objective, strictness), Problem.Objective))
                     .Select(pair => pair.Item1).ToArray();
             }
 
             var targetPopulationSize = elites + newPop.Count;
-            var newPopulation = ElitismReplacer.Replace(oldPopulation, newPop, problem.Objective, targetPopulationSize, elites);
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, newPop, Problem.Objective, targetPopulationSize, elites);
 
             return Population.From(newPopulation).ToPopulationState();
         }

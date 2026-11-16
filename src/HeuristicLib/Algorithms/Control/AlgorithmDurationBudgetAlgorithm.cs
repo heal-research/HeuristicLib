@@ -33,11 +33,11 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var algorithm = scope.Resolve(Algorithm);
-        return new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, MaximumDuration, TimeProvider);
+        return new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, MaximumDuration, TimeProvider, scope.Problem);
     }
 }
 
@@ -47,22 +47,23 @@ public sealed class AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearch
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecutor<TSearchState> algorithm;
     private readonly TimeSpan maximumDuration;
     private readonly TimeProvider timeProvider;
 
-    public AlgorithmDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
+    public AlgorithmDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider, TProblem problem)
+        : base(problem)
     {
         this.algorithm = algorithm;
         this.maximumDuration = maximumDuration;
         this.timeProvider = timeProvider;
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var duration = TimeSpan.Zero;
         await using var enumerator = algorithm
-            .RunStreamingAsync(problem, random, initialState, ct)
+            .RunStreamingAsync(random, initialState, ct)
             .GetAsyncEnumerator(ct);
 
         while (true)

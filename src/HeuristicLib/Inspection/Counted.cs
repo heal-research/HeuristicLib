@@ -35,7 +35,7 @@ public sealed record Counted<TOperation, TCandidate> : WrappingOperator<TOperati
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
+        var operation = OperationInfo.For<TOperation, TCandidate, TSearchState>();
         if (Metric == OperatorCountMetric.Candidates)
             operation.RequireCandidateWork(ChildOperator, "Counting candidates");
         var counter = scope.Resolve(Counter);

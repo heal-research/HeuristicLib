@@ -49,12 +49,12 @@ public sealed record OperatorCountBudgetAlgorithm<TCandidate, TSearchState>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         scope.Share(Counter);
-        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
-        return new OperatorCountBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Resolve(Counter), MaximumCount);
+        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, scope.Problem);
+        return new OperatorCountBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Resolve(Counter), MaximumCount, scope.Problem);
     }
 }
 
@@ -64,20 +64,21 @@ public sealed class OperatorCountBudgetAlgorithmExecutor<TCandidate, TSearchSpac
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    private readonly IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
+    private readonly IAlgorithmExecutor<TSearchState> algorithm;
     private readonly CountAccumulator counter;
     private readonly int maximumCount;
 
-    public OperatorCountBudgetAlgorithmExecutor(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, CountAccumulator counter, int maximumCount)
+    public OperatorCountBudgetAlgorithmExecutor(IAlgorithmExecutor<TSearchState> algorithm, CountAccumulator counter, int maximumCount, TProblem problem)
+        : base(problem)
     {
         this.algorithm = algorithm;
         this.counter = counter;
         this.maximumCount = maximumCount;
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
-        await foreach (var state in algorithm.RunStreamingAsync(problem, random, initialState, ct))
+        await foreach (var state in algorithm.RunStreamingAsync(random, initialState, ct))
         {
             yield return state;
 

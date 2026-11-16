@@ -9,6 +9,7 @@ namespace HEAL.HeuristicLib.Tests.Operators.Evaluators;
 
 public sealed class EvaluationResolutionTests
 {
+    private static readonly FuncProblem<int, DummySearchSpace<int>> Problem = FuncProblem.Create(static (int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
     [Fact]
     public void Cache_NegativeLimitsDistinguishArgumentsFromConfigurationAndFailBeforeChildConstruction()
     {
@@ -59,10 +60,10 @@ public sealed class EvaluationResolutionTests
         static (WeakReference Candidate, WeakReference Result) CreateCachedReferences(IOperator<Evaluation, object> source, FuncProblem<object, DummySearchSpace<object>> problem)
         {
             var scope = ResolutionScope.Create();
-            var executor = scope.Resolve<object, DummySearchSpace<object>, FuncProblem<object, DummySearchSpace<object>>>(source);
+            var executor = scope.Resolve<object, DummySearchSpace<object>, FuncProblem<object, DummySearchSpace<object>>>(source, problem);
             var candidate = new object();
-            var result = executor.Evaluate([candidate], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Single();
-            executor.Evaluate([candidate], RandomNumberGenerator.Create(2), problem.SearchSpace, problem).Single().ShouldBeSameAs(result);
+            var result = executor.Evaluate([candidate], RandomNumberGenerator.Create(1)).Single();
+            executor.Evaluate([candidate], RandomNumberGenerator.Create(2)).Single().ShouldBeSameAs(result);
             return (new WeakReference(candidate), new WeakReference(result));
         }
     }
@@ -127,30 +128,29 @@ public sealed class EvaluationResolutionTests
         calls.ShouldBe(3);
     }
 
-    private static IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> Resolve(ResolutionScope scope, IOperator<Evaluation, int> source) =>
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source);
+    private static IEvaluationExecutor<int> Resolve(ResolutionScope scope, IOperator<Evaluation, int> source) =>
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, Problem);
 
-    private static IReadOnlyList<ObjectiveVector> Evaluate(IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> executor, params int[] candidates)
+    private static IReadOnlyList<ObjectiveVector> Evaluate(IEvaluationExecutor<int> executor, params int[] candidates)
     {
-        var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        return executor.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        return executor.Evaluate(candidates, RandomNumberGenerator.Create(1));
     }
 
     private sealed record CountingEvaluator(Action Prepare, Action EvaluateCall) : Evaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
 
-        protected override IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor(this);
+            return new Executor(this, scope.Problem);
         }
 
-        private sealed class Executor(CountingEvaluator evaluator)
-            : EvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(CountingEvaluator evaluator, FuncProblem<int, DummySearchSpace<int>> problem)
+            : EvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
         {
             private int invocations;
 
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 evaluator.EvaluateCall();
                 var call = ++invocations;
@@ -172,16 +172,14 @@ public sealed class EvaluationResolutionTests
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Report);
+            new Executor(scope.Resolve(ChildOperator), Report);
 
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> child, Action<IReadOnlyList<int>> report)
-            : IEvaluationExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(IEvaluationExecutor<int> child, Action<IReadOnlyList<int>> report)
+            : IEvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
-                var result = child.Evaluate(candidates, random, searchSpace, problem);
+                var result = child.Evaluate(candidates, random);
                 report(candidates);
                 return result;
             }

@@ -18,7 +18,7 @@ public class RefinerBatchSemanticsTests
         foreach (var (name, topology) in PassThroughTopologies())
         {
             var refinedScope = ResolutionScope.Create();
-            var refined = refinedScope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology).Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+            var refined = refinedScope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology, Problem).Refine(population, RandomNumberGenerator.Create(42));
 
             refined.Count.ShouldBe(population.Length, name);
             for (var index = 0; index < population.Length; index++)
@@ -32,7 +32,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void PipelineRefiner_PassesAResizedPopulationToTheNextStage()
     {
-        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(PipelineRefiner.Create(new DropLastRefiner(), new AddOffsetRefiner(1)));
+        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(PipelineRefiner.Create(new DropLastRefiner(), new AddOffsetRefiner(1)), Problem);
 
         Refine(executor, 1, 2, 3).Select(individual => individual.Value).ShouldBe([2, 3]);
     }
@@ -40,7 +40,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void IteratedRefiner_ResizesThePopulationOncePerIteration()
     {
-        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner().AsIterated(2));
+        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner().AsIterated(2), Problem);
 
         Refine(executor, 1, 2, 3, 4).Select(individual => individual.Value).ShouldBe([1, 2]);
     }
@@ -52,7 +52,7 @@ public class RefinerBatchSemanticsTests
         var observed = new DropLastRefiner();
         var scope = ResolutionScope.Create();
         var executor = scope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(
-            observed.Counted(counter, OperatorCountMetric.Candidates));
+            observed.Counted(counter, OperatorCountMetric.Candidates), Problem);
 
         Refine(executor, 1, 2, 3);
 
@@ -64,7 +64,7 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void ChoosePerItemRefinement_RequiresOneResultPerCandidateAssignedToAChild()
     {
-        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ChoosePerItem.Create(new DropLastRefiner()));
+        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ChoosePerItem.Create(new DropLastRefiner()), Problem);
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 1, 2, 3));
     }
@@ -85,8 +85,8 @@ public class RefinerBatchSemanticsTests
         yield return ("single candidate", new IdentityRefiner());
     }
 
-    private static IReadOnlyList<Individual> Refine(IRefinementExecutor<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> executor, params int[] values) =>
-        executor.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+    private static IReadOnlyList<Individual> Refine(IRefinementExecutor<Individual> executor, params int[] values) =>
+        executor.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42));
 
     private static readonly FuncProblem<Individual, DummySearchSpace<Individual>> Problem =
         FuncProblem.Create(static (Individual individual) => individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);

@@ -1,6 +1,6 @@
 # Configuration vs executors
 
-Configurations describe reusable settings, child configurations and instrument definitions. Resolution keeps one executor per configuration reference within a scope. Executors own private mutable fields; `Sharing` retains selected executors across child scopes.
+Configurations describe reusable settings, child configurations and instrument definitions. Resolution keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters within a scope. Executors own private mutable fields; `Sharing` retains selected executors across child scopes.
 
 | Concept          | Responsibility                                                              |
 | ---------------- | --------------------------------------------------------------------------- |
@@ -12,9 +12,9 @@ Configurations describe reusable settings, child configurations and instrument d
 
 ## Authoring execution behavior
 
-Stateless leaves may use the stateless role bases and return themselves as immutable executors. Mutable operators and compositions author an executor with fields. Algorithms author executors because they coordinate operators and execution flow.
+Stateless role bases preserve the typed author override and construct a small executor retaining its problem or search space. Context-free stateless leaves can return themselves as immutable executors. Mutable operators and compositions author an executor with fields. Algorithms author executors because they coordinate operators and execution flow.
 
-An operator builds its executor in `IOperator<TCandidate>.CreateExecutor`. Resolution calls this hook with a scope typed to the requested operation and run types. Resolve every child through that scope and pass it to the executor. Initialize private counters, cursors and adaptation values on that executor. Repeated construction of one configuration creates independent private data.
+An operator builds its executor in `IOperator<TCandidate>.CreateExecutor`. Resolution calls this hook with a typed scope containing the problem object. Resolve every child through that scope and pass it to the executor. Initialize private counters, cursors and adaptation values on that executor. Repeated construction of one configuration creates independent private data.
 
 Algorithms follow the same rule in their typed `CreateExecutor` hook. Consumer defined roles implement `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Invocation local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 

@@ -25,7 +25,7 @@ internal sealed record ProbeAlgorithm(
     int HoldAfterYieldMilliseconds = 0)
     : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
 {
-    protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
     {
         Probe?.RecordSetup();
@@ -34,19 +34,14 @@ internal sealed record ProbeAlgorithm(
             throw new InvalidOperationException($"Setup failed for {Value}.");
         }
 
-        return new Executor<TSearchSpace, TProblem>(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
+        return new Executor(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
-        : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-        where TSearchSpace : class, ISearchSpace<int>
-        where TProblem : class, IProblem<int, TSearchSpace>
+    private sealed class Executor(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
+        : AlgorithmExecutor<PopulationState<int>>
     {
         public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            PopulationState<int>? initialState = null,
-            [EnumeratorCancellation] CancellationToken ct = default)
+            IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             probe?.BeginExecution();
             try

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -20,19 +21,19 @@ public sealed record RefinementObservation<TCandidate>(
     : IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Refinement, TCandidate> source, Action<RefinementObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((IRefinementExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Refinement, TCandidate> source, Action<RefinementObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((IRefinementExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Refinement, TCandidate> refiner, Action<RefinementObservation<TCandidate>> observe)
-        : IRefinementExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate> executor,
+        IOperator<Refinement, TCandidate> refiner, Action<RefinementObservation<TCandidate>> observe, TProblem problem)
+        : RefinementExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            var refined = executor.Refine(candidates, random, searchSpace, problem);
-            observe(new RefinementObservation<TCandidate>(refiner, candidates, refined, searchSpace, problem));
+            var refined = executor.Refine(candidates, random);
+            observe(new RefinementObservation<TCandidate>(refiner, candidates, refined, SearchSpace, Problem));
             return refined;
         }
 

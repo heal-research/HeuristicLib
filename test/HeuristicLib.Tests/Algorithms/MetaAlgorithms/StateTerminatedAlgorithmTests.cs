@@ -136,22 +136,22 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
         var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator, problem);
 
-        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0)).ShouldBeFalse();
 
         timeProvider.Advance(TimeSpan.FromSeconds(5));
 
-        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero), problem);
 
-        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class StateTerminatedAlgorithmTests
         var events = new List<string>();
         var algorithm = new RecordingAlgorithm(events).TerminatedBy(new RecordingResolveTerminator(events));
 
-        _ = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        _ = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, MetaAlgorithmTestHelpers.CreateIntegerProblem());
 
         events.ShouldBe(["terminator", "algorithm"]);
     }
@@ -205,14 +205,14 @@ public class StateTerminatedAlgorithmTests
     {
         protected override IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(Draws);
+            new Executor<TSearchSpace, TProblem>(Draws, scope.Problem);
 
-        private sealed class Executor<TSearchSpace, TProblem>(List<double> draws)
-            : IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>(null)
+        private sealed class Executor<TSearchSpace, TProblem>(List<double> draws, TProblem problem)
+            : IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>(null, problem)
             where TSearchSpace : class, ISearchSpace<int>
             where TProblem : class, IProblem<int, TSearchSpace>
         {
-            protected override PopulationState<int> ExecuteStep(PopulationState<int>? previousState, TProblem problem, IRandomNumberGenerator random)
+            protected override PopulationState<int> ExecuteStep(PopulationState<int>? previousState, IRandomNumberGenerator random)
             {
                 draws.Add(random.NextDouble());
                 return CreateState(previousState is null ? 1 : MetaAlgorithmTestHelpers.StateCandidate(previousState) + 1);
@@ -240,19 +240,18 @@ public class StateTerminatedAlgorithmTests
     private sealed record RecordingAlgorithm(List<string> Events)
         : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Events.Add("algorithm");
-            return new Executor<TSearchSpace, TProblem>();
+            return new Executor();
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 await Task.CompletedTask;
                 yield break;
@@ -266,7 +265,7 @@ public class StateTerminatedAlgorithmTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
             Events.Add("terminator");
-            return new Executor<TSearchSpace, TProblem, TSearchState>();
+            return new Executor<TSearchSpace, TProblem, TSearchState>(scope.Problem);
         }
 
         private sealed class Executor<TSearchSpace, TProblem, TSearchState> : TerminationExecutor<int, TSearchSpace, TProblem, TSearchState>
@@ -274,7 +273,9 @@ public class StateTerminatedAlgorithmTests
             where TProblem : class, IProblem<int, TSearchSpace>
             where TSearchState : class, ISearchState
         {
-            public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => false;
+            public Executor(TProblem problem) : base(problem) { }
+
+            public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => false;
         }
     }
 }

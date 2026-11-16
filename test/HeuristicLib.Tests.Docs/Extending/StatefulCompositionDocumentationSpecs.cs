@@ -27,26 +27,21 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
     {
         if (ChildOperators.Count == 0)
             throw new InvalidOperationException("At least one mutator is required.");
-        ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children =
+        ImmutableArray<IMutationExecutor<TCandidate>> children =
             [.. ChildOperators.Select(child => scope.Resolve(child))];
-        return new Executor<TSearchSpace, TProblem>(children);
+        return new Executor(children);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(
-        ImmutableArray<IMutationExecutor<TCandidate, TSearchSpace, TProblem>> children)
-        : IMutationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(
+        ImmutableArray<IMutationExecutor<TCandidate>> children)
+        : IMutationExecutor<TCandidate>
     {
         private int nextChild;
 
         public IReadOnlyList<TCandidate> Mutate(
-            IReadOnlyList<TCandidate> parents,
-            IRandomNumberGenerator random,
-            TSearchSpace searchSpace,
-            TProblem problem)
+            IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
-            var offspring = children[nextChild].Mutate(parents, random, searchSpace, problem);
+            var offspring = children[nextChild].Mutate(parents, random);
             nextChild = (nextChild + 1) % children.Length;
             return offspring;
         }
@@ -75,9 +70,9 @@ public sealed class StatefulCompositionDocumentationSpecs
         var original = scope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
-            IProblem<RealVector, BoundedRealVectorSearchSpace>>()
+            IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem)
             .Resolve(composition);
-        original.Mutate(parents, random, searchSpace, problem); // First child.
+        original.Mutate(parents, random); // First child.
 
         var firstCalls = first.Invocations.Count();
         var secondCalls = second.Invocations.Count();
@@ -85,11 +80,11 @@ public sealed class StatefulCompositionDocumentationSpecs
         var observed = observedScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
-            IProblem<RealVector, BoundedRealVectorSearchSpace>>()
+            IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem)
             .Resolve(composition.AnalyzedBy(firstCalls, secondCalls));
 
-        observed.Mutate(parents, random, searchSpace, problem); // First child with its own cursor.
-        original.Mutate(parents, random, searchSpace, problem); // Second child with the original cursor.
+        observed.Mutate(parents, random); // First child with its own cursor.
+        original.Mutate(parents, random); // Second child with the original cursor.
         #endregion stateful-composition-usage
 
         observedScope.Results.Result(firstCalls).CurrentCount.ShouldBe(1);
@@ -101,9 +96,9 @@ public sealed class StatefulCompositionDocumentationSpecs
         var independent = independentScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
-            IProblem<RealVector, BoundedRealVectorSearchSpace>>()
+            IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem)
             .Resolve(composition.AnalyzedBy(independentFirstCalls));
-        independent.Mutate(parents, random, searchSpace, problem); // First child with a fresh cursor.
+        independent.Mutate(parents, random); // First child with a fresh cursor.
         #endregion stateful-composition-independent
 
         independentScope.Results.Result(independentFirstCalls).CurrentCount.ShouldBe(1);

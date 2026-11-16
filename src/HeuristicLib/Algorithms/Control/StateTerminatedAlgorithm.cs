@@ -25,13 +25,13 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start before wrapped algorithm construction.
         var terminator = scope.Resolve(Terminator);
         var algorithm = scope.Resolve(Algorithm);
-        return new StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, terminator);
+        return new StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, terminator, scope.Problem);
     }
 }
 
@@ -51,28 +51,29 @@ public class StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    protected readonly IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm;
-    protected readonly ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator;
-
-    public StateTerminatedAlgorithmExecutor(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
-    {
-        Algorithm = algorithm;
-        Terminator = terminator;
-    }
+    protected IAlgorithmExecutor<TSearchState> Algorithm { get; }
+    protected ITerminationExecutor<TSearchState> Terminator { get; }
 
     // Iterative algorithms fork the run's generator by iteration index. A key no iteration reaches keeps the terminator
     // from receiving the stream of an inner iteration.
     private const ulong TerminationForkKey = ulong.MaxValue;
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public StateTerminatedAlgorithmExecutor(IAlgorithmExecutor<TSearchState> algorithm, ITerminationExecutor<TSearchState> terminator, TProblem problem)
+        : base(problem)
+    {
+        Algorithm = algorithm;
+        Terminator = terminator;
+    }
+
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var terminationRandom = random.Fork(TerminationForkKey);
         var yieldedStateCount = 0;
-        await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct))
+        await foreach (var state in Algorithm.RunStreamingAsync(random, initialState, ct))
         {
             yield return state;
 
-            if (Terminator.IsTerminalState(state, terminationRandom.Fork(yieldedStateCount), problem.SearchSpace, problem))
+            if (Terminator.IsTerminalState(state, terminationRandom.Fork(yieldedStateCount)))
             {
                 yield break;
             }

@@ -15,12 +15,6 @@ namespace HEAL.HeuristicLib.Inspection;
 public sealed record TimedAlgorithm<TCandidate, TSearchState> : WrappingAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public TimedAlgorithm(IAlgorithm<TCandidate, TSearchState> childAlgorithm, Duration duration)
-        : base(childAlgorithm)
-    {
-        Duration = duration;
-    }
-
     public Duration Duration { get; init; }
 
     public static Parameter<TimedAlgorithm<TCandidate, TSearchState>, Duration> DurationParameter { get; } =
@@ -28,22 +22,29 @@ public sealed record TimedAlgorithm<TCandidate, TSearchState> : WrappingAlgorith
 
     public new static IReadOnlyList<IParameter> Parameters { get; } = [DurationParameter];
 
+    public TimedAlgorithm(IAlgorithm<TCandidate, TSearchState> childAlgorithm, Duration duration)
+        : base(childAlgorithm)
+    {
+        Duration = duration;
+    }
+
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        new Executor<TSearchSpace, TProblem>(scope.Resolve(ChildAlgorithm), scope.Resolve(Duration), Duration.TimeProvider);
-
-    private sealed class Executor<TSearchSpace, TProblem>(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm,
-        DurationAccumulator duration, TimeProvider timeProvider)
-        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-            TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        var childAlgorithm = scope.Resolve(ChildAlgorithm);
+        var duration = scope.Resolve(Duration);
+        return new Executor(childAlgorithm, duration, Duration.TimeProvider);
+    }
+
+    private sealed class Executor(IAlgorithmExecutor<TSearchState> childAlgorithm,
+        DurationAccumulator duration, TimeProvider timeProvider)
+        : WrappingAlgorithmExecutor<TSearchState>(childAlgorithm)
+    {
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
-            await using var iterator = ChildAlgorithm.RunStreamingAsync(problem, random, initialState, ct).GetAsyncEnumerator(ct);
+            await using var iterator = ChildAlgorithm.RunStreamingAsync(random, initialState, ct).GetAsyncEnumerator(ct);
             while (true)
             {
                 bool moved;

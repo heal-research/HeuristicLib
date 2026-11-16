@@ -16,11 +16,11 @@ public class EvaluatorInspectionTests
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(counted);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(counted, problem);
 
-        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Evaluate([4], RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -31,11 +31,11 @@ public class EvaluatorInspectionTests
         var counter = new Counter();
         var evaluator = CreateEvaluator();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counted(counter, OperatorCountMetric.Candidates));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counted(counter, OperatorCountMetric.Candidates), problem);
 
-        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Evaluate([4], RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
@@ -47,11 +47,11 @@ public class EvaluatorInspectionTests
         var duration = new Duration(timeProvider);
         var evaluator = CreateEvaluator();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration), problem);
 
-        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Evaluate([4], RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -65,7 +65,7 @@ public class EvaluatorInspectionTests
 
         var scope = ResolutionScope.Create();
         Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counted(counter)).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Counted(counter), problem).Evaluate([1], RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -79,7 +79,7 @@ public class EvaluatorInspectionTests
 
         var scope = ResolutionScope.Create();
         Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration)).Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration), problem).Evaluate([1], RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }

@@ -14,7 +14,7 @@ public abstract class SymbolicExpressionGrammarBase
     private readonly Lock cachedMaxExpressionLengthLock = new();
     private readonly Lock cachedMinExpressionDepthLock = new();
     private readonly Lock cachedMinExpressionLengthLock = new();
-    protected readonly Dictionary<Symbol, SymbolConfiguration> SymbolConfigurations = [];
+    protected Dictionary<Symbol, SymbolConfiguration> SymbolConfigurations { get; } = [];
 
     private Dictionary<Tuple<Symbol, Symbol>, bool> cachedIsAllowedChildSymbol = new();
     private Dictionary<Tuple<Symbol, Symbol, int>, bool> cachedIsAllowedChildSymbolIndex = new();

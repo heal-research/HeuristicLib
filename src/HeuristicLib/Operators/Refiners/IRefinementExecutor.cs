@@ -23,53 +23,50 @@ namespace HEAL.HeuristicLib.Operators;
 /// measures a transient refined copy and reports its objective vector for the original candidate, which is Baldwinian.
 /// </para>
 /// </remarks>
-public interface IRefinementExecutor<TCandidate, in TSearchSpace, in TProblem>
-    : IOperatorExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public interface IRefinementExecutor<TCandidate> : IOperatorExecutor
 {
-    IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }
 
 public static class RefinementOperationResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TCandidate, TSearchSpace, TProblem>(IOperator<Refinement, TCandidate> source)
+        public IRefinementExecutor<TCandidate> Resolve<TCandidate, TSearchSpace, TProblem>(IOperator<Refinement, TCandidate> source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().Resolve(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).Resolve(source);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IOperator<Refinement, TCandidate>? source)
+        public IRefinementExecutor<TCandidate>? ResolveOptional<TCandidate, TSearchSpace, TProblem>(IOperator<Refinement, TCandidate>? source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().ResolveOptional(source);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).ResolveOptional(source);
 
-        public bool TryResolve<TCandidate, TSearchSpace, TProblem>(IOperator<Refinement, TCandidate> source,
-            [NotNullWhen(true)] out IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason)
+        public bool TryResolve<TCandidate, TSearchSpace, TProblem>(IOperator<Refinement, TCandidate> source, TProblem problem,
+            [NotNullWhen(true)] out IRefinementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>().TryResolve(source, out executor, out reason);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => scope.For<TCandidate, TSearchSpace, TProblem>(problem).TryResolve(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Refinement, TCandidate> source) =>
-            (IRefinementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+        public IRefinementExecutor<TCandidate> Resolve(IOperator<Refinement, TCandidate> source) =>
+            (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Refinement, TCandidate> source, out TControl? control)
+        public IRefinementExecutor<TCandidate> Resolve<TControl>(IOperator<Refinement, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IRefinementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState>(source);
+            var executor = (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public IRefinementExecutor<TCandidate>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Refinement, TCandidate> source,
-            [NotNullWhen(true)] out IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out IRefinementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 
@@ -78,22 +75,22 @@ public static class RefinementOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
     {
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Refinement, TCandidate> source) =>
-            (IRefinementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        public IRefinementExecutor<TCandidate> Resolve(IOperator<Refinement, TCandidate> source) =>
+            (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
 
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem> Resolve<TControl>(IOperator<Refinement, TCandidate> source, out TControl? control)
+        public IRefinementExecutor<TCandidate> Resolve<TControl>(IOperator<Refinement, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (IRefinementExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            var executor = (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public IRefinementExecutor<TCandidate>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Refinement, TCandidate> source,
-            [NotNullWhen(true)] out IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out IRefinementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 }

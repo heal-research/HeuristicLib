@@ -7,35 +7,33 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public interface ITerminationExecutor<TCandidate, in TSearchSpace, in TProblem, in TSearchState>
+public interface ITerminationExecutor<in TSearchState>
     : IOperatorExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    bool IsTerminalState(TSearchState state, IRandomNumberGenerator random);
 }
 
 public static class TerminationOperationResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(IOperator<Termination, TCandidate> source)
+        public ITerminationExecutor<TRunSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(IOperator<Termination, TCandidate> source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TRunSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TRunSearchState>().Resolve(source);
+            where TRunSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TRunSearchState>(problem).Resolve(source);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TRunSearchState>(IOperator<Termination, TCandidate>? source)
+        public ITerminationExecutor<TRunSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TRunSearchState>(IOperator<Termination, TCandidate>? source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TRunSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TRunSearchState>().ResolveOptional(source);
+            where TRunSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TRunSearchState>(problem).ResolveOptional(source);
 
-        public bool TryResolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(IOperator<Termination, TCandidate> source,
-            [NotNullWhen(true)] out ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>? executor, [NotNullWhen(false)] out string? reason)
+        public bool TryResolve<TCandidate, TSearchSpace, TProblem, TRunSearchState>(IOperator<Termination, TCandidate> source, TProblem problem,
+            [NotNullWhen(true)] out ITerminationExecutor<TRunSearchState>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TRunSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TRunSearchState>().TryResolve(source, out executor, out reason);
+            where TRunSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TRunSearchState>(problem).TryResolve(source, out executor, out reason);
     }
 
     extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
@@ -43,22 +41,22 @@ public static class TerminationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
     {
-        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve(IOperator<Termination, TCandidate> source) =>
-            (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+        public ITerminationExecutor<TRunSearchState> Resolve(IOperator<Termination, TCandidate> source) =>
+            (ITerminationExecutor<TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
 
-        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState> Resolve<TControl>(IOperator<Termination, TCandidate> source, out TControl? control)
+        public ITerminationExecutor<TRunSearchState> Resolve<TControl>(IOperator<Termination, TCandidate> source, out TControl? control)
             where TControl : class
         {
-            var executor = (ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source);
+            var executor = (ITerminationExecutor<TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
             control = ExecutorControls.Find<TControl>(executor);
             return executor;
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>? ResolveOptional(IOperator<Termination, TCandidate>? source) => source is null ? null : scope.Resolve(source);
+        public ITerminationExecutor<TRunSearchState>? ResolveOptional(IOperator<Termination, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve(IOperator<Termination, TCandidate> source,
-            [NotNullWhen(true)] out ITerminationExecutor<TCandidate, TSearchSpace, TProblem, TRunSearchState>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out ITerminationExecutor<TRunSearchState>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 }

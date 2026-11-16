@@ -95,18 +95,17 @@ public class AccumulatingAnalyzerTests
     }
 
     private static void Evaluate(ResolutionScope scope, IOperator<Evaluation, int> evaluator, params int[] candidates) =>
-        scope.Resolve<int, SketchSearchSpace, SketchProblem>(evaluator)
-             .Evaluate(candidates, RandomNumberGenerator.Create(1), SketchSearchSpace.Instance, SketchProblem.Instance);
+        scope.Resolve<int, SketchSearchSpace, SketchProblem>(evaluator, SketchProblem.Instance)
+             .Evaluate(candidates, RandomNumberGenerator.Create(1));
 
     /// <summary>Scores a candidate against two conflicting objectives, so every candidate stays on the front.</summary>
     private sealed record SketchEvaluator : Evaluator<int, SketchSearchSpace, SketchProblem>
     {
-        protected override IEvaluationExecutor<int, SketchSearchSpace, SketchProblem> CreateExecutor(ResolutionScope scope) => new Executor();
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SketchSearchSpace, SketchProblem, TRunSearchState> scope) => new Executor();
 
-        private sealed class Executor : IEvaluationExecutor<int, SketchSearchSpace, SketchProblem>
+        private sealed class Executor : IEvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random,
-                SketchSearchSpace searchSpace, SketchProblem problem) =>
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
                 [.. candidates.Select(candidate => new ObjectiveVector(candidate, 10 - candidate))];
         }
     }

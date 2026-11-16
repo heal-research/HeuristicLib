@@ -12,59 +12,49 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Tests.Docs.Architecture;
 
 #region operation-executor
-public interface IEstimationExecutor<TCandidate, in TSearchSpace, in TProblem> : IExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public interface IEstimationExecutor<TCandidate> : IExecutor
 {
-    IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
 }
 #endregion operation-executor
 
 #region operation-type
 public sealed class Estimation : IItemOperation<Estimation>
 {
-    static bool IOperation<Estimation>.IsExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(IExecutor executor) =>
-        executor is IEstimationExecutor<TCandidate, TSearchSpace, TProblem>;
+    static bool IOperation<Estimation>.IsExecutor<TCandidate, TSearchState>(IExecutor executor) =>
+        executor is IEstimationExecutor<TCandidate>;
 
-    static IExecutor IOperation<Estimation>.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
-        new WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(executor, wrapper);
+    static IExecutor IOperation<Estimation>.Wrap<TCandidate, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
+        new WrappedExecutor<TCandidate, TWrapper>(executor, wrapper);
 
-    static IExecutor IItemOperation<Estimation>.Route<TCandidate, TSearchSpace, TProblem, TSearchState>(WeightedRouter<IExecutor> children) =>
-        new RoutedExecutor<TCandidate, TSearchSpace, TProblem>(children);
+    static IExecutor IItemOperation<Estimation>.Route<TCandidate, TSearchState>(WeightedRouter<IExecutor> children) =>
+        new RoutedExecutor<TCandidate>(children);
 
-    private readonly struct Invocation<TCandidate, TSearchSpace, TProblem>(IEstimationExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) : IInvocation<IReadOnlyList<double>>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private readonly struct Invocation<TCandidate>(IEstimationExecutor<TCandidate> executor,
+        IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) : IInvocation<IReadOnlyList<double>>
     {
-        private readonly IEstimationExecutor<TCandidate, TSearchSpace, TProblem> executor = executor;
+        private readonly IEstimationExecutor<TCandidate> executor = executor;
         private readonly IRandomNumberGenerator random = random;
 
         public IRandomNumberGenerator Random => random;
-        public ISearchSpace SearchSpace => searchSpace;
-        public IProblem Problem => problem;
 
         public IReadOnlyList<double> Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-            ((IEstimationExecutor<TCandidate, TSearchSpace, TProblem>?)executor ?? this.executor).Estimate(candidates, random ?? this.random, searchSpace, problem);
+            ((IEstimationExecutor<TCandidate>?)executor ?? this.executor).Estimate(candidates, random ?? this.random);
     }
 
-    private sealed class WrappedExecutor<TCandidate, TSearchSpace, TProblem, TWrapper>(IExecutor executor, TWrapper wrapper)
-        : WrappingExecutor<IEstimationExecutor<TCandidate, TSearchSpace, TProblem>, TWrapper>(executor, wrapper), IEstimationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class WrappedExecutor<TCandidate, TWrapper>(IExecutor executor, TWrapper wrapper)
+        : WrappingExecutor<IEstimationExecutor<TCandidate>, TWrapper>(executor, wrapper), IEstimationExecutor<TCandidate>
         where TWrapper : struct, IInvocationWrapper
     {
-        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            Wrapper.Invoke<Invocation<TCandidate, TSearchSpace, TProblem>, IReadOnlyList<double>>(new(Executor, candidates, random, searchSpace, problem));
+        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+            Wrapper.Invoke<Invocation<TCandidate>, IReadOnlyList<double>>(new(Executor, candidates, random));
     }
 
-    private sealed class RoutedExecutor<TCandidate, TSearchSpace, TProblem>(WeightedRouter<IExecutor> children)
-        : RoutingExecutor<IEstimationExecutor<TCandidate, TSearchSpace, TProblem>>(children), IEstimationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class RoutedExecutor<TCandidate>(WeightedRouter<IExecutor> children)
+        : RoutingExecutor<IEstimationExecutor<TCandidate>>(children), IEstimationExecutor<TCandidate>
     {
-        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            Children.Route(candidates, random, (child, batch) => child.Estimate(batch, random, searchSpace, problem));
+        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+            Children.Route(candidates, random, (child, batch) => child.Estimate(batch, random));
     }
 }
 #endregion operation-type
@@ -76,11 +66,11 @@ public static class EstimationResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IEstimationExecutor<TCandidate, TSearchSpace, TProblem> Resolve(IOperator<Estimation, TCandidate> source) =>
-            (IEstimationExecutor<TCandidate, TSearchSpace, TProblem>)scope.ResolveOperator(source);
+        public IEstimationExecutor<TCandidate> Resolve(IOperator<Estimation, TCandidate> source) =>
+            (IEstimationExecutor<TCandidate>)scope.ResolveOperator(source);
 
         public bool TryResolve(IOperator<Estimation, TCandidate> source,
-            [NotNullWhen(true)] out IEstimationExecutor<TCandidate, TSearchSpace, TProblem>? executor, [NotNullWhen(false)] out string? reason) =>
+            [NotNullWhen(true)] out IEstimationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
             scope.TryResolveOperator(source, out executor, out reason);
     }
 }
@@ -96,18 +86,20 @@ public sealed record EstimationObservation<TCandidate>(
     : IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Estimation, TCandidate> source, Action<EstimationObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((IEstimationExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Estimation, TCandidate> source, Action<EstimationObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((IEstimationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEstimationExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Estimation, TCandidate> estimator, Action<EstimationObservation<TCandidate>> observe)
-        : IEstimationExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(IEstimationExecutor<TCandidate> executor,
+        IOperator<Estimation, TCandidate> estimator, Action<EstimationObservation<TCandidate>> observe, TProblem problem)
+        : IEstimationExecutor<TCandidate>, IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        private readonly TSearchSpace searchSpace = problem.SearchSpace;
+
+        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            var estimates = executor.Estimate(candidates, random, searchSpace, problem);
+            var estimates = executor.Estimate(candidates, random);
             observe(new EstimationObservation<TCandidate>(estimator, candidates, estimates, searchSpace, problem));
             return estimates;
         }
@@ -134,14 +126,11 @@ public sealed record ScaledEstimator(double Scale) : Operator<Estimation, RealVe
 {
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) =>
-        new Executor<TSearchSpace, TProblem>(Scale);
+        new Executor(Scale);
 
-    private sealed class Executor<TSearchSpace, TProblem>(double scale) : IEstimationExecutor<RealVector, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<RealVector>
-        where TProblem : class, IProblem<RealVector, TSearchSpace>
+    private sealed class Executor(double scale) : IEstimationExecutor<RealVector>
     {
-        public IReadOnlyList<double> Estimate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random,
-            TSearchSpace searchSpace, TProblem problem) =>
+        public IReadOnlyList<double> Estimate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
             [.. candidates.Select(candidate => scale * candidate[0])];
     }
 }
@@ -156,10 +145,10 @@ public sealed class OperationDefinitionDocumentationSpecs
         var estimator = ChoosePerItem.Create<Estimation, RealVector>(new ScaledEstimator(1.0), new ScaledEstimator(10.0));
         var counts = estimator.Invocations.Trace(observation => observation.Estimates.Count);
         var root = ResolutionScope.Create();
-        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>();
+        var scope = root.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem);
         RealVector[] candidates = [new(1.0), new(2.0), new(3.0)];
 
-        var estimates = scope.Resolve(estimator.AnalyzedBy(counts)).Estimate(candidates, RandomNumberGenerator.Create(42), searchSpace, problem);
+        var estimates = scope.Resolve(estimator.AnalyzedBy(counts)).Estimate(candidates, RandomNumberGenerator.Create(42));
 
         estimates.Count.ShouldBe(candidates.Length);
         for (var i = 0; i < candidates.Length; i++)

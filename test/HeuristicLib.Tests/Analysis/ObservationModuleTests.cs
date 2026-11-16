@@ -20,8 +20,8 @@ public class ObservationModuleTests
         var observations = new List<MutationObservation<int>>();
         var scope = ResolutionScope.Create();
 
-        var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.AnalyzedBy(mutator.Invocations.Observing(observations.Add)))
-            .Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.AnalyzedBy(mutator.Invocations.Observing(observations.Add)), problem)
+            .Mutate([1, 2], RandomNumberGenerator.Create(1));
 
         var observation = observations.ShouldHaveSingleItem();
         observation.Mutator.ShouldBeSameAs(mutator);
@@ -43,7 +43,7 @@ public class ObservationModuleTests
         var scope = ResolutionScope.Create();
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed));
+            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed, CreateProblem()));
 
         exception.Message.ShouldContain("cannot run over");
     }
@@ -59,7 +59,7 @@ public class ObservationModuleTests
         var scope = ResolutionScope.Create();
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
+            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator, CreateProblem()));
 
         exception.Message.ShouldNotContain("`");
         exception.Message.ShouldContain("FuncProblem<Int32, DummySearchSpace<Int32>>");
@@ -81,8 +81,8 @@ public class ObservationModuleTests
         var root = ResolutionScope.Create();
         var budget = root.CreateChildScope();
 
-        budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(budgeted)
-            .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(budgeted, problem)
+            .Evaluate([3], RandomNumberGenerator.Create(1));
 
         root.Results.Result(calls).CurrentCount.ShouldBe(1);
         observed.ShouldHaveSingleItem().ShouldBe(evaluator.Counted(calls));
@@ -96,12 +96,12 @@ public class ObservationModuleTests
         var observations = new List<AlgorithmObservation<int, PopulationState<int>>>();
         var scope = ResolutionScope.Create();
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-            algorithm.AnalyzedBy(algorithm.Iterations.Observing(observations.Add)));
+            algorithm.AnalyzedBy(algorithm.Iterations.Observing(observations.Add)), problem);
 
         var states = new List<PopulationState<int>>();
-        await foreach (var state in executor.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states.Add(state);
-        await foreach (var state in executor.RunStreamingAsync(problem, RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
+        await foreach (var state in executor.RunStreamingAsync(RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
             states.Add(state);
 
         observations.Select(observation => observation.Iteration).ShouldBe([1L, 1L]);
@@ -124,8 +124,8 @@ public class ObservationModuleTests
         var scope = ResolutionScope.Create();
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-                interceptor.AnalyzedBy(interceptor.Invocations.Observing(observation => observed.Add(observation.State))))
-            .Transform(state, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+                interceptor.AnalyzedBy(interceptor.Invocations.Observing(observation => observed.Add(observation.State))), problem)
+            .Transform(state, null, RandomNumberGenerator.Create(1));
 
         observed.ShouldHaveSingleItem().ShouldBeSameAs(state);
     }
@@ -146,10 +146,10 @@ public class ObservationModuleTests
         var mutations = mutator.Invocations.Observing(recorder.Record);
         _ = algorithm.Iterations.Observing(recorder.Record);
 
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.AnalyzedBy(evaluations))
-            .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.AnalyzedBy(mutations))
-            .Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.AnalyzedBy(evaluations), problem)
+            .Evaluate([3], RandomNumberGenerator.Create(1));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.AnalyzedBy(mutations), problem)
+            .Mutate([1], RandomNumberGenerator.Create(1));
 
         recorder.Problems.ShouldBe([problem, problem]);
     }

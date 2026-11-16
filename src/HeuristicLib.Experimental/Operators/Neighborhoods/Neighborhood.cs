@@ -1,4 +1,3 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -13,19 +12,15 @@ namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 /// </summary>
 /// <remarks>
 /// The type arguments are the search space and problem this neighborhood is written for, and a run it was not written
-/// for is reported when the execution graph is built. A neighborhood holds no execution data, so it is its own executor
-/// for every move operation, and <see cref="MoveCreator"/>, <see cref="MoveApplier"/> and <see cref="MoveEvaluator"/>
+/// for is reported when the execution graph is built. The bound executor serves every move operation, and <see cref="MoveCreator"/>, <see cref="MoveApplier"/> and <see cref="MoveEvaluator"/>
 /// return the neighborhood itself. A wrapper placed in one of these slots therefore wraps that operation of this
 /// neighborhood.
 /// </remarks>
 public abstract record Neighborhood<TCandidate, TSearchSpace, TProblem, TMove>
-    : INeighborhood<TCandidate, TMove>,
-      IOperator<MoveCreation<TMove>, TCandidate>,
+    : Operator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, IExecutor>,
+      INeighborhood<TCandidate, TMove>,
       IOperator<MoveApplication<TMove>, TCandidate>,
-      IOperator<MoveEvaluation<TMove>, TCandidate>,
-      IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>,
-      IMoveApplicationExecutor<TCandidate, TSearchSpace, TProblem, TMove>,
-      IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>
+      IOperator<MoveEvaluation<TMove>, TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
@@ -33,18 +28,13 @@ public abstract record Neighborhood<TCandidate, TSearchSpace, TProblem, TMove>
     public IOperator<MoveApplication<TMove>, TCandidate> MoveApplier => this;
     public IOperator<MoveEvaluation<TMove>, TCandidate> MoveEvaluator => this;
 
-    /// <summary>Returns this neighborhood, the executor of all three move operations.</summary>
-    /// <remarks>One hook serves every operation, so a scope holds one executor for the neighborhood whichever operation it resolves first.</remarks>
-    public IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
-        where TRunSearchState : class, ISearchState => this;
-
-    /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
-    public virtual IReadOnlyList<IParameter> GetParameters() => [];
-
-    public bool Supports(ExecutionSignature execution) =>
-        execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
+    /// <summary>Creates a bound executor for all three move operations.</summary>
+    /// <remarks>
+    /// The base's one hook serves every operation this record implements, so a scope holds one executor for the
+    /// neighborhood whichever operation it resolves first. The base names move creation only because it takes one operation.
+    /// </remarks>
+    protected override IExecutor CreateExecutor<TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        new Executor(this, scope.Problem);
 
     public abstract IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
     public abstract TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
@@ -57,9 +47,12 @@ public abstract record Neighborhood<TCandidate, TSearchSpace, TProblem, TMove>
         return problem.Evaluate([d], random)[0];
     }
 
-    ObjectiveVector IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>.Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-        Evaluate(candidate, move, random, searchSpace, problem);
-
-    ObjectiveVector IMoveEvaluationExecutor<TCandidate, TSearchSpace, TProblem, TMove>.Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-        problem.Evaluate([candidate], random)[0];
+    private sealed class Executor(Neighborhood<TCandidate, TSearchSpace, TProblem, TMove> configuration, TProblem problem)
+        : IMoveCreationExecutor<TCandidate, TMove>, IMoveApplicationExecutor<TCandidate, TMove>, IMoveEvaluationExecutor<TCandidate, TMove>
+    {
+        public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random) => configuration.Moves(candidate, random, problem.SearchSpace, problem);
+        public TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random) => configuration.Apply(candidate, move, random, problem.SearchSpace, problem);
+        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random) => configuration.Evaluate(candidate, move, random, problem.SearchSpace, problem);
+        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random) => problem.Evaluate([candidate], random)[0];
+    }
 }

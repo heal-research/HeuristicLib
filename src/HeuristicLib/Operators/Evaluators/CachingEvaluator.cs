@@ -47,15 +47,13 @@ public record CachingEvaluator<TCandidate, TKey>
             throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
         var cache = new EvaluationCache<TKey>(SizeLimit);
         var childEvaluator = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
+        return new Executor(childEvaluator, KeySelector, cache);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, EvaluationCache<TKey> cache)
-        : IEvaluationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, EvaluationCache<TKey> cache)
+        : EvaluationExecutor<TCandidate>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var n = candidates.Count;
             var results = new ObjectiveVector[n];
@@ -92,7 +90,7 @@ public record CachingEvaluator<TCandidate, TKey>
                 return results;
             }
 
-            var newObjectiveVectors = childEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+            var newObjectiveVectors = childEvaluator.Evaluate(uncachedCandidates, random);
 
             for (var k = 0; k < uncachedKeys.Count; k++)
             {

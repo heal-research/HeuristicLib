@@ -64,7 +64,7 @@ public class AlgorithmInterfaceCapabilitySpecs
             GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
         var resolved = ResolutionScope.Create()
-            .Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(algorithm);
+            .Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(algorithm, problem);
 
         resolved.ShouldNotBeNull();
     }

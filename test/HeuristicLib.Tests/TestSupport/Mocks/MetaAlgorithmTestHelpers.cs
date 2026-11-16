@@ -25,16 +25,18 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
     public int ExecutionCount { get; private set; }
 
     // Counts private data construction for each executor.
-    protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+    protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
     {
         ExecutionCount++;
-        return new Executor();
+        return new Executor(scope.Problem);
     }
 
     private sealed class Executor : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
-            problem.Evaluate(candidates, random).ToArray();
+        public Executor(IProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
+
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            Problem.Evaluate(candidates, random).ToArray();
     }
 
 }
@@ -50,25 +52,23 @@ public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluat
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
 
     // Counts private data construction for each executor.
-    protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
     {
         ExecutionCount++;
-        return new Executor<TSearchSpace, TProblem>(Increment, scope.Resolve(Evaluator));
+        return new Executor(Increment, scope.Resolve(Evaluator));
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(int increment, IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator)
-        : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-        where TSearchSpace : class, ISearchSpace<int>
-        where TProblem : class, IProblem<int, TSearchSpace>
+    private sealed class Executor(int increment, IEvaluationExecutor<int> evaluator)
+        : AlgorithmExecutor<PopulationState<int>>
     {
-        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
 
             var current = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
             var next = current + increment;
-            var objectiveVector = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
+            var objectiveVector = evaluator.Evaluate([next], random).Single();
 
             yield return Population.From([next.ToEvaluated(objectiveVector)]).ToPopulationState();
             await Task.CompletedTask;

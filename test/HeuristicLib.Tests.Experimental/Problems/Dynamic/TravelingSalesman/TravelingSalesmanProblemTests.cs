@@ -130,13 +130,13 @@ public class TravelingSalesmanProblemTests
         var data = new TravelingSalesmanDistanceMatrixProblemData(distances);
         var env = RandomNumberGenerator.Create(0);
         var problem = new ActivatedTravelingSalesmanProblem(data, env, [true, true, true, false], 1.0);
-        var evaluator = new ProblemEvaluator<Permutation>().ScaledToDynamicBestKnown(problem,
+        var evaluator = new ProblemEvaluator<Permutation>().ScaledToDynamicBestKnown(
             new ActivatedTravelingSalesmanExactBestKnownProvider(new HeldKarpTravelingSalesmanExactSolver()));
-        var executor = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(evaluator, problem);
 
-        var before = executor.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
+        var before = executor.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom)[0];
         problem.UpdateOnce();
-        var after = executor.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom, problem.SearchSpace, problem)[0];
+        var after = executor.Evaluate([[0, 1, 2, 3]], TestRandoms.NoRandom)[0];
 
         before.ShouldBe(new ObjectiveVector(0.0));
         after.ShouldBe(new ObjectiveVector(0.0));
@@ -204,17 +204,17 @@ public class TravelingSalesmanProblemTests
         var env = RandomNumberGenerator.Create(0);
         var p = new ActivatedTravelingSalesmanProblem(data, env, [true, false, false, true], 1.0, epochSchedule: new EvaluationCountSchedule(200));
         Permutation tour = [0, 1, 2, 3];
-        var cachedEval = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(new ProblemEvaluator<Permutation>().Cached(p));
+        var cachedEval = ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(new ProblemEvaluator<Permutation>().CachedPerEpoch(), p);
         p.CurrentEpoch.ShouldBe(0);
 
-        var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
-        var r2 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
+        var r1 = cachedEval.Evaluate([tour], TestRandoms.NoRandom)[0];
+        var r2 = cachedEval.Evaluate([tour], TestRandoms.NoRandom)[0];
         r2.ToArray().ShouldBe(r1.ToArray());
 
         p.UpdateOnce();
         p.CurrentEpoch.ShouldBe(1);
 
-        var r3 = cachedEval.Evaluate([tour], TestRandoms.NoRandom, p.SearchSpace, p)[0];
+        var r3 = cachedEval.Evaluate([tour], TestRandoms.NoRandom)[0];
 
         r3.ShouldNotBeNull();
     }

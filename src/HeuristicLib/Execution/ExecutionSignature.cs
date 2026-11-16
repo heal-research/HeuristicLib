@@ -8,8 +8,8 @@ namespace HEAL.HeuristicLib.Execution;
 /// </summary>
 /// <remarks>
 /// Built where an execution graph is created — by a run, or by validation asking what a run would do — and passed down
-/// unchanged. A configuration reads the parts it is written about and ignores the rest, so an ordinary operator never
-/// builds one.
+/// through the configuration and parameter mappings for declared children. A configuration reads the parts it is written
+/// about and ignores the rest.
 /// <para>
 /// A meta algorithm or an adapting operator that starts an <em>inner</em> execution over different types states that
 /// execution on the slot of its child, through <see cref="Parameter{TOwner, TValue}.ChildExecution"/>. Every signature
@@ -26,9 +26,10 @@ public readonly record struct ExecutionSignature(Type SearchSpace, Type Problem,
     /// resolves to nothing, so a <see langword="null"/> configuration is supported.
     /// </summary>
     /// <remarks>
-    /// A child is asked about the execution its parameter says it runs under, which is this one unless the parameter states
-    /// another through <see cref="Parameter{TOwner, TValue}.ChildExecution"/>. A reference list entry is not asked, because
-    /// it is not a place in the graph.
+    /// A child is asked about the execution from <see cref="IConfigurationNode.ChildExecution"/> followed by its
+    /// parameter's <see cref="Parameter{TOwner, TValue}.ChildExecution"/> mapping. Fixed-signature parents hand their
+    /// declared types to children, matching construction. A parameter may state another execution instead. A reference
+    /// list entry is not asked, because it is not a place in the graph.
     /// </remarks>
     public bool Supports(IConfigurationNode? configuration)
     {
@@ -41,7 +42,7 @@ public readonly record struct ExecutionSignature(Type SearchSpace, Type Problem,
             var children = parameter.GetChildren(configuration);
             if (children.Count == 0)
                 continue;
-            var childExecution = parameter.ChildExecution(this);
+            var childExecution = parameter.ChildExecution(configuration.ChildExecution(this));
             foreach (var child in children)
                 if (!childExecution.Supports(child))
                     return false;

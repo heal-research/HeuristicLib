@@ -51,17 +51,17 @@ internal static class SubstitutionFixture
     {
         public bool FailFirstCall { get; init; }
 
-        protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
             Box.Builds++;
-            return new Executor(Box, FailFirstCall);
+            return new Executor(Box, FailFirstCall, scope.Problem);
         }
 
-        private sealed class Executor(Recording box, bool failFirstCall) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(Recording box, bool failFirstCall, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(problem)
         {
             private bool failed = !failFirstCall;
 
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 box.Calls++;
                 if (!failed)
@@ -69,7 +69,7 @@ internal static class SubstitutionFixture
                     failed = true;
                     throw new RetryableOperationException("The first call fails.");
                 }
-                return problem.Evaluate(candidates, random).ToArray();
+                return Problem.Evaluate(candidates, random).ToArray();
             }
         }
     }
@@ -91,29 +91,26 @@ internal static class SubstitutionFixture
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Box.Entries.Add($"build {Label}");
-            return new Executor<TSearchSpace, TProblem>(this, scope.Resolve(Mutator), Second is null ? null : scope.Resolve(Second));
+            return new Executor(this, scope.Resolve(Mutator), Second is null ? null : scope.Resolve(Second));
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(Caller caller, IEvaluationExecutor<int, TSearchSpace, TProblem> mutator,
-            IEvaluationExecutor<int, TSearchSpace, TProblem>? second)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(Caller caller, IEvaluationExecutor<int> mutator,
+            IEvaluationExecutor<int>? second)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 for (var state = 1; state <= caller.States; state++)
                 {
                     ObjectiveVector quality = default!;
                     for (var call = 0; call < caller.CallsPerState; call++)
                     {
-                        quality = mutator.Evaluate([state], random, problem.SearchSpace, problem).Single();
-                        second?.Evaluate([state], random, problem.SearchSpace, problem);
+                        quality = mutator.Evaluate([state], random).Single();
+                        second?.Evaluate([state], random);
                     }
                     caller.Box.Entries.Add($"{caller.Label}{state}");
                     yield return Population.From([state.ToEvaluated(quality)]).ToPopulationState();

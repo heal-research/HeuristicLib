@@ -23,23 +23,23 @@ public class StateViewResolutionTests
         var probe = new Probe();
         var terminator = new ThirdCallTerminator(probe);
         var root = ResolutionScope.Create();
-        ITerminationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState> first;
-        ITerminationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, SecondState> second;
+        var problem = CreateProblem();
+        ITerminationExecutor<FirstState> first;
+        ITerminationExecutor<SecondState> second;
         if (secondViewFirst)
         {
-            second = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, SecondState>().Resolve(terminator);
-            first = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>().Resolve(terminator);
+            second = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, SecondState>(problem).Resolve(terminator);
+            first = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>(problem).Resolve(terminator);
         }
         else
         {
-            first = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>().Resolve(terminator);
-            second = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, SecondState>().Resolve(terminator);
+            first = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>(problem).Resolve(terminator);
+            second = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, SecondState>(problem).Resolve(terminator);
         }
-        var problem = CreateProblem();
 
-        first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        second.IsTerminalState(new SecondState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        second.IsTerminalState(new SecondState(), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        first.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0)).ShouldBeTrue();
 
         probe.Preparations.ShouldBe(1);
     }
@@ -49,13 +49,12 @@ public class StateViewResolutionTests
     {
         var calls = new Counter();
         var root = ResolutionScope.Create();
-        var scope = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>();
+        var scope = root.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, FirstState>(CreateProblem());
         var terminator = scope.Resolve(new ThirdCallTerminator(new Probe()).Counted(calls));
         var interceptor = scope.Resolve(new CountingInterceptor(new Probe()).Counted(calls));
-        var problem = CreateProblem();
 
-        terminator.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        interceptor.Transform(new FirstState(), null, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        terminator.IsTerminalState(new FirstState(), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        interceptor.Transform(new FirstState(), null, RandomNumberGenerator.Create(0));
 
         root.Results.Result(calls).CurrentCount.ShouldBe(2);
     }
@@ -80,14 +79,14 @@ public class StateViewResolutionTests
     private sealed record ThirdCallTerminator(Probe Probe) : Terminator<int>
     {
 
-        protected override ITerminationExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, ISearchState> CreateExecutor(ResolutionScope scope)
+        protected override ITerminationExecutor<ISearchState> CreateExecutor(ResolutionScope<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, ISearchState> scope)
         {
             Probe.Preparations++;
             return new Executor();
         }
 
         private sealed class Executor
-            : TerminationExecutor<int>
+            : TerminationExecutor
         {
             private int invocations;
 
@@ -98,14 +97,14 @@ public class StateViewResolutionTests
     private sealed record CountingInterceptor(Probe Probe) : Interceptor<int, FirstState>
     {
 
-        protected override IInterceptionExecutor<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, FirstState> CreateExecutor(ResolutionScope scope)
+        protected override IInterceptionExecutor<FirstState> CreateExecutor(ResolutionScope<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, FirstState> scope)
         {
             Probe.Preparations++;
             return new Executor();
         }
 
         private sealed class Executor
-            : InterceptionExecutor<int, FirstState>
+            : InterceptionExecutor<FirstState>
         {
             private int invocations;
 

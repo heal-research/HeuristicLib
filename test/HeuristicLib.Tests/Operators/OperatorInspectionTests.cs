@@ -24,18 +24,17 @@ public class OperatorInspectionTests
         var observedCalls = new Counter();
         var leaf = new AdvancingMutator(() => preparations++);
         var source = leaf.Counted(counter, metric);
-        var problem = CreateProblem();
         var random = RandomNumberGenerator.Create(1);
         var parent = ResolutionScope.Create();
         var outer = parent.ResolveMutator(source);
-        outer.Mutate([0, 0], random, problem.SearchSpace, problem).ShouldBe([1, 1]);
+        outer.Mutate([0, 0], random).ShouldBe([1, 1]);
 
         var child = parent.CreateChildScope();
         var inner = child.ResolveMutator(source.Counting(leaf, observedCalls));
         inner.ShouldNotBeSameAs(outer);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
-        outer.Mutate([0, 0, 0], random, problem.SearchSpace, problem).ShouldBe([2, 2, 2]);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
+        inner.Mutate([0], random).ShouldBe([1]);
+        outer.Mutate([0, 0, 0], random).ShouldBe([2, 2, 2]);
+        inner.Mutate([0], random).ShouldBe([2]);
 
         parent.Results.Result(counter).CurrentCount.ShouldBe(sharedCount);
         parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
@@ -43,7 +42,7 @@ public class OperatorInspectionTests
 
         var independentScope = ResolutionScope.Create();
         var independent = independentScope.ResolveMutator(source);
-        independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
+        independent.Mutate([0], random).ShouldBe([1]);
         parent.Results.Result(counter).CurrentCount.ShouldBe(sharedCount);
         independentScope.Results.Result(counter).CurrentCount.ShouldBe(1);
         parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
@@ -60,23 +59,22 @@ public class OperatorInspectionTests
         var duration = new Duration(timeProvider);
         var leaf = new AdvancingMutator(() => preparations++);
         var source = leaf.Timed(duration);
-        var problem = CreateProblem();
         var random = RandomNumberGenerator.Create(1);
         var parent = ResolutionScope.Create();
         var measured = parent.Results.Result(duration);
         var outer = parent.ResolveMutator(source);
         measured.CurrentDuration.ShouldBe(TimeSpan.Zero);
-        outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
+        outer.Mutate([0], random).ShouldBe([1]);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
 
         var child = parent.CreateChildScope();
         var inner = child.ResolveMutator(source.Counting(leaf, observedCalls));
         inner.ShouldNotBeSameAs(outer);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
+        inner.Mutate([0], random).ShouldBe([1]);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
-        outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
+        outer.Mutate([0], random).ShouldBe([2]);
+        inner.Mutate([0], random).ShouldBe([2]);
 
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
         parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
@@ -84,7 +82,7 @@ public class OperatorInspectionTests
 
         var independentScope = ResolutionScope.Create();
         var independent = independentScope.ResolveMutator(source);
-        independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
+        independent.Mutate([0], random).ShouldBe([1]);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
         independentScope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
         parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
@@ -110,9 +108,8 @@ public class OperatorInspectionTests
         var duration = new Duration(time);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveMutator(source.Timed(duration));
-        var problem = CreateProblem();
 
-        var failure = Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        var failure = Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1)));
 
         // A timer failure while recording is thrown from finally and therefore replaces an operation failure.
         failure.ShouldBeSameAs(failTimer ? timerFailure : operationFailure);
@@ -131,9 +128,8 @@ public class OperatorInspectionTests
         var duration = new Duration(time);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveMutator(source.Timed(duration));
-        var problem = CreateProblem();
 
-        Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem))
+        Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1)))
             .ShouldBeSameAs(failure);
 
         calls.ShouldBe(0);
@@ -151,10 +147,9 @@ public class OperatorInspectionTests
         counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCreator(counted);
-        var problem = CreateProblem();
 
-        executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1));
+        executor.Create(1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -167,10 +162,9 @@ public class OperatorInspectionTests
         var counted = creator.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCreator(counted);
-        var problem = CreateProblem();
 
-        executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1));
+        executor.Create(1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
@@ -183,10 +177,9 @@ public class OperatorInspectionTests
         var creator = new SequenceCreator();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCreator(creator.Timed(duration));
-        var problem = CreateProblem();
 
-        executor.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1));
+        executor.Create(1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -198,10 +191,9 @@ public class OperatorInspectionTests
         var source = new ThrowingCreator();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCreator(source.Counted(counter));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Create(1, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -214,10 +206,9 @@ public class OperatorInspectionTests
         var source = new ThrowingCreator();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCreator(source.Timed(duration));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Create(1, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -232,10 +223,9 @@ public class OperatorInspectionTests
         counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveMutator(counted);
-        var problem = CreateProblem();
 
-        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Mutate([4], RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -248,10 +238,9 @@ public class OperatorInspectionTests
         var counted = mutator.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveMutator(counted);
-        var problem = CreateProblem();
 
-        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Mutate([4], RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
@@ -263,10 +252,9 @@ public class OperatorInspectionTests
         var source = new ThrowingMutator();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveMutator(source.Counted(counter));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -279,10 +267,9 @@ public class OperatorInspectionTests
         var mutator = new AddOneMutator();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveMutator(mutator.Timed(duration));
-        var problem = CreateProblem();
 
-        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Mutate([4], RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -295,10 +282,9 @@ public class OperatorInspectionTests
         var mutator = new ThrowingMutator();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveMutator(mutator.Timed(duration));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -323,9 +309,9 @@ public class OperatorInspectionTests
             return actualParents;
         });
         var scope = ResolutionScope.Create();
-        var executor = scope.ResolveMutator(childMutator.Timed(innerDuration).Timed(outerDuration));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(childMutator.Timed(innerDuration).Timed(outerDuration), problem);
 
-        var result = executor.Mutate(parents, random, problem.SearchSpace, problem);
+        var result = executor.Mutate(parents, random);
 
         result.ShouldBeSameAs(parents);
         calls.ShouldBe(1);
@@ -347,10 +333,10 @@ public class OperatorInspectionTests
             throw new InvalidOperationException();
         });
         var scope = ResolutionScope.Create();
-        var executor = scope.ResolveMutator(childMutator.Timed(innerDuration).Timed(outerDuration));
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(childMutator.Timed(innerDuration).Timed(outerDuration), problem);
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1)));
 
         calls.ShouldBe(1);
         scope.Results.Result(innerDuration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
@@ -367,18 +353,13 @@ public class OperatorInspectionTests
         counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCrossover(counted);
-        var problem = CreateProblem();
 
         executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(1));
         executor.Cross(
             [Parents.From(4, 40)],
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -391,18 +372,13 @@ public class OperatorInspectionTests
         var counted = crossover.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCrossover(counted);
-        var problem = CreateProblem();
 
         executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(1));
         executor.Cross(
             [Parents.From(4, 40)],
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
@@ -415,18 +391,13 @@ public class OperatorInspectionTests
         var crossover = new SumParentsCrossover();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCrossover(crossover.Timed(duration));
-        var problem = CreateProblem();
 
         executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(1));
         executor.Cross(
             [Parents.From(4, 40)],
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -438,10 +409,9 @@ public class OperatorInspectionTests
         var source = new ThrowingCrossover();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCrossover(source.Counted(counter));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -454,10 +424,9 @@ public class OperatorInspectionTests
         var source = new ThrowingCrossover();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveCrossover(source.Timed(duration));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -474,8 +443,8 @@ public class OperatorInspectionTests
         var executor = scope.ResolveSelector(counted);
         var problem = CreateProblem();
 
-        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -490,8 +459,8 @@ public class OperatorInspectionTests
         var executor = scope.ResolveSelector(counted);
         var problem = CreateProblem();
 
-        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
@@ -506,7 +475,7 @@ public class OperatorInspectionTests
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -521,8 +490,8 @@ public class OperatorInspectionTests
         var executor = scope.ResolveSelector(selector.Timed(duration));
         var problem = CreateProblem();
 
-        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -538,7 +507,7 @@ public class OperatorInspectionTests
         var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -560,17 +529,13 @@ public class OperatorInspectionTests
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
             2,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(1));
         executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
             1,
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -590,17 +555,13 @@ public class OperatorInspectionTests
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
             2,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(1));
         executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
             1,
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
@@ -619,9 +580,7 @@ public class OperatorInspectionTests
             CreateEvaluatedCandidates([2]),
             problem.Objective,
             1,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem));
+            RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -641,17 +600,13 @@ public class OperatorInspectionTests
             CreateEvaluatedCandidates([10, 20]),
             problem.Objective,
             2,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(1));
         executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
             problem.Objective,
             1,
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -670,9 +625,7 @@ public class OperatorInspectionTests
             CreateEvaluatedCandidates([2]),
             problem.Objective,
             1,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem));
+            RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -685,11 +638,11 @@ public class OperatorInspectionTests
         var counted = interceptor.Counted(counter);
         counted.Counter.ShouldBeSameAs(counter);
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted, problem);
 
-        executor.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1));
+        executor.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -701,11 +654,11 @@ public class OperatorInspectionTests
         var duration = new Duration(timeProvider);
         var interceptor = new AddOneInterceptor();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor.Timed(duration));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor.Timed(duration), problem);
 
-        executor.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        executor.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1));
+        executor.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -716,10 +669,10 @@ public class OperatorInspectionTests
         var counter = new Counter();
         var source = new ThrowingInterceptor();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter), problem);
 
-        Should.Throw<InvalidOperationException>(() => executor.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -730,10 +683,10 @@ public class OperatorInspectionTests
         var duration = new Duration(new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
         var source = new ThrowingInterceptor();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration), problem);
 
-        Should.Throw<InvalidOperationException>(() => executor.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -746,11 +699,11 @@ public class OperatorInspectionTests
         var counted = terminator.Counted(counter);
         counted.Counter.ShouldBeSameAs(counter);
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted, problem);
 
-        executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
-        executor.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0));
+        executor.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -762,11 +715,11 @@ public class OperatorInspectionTests
         var duration = new Duration(timeProvider);
         var terminator = new NeverTerminalStateTerminator();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator.Timed(duration));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator.Timed(duration), problem);
 
-        executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
-        executor.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem);
+        executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0));
+        executor.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -777,10 +730,10 @@ public class OperatorInspectionTests
         var counter = new Counter();
         var source = new ThrowingTerminator();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter), problem);
 
-        Should.Throw<InvalidOperationException>(() => executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -791,10 +744,10 @@ public class OperatorInspectionTests
         var duration = new Duration(new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
         var source = new ThrowingTerminator();
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration));
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration), problem);
 
-        Should.Throw<InvalidOperationException>(() => executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -857,23 +810,19 @@ public class OperatorInspectionTests
         DummySearchSpace<int> searchSpace,
         FuncProblem<int, DummySearchSpace<int>> problem);
 
-    private sealed class CallbackMutator(MutateCallback callback)
-        : IOperator<Mutation, int>
+    private sealed record CallbackMutator(MutateCallback callback)
+        : Mutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => CreateBoundExecutor();
+        protected override IMutationExecutor<int> CreateExecutor<TSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TSearchState> scope) =>
+            new Executor(callback, scope.Problem);
 
-        private IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundExecutor() =>
-            new Executor(callback);
-
-        private sealed class Executor(MutateCallback callback)
-            : IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(MutateCallback callback, FuncProblem<int, DummySearchSpace<int>> problem)
+            : IMutationExecutor<int>
         {
+            private readonly DummySearchSpace<int> searchSpace = problem.SearchSpace;
+
             public IReadOnlyList<int> Mutate(
-                IReadOnlyList<int> parents,
-                IRandomNumberGenerator random,
-                DummySearchSpace<int> searchSpace,
-                FuncProblem<int, DummySearchSpace<int>> problem) =>
+                IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
                 callback(parents, random, searchSpace, problem);
         }
     }
@@ -1015,18 +964,20 @@ public class OperatorInspectionTests
     private sealed record AdvancingMutator(Action Prepare) : Mutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
 
-        protected override IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+        protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor();
+            return new Executor(scope.Problem);
         }
 
         private sealed class Executor
             : MutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
         {
+            public Executor(FuncProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
+
             private int invocations;
 
-            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
             {
                 var call = ++invocations;
                 return parents.Select(parent => parent + call).ToArray();
@@ -1072,51 +1023,52 @@ public class OperatorInspectionTests
 /// </summary>
 file static class OperatorResolution
 {
+    private static readonly FuncProblem<int, DummySearchSpace<int>> Problem = FuncProblem.Create(static (int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
     extension(ResolutionScope scope)
     {
-        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(IOperator<Creation, int> creator) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
+        public ICreationExecutor<int> ResolveCreator(IOperator<Creation, int> creator) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator, Problem);
 
-        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(IOperator<Crossover, int> crossover) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
+        public ICrossoverExecutor<int> ResolveCrossover(IOperator<Crossover, int> crossover) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover, Problem);
 
-        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IOperator<Mutation, int> mutator) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+        public IMutationExecutor<int> ResolveMutator(IOperator<Mutation, int> mutator) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, Problem);
 
-        public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(IOperator<Selection, int> selector) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        public ISelectionExecutor<int> ResolveSelector(IOperator<Selection, int> selector) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector, Problem);
 
-        public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IOperator<Replacement, int> replacer) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
+        public IReplacementExecutor<int> ResolveReplacer(IOperator<Replacement, int> replacer) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer, Problem);
     }
 
     extension(IOperator<Creation, int> creator)
     {
-        public ICreationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorExecutor() =>
+        public ICreationExecutor<int> CreateCreatorExecutor() =>
             ResolutionScope.Create().ResolveCreator(creator);
     }
 
     extension(IOperator<Crossover, int> crossover)
     {
-        public ICrossoverExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverExecutor() =>
+        public ICrossoverExecutor<int> CreateCrossoverExecutor() =>
             ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
     extension(IOperator<Mutation, int> mutator)
     {
-        public IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecutor() =>
+        public IMutationExecutor<int> CreateMutatorExecutor() =>
             ResolutionScope.Create().ResolveMutator(mutator);
     }
 
     extension(IOperator<Selection, int> selector)
     {
-        public ISelectionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorExecutor() =>
+        public ISelectionExecutor<int> CreateSelectorExecutor() =>
             ResolutionScope.Create().ResolveSelector(selector);
     }
 
     extension(IOperator<Replacement, int> replacer)
     {
-        public IReplacementExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerExecutor() =>
+        public IReplacementExecutor<int> CreateReplacerExecutor() =>
             ResolutionScope.Create().ResolveReplacer(replacer);
     }
 }

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -20,19 +21,19 @@ public sealed record CrossoverObservation<TCandidate>(
     : IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Crossover, TCandidate> source, Action<CrossoverObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Crossover, TCandidate> source, Action<CrossoverObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((ICrossoverExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Crossover, TCandidate> crossover, Action<CrossoverObservation<TCandidate>> observe)
-        : ICrossoverExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate> executor,
+        IOperator<Crossover, TCandidate> crossover, Action<CrossoverObservation<TCandidate>> observe, TProblem problem)
+        : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random)
         {
-            var offspring = executor.Cross(parents, random, searchSpace, problem);
-            observe(new CrossoverObservation<TCandidate>(crossover, parents, offspring, searchSpace, problem));
+            var offspring = executor.Cross(parents, random);
+            observe(new CrossoverObservation<TCandidate>(crossover, parents, offspring, SearchSpace, Problem));
             return offspring;
         }
 

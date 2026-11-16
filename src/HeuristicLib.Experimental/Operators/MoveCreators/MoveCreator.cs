@@ -14,6 +14,6 @@ namespace HEAL.HeuristicLib.Operators.MoveCreators;
 /// </para>
 /// </remarks>
 public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove>
-    : Operator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveCreationExecutor<TCandidate, TSearchSpace, TProblem, TMove>>
+    : Operator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveCreationExecutor<TCandidate, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;

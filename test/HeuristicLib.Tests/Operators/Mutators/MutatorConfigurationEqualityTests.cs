@@ -175,17 +175,15 @@ public class MutatorConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            System.Collections.Immutable.ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor<TSearchSpace, TProblem>(children);
+            System.Collections.Immutable.ImmutableArray<IMutationExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(children);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IMutationExecutor<int, TSearchSpace, TProblem>> childMutators)
-            : IMutationExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ImmutableArray<IMutationExecutor<int>> childMutators)
+            : IMutationExecutor<int>
         {
-            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                childMutators[0].Mutate(parents, random, searchSpace, problem);
+            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
+                childMutators[0].Mutate(parents, random);
         }
     }
 }

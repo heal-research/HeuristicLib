@@ -7,7 +7,6 @@ using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 #endregion custom-wrapper-imports
 
 namespace HEAL.HeuristicLib.Tests.Docs.Extending;
@@ -32,22 +31,19 @@ public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCan
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        new LoggingExecutor<TSearchSpace, TProblem>(scope.Resolve(ChildOperator), ChildOperator, Write);
+        new LoggingExecutor(scope.Resolve(ChildOperator), ChildOperator, Write);
 
-    private sealed class LoggingExecutor<TSearchSpace, TProblem>(
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> executor,
+    private sealed class LoggingExecutor(
+        IMutationExecutor<TCandidate> executor,
         IOperator<Mutation, TCandidate> mutator,
         Action<IOperator<Mutation, TCandidate>, int, int> write)
-        : IMutationExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        : IMutationExecutor<TCandidate>, IExecutorControlProvider
     {
         private int calls;
 
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random,
-            TSearchSpace searchSpace, TProblem problem)
+        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
-            var offspring = executor.Mutate(parents, random, searchSpace, problem);
+            var offspring = executor.Mutate(parents, random);
             write(mutator, ++calls, offspring.Count);
             return offspring;
         }
@@ -90,7 +86,7 @@ public sealed record SlowCallReporter<TOperation, TCandidate> : WrappingOperator
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
+        var operation = OperationInfo.For<TOperation, TCandidate, TSearchState>();
         return operation.Wrap(scope.ResolveOperator(ChildOperator), new ReportSlowCalls(Threshold, Time, Report, ChildOperator));
     }
 
@@ -157,16 +153,16 @@ public sealed class CustomWrapperDocumentationSpecs
         var random = RandomNumberGenerator.Create(42);
         IReadOnlyList<RealVector> parents = [new RealVector(0.0)];
         var scope = ResolutionScope.Create();
-        var original = scope.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(logged);
-        var repeated = scope.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(logged);
-        var rebound = scope.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(logged);
+        var original = scope.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem).Resolve(logged);
+        var repeated = scope.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem).Resolve(logged);
+        var rebound = scope.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem).Resolve(logged);
 
-        original.Mutate(parents, random, searchSpace, problem);
-        repeated.Mutate(parents, random, searchSpace, problem);
-        rebound.Mutate(parents, random, searchSpace, problem);
+        original.Mutate(parents, random);
+        repeated.Mutate(parents, random);
+        rebound.Mutate(parents, random);
         var independent = ResolutionScope.Create()
-            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>().Resolve(logged);
-        independent.Mutate(parents, random, searchSpace, problem);
+            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem).Resolve(logged);
+        independent.Mutate(parents, random);
 
         calls.ShouldBe([1, 2, 1, 1]);
     }

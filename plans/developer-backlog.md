@@ -214,6 +214,12 @@ These entries are retained for later selection. Regrouping them does not accept 
 
 ## Discussed, tried, and rejected
 
+### Erasing problem types from construction hooks
+
+Tried in the initial [phase 4b problem-binding spike](core-simplification-plan.md#phase-4b-findings-after-the-typed-hook-checkpoint) and replaced after the developer's typed-hook acceptance on 2026-11-11. An untyped construction view forced problem-specific authors to cast its problem, while inferring candidate/search-space types from a concrete problem would need additional machinery. Neither is needed to remove problem/search-space arguments from executor invocations.
+
+Retain generic typed construction hooks and give their scope view the problem object. Reconciliation stays in the authoring bases, and named executor operations receive their ordinary inputs and RNG. The developer later accepted the full migration in this shape, without a second public configuration family. Reconsider erasing hooks only with a concrete type-safe alternative that improves representative author code without witnesses, invocation context carriers or adapters to old executors.
+
 ### Finding a configuration copied by an earlier substitution
 
 Discussed under [D32 and D33](core-simplification-plan.md#decided-in-round-11) and rejected on 2026-11-06. A reference that an earlier substitution copied stays an error, and the error names the routes that already exist.

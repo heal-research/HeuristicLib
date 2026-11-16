@@ -34,21 +34,20 @@ public sealed record IterationUpdatingAlgorithm<TCandidate, TSearchState> : Wrap
     public override bool Supports(ExecutionSignature execution) =>
         base.Supports(execution) && execution.Problem.IsAssignableTo(typeof(IIterationUpdatable));
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        new Executor<TSearchSpace, TProblem>(scope.Resolve(ChildAlgorithm));
+        new Executor<TSearchSpace, TProblem>(scope.Resolve(ChildAlgorithm), scope.Problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm)
-        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)
+    private sealed class Executor<TSearchSpace, TProblem>(IAlgorithmExecutor<TSearchState> childAlgorithm, TProblem problem)
+        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-            TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             // Supports admitted only problem types that implement it.
-            var updates = (IIterationUpdatable)problem;
-            await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
+            var updates = (IIterationUpdatable)Problem;
+            await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(random, initialState, ct))
             {
                 updates.CompleteIteration();
                 yield return searchState;

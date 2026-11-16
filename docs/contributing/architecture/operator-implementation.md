@@ -31,7 +31,7 @@ A single-item base owns its batch operation and seals it. A subclass that replac
 
 Each role base is available at three arities. Reduced arities exist so an author who needs neither the problem nor the search space does not have to name them.
 
-Interceptor and Terminator retain `TSearchState` in these three ordinary arities because their operations transform or inspect a produced search state. Like every other operation, both receive the call's random number generator after their primary inputs at each ordinary arity. Terminator additionally provides `Terminator<TCandidate>`, `TerminationExecutor<TCandidate>` and matching stateless bases for termination conditions that inspect none of the operation inputs, such as elapsed time, cancellation and external operator budgets. Interceptor cannot remove `TSearchState` because it returns that type.
+Interceptor and Terminator retain `TSearchState` in these three ordinary arities because their operations transform or inspect a produced search state. Like every other operation, both receive the call's random number generator after their primary inputs at each ordinary arity. Terminator additionally provides `Terminator<TCandidate>`, the non-generic `TerminationExecutor` and matching stateless bases for termination conditions that inspect none of the operation inputs, such as elapsed time, cancellation and external operator budgets. Interceptor cannot remove `TSearchState` because it returns that type.
 
 | Declared as                                                  | Operation receives                    | Use when                                       |
 | ------------------------------------------------------------ | ------------------------------------- | ---------------------------------------------- |
@@ -49,11 +49,11 @@ public record SwapMutator : SingleCandidateMutator<Permutation>
 
 Reduction changes what the author declares, not where the operator fits. **Candidate-operation slots name the operation and candidate, without run types.** `IOperator<Mutation, Permutation>` is the whole contract, so the `SwapMutator` above fills any mutator slot over permutations, and so does an operator authored at the fullest rung against a specific problem.
 
-The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and for a stateless operator the configuration _is_ the executable part, so it needs the search space and problem in scope where it is written. A consumer, field or child property never names them.
+The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and the stateless helper supplies the bound search space and problem to the typed author override. A consumer, field or child property never names them.
 
 `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They declare their children, so `ExecutionSignature.Supports` asks them too, and they forward candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and initialize private data on the executor. Read run-bound instruments through `scope.Results.Result(instrument)`; share configurations explicitly to retain their executors across child scopes.
 
-Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerInvocation` chooses one child per call and exposes no controls. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
+Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. Both expose the child's controls. `ChoosePerInvocation` chooses one child per call and exposes no controls. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation; it supplies the wrapping executor's controls by implementing `IExecutorControlProvider`, and otherwise the child's controls pass through. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
 
 ## Stateless operators
 
@@ -76,7 +76,7 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 ## Private fields and shared resources
 
-Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Two resolutions of one configuration construct independent fields. Get controls from the same resolved executor that performs the operation.
+Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Different runs, problem objects or fresh child activations construct independent fields. Repeated resolution of the same configuration/problem pair in one scope reuses its fields. Get controls from the same resolved executor that performs the operation.
 
 Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are configuration nodes whose executors hold the run's count or time. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` resolve them.
 
@@ -84,24 +84,24 @@ The [tested composition and cache examples](/guide/extending/operator-compositio
 
 ## Explicit executors
 
-The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected `CreateExecutor(ResolutionScope scope)` runs for every build. It resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; private data belongs to executor fields and explicit resources can be shared across constructions.
+Derive an explicit executor from its role's executor base, such as `EvaluationExecutor<TCandidate>`. Use the search-space variant when it retains only a search space, or the search-space and problem variant when it retains a problem, passing that context to the base constructor. These variants expose protected get-only `SearchSpace` and `Problem` properties; use them in operation methods instead of retaining duplicate context fields or capturing a primary constructor parameter. Name a type's sole nested executor `Executor`.
+
+The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected typed `CreateExecutor` runs for every build and exposes the problem on its scope. It resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; private data belongs to executor fields and explicit resources can be shared across constructions.
 
 ```csharp
 private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
     : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    protected override IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutor(ResolutionScope scope) =>
-        new Executor(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
+    protected override IEvaluationExecutor<RealVector> CreateExecutor<TSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TSearchState> scope) =>
+        new Executor(scope.Resolve(Inner));
 
-    private sealed class Executor(IEvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
-        : EvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+    private sealed class Executor(IEvaluationExecutor<RealVector> inner)
+        : EvaluationExecutor<RealVector>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(
             IReadOnlyList<RealVector> candidates,
-            IRandomNumberGenerator random,
-            BoundedRealVectorSearchSpace searchSpace,
-            TestFunctionProblem problem) =>
-            inner.Evaluate(candidates, random, searchSpace, problem);
+            IRandomNumberGenerator random) =>
+            inner.Evaluate(candidates, random);
     }
 }
 ```
@@ -159,7 +159,7 @@ Algorithms use the router to apply parameter-derived behavior in their execution
 
 When no existing role fits, define an operation. It has an executor interface with one named method, an operation type that implements `IOperation<TSelf>` and wraps that executor, and typed resolution extensions. Operators then implement `IOperator<TOperation, TCandidate>` for it, and naming, retry, choice, counting, timing and custom wrappers work without further code. A built-in operation is defined the same way.
 
-The named method ends with the call's random number generator, search space and problem:
+The named method ends with the call's random number generator. The executor received its problem during construction, so the call carries neither search space nor problem:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-executor{csharp}
 
@@ -167,7 +167,7 @@ The operation implements the static members of `IOperation<TSelf>` explicitly. I
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-type{csharp}
 
-The invocation is what every wrapper receives: its `Random`, `SearchSpace` and `Problem`, and `Proceed`. An operation whose calls do not split into items implements `IOperation<TSelf>` instead and needs no routed executor. An operation with candidate work returns true from `SupportsCandidateWork` and implements `CountCandidateWork` on its invocation. The static members, the invocation and the two executors stay per operation: C# needs a nominal class for each executor interface, a struct has no base class, and the operation's static members are the only place that names the executor interface for the run's types.
+The invocation is what every wrapper receives: its `Random` and `Proceed`. An operation whose calls do not split into items implements `IOperation<TSelf>` instead and needs no routed executor. An operation with candidate work returns true from `SupportsCandidateWork` and implements `CountCandidateWork` on its invocation. The static members, the invocation and the two executors stay per operation: C# needs a nominal class for each executor interface, a struct has no base class, and the operation's static members are the only place that names the executor interface for the run's types.
 
 Resolution extensions cast the resolved executor to the operation's interface. `TryResolve` calls `TryResolveOperator`, which takes the interface from the executor variable and reports a failure as a reason:
 
@@ -175,7 +175,7 @@ Resolution extensions cast the resolved executor to the operation's interface. `
 
 ### Make the operation observable
 
-An operation is observable once it declares two parts beside the operation, as each built-in operation does: an observation record, which implements `IInvocationObservation<TOperation, TCandidate, TSelf>` to make an executor report it, and an `Invocations` source. The record carries the call's inputs and outputs together with its search space and problem, so a trace can rank by that problem's objective:
+An operation is observable once it declares two parts beside the operation, as each built-in operation does: an observation record, which implements `IInvocationObservation<TOperation, TCandidate, TSelf>` to make an executor report it, and an `Invocations` source. The record carries the call's inputs and outputs together with the search space and problem its executor was bound to, so a trace can rank by that problem's objective:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
 
@@ -192,10 +192,10 @@ An agent will not settle a concern's semantics for you. Implement and review the
 ## Configuration and execution rules
 
 - Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.
-- Keep randomness, the search space and the problem explicit in operation calls.
+- Keep randomness explicit in operation calls and bind the problem explicitly during executor construction.
 - Store private mutable data in executor fields and explicitly shared data in resources.
 - Use `Sharing` when child scopes should retain a selected configuration's executor and its data.
-- Each scope keeps one executor per configuration reference. Child scopes create independent executors except for explicitly shared configurations; all child scopes use the root's run-bound results. Separate roots have independent results.
+- Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes create independent executors except for explicitly shared configurations; all child scopes use the root's run-bound results. Separate roots have independent results.
 - Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.
 
 ## Roslyn analyzer guardrails

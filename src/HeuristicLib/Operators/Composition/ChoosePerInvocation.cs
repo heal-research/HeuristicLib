@@ -37,7 +37,7 @@ public sealed record ChoosePerInvocation<TOperation, TCandidate> : MultiOperator
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var children = WeightedChoice.ResolveChildren(ChildOperators, Weights, scope);
-        return TOperation.Wrap<TCandidate, TSearchSpace, TProblem, TSearchState, ChoiceWrapper>(children[0], new ChoiceWrapper(new WeightedItemSampler<IExecutor>(children, Weights)));
+        return TOperation.Wrap<TCandidate, TSearchState, ChoiceWrapper>(children[0], new ChoiceWrapper(new WeightedItemSampler<IExecutor>(children, Weights)));
     }
 }
 

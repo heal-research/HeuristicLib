@@ -31,9 +31,9 @@ public record PipelineAlgorithm<TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        new PipelineAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms);
+        new PipelineAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, Algorithms, scope.Problem);
 }
 
 public static class PipelineAlgorithm
@@ -60,15 +60,16 @@ public class PipelineAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSear
     where TSearchState : class, ISearchState
 {
     private readonly ResolutionScope scope;
-    protected readonly ImmutableArray<IAlgorithm<TCandidate, TSearchState>> Algorithms;
+    protected ImmutableArray<IAlgorithm<TCandidate, TSearchState>> Algorithms { get; }
 
-    public PipelineAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
+    public PipelineAlgorithmExecutor(ResolutionScope scope, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms, TProblem problem)
+        : base(problem)
     {
         this.scope = scope;
         Algorithms = algorithms.ToImmutableArray();
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var state = initialState;
 
@@ -76,9 +77,9 @@ public class PipelineAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSear
         {
             ct.ThrowIfCancellationRequested();
             var algRng = random.Fork(index);
-            var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+            var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, Problem);
 
-            await foreach (var newState in algorithmExecutor.RunStreamingAsync(problem, algRng, state, ct))
+            await foreach (var newState in algorithmExecutor.RunStreamingAsync(algRng, state, ct))
             {
                 state = newState;
                 yield return newState;

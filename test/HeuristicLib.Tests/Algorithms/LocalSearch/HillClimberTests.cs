@@ -51,31 +51,27 @@ public class HillClimberTests
 
     private sealed record ConstantCreator(int Value)
         : IOperator<Creation, int>,
-        ICreationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        ICreationExecutor<int>
     {
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
 
         public IReadOnlyList<int> Create(
             int count,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            IProblem<int, DummySearchSpace<int>> problem) =>
+            IRandomNumberGenerator random) =>
             Enumerable.Repeat(Value, count).ToArray();
     }
 
     private sealed record OffsetMutator(int Offset)
         : IOperator<Mutation, int>,
-        IMutationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        IMutationExecutor<int>
     {
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
 
         public IReadOnlyList<int> Mutate(
             IReadOnlyList<int> parents,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            IProblem<int, DummySearchSpace<int>> problem) =>
+            IRandomNumberGenerator random) =>
             parents.Select(parent => parent + Offset).ToArray();
     }
 }

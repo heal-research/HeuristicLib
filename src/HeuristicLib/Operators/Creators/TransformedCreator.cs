@@ -1,8 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -27,18 +25,16 @@ public record TransformedCreator<TCandidate>(IOperator<Creation, TCandidate> Sou
     {
         var sourceCreator = scope.Resolve(SourceCreator);
         var transformationMutator = scope.Resolve(TransformationMutator);
-        return new Executor<TRunSearchSpace, TRunProblem>(sourceCreator, transformationMutator);
+        return new Executor(sourceCreator, transformationMutator);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator, IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator)
-        : CreationExecutor<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ICreationExecutor<TCandidate> creator, IMutationExecutor<TCandidate> mutator)
+        : CreationExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random)
         {
-            var candidates = creator.Create(count, random, searchSpace, problem);
-            return mutator.Mutate(candidates, random, searchSpace, problem);
+            var candidates = creator.Create(count, random);
+            return mutator.Mutate(candidates, random);
         }
     }
 }

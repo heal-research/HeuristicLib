@@ -85,43 +85,42 @@ public record AlpsGeneticAlgorithm<TCandidate>
         var selector = scope.Resolve(Selector);
         var refiner = scope.ResolveOptional(Refiner);
         return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
-            PopulationSize, Elites, MaximumGenerations, MutationRate);
+            PopulationSize, Elites, MaximumGenerations, MutationRate, scope.Problem);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? interceptor,
-        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selector,
-        IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? refiner,
+        IInterceptionExecutor<AlpsState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate> evaluator,
+        ICreationExecutor<TCandidate> creator,
+        ICrossoverExecutor<TCandidate> crossover,
+        IMutationExecutor<TCandidate> mutator,
+        ISelectionExecutor<TCandidate> selector,
+        IRefinementExecutor<TCandidate>? refiner,
         int populationSize,
         int elites,
         int? maximumGenerations,
-        double mutationRate)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor)
+        double mutationRate, TProblem problem)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private readonly WeightedRouter<IMutationExecutor<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
+        private readonly WeightedRouter<IMutationExecutor<TCandidate>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
 
-        protected override bool HasCompleted(int yieldedStateCount, AlpsState<TCandidate>? previousState, TProblem problem) =>
+        protected override bool HasCompleted(int yieldedStateCount, AlpsState<TCandidate>? previousState) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
-        protected override AlpsState<TCandidate> ExecuteStep(AlpsState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        protected override AlpsState<TCandidate> ExecuteStep(AlpsState<TCandidate>? previousState, IRandomNumberGenerator random)
         {
-            var searchSpace = problem.SearchSpace;
 
             if (previousState is null)
             {
-                var initialLayerPopulation = creator.Create(populationSize, random, searchSpace, problem);
+                var initialLayerPopulation = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialLayerPopulation = refiner.Refine(initialLayerPopulation, random, searchSpace, problem);
+                    initialLayerPopulation = refiner.Refine(initialLayerPopulation, random);
                 }
 
-                var initialPopulation = initialLayerPopulation.ToEvaluated(evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem));
+                var initialPopulation = initialLayerPopulation.ToEvaluated(evaluator.Evaluate(initialLayerPopulation, random));
                 return new()
                 {
                     Population = [Population.From(initialPopulation)],
@@ -131,7 +130,7 @@ public record AlpsGeneticAlgorithm<TCandidate>
 
             var offspringCount = populationSize;
             var oldPopulation = previousState.Population[0].ToArray();
-            var selectedParents = selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, searchSpace, problem);
+            var selectedParents = selector.Select(oldPopulation, Problem.Objective, offspringCount * 2, random);
             var parentPairs = new Parents<TCandidate>[offspringCount];
             var offspringAges = new int[offspringCount];
             var nextAge = previousState.Ages[0].DefaultIfEmpty(0).Max() + 1;
@@ -141,16 +140,16 @@ public record AlpsGeneticAlgorithm<TCandidate>
                 offspringAges[i] = nextAge;
             }
 
-            var offspring = crossover.Cross(parentPairs, random, searchSpace, problem);
+            var offspring = crossover.Cross(parentPairs, random);
             offspring = mutationRouter.Route(offspring, random, (selected, batch) =>
-                selected is null ? batch : selected.Mutate(batch, random, searchSpace, problem));
+                selected is null ? batch : selected.Mutate(batch, random));
             if (refiner is not null)
             {
-                offspring = refiner.Refine(offspring, random, searchSpace, problem);
+                offspring = refiner.Refine(offspring, random);
             }
 
-            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random, searchSpace, problem));
-            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, elites);
+            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random));
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, Problem.Objective, offspringCount, elites);
 
             return new()
             {

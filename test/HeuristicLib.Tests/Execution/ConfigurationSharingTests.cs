@@ -109,8 +109,8 @@ public class ConfigurationSharingTests
         var budget = NewCaller("A", 3, 1, m, box).LimitedToInvocations(m, 5);
         var scope = ResolutionScope.Create();
 
-        var limited = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(budget);
-        var bare = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(budget.Algorithm);
+        var limited = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(budget, Problem);
+        var bare = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(budget.Algorithm, Problem);
 
         limited.ShouldNotBeSameAs(bare);
         box.Log.ShouldBe("build A"); // the budget and the direct request use one A executor
@@ -165,21 +165,20 @@ public class ConfigurationSharingTests
         run.Result(counter).CurrentCount.ShouldBe(1); // the inner evaluator is reached once: candidate 1 is cached for every later call
     }
 
-    // A scope holds one executor per configuration, so a request for other run types cannot reuse it.
+    // Compatible static views of one configuration/problem pair reuse its executor.
     [Fact]
-    public void Configuration_RequestedForOtherRunTypesInOneScope_IsRejected()
+    public void Configuration_RequestedThroughCompatibleProblemTypes_ReusesItsExecutor()
     {
         var (_, m) = Mutator();
         var limited = m.LimitEvaluations(2);
         var scope = ResolutionScope.Create();
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(limited);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(limited, Problem);
 
-        Should.Throw<InvalidOperationException>(() => scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(limited))
-            .Message.ShouldContain("already built");
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(limited).ShouldNotBeNull(); // nothing was built, so the scope stays usable
+        scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(limited, Problem).ShouldBeSameAs(executor);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(limited, Problem).ShouldBeSameAs(executor);
     }
 
-    private static readonly IProblem<int, DummySearchSpace<int>> Problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+    private static readonly FuncProblem<int, DummySearchSpace<int>> Problem = FuncProblem.Create(static (int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
     private static IRandomNumberGenerator Rng => RandomNumberGenerator.Create(1);
 
     private static void Run(IAlgorithm<int, PopulationState<int>> algorithm) => algorithm.CreateRun(Problem, Rng).Complete();
@@ -216,21 +215,21 @@ public class ConfigurationSharingTests
     // Stands in for the mutator M. Its executor keeps a private call count, like an adaptive mutation strength would.
     private sealed record M(Box Box) : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
-        protected override IEvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope)
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
             Box.Builds++;
-            return new Executor(Box);
+            return new Executor(Box, scope.Problem);
         }
 
-        private sealed class Executor(Box box) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(Box box, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(problem)
         {
             private int calls;
 
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 box.Calls++;
                 box.LastPrivateCount = ++calls;
-                return problem.Evaluate(candidates, random).ToArray();
+                return Problem.Evaluate(candidates, random).ToArray();
             }
         }
     }
@@ -247,29 +246,26 @@ public class ConfigurationSharingTests
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), MutatorParameter];
 
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Box.Entries.Add($"build {Label}");
-            return new Executor<TSearchSpace, TProblem>(this, scope.Resolve(Mutator), Second is null ? null : scope.Resolve(Second));
+            return new Executor(this, scope.Resolve(Mutator), Second is null ? null : scope.Resolve(Second));
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(Caller caller, IEvaluationExecutor<int, TSearchSpace, TProblem> mutator,
-            IEvaluationExecutor<int, TSearchSpace, TProblem>? second)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(Caller caller, IEvaluationExecutor<int> mutator,
+            IEvaluationExecutor<int>? second)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 for (var state = 1; state <= caller.States; state++)
                 {
                     ObjectiveVector quality = default!;
                     for (var call = 0; call < caller.CallsPerState; call++)
                     {
-                        quality = mutator.Evaluate([state], random, problem.SearchSpace, problem).Single();
-                        second?.Evaluate([state], random, problem.SearchSpace, problem);
+                        quality = mutator.Evaluate([state], random).Single();
+                        second?.Evaluate([state], random);
                     }
                     caller.Box.Entries.Add($"{caller.Label}{state}");
                     yield return Population.From([state.ToEvaluated(quality)]).ToPopulationState();
@@ -291,17 +287,15 @@ public class ConfigurationSharingTests
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), FirstParameter, SecondParameter];
 
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
-            new Executor<TSearchSpace, TProblem>(scope.Resolve(First), scope.Resolve(Second));
+            new Executor(scope.Resolve(First), scope.Resolve(Second));
 
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> first, IEvaluationExecutor<int, TSearchSpace, TProblem> second)
-            : IEvaluationExecutor<int, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(IEvaluationExecutor<int> first, IEvaluationExecutor<int> second)
+            : IEvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
-                first.Evaluate(candidates, random, searchSpace, problem);
-                return second.Evaluate(candidates, random, searchSpace, problem);
+                first.Evaluate(candidates, random);
+                return second.Evaluate(candidates, random);
             }
         }
     }

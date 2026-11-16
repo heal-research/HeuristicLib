@@ -23,7 +23,8 @@ public class SelectionSpecs
         var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
         var exploration = new Named<Mutation, RealVector>(child, "exploration");
         var refinement = new Named<Mutation, RealVector>(child, "refinement");
-        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>();
+        var problem = new TestFunctionProblem(new SphereFunction(3));
+        var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
 
         // Within one scope both names and the child itself resolve to the child's one executor.
         _ = scope.Resolve(exploration, out IMutationStrengthControl? explorationStrength);
@@ -231,17 +232,14 @@ public class SelectionSpecs
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), ScheduleParameter];
 
-        protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope) =>
-            new Executor<TSearchSpace, TProblem>(scope.Resolve(Schedule));
+            new Executor(scope.Resolve(Schedule));
 
-        private sealed class Executor<TSearchSpace, TProblem>(ICoolingScheduleExecutor schedule)
-            : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(ICoolingScheduleExecutor schedule)
+            : AlgorithmExecutor<SingleSolutionState<RealVector>>
         {
-            public override async IAsyncEnumerable<SingleSolutionState<RealVector>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                SingleSolutionState<RealVector>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<SingleSolutionState<RealVector>> RunStreamingAsync(IRandomNumberGenerator random, SingleSolutionState<RealVector>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 yield return SingleSolutionState.From(new RealVector(schedule.Temperature(step: 0)), new ObjectiveVector(0));
                 await Task.CompletedTask;

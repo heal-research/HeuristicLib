@@ -179,7 +179,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               public int Builds { get; set; }
 
-              protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+              protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
                   ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
               {
                   Builds++;

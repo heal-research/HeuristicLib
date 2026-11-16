@@ -25,11 +25,12 @@ public class CompositeBindingTests
     public void ACompositeOnTheLeafLadder_NarrowsTheRunAndRefusesAChildTheRunSupports()
     {
         var searchSpace = new BoundedRealVectorSearchSpace(3, -1.0, 1.0);
+        var problem = FuncProblem.Create(static (RealVector _) => 0.0, searchSpace, SingleObjective.Minimize);
         var composite = new LeafLadderTransformedCreator(new UniformDistributedCreator(searchSpace));
 
         var failure = Should.Throw<InvalidOperationException>(() =>
             ResolutionScope.Create()
-                .Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(composite));
+                .Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(composite, problem));
 
         failure.Message.ShouldContain(nameof(UniformDistributedCreator));
     }
@@ -42,10 +43,11 @@ public class CompositeBindingTests
     public void ACompositeThatTakesTheRunsTypes_ResolvesTheSameChild()
     {
         var searchSpace = new BoundedRealVectorSearchSpace(3, -1.0, 1.0);
+        var problem = FuncProblem.Create(static (RealVector _) => 0.0, searchSpace, SingleObjective.Minimize);
         var composite = new AgnosticTransformedCreator(new UniformDistributedCreator(searchSpace));
 
         var executor = ResolutionScope.Create()
-            .Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(composite);
+            .Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(composite, problem);
 
         executor.ShouldNotBeNull();
     }
@@ -53,14 +55,14 @@ public class CompositeBindingTests
     /// <summary>How not to write it: the base fixes the triple, so the child is resolved at the wrong one.</summary>
     private sealed record LeafLadderTransformedCreator(IOperator<Creation, RealVector> Source) : Creator<RealVector>
     {
-        protected override ICreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope) =>
-            new Executor(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source));
+        protected override ICreationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, TRunSearchState> scope) =>
+            new Executor(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source, scope.Problem), scope.Problem);
 
-        private sealed class Executor(ICreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> source)
-            : CreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>
+        private sealed class Executor(ICreationExecutor<RealVector> source, IProblem<RealVector, ISearchSpace<RealVector>> problem)
+            : CreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(problem)
         {
-            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, ISearchSpace<RealVector> searchSpace, IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
-                source.Create(count, random, searchSpace, problem);
+            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random) =>
+                source.Create(count, random);
         }
     }
 
@@ -69,15 +71,15 @@ public class CompositeBindingTests
     {
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Source));
+            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Source), scope.Problem);
 
-        private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<RealVector, TSearchSpace, TProblem> source)
-            : CreationExecutor<RealVector, TSearchSpace, TProblem>
+        private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<RealVector> source, TProblem problem)
+            : CreationExecutor<RealVector, TSearchSpace, TProblem>(problem)
             where TSearchSpace : class, ISearchSpace<RealVector>
             where TProblem : class, IProblem<RealVector, TSearchSpace>
         {
-            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                source.Create(count, random, searchSpace, problem);
+            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random) =>
+                source.Create(count, random);
         }
     }
 }

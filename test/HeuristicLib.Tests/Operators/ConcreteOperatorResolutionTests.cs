@@ -51,19 +51,19 @@ public sealed class ConcreteOperatorResolutionTests
         var countedGenderSelector = genderSelector.Substitute(counting);
         Action<ResolutionScope, bool> invoke = kind switch
         {
-            nameof(TransformedCreator<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(counted ? countedTransformedCreator : transformedCreator).Create(1, random, problem.SearchSpace, problem).ShouldBe([11]),
-            nameof(TransformedCrossover<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(counted ? countedTransformedCrossover : transformedCrossover).Cross([new Parents<int>(10, 20)], random, problem.SearchSpace, problem).ShouldBe([11]),
-            nameof(RefinementEvaluator<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(counted ? countedRefiningEvaluator : refiningEvaluator).Evaluate([10], random, problem.SearchSpace, problem).ShouldBe([new ObjectiveVector(9)]),
-            nameof(ImprovementCheckingRefiner<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(counted ? countedCheckingRefiner : checkingRefiner).Refine([10], random, problem.SearchSpace, problem).ShouldBe([9]),
-            nameof(EliteSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(counted ? countedEliteSelector : eliteSelector).Select(population, problem.Objective, 2, random, problem.SearchSpace, problem)
+            nameof(TransformedCreator<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
+                .Resolve(counted ? countedTransformedCreator : transformedCreator).Create(1, random).ShouldBe([11]),
+            nameof(TransformedCrossover<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
+                .Resolve(counted ? countedTransformedCrossover : transformedCrossover).Cross([new Parents<int>(10, 20)], random).ShouldBe([11]),
+            nameof(RefinementEvaluator<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
+                .Resolve(counted ? countedRefiningEvaluator : refiningEvaluator).Evaluate([10], random).ShouldBe([new ObjectiveVector(9)]),
+            nameof(ImprovementCheckingRefiner<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
+                .Resolve(counted ? countedCheckingRefiner : checkingRefiner).Refine([10], random).ShouldBe([9]),
+            nameof(EliteSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
+                .Resolve(counted ? countedEliteSelector : eliteSelector).Select(population, problem.Objective, 2, random)
                 .Select(candidate => candidate.Candidate).ShouldBe([10, 10]),
-            nameof(GenderSpecificSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
-                .Resolve(counted ? countedGenderSelector : genderSelector).Select(population, problem.Objective, 3, random, problem.SearchSpace, problem)
+            nameof(GenderSpecificSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
+                .Resolve(counted ? countedGenderSelector : genderSelector).Select(population, problem.Objective, 3, random)
                 .Select(candidate => candidate.Candidate).ShouldBe([10, 20, 20]),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };

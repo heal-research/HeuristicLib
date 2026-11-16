@@ -42,7 +42,7 @@ public class ExtendedSymbolicRegressionProblem(
     : SingleSolutionProblem<ExtendedSymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
-        : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
+        : Refiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
     {
         public static Parameter<InnerProblemParameterFittingRefiner, NumericParameterFittingRefiner> ChildRefinerParameter { get; } =
             new(nameof(ChildRefiner), static refiner => refiner.ChildRefiner, static (refiner, value) => refiner with { ChildRefiner = value })
@@ -50,12 +50,12 @@ public class ExtendedSymbolicRegressionProblem(
                 ChildExecution = static _ => ExecutionSignature.For<ExpressionTreeSearchSpace, SymbolicRegressionProblem, ISearchState>()
             };
 
-        public new static IReadOnlyList<IParameter> Parameters { get; } = [ChildRefinerParameter];
+        public static IReadOnlyList<IParameter> Parameters { get; } = [ChildRefinerParameter];
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-        public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem) =>
-            ChildRefiner.RefineCandidate(candidate, random, searchSpace, problem.InnerProblem);
+        protected override IRefinementExecutor<ExpressionTree> CreateExecutor<TRunSearchState>(ResolutionScope<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem, TRunSearchState> scope) =>
+            scope.For<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(scope.Problem.InnerProblem).Resolve(ChildRefiner);
     }
 
     public required SymbolicRegressionProblem InnerProblem { get; init; }

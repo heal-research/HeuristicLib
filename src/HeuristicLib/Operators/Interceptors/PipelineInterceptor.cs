@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -18,21 +19,19 @@ public sealed record PipelineInterceptor<TCandidate, TSearchState>
     protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        ImmutableArray<IInterceptionExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> childInterceptors = [.. ChildOperators.Select(child => scope.Resolve(child))];
-        return new Executor<TRunSearchSpace, TRunProblem>(childInterceptors);
+        ImmutableArray<IInterceptionExecutor<TSearchState>> childInterceptors = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor(childInterceptors);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(ImmutableArray<IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>> childInterceptors)
-        : IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ImmutableArray<IInterceptionExecutor<TSearchState>> childInterceptors)
+        : InterceptionExecutor<TSearchState>
     {
-        public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
         {
             var transformedState = currentState;
             foreach (var interceptor in childInterceptors)
             {
-                transformedState = interceptor.Transform(transformedState, previousState, random, searchSpace, problem);
+                transformedState = interceptor.Transform(transformedState, previousState, random);
             }
 
             return transformedState;

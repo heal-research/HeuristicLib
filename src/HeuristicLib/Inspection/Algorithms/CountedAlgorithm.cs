@@ -24,15 +24,15 @@ public sealed record CountedAlgorithm<TCandidate, TSearchState, TObservation> : 
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var counter = scope.Resolve(Counter);
-        return TObservation.Wrap(scope.Resolve(ChildAlgorithm), ChildAlgorithm, observation =>
+        return TObservation.Wrap<TSearchSpace, TProblem>(scope.Resolve(ChildAlgorithm), ChildAlgorithm, observation =>
         {
             if (observation.Counts)
                 counter.IncrementBy(1);
-        });
+        }, scope.Problem);
     }
 }
 

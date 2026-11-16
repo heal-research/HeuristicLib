@@ -5,35 +5,36 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Refiners;
 
-public abstract record StatelessRefiner<TCandidate, TSearchSpace, TProblem>
-    : Refiner<TCandidate, TSearchSpace, TProblem>, IRefinementExecutor<TCandidate, TSearchSpace, TProblem>
+public abstract record StatelessRefiner<TCandidate, TSearchSpace, TProblem> : Refiner<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    protected sealed override IRefinementExecutor<TCandidate, TSearchSpace, TProblem> CreateExecutor(ResolutionScope scope) => this;
+    protected sealed override IRefinementExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessRefiner<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : RefinementExecutor<TCandidate, TSearchSpace, TProblem>(problem)
+    {
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Refine(candidates, random, SearchSpace, Problem);
+    }
 }
 
-public abstract record StatelessRefiner<TCandidate, TSearchSpace>
-    : Refiner<TCandidate, TSearchSpace>, IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract record StatelessRefiner<TCandidate, TSearchSpace> : Refiner<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>> CreateExecutor(ResolutionScope scope) => this;
+    protected sealed override IRefinementExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TRunSearchState> scope) => new Executor(this, scope.SearchSpace);
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<TCandidate> IRefinementExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Refine(candidates, random, searchSpace);
+    private sealed class Executor(StatelessRefiner<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : RefinementExecutor<TCandidate, TSearchSpace>(searchSpace)
+    {
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Refine(candidates, random, SearchSpace);
+    }
 }
 
-public abstract record StatelessRefiner<TCandidate>
-    : Refiner<TCandidate>, IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract record StatelessRefiner<TCandidate> : Refiner<TCandidate>, IRefinementExecutor<TCandidate>
 {
-    protected sealed override IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>> CreateExecutor(ResolutionScope scope) => this;
+    protected sealed override IRefinementExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TRunSearchState> scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
-
-    IReadOnlyList<TCandidate> IRefinementExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Refine(candidates, random);
 }

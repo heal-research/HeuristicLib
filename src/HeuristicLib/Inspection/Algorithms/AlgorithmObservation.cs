@@ -28,27 +28,26 @@ public sealed record AlgorithmObservation<TCandidate, TSearchState>(
     : IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>
     where TSearchState : class, ISearchState
 {
-    static IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmObservation<TCandidate, TSearchState>> record) =>
-        new Executor<TSearchSpace, TProblem>(executor, source, record);
+    static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmObservation<TCandidate, TSearchState>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>(executor, source, record, problem);
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm,
+        IAlgorithmExecutor<TSearchState> childAlgorithm,
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
-        Action<AlgorithmObservation<TCandidate, TSearchState>> observe)
-        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)
+        Action<AlgorithmObservation<TCandidate, TSearchState>> observe, TProblem problem)
+        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         // The count belongs to the call, as the algorithm's own iteration count does.
-        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-            TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             var iteration = 0L;
             var previousState = initialState;
-            await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(problem, random, initialState, ct))
+            await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(random, initialState, ct))
             {
-                observe(new AlgorithmObservation<TCandidate, TSearchState>(observedAlgorithm, ++iteration, searchState, previousState, problem.SearchSpace, problem));
+                observe(new AlgorithmObservation<TCandidate, TSearchState>(observedAlgorithm, ++iteration, searchState, previousState, Problem.SearchSpace, Problem));
                 previousState = searchState;
                 yield return searchState;
             }

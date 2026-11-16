@@ -16,20 +16,23 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
 {
     internal TSelf Self => (TSelf)this;
 
-    IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(
+    IAlgorithmExecutor<TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => CreateExecutor(scope);
 
     /// <summary>
     /// Agnostic in the search space and problem, so this base answers on the search state alone, which
-    /// <see cref="IAlgorithmExecutor{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
+    /// <see cref="IAlgorithmExecutor{TSearchState}"/> is invariant in.
     /// </summary>
     public virtual bool Supports(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
+
+    /// <inheritdoc cref="IConfigurationNode.ChildExecution"/>
+    public virtual ExecutionSignature ChildExecution(ExecutionSignature execution) => execution;
 
     /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
     public virtual IReadOnlyList<IParameter> GetParameters() => [];
 
     /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
-    protected abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected abstract IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>;
@@ -55,35 +58,49 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    // The run's types convert to the declared ones, so the executor built for those serves the run.
-    protected sealed override IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> CreateExecutor<TRunSearchSpace, TRunProblem>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> scope)
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
+    /// <inheritdoc cref="IConfigurationNode.ChildExecution"/>
+    public override ExecutionSignature ChildExecution(ExecutionSignature execution) =>
+        ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>();
+
+    // Supports has already accepted the run's types, so the run's problem is a TProblem.
+    protected sealed override IAlgorithmExecutor<TSearchState> CreateExecutor<TRunSearchSpace, TRunProblem>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> scope) =>
+        scope.Problem is TProblem problem
+            ? CreateExecutor(new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, problem))
+            : throw ExecutionSignature.Mismatch(
                 this,
                 ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (IAlgorithmExecutor<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>)CreateExecutor(scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>());
-    }
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TSearchState)));
 
     /// <summary>Builds this algorithm's executor for the types it is written for, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
-    /// executor. Validate the configuration first and look up run-bound instrument results through the scope.
+    /// Resolution calls this once per configuration and problem in a scope, on the first request; later requests for that
+    /// pair receive the same executor. Validate the configuration first and look up run-bound instrument results through the scope.
     /// Keep private mutable data in executor fields; explicit sharing retains the executor across child scopes.
     /// </remarks>
-    protected abstract IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
+    protected abstract IAlgorithmExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
 public abstract class AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : IAlgorithmExecutor<TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
+    protected TProblem Problem { get; }
+    protected TSearchSpace SearchSpace { get; }
+
+    protected AlgorithmExecutor(TProblem problem)
+    {
+        Problem = problem;
+        SearchSpace = problem.SearchSpace;
+    }
+
+    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
+}
+
+public abstract class AlgorithmExecutor<TSearchState> : IAlgorithmExecutor<TSearchState>
+    where TSearchState : class, ISearchState
+{
+    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 }

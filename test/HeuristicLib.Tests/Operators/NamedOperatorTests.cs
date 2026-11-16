@@ -18,16 +18,16 @@ public sealed class NamedOperatorTests
         var countingExploration = CountingNamed("exploration", explored);
         ISubstitutionBundle[] observing = [Substitution.Counting(leaf, childCalls), countingExploration];
         var scope = ResolutionScope.Create();
-        var typedScope = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var typedScope = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem);
         var random = RandomNumberGenerator.Create(1);
 
         var first = typedScope.Resolve(exploration.Substitute(observing));
         var second = typedScope.Resolve(refinement.Substitute(observing));
-        first.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
-        second.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
-        typedScope.Resolve(leaf.Counted(childCalls)).Mutate([0], random, problem.SearchSpace, problem).ShouldBe([3]);
-        first.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([4]);
+        first.Mutate([0], random).ShouldBe([1]);
+        second.Mutate([0], random).ShouldBe([2]);
+        typedScope.Resolve(leaf.Counted(childCalls)).Mutate([0], random).ShouldBe([3]);
+        first.Mutate([0], random).ShouldBe([4]);
 
         scope.Results.Result(explored).CurrentCount.ShouldBe(2);
         scope.Results.Result(childCalls).CurrentCount.ShouldBe(4);
@@ -50,7 +50,9 @@ public sealed class NamedOperatorTests
     [Fact]
     public void EveryNamedRole_ResolvesItsChildInTheSameScope()
     {
-        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>();
+        // The name resolves its child in the same scope, so the named and the plain mutator share the child's state.
+        var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var scope = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(problem);
         IOperator<Creation, int> creator = new SequenceCreator();
         IOperator<Crossover, int> crossover = new SelectFirstParentCrossover<int>();
         IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
@@ -65,10 +67,8 @@ public sealed class NamedOperatorTests
         scope.Resolve(creator.Named("creator")).ShouldBeSameAs(scope.Resolve(creator));
         scope.Resolve(crossover.Named("crossover")).ShouldBeSameAs(scope.Resolve(crossover));
         scope.Resolve(evaluator.Named("evaluator")).ShouldBeSameAs(scope.Resolve(evaluator));
-        // The name resolves its child in the same scope, so the named and the plain mutator share the child's state.
-        var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        scope.Resolve(mutator.Named("mutator")).Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([1]);
-        scope.Resolve(mutator).Mutate([0], RandomNumberGenerator.Create(1), problem.SearchSpace, problem).ShouldBe([2]);
+        scope.Resolve(mutator.Named("mutator")).Mutate([0], RandomNumberGenerator.Create(1)).ShouldBe([1]);
+        scope.Resolve(mutator).Mutate([0], RandomNumberGenerator.Create(1)).ShouldBe([2]);
         scope.Resolve(refiner.Named("refiner")).ShouldBeSameAs(scope.Resolve(refiner));
         scope.Resolve(replacer.Named("replacer")).ShouldBeSameAs(scope.Resolve(replacer));
         scope.Resolve(selector.Named("selector")).ShouldBeSameAs(scope.Resolve(selector));
@@ -90,11 +90,11 @@ public sealed class NamedOperatorTests
             selected => selected is INamedConfiguration { Name: "search" },
             selected => new CountedAlgorithm<int, PopulationState<int>, AlgorithmCallObservation<int, PopulationState<int>>>(selected, calls)));
         var root = ResolutionScope.Create();
-        var scope = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var scope = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(problem);
 
         var states = new List<PopulationState<int>>();
-        await foreach (var state in scope.Resolve(counted).RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in scope.Resolve(counted).RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states.Add(state);
 
         states.Single().Population.EvaluatedCandidates.Single().Candidate.ShouldBe(2);
@@ -113,15 +113,17 @@ public sealed class NamedOperatorTests
     private sealed record AdvancingMutator : Mutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
 
-        protected override IMutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
-        new Executor();
+        protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
+        new Executor(scope.Problem);
 
         private sealed class Executor
             : MutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
         {
+            public Executor(FuncProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
+
             private int invocations;
 
-            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
             parents.Select(parent => parent + ++invocations).ToArray();
         }
     }

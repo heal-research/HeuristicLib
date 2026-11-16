@@ -20,22 +20,20 @@ public interface IAlgorithm<TCandidate, TSearchState> : IAlgorithm<TCandidate>
 {
     /// <summary>Builds this algorithm's executor for the run types, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
-    /// executor. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
+    /// Resolution calls this once per configuration and problem in a scope, on the first request; later requests for that
+    /// pair receive the same executor. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
     /// Keep private mutable data in executor fields.
     /// </remarks>
-    IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 }
 
-public interface IAlgorithmExecutor<TCandidate, in TSearchSpace, in TProblem, TSearchState>
+public interface IAlgorithmExecutor<TSearchState>
     : IExecutor
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
+    IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 }
 
 public static class AlgorithmResolutionExtensions
@@ -45,17 +43,17 @@ public static class AlgorithmResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
     {
-        public IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve(IAlgorithm<TCandidate> algorithm) =>
-            scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+        public IAlgorithmExecutor<TSearchState> Resolve(IAlgorithm<TCandidate> algorithm) =>
+            scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Problem);
 
         [return: NotNullIfNotNull(nameof(algorithm))]
-        public IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional(IAlgorithm<TCandidate>? algorithm) =>
-            algorithm is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
+        public IAlgorithmExecutor<TSearchState>? ResolveOptional(IAlgorithm<TCandidate>? algorithm) =>
+            algorithm is null ? null : scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Problem);
 
         public bool TryResolve(
             IAlgorithm<TCandidate> algorithm,
-            [NotNullWhen(true)] out IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor,
+            [NotNullWhen(true)] out IAlgorithmExecutor<TSearchState>? executor,
             [NotNullWhen(false)] out string? reason) =>
-            scope.TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, out executor, out reason);
+            scope.TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Problem, out executor, out reason);
     }
 }

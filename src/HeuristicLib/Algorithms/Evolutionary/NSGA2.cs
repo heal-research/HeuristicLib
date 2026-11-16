@@ -81,55 +81,55 @@ public record NSGA2<TCandidate>
         var replacer = scope.Resolve(Replacer);
         var refiner = scope.ResolveOptional(Refiner);
         return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, replacer, refiner,
-            PopulationSize, MaximumGenerations, MutationRate);
+            PopulationSize, MaximumGenerations, MutationRate, scope.Problem);
     }
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluationExecutor<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreationExecutor<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverExecutor<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutationExecutor<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectionExecutor<TCandidate, TSearchSpace, TProblem> selector,
-        IReplacementExecutor<TCandidate, TSearchSpace, TProblem> replacer,
-        IRefinementExecutor<TCandidate, TSearchSpace, TProblem>? refiner,
+        IInterceptionExecutor<PopulationState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate> evaluator,
+        ICreationExecutor<TCandidate> creator,
+        ICrossoverExecutor<TCandidate> crossover,
+        IMutationExecutor<TCandidate> mutator,
+        ISelectionExecutor<TCandidate> selector,
+        IReplacementExecutor<TCandidate> replacer,
+        IRefinementExecutor<TCandidate>? refiner,
         int populationSize,
         int? maximumGenerations,
-        double mutationRate)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        double mutationRate, TProblem problem)
+        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private readonly WeightedRouter<IMutationExecutor<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
+        private readonly WeightedRouter<IMutationExecutor<TCandidate>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
 
-        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
+        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
-        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, IRandomNumberGenerator random)
         {
             if (previousState is null)
             {
-                var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialSolutions = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialSolutions = refiner.Refine(initialSolutions, random, problem.SearchSpace, problem);
+                    initialSolutions = refiner.Refine(initialSolutions, random);
                 }
 
-                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem));
+                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random));
                 return Population.From(initialPopulation).ToPopulationState();
             }
 
-            var parents = selector.Select(previousState.Population.EvaluatedCandidates, problem.Objective, populationSize * 2, random, problem.SearchSpace, problem).ToParents(problem.Objective);
-            var children = crossover.Cross(parents, random, problem.SearchSpace, problem);
+            var parents = selector.Select(previousState.Population.EvaluatedCandidates, Problem.Objective, populationSize * 2, random).ToParents(Problem.Objective);
+            var children = crossover.Cross(parents, random);
             var mutants = mutationRouter.Route(children, random, (selected, batch) =>
-                selected is null ? batch : selected.Mutate(batch, random, problem.SearchSpace, problem));
+                selected is null ? batch : selected.Mutate(batch, random));
             if (refiner is not null)
             {
-                mutants = refiner.Refine(mutants, random, problem.SearchSpace, problem);
+                mutants = refiner.Refine(mutants, random);
             }
 
-            var newPopulation = mutants.ToEvaluated(evaluator.Evaluate(mutants, random, problem.SearchSpace, problem));
-            var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation, problem.Objective, populationSize, random, problem.SearchSpace, problem);
+            var newPopulation = mutants.ToEvaluated(evaluator.Evaluate(mutants, random));
+            var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation, Problem.Objective, populationSize, random);
 
             return Population.From(nextPopulation).ToPopulationState();
         }

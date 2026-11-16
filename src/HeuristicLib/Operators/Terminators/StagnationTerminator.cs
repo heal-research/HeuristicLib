@@ -28,22 +28,22 @@ public sealed record StagnationTerminator<TCandidate>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> CreateExecutor(ResolutionScope scope) => new Executor(StagnationThreshold);
+    protected override TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> CreateExecutor(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> scope) => new Executor(StagnationThreshold, scope.Problem);
 
-    private sealed class Executor(int threshold)
-        : TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>
+    private sealed class Executor(int threshold, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>(problem)
     {
         private ObjectiveVector? bestObjectiveVectorSoFar;
         private int stagnationCounter;
 
-        public override bool IsTerminalState(PopulationState<TCandidate> searchState, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        public override bool IsTerminalState(PopulationState<TCandidate> searchState, IRandomNumberGenerator random)
         {
             if (threshold <= 0)
                 return true;
 
-            bestObjectiveVectorSoFar ??= problem.Objective.Worst;
+            bestObjectiveVectorSoFar ??= Problem.Objective.Worst;
 
-            var comparer = problem.Objective.TotalOrderComparer;
+            var comparer = Problem.Objective.TotalOrderComparer;
 
             var currentBestObjectiveVector = searchState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
             if (comparer.Compare(currentBestObjectiveVector, bestObjectiveVectorSoFar) < 0)

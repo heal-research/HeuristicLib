@@ -96,6 +96,7 @@ public class BoundRoleResolutionTests
             : [typeof(RealVector), typeof(BoundedRealVectorSearchSpace), problem];
 
         var scope = ResolutionScope.Create();
+        var instance = new TestFunctionProblem(new HEAL.HeuristicLib.Problems.TestFunctions.SphereFunction(1));
         object receiver = scope;
 
         if (viaTypedScope)
@@ -108,7 +109,7 @@ public class BoundRoleResolutionTests
                 .Single(method => method.Name == nameof(ResolutionScopeExtensions.For)
                     && method.GetGenericArguments().Length == typeArguments.Length)
                 .MakeGenericMethod(typeArguments);
-            receiver = forMethod.Invoke(null, [scope])!;
+            receiver = forMethod.Invoke(null, [scope, instance])!;
         }
 
         // An interceptor's typed form also takes the search state its operation names, which here is the scope's.
@@ -119,9 +120,9 @@ public class BoundRoleResolutionTests
                 && method.GetParameters()[0].ParameterType.IsGenericType == viaTypedScope
                 && method.GetGenericArguments().Length == methodArguments.Length)
             .MakeGenericMethod(methodArguments);
-        var arguments = new[] { receiver, BoundOperators[role], null, null };
+        object?[] arguments = viaTypedScope ? [receiver, BoundOperators[role], null, null] : [receiver, BoundOperators[role], instance, null, null];
         tryResolve.Invoke(null, arguments);
-        return (arguments[2], (string?)arguments[3]);
+        return (arguments[^2], (string?)arguments[^1]);
     }
 
     private static readonly Dictionary<string, object> BoundOperators = new()

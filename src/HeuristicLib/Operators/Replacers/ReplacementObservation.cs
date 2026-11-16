@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -24,22 +25,20 @@ public sealed record ReplacementObservation<TCandidate>(
     : IInvocationObservation<Replacement, TCandidate, ReplacementObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Replacement, TCandidate, ReplacementObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Replacement, TCandidate> source, Action<ReplacementObservation<TCandidate>> record) =>
-        new Executor<TSearchSpace, TProblem>((IReplacementExecutor<TCandidate, TSearchSpace, TProblem>)executor, source, record);
+        IExecutor executor, IOperator<Replacement, TCandidate> source, Action<ReplacementObservation<TCandidate>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>((IReplacementExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IReplacementExecutor<TCandidate, TSearchSpace, TProblem> executor,
-        IOperator<Replacement, TCandidate> replacer, Action<ReplacementObservation<TCandidate>> observe)
-        : IReplacementExecutor<TCandidate, TSearchSpace, TProblem>, IExecutorControlProvider
+    private sealed class Executor<TSearchSpace, TProblem>(IReplacementExecutor<TCandidate> executor,
+        IOperator<Replacement, TCandidate> replacer, Action<ReplacementObservation<TCandidate>> observe, TProblem problem)
+        : ReplacementExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,
-            IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count,
-            IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
-            var replaced = executor.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            var replaced = executor.Replace(previousPopulation, offspringPopulation, objective, count, random);
             observe(new ReplacementObservation<TCandidate>(replacer, previousPopulation, offspringPopulation, objective, count, replaced,
-                searchSpace, problem));
+                SearchSpace, Problem));
             return replaced;
         }
 

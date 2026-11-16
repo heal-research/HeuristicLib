@@ -16,7 +16,7 @@ namespace HEAL.HeuristicLib.Operators.Creators;
 /// </para>
 /// </remarks>
 public abstract record Creator<TCandidate, TSearchSpace, TProblem>
-    : Operator<Creation, TCandidate, TSearchSpace, TProblem, ICreationExecutor<TCandidate, TSearchSpace, TProblem>>
+    : Operator<Creation, TCandidate, TSearchSpace, TProblem, ICreationExecutor<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
@@ -28,28 +28,38 @@ public abstract record Creator<TCandidate>
     : Creator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
 public abstract class CreationExecutor<TCandidate, TSearchSpace, TProblem>
-    : ICreationExecutor<TCandidate, TSearchSpace, TProblem>
+    : ICreationExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    protected TProblem Problem { get; }
+    protected TSearchSpace SearchSpace { get; }
+
+    protected CreationExecutor(TProblem problem)
+    {
+        Problem = problem;
+        SearchSpace = problem.SearchSpace;
+    }
+
+    public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
 }
 
 public abstract class CreationExecutor<TCandidate, TSearchSpace>
-    : ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+    : ICreationExecutor<TCandidate>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
+    protected TSearchSpace SearchSpace { get; }
 
-    IReadOnlyList<TCandidate> ICreationExecutor<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Create(count, random, searchSpace);
+    protected CreationExecutor(TSearchSpace searchSpace)
+    {
+        SearchSpace = searchSpace;
+    }
+
+    public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
 }
 
 public abstract class CreationExecutor<TCandidate>
-    : ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+    : ICreationExecutor<TCandidate>
 {
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
-
-    IReadOnlyList<TCandidate> ICreationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Create(int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Create(count, random);
 }

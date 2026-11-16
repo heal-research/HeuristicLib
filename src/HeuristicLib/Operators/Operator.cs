@@ -5,7 +5,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-/// <summary>An operator that builds its executor for each run's types in one hook.</summary>
+/// <summary>An operator that builds a problem-bound executor for each run's types in one hook.</summary>
 public abstract record Operator<TOperation, TCandidate> : IOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
 {
@@ -16,11 +16,15 @@ public abstract record Operator<TOperation, TCandidate> : IOperator<TOperation, 
 
     public virtual bool Supports(ExecutionSignature execution) => true;
 
+    /// <inheritdoc cref="IConfigurationNode.ChildExecution"/>
+    public virtual ExecutionSignature ChildExecution(ExecutionSignature execution) => execution;
+
     /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
     public virtual IReadOnlyList<IParameter> GetParameters() => [];
 
     /// <inheritdoc cref="IOperator{TCandidate}.CreateExecutor{TSearchSpace, TProblem, TSearchState}"/>
-    protected abstract IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    protected abstract IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState;
@@ -38,20 +42,25 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
     public override bool Supports(ExecutionSignature execution) =>
         execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    // The call reaches the leaf hook, because overload resolution prefers the hook this class declares.
-    protected sealed override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope);
+    /// <inheritdoc cref="IConfigurationNode.ChildExecution"/>
+    public override ExecutionSignature ChildExecution(ExecutionSignature execution) =>
+        new(typeof(TSearchSpace), typeof(TProblem), execution.SearchState);
 
-    // S4019: the leaf hook hides the run-generic one on purpose; a bound operator builds only through this hook.
-#pragma warning disable S4019
-    /// <summary>Builds this operator's executor, resolving children through the scope.</summary>
+    // Supports has already accepted the run's types, so the run's problem is a TProblem.
+    protected sealed override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        scope.Problem is TProblem problem
+            ? CreateExecutor(new ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState>(scope, problem))
+            : throw ExecutionSignature.Mismatch(this, SupportedExecutionDescription, ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
+
+    /// <summary>Builds this operator's executor for the scope's problem, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
-    /// executor. Validate the configuration first and look up run-bound instrument results through the scope.
-    /// Keep private mutable data in executor fields; explicit sharing retains the executor across child scopes.
+    /// Resolution calls this once per configuration and problem in a scope, on the first request; later requests for that
+    /// pair receive the same executor. Validate the configuration first and look up run-bound instrument results through
+    /// the scope. Keep private mutable data in executor fields; explicit sharing retains the executor across child scopes.
     /// </remarks>
-    protected abstract TExecutor CreateExecutor(ResolutionScope scope);
-#pragma warning restore S4019
+    protected abstract TExecutor CreateExecutor<TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+        where TSearchState : class, ISearchState;
 }
 
 /// <summary>An operator written for fixed search-space, problem and search-state contracts, with a typed executor hook.</summary>
@@ -70,14 +79,17 @@ public abstract record Operator<TOperation, TCandidate, TSearchSpace, TProblem, 
         && execution.Problem.IsAssignableTo(typeof(TProblem))
         && execution.SearchState.IsAssignableTo(typeof(TSearchState));
 
-    // The call reaches the leaf hook, because overload resolution prefers the hook this class declares.
+    /// <inheritdoc cref="IConfigurationNode.ChildExecution"/>
+    public override ExecutionSignature ChildExecution(ExecutionSignature execution) =>
+        ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>();
+
+    // Supports has already accepted the run's types, so the run's problem is a TProblem.
     protected sealed override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) => CreateExecutor(scope);
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
+        scope.Problem is TProblem problem
+            ? CreateExecutor(new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, problem))
+            : throw ExecutionSignature.Mismatch(this, SupportedExecutionDescription, ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TRunSearchState)));
 
-    // S4019: the leaf hook hides the run-generic one on purpose; a bound operator builds only through this hook.
-#pragma warning disable S4019
-    /// <inheritdoc cref="Operator{TOperation, TCandidate, TSearchSpace, TProblem, TExecutor}.CreateExecutor(ResolutionScope)"/>
-    protected abstract TExecutor CreateExecutor(ResolutionScope scope);
-#pragma warning restore S4019
+    /// <inheritdoc cref="Operator{TOperation, TCandidate, TSearchSpace, TProblem, TExecutor}.CreateExecutor{TSearchState}"/>
+    protected abstract TExecutor CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
-

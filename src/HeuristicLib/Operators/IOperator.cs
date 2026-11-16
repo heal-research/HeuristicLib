@@ -17,7 +17,7 @@ public interface IOperator<TCandidate> : IOperator
 {
     /// <summary>Builds this operator's executor for the run types, resolving children through the scope.</summary>
     /// <remarks>
-    /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
+    /// Resolution calls this once per configuration/problem binding in a scope; later requests for that binding receive the same
     /// executor. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
     /// Keep private mutable data in executor fields. The result implements the operation's executor interface for the run
     /// types. A configuration performing several operations returns an executor that serves every one of them.

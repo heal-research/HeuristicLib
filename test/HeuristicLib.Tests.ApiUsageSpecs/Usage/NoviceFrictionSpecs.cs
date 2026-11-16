@@ -81,8 +81,8 @@ public class NoviceFrictionSpecs
     }
 
     /// <summary>
-    /// Naming the algorithm is still the moment its type becomes visible â€” <c>var</c> cannot help a field, a
-    /// parameter or a return type â€” but what it forces is now one type argument, and that argument is the one thing
+    /// Naming the algorithm is still the moment its type becomes visible — <c>var</c> cannot help a field, a
+    /// parameter or a return type — but what it forces is now one type argument, and that argument is the one thing
     /// the newcomer already knows they are optimizing.
     /// </summary>
     /// <remarks>
@@ -268,7 +268,7 @@ public class NoviceFrictionSpecs
     /// now, and the assignment is simply accepted. That failure was pure arity cost and it is paid off.
     /// <para>
     /// The other failure remains, and it is not an arity question. Preserving an invariant is a postcondition on the
-    /// operator's output, and a postcondition is not a type, so no type argument was ever going to answer it â€” which
+    /// operator's output, and a postcondition is not a type, so no type argument was ever going to answer it — which
     /// is why removing the argument forfeits no guarantee that existed. The invariant contract is what answers it.
     /// The full compatibility table lives in <see cref="SearchSpaceCompatibilitySpecs"/>.
     /// </para>
@@ -320,13 +320,13 @@ public class NoviceFrictionSpecs
 
         // A scope serves one run, so each triple is asked in its own.
         ResolutionScope.Create()
-            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var executor, out var reason)
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, new TestFunctionProblem(new SphereFunction(3)), out var executor, out var reason)
             .ShouldBeTrue();
         executor.ShouldNotBeNull();
         reason.ShouldBeNull();
 
         ResolutionScope.Create()
-            .TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problemBound, out var wrong, out var refusal)
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problemBound, new TestFunctionProblem(new SphereFunction(3)), out var wrong, out var refusal)
             .ShouldBeFalse();
         wrong.ShouldBeNull();
         refusal.ShouldNotBeNull();

@@ -17,6 +17,7 @@ namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
 public sealed class RoleResolutionTests
 {
+    private static readonly TestFunctionProblem Problem = new(new RastriginFunction(1));
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
@@ -29,13 +30,13 @@ public sealed class RoleResolutionTests
         var innerReports = new List<double>();
         var observed = new ReportingMutator(source, outerReports.Add);
         var parent = ResolutionScope.Create();
-        var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(observed);
+        var outer = parent.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Problem).Resolve(observed);
         Next(outer).ShouldBe(1);
         Next(outer).ShouldBe(2);
         Next(outer).ShouldBe(3);
 
         var child = parent.CreateChildScope();
-        var inner = child.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>()
+        var inner = child.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Problem)
             .Resolve(observed.Substitute(source, mutator => new ReportingMutator(mutator, innerReports.Add)));
         Next(inner).ShouldBe(1);
         Next(inner).ShouldBe(2);
@@ -57,13 +58,13 @@ public sealed class RoleResolutionTests
         var source = CreateMutator(arity, () => preparations++);
         var parent = ResolutionScope.Create();
         var child = parent.CreateChildScope();
-        var local = child.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
+        var local = child.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem);
         Next(local).ShouldBe(1);
-        var ancestor = parent.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
+        var ancestor = parent.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem);
         Next(ancestor).ShouldBe(1);
 
-        Next(child.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(2);
-        Next(parent.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(1);
+        Next(child.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem)).ShouldBe(2);
+        Next(parent.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem)).ShouldBe(1);
         preparations.ShouldBe(3);
     }
 
@@ -76,16 +77,16 @@ public sealed class RoleResolutionTests
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
         var root = ResolutionScope.Create();
-        var first = root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
+        var first = root.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem);
         preparations.ShouldBe(1);
 
-        var second = root.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
+        var second = root.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem);
         first.ShouldNotBeSameAs(second);
         Next(first).ShouldBe(1);
         Next(second).ShouldBe(1);
         preparations.ShouldBe(2);
 
-        Next(ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBe(1);
+        Next(ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem)).ShouldBe(1);
         preparations.ShouldBe(3);
     }
 
@@ -97,11 +98,10 @@ public sealed class RoleResolutionTests
         var preparations = 0;
         var source = CreateMutator(arity, () => preparations++);
         var scope = ResolutionScope.Create();
-        var wide = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(source);
-        var narrow = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source);
-        var problem = new TestFunctionProblem(new RastriginFunction(1));
+        var wide = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(source, Problem);
+        var narrow = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem);
 
-        wide.Mutate([RealVector.Repeat(0, 1)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)[0][0].ShouldBe(1);
+        wide.Mutate([RealVector.Repeat(0, 1)], RandomNumberGenerator.Create(1))[0][0].ShouldBe(1);
         Next(narrow).ShouldBe(2); // the executor built for the wider problem contract serves the narrower one too
         preparations.ShouldBe(1);
     }
@@ -114,7 +114,7 @@ public sealed class RoleResolutionTests
         var scope = ResolutionScope.Create();
 
         scope.TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(
-            source, out var executor, out var reason).ShouldBeFalse();
+            source, Problem, out var executor, out var reason).ShouldBeFalse();
 
         executor.ShouldBeNull();
         reason.ShouldNotBeNull();
@@ -134,10 +134,10 @@ public sealed class RoleResolutionTests
         });
         var parent = ResolutionScope.Create();
 
-        Should.Throw<InvalidOperationException>(() => parent.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBeSameAs(failure);
-        Should.Throw<InvalidOperationException>(() => parent.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source))
+        Should.Throw<InvalidOperationException>(() => parent.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem)).ShouldBeSameAs(failure);
+        Should.Throw<InvalidOperationException>(() => parent.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem))
             .Message.ShouldContain("new scope");
-        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source)).ShouldBeSameAs(failure);
+        Should.Throw<InvalidOperationException>(() => ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(source, Problem)).ShouldBeSameAs(failure);
         preparations.ShouldBe(2);
     }
 
@@ -147,14 +147,13 @@ public sealed class RoleResolutionTests
         var preparations = 0;
         var source = new InputFreeTerminator(() => preparations++);
         var scope = ResolutionScope.Create();
-        var population = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(source);
-        var single = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source);
-        var problem = new TestFunctionProblem(new RastriginFunction(1));
+        var population = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(source, Problem);
+        var single = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, Problem);
         var searchState = SingleSolutionState.From(RealVector.Repeat(0, 1), new ObjectiveVector(0));
 
-        population.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        single.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeFalse();
-        population.IsTerminalState(searchState, RandomNumberGenerator.Create(0), problem.SearchSpace, problem).ShouldBeTrue();
+        population.IsTerminalState(searchState, RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        single.IsTerminalState(searchState, RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        population.IsTerminalState(searchState, RandomNumberGenerator.Create(0)).ShouldBeTrue();
         preparations.ShouldBe(1);
     }
 
@@ -167,7 +166,7 @@ public sealed class RoleResolutionTests
         var source = CreateAlgorithm(bound, () => preparations++);
 
         ResolutionScope.Create().TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
-            source, out var executor, out var reason).ShouldBeFalse();
+            source, Problem, out var executor, out var reason).ShouldBeFalse();
 
         executor.ShouldBeNull();
         reason.ShouldNotBeNull();
@@ -184,11 +183,11 @@ public sealed class RoleResolutionTests
         var source = CreateAlgorithm(bound, () => preparations++);
         var scope = ResolutionScope.Create();
 
-        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
-        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, Problem).ShouldNotBeNull();
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, Problem).ShouldNotBeNull();
         preparations.ShouldBe(1);
 
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, Problem).ShouldNotBeNull();
         preparations.ShouldBe(2);
     }
 
@@ -199,7 +198,7 @@ public sealed class RoleResolutionTests
         var source = new BoundAlgorithm(() => preparations++);
 
         ResolutionScope.Create().TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, SingleSolutionState<RealVector>>(
-            source, out var executor, out var reason).ShouldBeFalse();
+            source, Problem, out var executor, out var reason).ShouldBeFalse();
 
         executor.ShouldBeNull();
         reason.ShouldNotBeNull();
@@ -221,7 +220,7 @@ public sealed class RoleResolutionTests
         };
 
         ResolutionScope.Create().TryResolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>, SingleSolutionState<BoolVector>>(
-            source, out var executor, out var reason).ShouldBeFalse();
+            source, FuncProblem.Create(static (BoolVector _) => 0.0, new FixedCardinalityBoolVectorSearchSpace(3, 1), SingleObjective.Minimize), out var executor, out var reason).ShouldBeFalse();
 
         executor.ShouldBeNull();
         reason.ShouldNotBeNull();
@@ -236,10 +235,10 @@ public sealed class RoleResolutionTests
         var source = new TwoStateAlgorithm();
         var scope = ResolutionScope.Create();
 
-        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(source).ShouldNotBeNull();
-        scope.TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, out _, out var reason).ShouldBeFalse();
+        scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(source, Problem).ShouldNotBeNull();
+        scope.TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, Problem, out _, out var reason).ShouldBeFalse();
         reason.ShouldContain("already built in this resolution scope");
-        scope.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source).ShouldNotBeNull();
+        scope.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(source, Problem).ShouldNotBeNull();
     }
 
     private static IOperator<Mutation, RealVector> CreateMutator(int arity, Action prepare) => arity switch
@@ -253,28 +252,29 @@ public sealed class RoleResolutionTests
     private static IAlgorithm<RealVector> CreateAlgorithm(bool bound, Action prepare) =>
         bound ? new BoundAlgorithm(prepare) : new AgnosticAlgorithm(prepare);
 
-    private static double Next(IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> executor)
+    private static double Next(IMutationExecutor<RealVector> executor)
     {
-        var problem = new TestFunctionProblem(new RastriginFunction(1));
-        return executor.Mutate([RealVector.Repeat(0, 1)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem)[0][0];
+        return executor.Mutate([RealVector.Repeat(0, 1)], RandomNumberGenerator.Create(1))[0][0];
     }
 
     private sealed record BoundMutator(Action Prepare)
         : Mutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
 
-        protected override IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> CreateExecutor(ResolutionScope scope)
+        protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor();
+            return new Executor(scope.Problem);
         }
 
         private sealed class Executor
             : MutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
         {
+            public Executor(TestFunctionProblem problem) : base(problem) { }
+
             private int invocations;
 
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             [RealVector.Repeat(++invocations, 1)];
         }
     }
@@ -283,18 +283,20 @@ public sealed class RoleResolutionTests
         : Mutator<RealVector, BoundedRealVectorSearchSpace>
     {
 
-        protected override IMutationExecutor<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>> CreateExecutor(ResolutionScope scope)
+        protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor();
+            return new Executor(searchSpace: scope.SearchSpace);
         }
 
         private sealed class Executor
             : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>
         {
+            public Executor(BoundedRealVectorSearchSpace searchSpace) : base(searchSpace: searchSpace) { }
+
             private int invocations;
 
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             [RealVector.Repeat(++invocations, 1)];
         }
     }
@@ -302,7 +304,7 @@ public sealed class RoleResolutionTests
     private sealed record CandidateMutator(Action Prepare) : Mutator<RealVector>
     {
 
-        protected override IMutationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>> CreateExecutor(ResolutionScope scope)
+        protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, TRunSearchState> scope)
         {
             Prepare();
             return new Executor();
@@ -331,16 +333,14 @@ public sealed class RoleResolutionTests
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(ChildOperator), Report);
+            new Executor(scope.Resolve(ChildOperator), Report);
 
-        private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<RealVector, TSearchSpace, TProblem> child, Action<double> report)
-            : IMutationExecutor<RealVector, TSearchSpace, TProblem>
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(IMutationExecutor<RealVector> child, Action<double> report)
+            : IMutationExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
-                var result = child.Mutate(parents, random, searchSpace, problem);
+                var result = child.Mutate(parents, random);
                 report(result[0][0]);
                 return result;
             }
@@ -350,14 +350,14 @@ public sealed class RoleResolutionTests
     private sealed record InputFreeTerminator(Action Prepare) : Terminator<RealVector>
     {
 
-        protected override ITerminationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ISearchState> CreateExecutor(ResolutionScope scope)
+        protected override ITerminationExecutor<ISearchState> CreateExecutor(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ISearchState> scope)
         {
             Prepare();
             return new Executor();
         }
 
         private sealed class Executor
-            : TerminationExecutor<RealVector>
+            : TerminationExecutor
         {
             private int invocations;
 
@@ -367,11 +367,11 @@ public sealed class RoleResolutionTests
 
     private sealed record AgnosticAlgorithm(Action Prepare) : Algorithm<AgnosticAlgorithm, RealVector, SingleSolutionState<RealVector>>
     {
-        protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope)
         {
             Prepare();
-            return new ProbeAlgorithmExecutor<TSearchSpace, TProblem, SingleSolutionState<RealVector>>();
+            return new ProbeAlgorithmExecutor<SingleSolutionState<RealVector>>();
         }
 
     }
@@ -379,11 +379,11 @@ public sealed class RoleResolutionTests
     private sealed record BoundAlgorithm(Action Prepare)
         : Algorithm<BoundAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>
     {
-        protected override IAlgorithmExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> CreateExecutor(
+        protected override IAlgorithmExecutor<SingleSolutionState<RealVector>> CreateExecutor(
             ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> scope)
         {
             Prepare();
-            return new ProbeAlgorithmExecutor<BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>();
+            return new ProbeAlgorithmExecutor<SingleSolutionState<RealVector>>();
         }
 
     }
@@ -395,21 +395,20 @@ public sealed class RoleResolutionTests
         public override bool Supports(ExecutionSignature execution) =>
             base.Supports(execution) || execution.SearchState == typeof(PopulationState<RealVector>);
 
-        protected override IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope) =>
-            new ProbeAlgorithmExecutor<TSearchSpace, TProblem, SingleSolutionState<RealVector>>();
+            new ProbeAlgorithmExecutor<SingleSolutionState<RealVector>>();
 
-        IAlgorithmExecutor<RealVector, TSearchSpace, TProblem, PopulationState<RealVector>> IAlgorithm<RealVector, PopulationState<RealVector>>.CreateExecutor<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<PopulationState<RealVector>> IAlgorithm<RealVector, PopulationState<RealVector>>.CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<RealVector, TSearchSpace, TProblem, PopulationState<RealVector>> scope) =>
-            new ProbeAlgorithmExecutor<TSearchSpace, TProblem, PopulationState<RealVector>>();
+            new ProbeAlgorithmExecutor<PopulationState<RealVector>>();
     }
 
-    private sealed class ProbeAlgorithmExecutor<TSearchSpace, TProblem, TSearchState> : AlgorithmExecutor<RealVector, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<RealVector>
-        where TProblem : class, IProblem<RealVector, TSearchSpace>
+    private sealed class ProbeAlgorithmExecutor<TSearchState> : AlgorithmExecutor<TSearchState>
         where TSearchState : class, ISearchState
     {
-        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             await Task.Yield();
             ct.ThrowIfCancellationRequested();

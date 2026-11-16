@@ -45,27 +45,26 @@ public sealed record AlgorithmCallObservation<TCandidate, TSearchState>(
     // A call reports its start and its end, and counts once.
     bool IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Counts => Event == AlgorithmCallEvent.Started;
 
-    static IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmCallObservation<TCandidate, TSearchState>> record) =>
-        new Executor<TSearchSpace, TProblem>(executor, source, record);
+    static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
+        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmCallObservation<TCandidate, TSearchState>> record, TProblem problem) =>
+        new Executor<TSearchSpace, TProblem>(executor, source, record, problem);
 
     private sealed class Executor<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm,
+        IAlgorithmExecutor<TSearchState> childAlgorithm,
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
-        Action<AlgorithmCallObservation<TCandidate, TSearchState>> observe)
-        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm)
+        Action<AlgorithmCallObservation<TCandidate, TSearchState>> observe, TProblem problem)
+        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm, problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-            TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             var iterations = 0L;
             TSearchState? state = null;
             var ended = false;
             void Report(AlgorithmCallEvent callEvent) =>
                 observe(new AlgorithmCallObservation<TCandidate, TSearchState>(observedAlgorithm, callEvent, initialState, state, iterations,
-                    problem.SearchSpace, problem));
+                    Problem.SearchSpace, Problem));
             // Every call that starts reports exactly one end.
             void End(AlgorithmCallEvent callEvent)
             {
@@ -82,7 +81,7 @@ public sealed record AlgorithmCallObservation<TCandidate, TSearchState>(
                     bool moved;
                     try
                     {
-                        iterator ??= ChildAlgorithm.RunStreamingAsync(problem, random, initialState, ct).GetAsyncEnumerator(ct);
+                        iterator ??= ChildAlgorithm.RunStreamingAsync(random, initialState, ct).GetAsyncEnumerator(ct);
                         moved = await iterator.MoveNextAsync();
                     }
                     catch (OperationCanceledException)

@@ -8,35 +8,33 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 /// <remarks>The search state is invariant, since <c>Transform</c> returns it as well as reading it.</remarks>
-public interface IInterceptionExecutor<TCandidate, in TSearchSpace, in TProblem, TSearchState>
+public interface IInterceptionExecutor<TSearchState>
     : IOperatorExecutor
     where TSearchState : class, ISearchState
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+    TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random);
 }
 
 public static class InterceptionOperationResolutionExtensions
 {
     extension(ResolutionScope scope)
     {
-        public IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source)
+        public IInterceptionExecutor<TSearchState> Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>().Resolve(source);
+            where TSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>(problem).Resolve(source);
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Interception<TSearchState>, TCandidate>? source)
+        public IInterceptionExecutor<TSearchState>? ResolveOptional<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Interception<TSearchState>, TCandidate>? source, TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>().ResolveOptional(source);
+            where TSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>(problem).ResolveOptional(source);
 
-        public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source,
-            [NotNullWhen(true)] out IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor, [NotNullWhen(false)] out string? reason)
+        public bool TryResolve<TCandidate, TSearchSpace, TProblem, TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source, TProblem problem,
+            [NotNullWhen(true)] out IInterceptionExecutor<TSearchState>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>().TryResolve(source, out executor, out reason);
+            where TSearchState : class, ISearchState => scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>(problem).TryResolve(source, out executor, out reason);
     }
 
     /// <remarks>
@@ -48,11 +46,11 @@ public static class InterceptionOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TRunSearchState : class, ISearchState
     {
-        public IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source)
+        public IInterceptionExecutor<TSearchState> Resolve<TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source)
             where TSearchState : class, ISearchState =>
-            (IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>)scope.ResolveOperator<Interception<TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>(source);
+            (IInterceptionExecutor<TSearchState>)scope.ResolveOperator<Interception<TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>(source, scope.Problem);
 
-        public IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> Resolve<TSearchState, TControl>(IOperator<Interception<TSearchState>, TCandidate> source, out TControl? control)
+        public IInterceptionExecutor<TSearchState> Resolve<TSearchState, TControl>(IOperator<Interception<TSearchState>, TCandidate> source, out TControl? control)
             where TSearchState : class, ISearchState
             where TControl : class
         {
@@ -62,12 +60,12 @@ public static class InterceptionOperationResolutionExtensions
         }
 
         [return: NotNullIfNotNull(nameof(source))]
-        public IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? ResolveOptional<TSearchState>(IOperator<Interception<TSearchState>, TCandidate>? source)
+        public IInterceptionExecutor<TSearchState>? ResolveOptional<TSearchState>(IOperator<Interception<TSearchState>, TCandidate>? source)
             where TSearchState : class, ISearchState => source is null ? null : scope.Resolve(source);
 
         public bool TryResolve<TSearchState>(IOperator<Interception<TSearchState>, TCandidate> source,
-            [NotNullWhen(true)] out IInterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>? executor, [NotNullWhen(false)] out string? reason)
+            [NotNullWhen(true)] out IInterceptionExecutor<TSearchState>? executor, [NotNullWhen(false)] out string? reason)
             where TSearchState : class, ISearchState =>
-            scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>().TryResolveOperator(source, out executor, out reason);
+            scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>(scope.Problem).TryResolveOperator(source, out executor, out reason);
     }
 }

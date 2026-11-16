@@ -143,7 +143,7 @@ public sealed class DynamicRacingResolutionTests
         var mutatorObservation = metaMutator.Invocations.Observing(_ => mutations.IncrementBy(1));
         var parent = ResolutionScope.Create();
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
-        _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender);
+        _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender, problem);
         await using var paused = Run(parent, racing.AnalyzedBy(creatorObservation, mutatorObservation), problem).GetAsyncEnumerator();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(1);
@@ -347,8 +347,8 @@ public sealed class DynamicRacingResolutionTests
     }
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm, EpochProblem problem) =>
-        scope.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(algorithm)
-            .RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
+        scope.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(algorithm, problem)
+            .RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken);
 
     [Theory]
     [InlineData("step")]
@@ -434,15 +434,15 @@ public sealed class DynamicRacingResolutionTests
             };
     }
 
-    // The interceptor builds its evaluator without the run's search state, so the walk asks about what the resolve asks.
+    // The evaluator uses the interceptor's scope, so preflight and resolution see the same run's search state.
     [Fact]
     public void ReevaluationInterceptor_AsksItsEvaluatorAboutTheExecutionItResolves()
     {
         using var problem = new EpochProblem(epochLength: 10_000);
         var execution = ExecutionSignature.For<UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>();
-        var valid = Interceptor(new EvaluatorUnder<ISearchState>());
-        var invalid = Interceptor(new EvaluatorUnder<PopulationState<int>>());
-        var scope = ResolutionScope.Create().For<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>();
+        var valid = Interceptor(new EvaluatorUnder<PopulationState<int>>());
+        var invalid = Interceptor(new EvaluatorUnder<ISearchState>());
+        var scope = ResolutionScope.Create().For<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(problem);
 
         execution.Supports(valid).ShouldBeTrue();
         SearchConfigurationValidation.Validate(valid, UnrestrictedSearchSpace<int>.Instance, execution).IsValid.ShouldBeTrue();
@@ -454,7 +454,7 @@ public sealed class DynamicRacingResolutionTests
         Should.Throw<InvalidOperationException>(() => scope.Resolve(invalid)).Message.ShouldContain("EvaluatorUnder");
 
         ReevaluationInterceptor<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>> Interceptor(IOperator<Evaluation, int> evaluator) =>
-            new(evaluator, problem);
+            new(evaluator);
     }
 
     // Written for one search state, as a consumer's evaluator can be.
@@ -498,20 +498,18 @@ public sealed class DynamicRacingResolutionTests
         public required Action Started { get; init; }
         public required Action Disposed { get; init; }
 
-        protected override IAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
             Built();
-            return new Executor<TSearchSpace, TProblem>(scope.Resolve(Evaluator), Steps, Candidate, BeforeMove, Started, Disposed);
+            return new Executor(scope.Resolve(Evaluator), Steps, Candidate, BeforeMove, Started, Disposed);
         }
 
-        private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<int, TSearchSpace, TProblem> evaluator, int steps, Func<int> candidate,
+        private sealed class Executor(IEvaluationExecutor<int> evaluator, int steps, Func<int> candidate,
             Action beforeMove, Action started, Action disposed)
-            : AlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 started();
                 try
@@ -521,7 +519,7 @@ public sealed class DynamicRacingResolutionTests
                         ct.ThrowIfCancellationRequested();
                         beforeMove();
                         int[] candidates = [candidate()];
-                        var qualities = evaluator.Evaluate(candidates, random, problem.SearchSpace, problem);
+                        var qualities = evaluator.Evaluate(candidates, random);
                         yield return Population.From(candidates.ToEvaluated(qualities)).ToPopulationState();
                         await Task.CompletedTask;
                     }

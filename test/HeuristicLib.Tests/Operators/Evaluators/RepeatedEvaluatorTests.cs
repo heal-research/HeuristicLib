@@ -12,9 +12,9 @@ public class RepeatedEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repetitions: 3);
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var objectiveVectors = executor.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate([7], RandomNumberGenerator.Create(1));
 
         objectiveVectors.Single().ShouldBe(new ObjectiveVector(2.0));
     }
@@ -25,9 +25,9 @@ public class RepeatedEvaluatorTests
         var problem = CreateProblem();
         var evaluator = new ProblemEvaluator<int>()
             .AsRepeated(repetitions: 2);
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var objectiveVectors = executor.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1));
 
         objectiveVectors.ShouldBe([new ObjectiveVector(3.0), new ObjectiveVector(5.0), new ObjectiveVector(8.0)]);
     }
@@ -44,18 +44,20 @@ public class RepeatedEvaluatorTests
         : Evaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
 
-        protected override IEvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateExecutor(ResolutionScope scope) =>
-        new Executor();
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
+        new Executor(scope.Problem);
 
         private sealed class Executor
             : EvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
         {
+            public Executor(FuncProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
+
             private int invocations;
 
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 var calls = Interlocked.Increment(ref invocations);
-                return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
+                return candidates.Select(_ => Problem.Evaluate(calls, random)).ToArray();
             }
         }
     }

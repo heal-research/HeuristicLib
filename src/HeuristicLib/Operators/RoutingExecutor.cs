@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>Base for an item operation's routed executor, which runs each item of a call on the child a router assigns it.</summary>
 /// <remarks>
-/// An item operation's <see cref="IItemOperation{TSelf}.Route{TCandidate, TSearchSpace, TProblem, TSearchState}"/>
+/// An item operation's <see cref="IItemOperation{TSelf}.Route{TCandidate, TSearchState}"/>
 /// returns a sealed class that derives from this base and implements the operation's executor interface. Its named
 /// method, such as Mutate, routes the call's items through <see cref="Children"/> with the call's random number generator
 /// and calls each child with its items and the call's other arguments. The routed executor exposes no controls of its

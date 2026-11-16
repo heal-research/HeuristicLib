@@ -61,9 +61,10 @@ public class EliteSelectorTests
         };
 
         var selector = new EliteSelector<string>(childSelector) { Elites = elites };
-        var executor = ResolutionScope.Create().Resolve<string, ISearchSpace<string>, IProblem<string, ISearchSpace<string>>>(selector);
+        var problem = FuncProblem.Create(static (string _) => 0.0, HEAL.HeuristicLib.Tests.TestSupport.Mocks.DummySearchSpace<string>.Instance, SingleObjective.Minimize);
+        var executor = ResolutionScope.Create().Resolve<string, ISearchSpace<string>, IProblem<string, ISearchSpace<string>>>(selector, problem);
 
-        return executor.Select(population, SingleObjective.Minimize, count, new SequenceRandomNumberGenerator(0.5), null!, null!);
+        return executor.Select(population, SingleObjective.Minimize, count, new SequenceRandomNumberGenerator(0.5));
     }
 
     /// <summary>

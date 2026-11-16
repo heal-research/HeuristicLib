@@ -24,7 +24,7 @@ public sealed record Timed<TOperation, TCandidate> : WrappingOperator<TOperation
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var operation = OperationInfo.For<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>();
+        var operation = OperationInfo.For<TOperation, TCandidate, TSearchState>();
         var duration = scope.Resolve(Duration);
         return operation.Wrap(scope.ResolveOperator(ChildOperator), new DurationMeasurement(duration, Duration.TimeProvider));
     }
