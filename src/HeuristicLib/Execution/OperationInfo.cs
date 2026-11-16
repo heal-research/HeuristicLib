@@ -26,10 +26,6 @@ public sealed class OperationInfo
     public void RequireCandidateWork(IOperator source, string metric) => members.RequireCandidateWork(source, metric);
 
     /// <summary>Returns an executor whose named method passes each call, as an invocation, to the wrapper.</summary>
-    /// <remarks>
-    /// The returned executor forwards the controls of the executor it wraps, unless the wrapper implements
-    /// <see cref="IExecutorControlProvider"/> and supplies them.
-    /// </remarks>
     public IExecutor Wrap<TWrapper>(IExecutor executor, TWrapper wrapper) where TWrapper : struct, IInvocationWrapper =>
         members.Wrap(executor, wrapper);
 

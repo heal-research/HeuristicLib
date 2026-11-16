@@ -1,6 +1,6 @@
 # Execution resolution
 
-Resolution constructs typed executors with the scope's run-bound results. Each configuration resolves its declared children through the scope received by its `CreateExecutor` hook.
+Resolution constructs execution nodes, including typed executors with the scope's run-bound results. Each configuration resolves its declared children through the scope received by its construction hook. Operators and algorithms use `CreateExecutor`; other execution nodes use `IConfigurationNode<TExecutionNode>.CreateExecutionNode`.
 
 See [configuration vs executors](/contributing/architecture/execution-nodes) for authoring responsibilities.
 
@@ -10,17 +10,17 @@ See [configuration vs executors](/contributing/architecture/execution-nodes) for
 
 A typed view from `scope.For<TCandidate, TSearchSpace, TProblem>(problem)` retains the same scope and exposes `Problem` and `SearchSpace`. It creates no child activation. The problem's search space and objective stay fixed for the problem object's lifetime; mutable instance data may change. Fixed-signature operator and algorithm bases pass their declared search-space, problem and, where fixed, search-state types to children through `IConfigurationNode.ChildExecution`, matching their typed construction scopes. Preflight applies this mapping before each parameter's own `ChildExecution` mapping. A parent may create a view for another problem to bind a child; the parameter declares that child's signature and its mapping can ignore the parent's execution.
 
-For each resolution:
+For each operator or algorithm resolution:
 
 1. Check the requested operation and run signature.
 2. Build an executor through the configuration's `CreateExecutor`, resolving contextual children through the supplied scope, unless the owning scope already holds an executor for the configuration and problem references.
 3. Check that the executor implements the requested executor interface and return it.
 
-A scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters, so every request in it returns the same executor. A child scope builds its own executor unless an ancestor shares the configuration. Stateless leaves may return an immutable executor repeatedly.
+A scope keeps one execution node per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose execution node needs no problem, such as counters and adaptations, so every request in it returns the same execution node. A child scope builds its own execution node unless an ancestor shares the configuration. Stateless leaves may return an immutable executor repeatedly.
 
 ### Shared configurations
 
-A scope selects sharing by configuration reference and holds each bound executor by configuration/problem references. The nearest ancestor sharing a configuration owns its entry. A shared configuration is first built in a dedicated child scope of that owner; the children its construction resolves stay there. Every request for that problem in the owner's subtree returns that executor.
+A scope selects sharing by configuration reference and holds each execution node by configuration and optional problem references. The nearest ancestor sharing a configuration owns its entry. A shared configuration is first built in a dedicated child scope of that owner; the children its construction resolves stay there. Every request for that problem in the owner's subtree returns that executor.
 
 `algorithm.Sharing(configurations)` declares the configurations whose executors child scopes reuse. Configuration reference identity selects them; equal but distinct configurations keep separate entries. A new sharing owner or root starts independently. A request for incompatible run types is rejected rather than constructing a second executor. Configurations never requested construct nothing.
 
@@ -44,7 +44,7 @@ Candidate work means returned counts for candidate-producing operations and inpu
 
 Each resolution of an algorithm calls its `CreateExecutor` with a scope typed to the run types and the requested search state. A configuration that does not produce that state is rejected before it is built, and an algorithm bound to a search space and problem rejects other run types in its base before its hook runs.
 
-A consumer-defined role is an `IConfigurationNode<TExecutor>` resolved through `ResolutionScope.Resolve`. A wrapper of the role implements the role, declares the child it holds and wraps the child's executor in its `CreateExecutor`.
+A consumer-defined role is an `IConfigurationNode<TExecutionNode>` resolved through `ResolutionScope.Resolve`. A wrapper of the role implements the role, declares the child it holds and wraps the child's execution node in its `CreateExecutionNode`.
 
 ### Observation sources
 
@@ -64,11 +64,15 @@ Cycle resolves fresh children for every turn while forwarding search state. Shar
 
 Pipeline stages and dynamic racing contenders resolve fresh children through child scopes of their current scope. Every scope in the tree sees the same run results. Pause/resume continues the retained iterator and executors. `AlgorithmRun` measures each call advancing that iterator in `try`/`finally`. Executor construction before the first advance, pauses and consumer work between states are excluded. Deferred child construction during an advance, such as a fresh Cycle turn, is included. The resolver returns the executor itself and measures no elapsed time. Direct scope execution leaves `scope.Results.Elapsed` and `Clock.Elapsed` at zero; use `algorithm.Timed(duration)` for explicit measurement.
 
-## Controls, failures and lifetime
+## Adaptation, failures and lifetime
 
-An executor is its own control unless it implements `IExecutorControlProvider`. `ExecutorControls.Find` follows that forwarding from the executor that resolution returns; invoke operations through that executor. A wrapping executor built by an operation's `Wrap` forwards the wrapped executor's controls through its `WrappingExecutor<TExecutor, TWrapper>` base unless its invocation wrapper implements `IExecutorControlProvider`, which then supplies them; `ChoosePerInvocation`'s wrapper supplies none, and `ChoosePerItem`'s routed executor exposes none of its children's. `Named`, `Retry` and inspection therefore forward. A replacement implements the controls it offers, or none.
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/AdaptationDocumentationSpecs.cs#adaptation-wiring{csharp}
 
-Operation-parameterized naming, retry and inspection therefore expose the child's controls. A composite supplies its own controls; the resolver does not infer them from arbitrary children.
+`GaussianMutator.MutationStrength` remains the configured base value. Its optional `MutationStrengthAdaptation` child is an `IConfigurationNode<IAdaptation>`: the executor resolves it and calls `Apply(baseValue)` once per mutation invocation. `ScaleAdaptation` starts with factor 1 and `OffsetAdaptation` with offset 0. A rule writes their runtime objects through the settable `Factor` and `Offset` properties.
+
+The strategy's slot is `ScaleAdaptation?`, the form its 1/5 success rule writes. Both slots must name the same instance. An unset strategy slot means no adaptation. Wrappers forward nothing: `Timed`, `Counted`, `PipelineMutator` and `ChoosePerInvocation` can surround mutators that read the same link. Several mutators can read one adaptation with different base values. External nodes may implement `IConfigurationNode<IAdaptation>` directly, including as records.
+
+A scope resolves one runtime adaptation per configuration reference. Independent runs remain independent. To retain adaptation across Cycle turns, share the adaptation on the Cycle. Sharing the mutator also requires sharing the adaptation: otherwise the retained mutator reads its original adaptation while each fresh strategy writes a different one. The resolver does not detect unused links.
 
 A construction failure ends the entire scope tree. Published results remain readable, but further resolution requires a new root. Rejections before construction, such as signature checks, leave the scope usable. `TryResolve` reports those rejections as reasons; a construction failure propagates.
 

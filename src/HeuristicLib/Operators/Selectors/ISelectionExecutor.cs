@@ -39,14 +39,6 @@ public static class SelectionOperationResolutionExtensions
         public ISelectionExecutor<TCandidate> Resolve(IOperator<Selection, TCandidate> source) =>
             (ISelectionExecutor<TCandidate>)scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
-        public ISelectionExecutor<TCandidate> Resolve<TControl>(IOperator<Selection, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (ISelectionExecutor<TCandidate>)scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
-
         [return: NotNullIfNotNull(nameof(source))]
         public ISelectionExecutor<TCandidate>? ResolveOptional(IOperator<Selection, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
@@ -62,14 +54,6 @@ public static class SelectionOperationResolutionExtensions
     {
         public ISelectionExecutor<TCandidate> Resolve(IOperator<Selection, TCandidate> source) =>
             (ISelectionExecutor<TCandidate>)scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-
-        public ISelectionExecutor<TCandidate> Resolve<TControl>(IOperator<Selection, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (ISelectionExecutor<TCandidate>)scope.ResolveOperator<Selection, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
 
         [return: NotNullIfNotNull(nameof(source))]
         public ISelectionExecutor<TCandidate>? ResolveOptional(IOperator<Selection, TCandidate>? source) => source is null ? null : scope.Resolve(source);

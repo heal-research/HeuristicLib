@@ -31,7 +31,8 @@ public sealed class MixedOperatorResolutionTests
         Invoke(first).ShouldBe(1);
         Invoke(second).ShouldBe(2);
         var child = root.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Problem);
-        var operation = child.Resolve(current, out ILiveValue? control);
+        var operation = child.Resolve(current);
+        var control = child.Resolve(source).ShouldBeAssignableTo<ILiveValue>();
         control.ShouldNotBeNull().Value.ShouldBe(0);
         control.Value = 12;
         Invoke(operation).ShouldBe(13);
@@ -87,7 +88,6 @@ public sealed class MixedOperatorResolutionTests
             public IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random) =>
                 [new RealVector((double)++Value)];
         }
-
     }
 
     private sealed record ForwardedCrossover(IOperator<Crossover, RealVector> Child) : IOperator<Crossover, RealVector>

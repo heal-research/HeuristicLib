@@ -18,22 +18,22 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 public class SelectionSpecs
 {
     [Fact]
-    public void NamingWrappersInOneScopeForwardControlsOfTheChildExecutorTheyShare()
+    public void NamingWrappersUseTheirChildsExplicitAdaptationLink()
     {
-        var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5);
+        var adaptation = new ScaleAdaptation();
+        var child = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.5) { MutationStrengthAdaptation = adaptation };
         var exploration = new Named<Mutation, RealVector>(child, "exploration");
         var refinement = new Named<Mutation, RealVector>(child, "refinement");
         var problem = new TestFunctionProblem(new SphereFunction(3));
         var scope = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
 
-        // Within one scope both names and the child itself resolve to the child's one executor.
-        _ = scope.Resolve(exploration, out IMutationStrengthControl? explorationStrength);
-        _ = scope.Resolve(refinement, out IMutationStrengthControl? refinementStrength);
-        _ = scope.Resolve(child, out IMutationStrengthControl? childStrength);
-        explorationStrength.ShouldNotBeNull().CurrentMutationStrength = 0.25;
+        // Both names resolve their child in this scope, so its link resolves to the same adaptation.
+        _ = scope.Resolve(exploration);
+        _ = scope.Resolve(refinement);
+        _ = scope.Resolve(child);
+        scope.Resolve(adaptation).Factor *= 0.5;
 
-        refinementStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
-        childStrength.ShouldNotBeNull().CurrentMutationStrength.ShouldBe(0.25);
+        scope.Resolve(adaptation).Apply(child.MutationStrength).ShouldBe(0.25);
     }
 
     [Theory]
@@ -180,7 +180,7 @@ public class SelectionSpecs
 
     private sealed record GeometricCooling(double StartTemperature, double Factor) : ICoolingSchedule
     {
-        public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) => new Executor(StartTemperature, Factor);
+        public ICoolingScheduleExecutor CreateExecutionNode(ResolutionScope scope) => new Executor(StartTemperature, Factor);
 
         private sealed class Executor(double startTemperature, double factor) : ICoolingScheduleExecutor
         {
@@ -196,7 +196,7 @@ public class SelectionSpecs
 
         public IReadOnlyList<IParameter> GetParameters() => [ScheduleParameter];
 
-        public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) => new RecordingExecutor(scope.Resolve(Schedule), Record);
+        public ICoolingScheduleExecutor CreateExecutionNode(ResolutionScope scope) => new RecordingExecutor(scope.Resolve(Schedule), Record);
     }
 
     private sealed class RecordingExecutor(ICoolingScheduleExecutor schedule, Action<double> record) : ICoolingScheduleExecutor
@@ -220,7 +220,7 @@ public class SelectionSpecs
 
         public IReadOnlyList<IParameter> GetParameters() => [ScheduleParameter, InstrumentParameter];
 
-        public ICoolingScheduleExecutor CreateExecutor(ResolutionScope scope) =>
+        public ICoolingScheduleExecutor CreateExecutionNode(ResolutionScope scope) =>
             new RecordingExecutor(scope.Resolve(Schedule), Instrument.CreateRecorder(scope.Results));
     }
 
@@ -258,7 +258,7 @@ public class SelectionSpecs
 
         public IReadOnlyList<IParameter> GetParameters() => [WarmupParameter, MainParameter];
 
-        public Executor CreateExecutor(ResolutionScope scope) => new(scope.Resolve(Warmup), scope.Resolve(Main), WarmupSteps);
+        public Executor CreateExecutionNode(ResolutionScope scope) => new(scope.Resolve(Warmup), scope.Resolve(Main), WarmupSteps);
 
         public sealed class Executor(ICoolingScheduleExecutor warmup, ICoolingScheduleExecutor main, int warmupSteps) : IExecutor
         {
@@ -266,5 +266,4 @@ public class SelectionSpecs
                 step < warmupSteps ? warmup.Temperature(step) : main.Temperature(step - warmupSteps);
         }
     }
-
 }

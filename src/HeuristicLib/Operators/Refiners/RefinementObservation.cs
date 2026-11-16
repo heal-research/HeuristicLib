@@ -26,7 +26,7 @@ public sealed record RefinementObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate> executor,
         IOperator<Refinement, TCandidate> refiner, Action<RefinementObservation<TCandidate>> observe, TProblem problem)
-        : RefinementExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
+        : RefinementExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -36,8 +36,6 @@ public sealed record RefinementObservation<TCandidate>(
             observe(new RefinementObservation<TCandidate>(refiner, candidates, refined, SearchSpace, Problem));
             return refined;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

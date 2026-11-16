@@ -26,6 +26,13 @@ public sealed class LayerDependencyTests
         // Reviewed ownership boundaries only; grouping folders do not introduce namespaces.
         AssertPublicTypeLocations(compilation, repositoryRoot, MainRoot,
         [
+            ("Execution.IExecutionNode", "Execution/"),
+            ("Operators.IAdaptation", "Operators/Adaptation/"),
+            ("Operators.Adaptation`1", "Operators/Adaptation/"),
+            ("Operators.ScaleAdaptation", "Operators/Adaptation/"),
+            ("Operators.AdaptedScale", "Operators/Adaptation/"),
+            ("Operators.OffsetAdaptation", "Operators/Adaptation/"),
+            ("Operators.AdaptedOffset", "Operators/Adaptation/"),
             ("Inspection.CountAccumulator", "Inspection/"),
             ("Inspection.DurationAccumulator", "Inspection/"),
             ("Execution.SearchConfigurationValidation", "Execution/"),

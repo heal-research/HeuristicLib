@@ -52,7 +52,7 @@ public partial class ExecutorResolutionTests
     }
 
     [Fact]
-    public void ChildFirstCollision_TheCompositeInTheChildUsesTheChildsLeafAndItsControl()
+    public void ChildFirstCollision_TheCompositeInTheChildUsesTheChildsLeafDirectly()
     {
         IConfigurationNode<ICounterExecutor> leaf = new CounterConfiguration("leaf");
         var composite = new Composite(leaf);
@@ -64,8 +64,8 @@ public partial class ExecutorResolutionTests
         ancestor.Next().ShouldBe(1);
         var rebound = child.Resolve(composite);
         rebound.Next().ShouldBe(2);
-        rebound.Control.Value.ShouldBe(2);
-        ancestor.Control.Value.ShouldBe(1);
+        rebound.Child.Value.ShouldBe(2);
+        ancestor.Child.Value.ShouldBe(1);
         rebound.Invocations.ShouldBe(1);
         ancestor.Invocations.ShouldBe(1);
         local.Next().ShouldBe(3);
@@ -194,7 +194,7 @@ public partial class ExecutorResolutionTests
 
     private abstract record WrappingCounter(IConfigurationNode<ICounterExecutor> Child) : IConfigurationNode<ICounterExecutor>
     {
-        public ICounterExecutor CreateExecutor(ResolutionScope scope) => Wrap(scope.Resolve(Child), scope);
+        public ICounterExecutor CreateExecutionNode(ResolutionScope scope) => Wrap(scope.Resolve(Child), scope);
         protected abstract ICounterExecutor Wrap(ICounterExecutor child, ResolutionScope scope);
     }
 
@@ -204,15 +204,13 @@ public partial class ExecutorResolutionTests
         int Next();
     }
 
-    private interface ICounterControl { int Value { get; } }
-
     // Private executor data or data a configuration holds.
     private sealed class Count
     {
         public int Value { get; set; }
     }
 
-    private sealed class Counter(Count count) : ICounterExecutor, ICounterControl
+    private sealed class Counter(Count count) : ICounterExecutor
     {
         public int Value => count.Value;
         public int Next() => ++count.Value;
@@ -220,29 +218,27 @@ public partial class ExecutorResolutionTests
 
     private sealed record CounterConfiguration(string Name, Action? Prepare = null, Func<ResolutionScope, ICounterExecutor?>? Bind = null) : IConfigurationNode<ICounterExecutor>
     {
-        public ICounterExecutor CreateExecutor(ResolutionScope scope)
+        public ICounterExecutor CreateExecutionNode(ResolutionScope scope)
         {
             Prepare?.Invoke();
             var count = new Count();
             return Bind?.Invoke(scope) ?? new Counter(count);
         }
-
     }
 
     private sealed record Composite(IConfigurationNode<ICounterExecutor> Child) : IConfigurationNode<CompositeExecutor>
     {
-        public CompositeExecutor CreateExecutor(ResolutionScope scope)
+        public CompositeExecutor CreateExecutionNode(ResolutionScope scope)
         {
             var calls = new Count();
             var child = scope.Resolve(Child);
-            var control = ExecutorControls.Find<ICounterControl>(child) ?? throw new InvalidOperationException("The child offers no counter control.");
-            return new CompositeExecutor(child, control, calls);
+            return new CompositeExecutor(child, calls);
         }
     }
 
-    private sealed class CompositeExecutor(ICounterExecutor child, ICounterControl control, Count calls) : IExecutor
+    private sealed class CompositeExecutor(ICounterExecutor child, Count calls) : IExecutor
     {
-        public ICounterControl Control { get; } = control;
+        public ICounterExecutor Child { get; } = child;
         public int Invocations => calls.Value;
         public int Next()
         {
@@ -259,8 +255,8 @@ public partial class ExecutorResolutionTests
             new ObservingExecutor(child, Calls ?? new Count(), Observe);
     }
 
-    // A transparent wrapper: it forwards the controls of the executor it wraps.
-    private sealed class ObservingExecutor(ICounterExecutor child, Count calls, Action<int> observe) : ICounterExecutor, IExecutorControlProvider
+    // Reads the child directly and counts its invocations.
+    private sealed class ObservingExecutor(ICounterExecutor child, Count calls, Action<int> observe) : ICounterExecutor
     {
         public int Value => child.Value;
         public int Next()
@@ -269,6 +265,5 @@ public partial class ExecutorResolutionTests
             observe(++calls.Value);
             return result;
         }
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(child);
     }
 }

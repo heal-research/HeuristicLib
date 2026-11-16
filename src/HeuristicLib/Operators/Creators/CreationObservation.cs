@@ -26,7 +26,7 @@ public sealed record CreationObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate> executor,
         IOperator<Creation, TCandidate> creator, Action<CreationObservation<TCandidate>> observe, TProblem problem)
-        : CreationExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
+        : CreationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -36,8 +36,6 @@ public sealed record CreationObservation<TCandidate>(
             observe(new CreationObservation<TCandidate>(creator, count, candidates, SearchSpace, Problem));
             return candidates;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

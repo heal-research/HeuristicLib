@@ -159,21 +159,6 @@ public class ChoosePerInvocationTests
     }
 
     [Fact]
-    public void ExposesNoControlsOfItsChildren()
-    {
-        var child = new ControlledMutator();
-        var scope = CreateScope();
-
-        scope.Resolve(child, out ILevelControl? direct).ShouldNotBeNull();
-        scope.Resolve(ChoosePerInvocation.Create(child), out ILevelControl? throughChoice);
-        scope.Resolve(ChoosePerInvocation.Create(child).Named("choice").Retry(2), out ILevelControl? throughWrappers);
-
-        direct.ShouldNotBeNull();
-        throughChoice.ShouldBeNull();
-        throughWrappers.ShouldBeNull();
-    }
-
-    [Fact]
     public void ChoosesAmongExternalOperationsWithoutAdapterChanges()
     {
         var choice = ChoosePerInvocation.Create([new ChecksumValue(10), new ChecksumValue(20)], [0.0, 1.0]);
@@ -218,25 +203,6 @@ public class ChoosePerInvocationTests
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
             candidates.Select(_ => new ObjectiveVector(Value)).ToArray();
-    }
-
-    private interface ILevelControl
-    {
-        int Level { get; set; }
-    }
-
-    private sealed record ControlledMutator : IOperator<Mutation, int>
-    {
-        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor();
-
-        private sealed class Executor : IMutationExecutor<int>, ILevelControl
-        {
-            public int Level { get; set; }
-
-            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
-                parents;
-        }
     }
 
     private sealed record ChecksumValue(int Value) : IOperator<Checksum, RealVector>

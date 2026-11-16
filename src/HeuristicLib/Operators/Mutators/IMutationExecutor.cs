@@ -38,14 +38,6 @@ public static class MutationOperationResolutionExtensions
         public IMutationExecutor<TCandidate> Resolve(IOperator<Mutation, TCandidate> source) =>
             (IMutationExecutor<TCandidate>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
-        public IMutationExecutor<TCandidate> Resolve<TControl>(IOperator<Mutation, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (IMutationExecutor<TCandidate>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
-
         [return: NotNullIfNotNull(nameof(source))]
         public IMutationExecutor<TCandidate>? ResolveOptional(IOperator<Mutation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
@@ -61,14 +53,6 @@ public static class MutationOperationResolutionExtensions
     {
         public IMutationExecutor<TCandidate> Resolve(IOperator<Mutation, TCandidate> source) =>
             (IMutationExecutor<TCandidate>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-
-        public IMutationExecutor<TCandidate> Resolve<TControl>(IOperator<Mutation, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (IMutationExecutor<TCandidate>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
 
         [return: NotNullIfNotNull(nameof(source))]
         public IMutationExecutor<TCandidate>? ResolveOptional(IOperator<Mutation, TCandidate>? source) => source is null ? null : scope.Resolve(source);

@@ -37,7 +37,7 @@ public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCan
         IMutationExecutor<TCandidate> executor,
         IOperator<Mutation, TCandidate> mutator,
         Action<IOperator<Mutation, TCandidate>, int, int> write)
-        : IMutationExecutor<TCandidate>, IExecutorControlProvider
+        : IMutationExecutor<TCandidate>
     {
         private int calls;
 
@@ -47,8 +47,6 @@ public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCan
             write(mutator, ++calls, offspring.Count);
             return offspring;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 #endregion custom-wrapper-type

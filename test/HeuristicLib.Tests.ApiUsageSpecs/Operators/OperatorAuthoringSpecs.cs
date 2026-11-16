@@ -24,17 +24,17 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Operators;
 public class OperatorAuthoringSpecs
 {
     [Fact]
-    public void AdaptiveMutator_ProjectsStrengthControlAndInvokesTheObservedExecution()
+    public void AdaptiveMutator_ResolvesAdaptationAndInvokesTheObservedExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var gaussian = new GaussianMutator(1.0, 3.0);
+        var adaptation = new ScaleAdaptation();
+        var gaussian = new GaussianMutator(1.0, 3.0) { MutationStrengthAdaptation = adaptation };
         IOperator<Mutation, RealVector> mutator = gaussian;
         var observedCalls = 0;
         var observed = mutator.AnalyzedBy(mutator.Invocations.Observing(_ => observedCalls++));
         var scope = ResolutionScope.Create();
-        var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(observed, out IMutationStrengthControl? strength);
-        strength.ShouldNotBeNull();
-        strength.CurrentMutationStrength = 0.0;
+        var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(observed);
+        scope.Resolve(adaptation).Factor *= 0.0;
 
         var offspring = executor.Mutate([RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(12));
 

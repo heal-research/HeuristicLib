@@ -27,7 +27,7 @@ public sealed record EvaluationObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate> executor,
         IOperator<Evaluation, TCandidate> evaluator, Action<EvaluationObservation<TCandidate>> observe, TProblem problem)
-        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
+        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -37,8 +37,6 @@ public sealed record EvaluationObservation<TCandidate>(
             observe(new EvaluationObservation<TCandidate>(evaluator, candidates, objectiveVectors, SearchSpace, Problem));
             return objectiveVectors;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

@@ -7,8 +7,7 @@ namespace HEAL.HeuristicLib.Execution;
 /// An operation builds the wrapper into the executor its <see cref="IOperation{TSelf}"/> members wrap; each call to that
 /// executor's named method, such as Mutate, passes one invocation to <see cref="Invoke{TInvocation, TResult}"/>.
 /// Implement wrappers as small immutable structs so that each call is compiled for the wrapper type. Keep data that
-/// outlives a call, such as a counter, in a referenced object. The wrapping executor forwards the wrapped executor's
-/// controls unless the wrapper implements <see cref="IExecutorControlProvider"/>, which then supplies them.
+/// outlives a call, such as a counter, in a referenced object.
 /// </remarks>
 public interface IInvocationWrapper
 {

@@ -33,7 +33,7 @@ public sealed partial class OperatorPreparationSpecs
     }
 
     [Fact]
-    public void TheSameExternalInvocationWrapperSupportsAnExternalOperationAndForwardsItsControls()
+    public void TheSameExternalInvocationWrapperSupportsAnExternalOperation()
     {
         var source = new ValueSource(42);
         var calls = new CallCount();
@@ -45,13 +45,10 @@ public sealed partial class OperatorPreparationSpecs
 
         executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(42);
         calls.Invocations.ShouldBe(2);
-        ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
-        executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(43);
-        calls.Invocations.ShouldBe(4);
     }
 
     [Fact]
-    public void ExternalOperationAndRetryAreReachedBySubstitutionAndForwardControls()
+    public void ExternalOperationAndRetryAreReachedBySubstitution()
     {
         IOperator<ReadValue, RealVector> source = new ValueSource(42);
         var forwarded = new Forward<ReadValue, RealVector>(source).Retry(2);
@@ -65,14 +62,6 @@ public sealed partial class OperatorPreparationSpecs
 
         executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(42);
         calls.Invocations.ShouldBe(1);
-        ExecutorControls.Find<IValueControl>(executor).ShouldNotBeNull().Value = 43;
-        executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(43);
-        calls.Invocations.ShouldBe(2);
-    }
-
-    private interface IValueControl
-    {
-        int Value { get; set; }
     }
 
     // An external operation ends with the call's random number generator, like built-in ones.
@@ -117,10 +106,9 @@ public sealed partial class OperatorPreparationSpecs
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope) => new Executor(Value);
 
         private sealed class Executor(int value)
-            : IReadValueExecutor, IValueControl
+            : IReadValueExecutor
         {
-            public int Value { get; set; } = value;
-            public int Read(IRandomNumberGenerator random) => Value;
+            public int Read(IRandomNumberGenerator random) => value;
         }
     }
 

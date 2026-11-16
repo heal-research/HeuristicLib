@@ -1,7 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -22,6 +21,7 @@ public record EvolutionStrategy<TCandidate>
     public EvolutionStrategyType Strategy { get; init; } = EvolutionStrategyDefaults.Strategy;
     public required IOperator<Creation, TCandidate> Creator { get; init; }
     public required IOperator<Mutation, TCandidate> Mutator { get; init; }
+    public ScaleAdaptation? MutationStrengthAdaptation { get; init; }
     public IOperator<Crossover, TCandidate>? Crossover { get; init; }
     public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = EvolutionStrategyDefaults.Evaluator<TCandidate>();
     public IOperator<Selection, TCandidate> Selector { get; init; } = EvolutionStrategyDefaults.Selector<TCandidate>();
@@ -47,6 +47,9 @@ public record EvolutionStrategy<TCandidate>
     public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Mutation, TCandidate>> MutatorParameter { get; } =
         new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
 
+    public static Parameter<EvolutionStrategy<TCandidate>, ScaleAdaptation?> MutationStrengthAdaptationParameter { get; } =
+        new(nameof(MutationStrengthAdaptation), static algorithm => algorithm.MutationStrengthAdaptation, static (algorithm, value) => algorithm with { MutationStrengthAdaptation = value });
+
     public static Parameter<EvolutionStrategy<TCandidate>, IOperator<Crossover, TCandidate>?> CrossoverParameter { get; } =
         new(nameof(Crossover), static algorithm => algorithm.Crossover, static (algorithm, value) => algorithm with { Crossover = value });
 
@@ -62,7 +65,7 @@ public record EvolutionStrategy<TCandidate>
     public static Parameter<EvolutionStrategy<TCandidate>, int?> MaximumGenerationsParameter { get; } =
         new(nameof(MaximumGenerations), static algorithm => algorithm.MaximumGenerations, static (algorithm, value) => algorithm with { MaximumGenerations = value });
 
-    public new static IReadOnlyList<IParameter> Parameters { get; } = [PopulationSizeParameter, NumberOfChildrenParameter, StrategyParameter, CreatorParameter, MutatorParameter, CrossoverParameter, EvaluatorParameter, SelectorParameter, RefinerParameter, MaximumGenerationsParameter];
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [PopulationSizeParameter, NumberOfChildrenParameter, StrategyParameter, CreatorParameter, MutatorParameter, MutationStrengthAdaptationParameter, CrossoverParameter, EvaluatorParameter, SelectorParameter, RefinerParameter, MaximumGenerationsParameter];
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
@@ -72,11 +75,12 @@ public record EvolutionStrategy<TCandidate>
         var interceptor = scope.ResolveOptional(Interceptor);
         var evaluator = scope.Resolve(Evaluator);
         var creator = scope.Resolve(Creator);
-        var mutator = scope.Resolve(Mutator, out IMutationStrengthControl? strength);
+        var mutator = scope.Resolve(Mutator);
+        var adaptation = scope.ResolveOptional(MutationStrengthAdaptation);
         var selector = scope.Resolve(Selector);
         var crossover = scope.ResolveOptional(Crossover);
         var refiner = scope.ResolveOptional(Refiner);
-        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, mutator, strength, selector, crossover, refiner,
+        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, mutator, adaptation, selector, crossover, refiner,
             PopulationSize, NumberOfChildren, Strategy, MaximumGenerations, scope.Problem);
     }
 
@@ -85,7 +89,7 @@ public record EvolutionStrategy<TCandidate>
         IEvaluationExecutor<TCandidate> evaluator,
         ICreationExecutor<TCandidate> creator,
         IMutationExecutor<TCandidate> mutator,
-        IMutationStrengthControl? strength,
+        AdaptedScale? adaptation,
         ISelectionExecutor<TCandidate> selector,
         ICrossoverExecutor<TCandidate>? crossover,
         IRefinementExecutor<TCandidate>? refiner,
@@ -138,7 +142,7 @@ public record EvolutionStrategy<TCandidate>
 
             var evaluatedChildren = children.ToEvaluated(evaluator.Evaluate(children, random));
 
-            if (strength is not null)
+            if (adaptation is not null)
             {
                 // The rate is over the parent/child pairs actually compared, which is the number of children rather
                 // than the population size; the two differ whenever the strategy is configured with more or fewer
@@ -147,7 +151,7 @@ public record EvolutionStrategy<TCandidate>
                 var successes = comparisons.Count(
                     pair => pair.Second.ObjectiveVector.CompareTo(pair.First, Problem.Objective) == DominanceRelation.Dominates);
                 var successRate = comparisons.Length == 0 ? 0.0 : successes / (double)comparisons.Length;
-                strength.CurrentMutationStrength *= successRate switch
+                adaptation.Factor *= successRate switch
                 {
                     > 0.2 => 1.5,
                     < 0.2 => 1 / 1.5,
@@ -294,5 +298,4 @@ public static class EvolutionStrategy
             Strategy = strategy,
             MaximumGenerations = maximumGenerations
         };
-
 }

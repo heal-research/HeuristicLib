@@ -231,7 +231,7 @@ public sealed class ProblemBindingTests
 
     private sealed record PlainConfiguration : IConfigurationNode<PlainExecutor>
     {
-        public PlainExecutor CreateExecutor(ResolutionScope scope) => new();
+        public PlainExecutor CreateExecutionNode(ResolutionScope scope) => new();
     }
 
     private sealed class PlainExecutor : IExecutor;

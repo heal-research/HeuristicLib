@@ -30,7 +30,7 @@ public sealed record ReplacementObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(IReplacementExecutor<TCandidate> executor,
         IOperator<Replacement, TCandidate> replacer, Action<ReplacementObservation<TCandidate>> observe, TProblem problem)
-        : ReplacementExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
+        : ReplacementExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -41,8 +41,6 @@ public sealed record ReplacementObservation<TCandidate>(
                 SearchSpace, Problem));
             return replaced;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

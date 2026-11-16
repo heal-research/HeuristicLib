@@ -27,7 +27,7 @@ public sealed record TerminationObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ITerminationExecutor<TSearchState> executor,
         IOperator<Termination, TCandidate> terminator, Action<TerminationObservation<TCandidate>> observe, TProblem problem)
-        : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem), IExecutorControlProvider
+        : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TSearchState : class, ISearchState
@@ -38,8 +38,6 @@ public sealed record TerminationObservation<TCandidate>(
             observe(new TerminationObservation<TCandidate>(terminator, state, isTerminal, SearchSpace, Problem));
             return isTerminal;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

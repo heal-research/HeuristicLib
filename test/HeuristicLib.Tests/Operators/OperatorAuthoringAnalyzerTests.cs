@@ -157,7 +157,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               private int calls;
 
-              public InvalidOperator CreateExecutor(ResolutionScope scope) => this;
+              public InvalidOperator CreateExecutionNode(ResolutionScope scope) => this;
 
               public void Execute()
               {
@@ -203,7 +203,7 @@ public class OperatorAuthoringAnalyzerTests
           {
               private int builds;
 
-              public ITickExecutor CreateExecutor(ResolutionScope scope)
+              public ITickExecutor CreateExecutionNode(ResolutionScope scope)
               {
                   builds = builds + 1;
                   throw new System.NotSupportedException();

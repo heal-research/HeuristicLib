@@ -32,7 +32,7 @@ public sealed record InterceptionObservation<TCandidate, TSearchState>(
 
     private sealed class Executor<TSearchSpace, TProblem>(IInterceptionExecutor<TSearchState> executor,
         IOperator<Interception<TSearchState>, TCandidate> interceptor, Action<InterceptionObservation<TCandidate, TSearchState>> observe, TProblem problem)
-        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem), IExecutorControlProvider
+        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -42,8 +42,6 @@ public sealed record InterceptionObservation<TCandidate, TSearchState>(
             observe(new InterceptionObservation<TCandidate, TSearchState>(interceptor, currentState, previousState, state, SearchSpace, Problem));
             return state;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

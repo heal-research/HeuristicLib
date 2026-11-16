@@ -235,7 +235,7 @@ public class ResolutionScopeTests
     // Labels the executor of its child and keeps that executor's state.
     private sealed record LabelWrapper(IConfigurationNode<INamedExecutor> Child, string Label) : IConfigurationNode<INamedExecutor>
     {
-        public INamedExecutor CreateExecutor(ResolutionScope scope)
+        public INamedExecutor CreateExecutionNode(ResolutionScope scope)
         {
             var executor = scope.Resolve(Child);
             return new NamedExecutor($"{Label}({executor.Name})", executor.State);
@@ -247,12 +247,11 @@ public class ResolutionScopeTests
     {
         public int CreateCount { get; private set; }
 
-        public INamedExecutor CreateExecutor(ResolutionScope scope)
+        public INamedExecutor CreateExecutionNode(ResolutionScope scope)
         {
             CreateCount++;
             return new NamedExecutor(name, new object());
         }
-
     }
 
     // Resolves its child in the scope it is built in, after an optional action on that scope. Its state is the child's
@@ -262,7 +261,7 @@ public class ResolutionScopeTests
     {
         public int CreateCount { get; private set; }
 
-        public INamedExecutor CreateExecutor(ResolutionScope scope)
+        public INamedExecutor CreateExecutionNode(ResolutionScope scope)
         {
             CreateCount++;
             building?.Invoke(scope);
@@ -276,7 +275,7 @@ public class ResolutionScopeTests
     {
         public Exception? Caught { get; private set; }
 
-        public INamedExecutor CreateExecutor(ResolutionScope scope)
+        public INamedExecutor CreateExecutionNode(ResolutionScope scope)
         {
             try
             {

@@ -14,7 +14,7 @@ public sealed class ChildResolutionAnalyzer : DiagnosticAnalyzer
     private static readonly DiagnosticDescriptor Rule = new(
         id: DiagnosticId,
         title: "Resolve child configurations through the scope",
-        messageFormat: "Do not create a child's executor directly. Resolve the child through the scope to preserve its sharing and construction checks.",
+        messageFormat: "Do not create a child's execution node directly. Resolve the child through the scope to preserve its sharing and construction checks.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
@@ -44,16 +44,16 @@ public sealed class ChildResolutionAnalyzer : DiagnosticAnalyzer
         context.ReportDiagnostic(Diagnostic.Create(Rule, invocation.GetLocation()));
     }
 
-    // Every configuration builds its executor in CreateExecutor, from the scope it receives.
+    // Configurations build through CreateExecutionNode or an operation-specific CreateExecutor hook, using the supplied scope.
     private static bool IsConstructionHook(IMethodSymbol target) =>
-        target is { Name: "CreateExecutor", Parameters.Length: 1 }
+        target is { Name: "CreateExecutor" or "CreateExecutionNode", Parameters.Length: 1 }
         && ExecutionTypes.Is(target.Parameters[0].Type, "ResolutionScope")
-        && IsExecutorType(target.ReturnType);
+        && IsExecutionNodeType(target.ReturnType);
 
-    private static bool IsExecutorType(ITypeSymbol type) => type switch
+    private static bool IsExecutionNodeType(ITypeSymbol type) => type switch
     {
-        INamedTypeSymbol named => HasContract(named, "IExecutor"),
-        ITypeParameterSymbol parameter => parameter.ConstraintTypes.Any(IsExecutorType),
+        INamedTypeSymbol named => HasContract(named, "IExecutionNode"),
+        ITypeParameterSymbol parameter => parameter.ConstraintTypes.Any(IsExecutionNodeType),
         _ => false
     };
 
@@ -64,7 +64,7 @@ public sealed class ChildResolutionAnalyzer : DiagnosticAnalyzer
         {
             if (symbol is IMethodSymbol method && method.Parameters.Any(static parameter => ExecutionTypes.Is(parameter.Type, "ResolutionScope")))
                 return true;
-            if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutor"))
+            if (symbol is INamedTypeSymbol type && HasContract(type, "IExecutionNode"))
                 return true;
         }
         return false;

@@ -399,31 +399,17 @@ A named configuration such as `mutator.Named("exploration")` supplies a selectab
 
 See [Observability and analysis](/guide/execution/observability-and-analysis) for observation, counter, duration and selection APIs.
 
-## Specialized executor capabilities
+## Adaptable parameters
 
-General wrappers and compositions preserve the operator role contract. Additional controls belong to the selected configuration's raw executor. `GaussianMutator` exposes `IMutationStrengthControl`, which changes execution-scoped mutation strength without providing a mutation operation.
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/AdaptationDocumentationSpecs.cs#adaptation-wiring{csharp}
 
-An observation wrapper can implement `IMutationExecutor` without implementing `IMutationStrengthControl`. An `is` check on the wrapped mutator would then hide the source's adaptation capability. Resolving the control separately lets an algorithm keep adapting the selected source while every mutation call passes through the observation wrapper. The control interface contains no mutation operation, so it supplies no alternative path for mutation calls to bypass observations.
+`GaussianMutator.MutationStrength` remains the configured base value. Its optional `MutationStrengthAdaptation` child is an `IConfigurationNode<IAdaptation>`: the executor resolves it and calls `Apply(baseValue)` once per mutation invocation. `ScaleAdaptation` starts with factor 1 and `OffsetAdaptation` with offset 0. A rule writes their runtime objects through the settable `Factor` and `Offset` properties.
 
-`EvolutionStrategy` projects this optional control during resolution and invokes mutation through the wrapped executor. A wrapper placed directly around the Gaussian configuration preserves access to its raw strength control, because wrappers pass on their child's controls. Generic naming and retry wrappers pass on the same controls, including through child inspection.
+The strategy's slot is `ScaleAdaptation?`, the form its 1/5 success rule writes. Both slots must name the same instance. An unset strategy slot means no adaptation. Wrappers forward nothing: `Timed`, `Counted`, `PipelineMutator` and `ChoosePerInvocation` can surround mutators that read the same link. Several mutators can read one adaptation with different base values. External nodes may implement `IConfigurationNode<IAdaptation>` directly, including as records.
 
-An algorithm author requests the control through the scope its `CreateExecutor` receives:
-
-```csharp
-var mutator = scope.Resolve(Mutator, out IMutationStrengthControl? strength);
-```
-
-Use `mutator` for mutation and `strength`, when non-null, to read or update the selected executor's strength.
-
-An explicitly configured wrapper is a separate selected configuration. For example, assigning `PipelineMutator.Create(gaussian)` to `EvolutionStrategy.Mutator` exposes the pipeline's ordinary mutation role, so that configuration has no strength adaptation. A custom configured wrapper must deliberately expose `IMutationStrengthControl` if its own mutation behavior supports that control; the resolver does not search its children for additional capabilities.
-
-### Transparent wrappers and controls
-
-Every operation uses `IOperator<TOperation, TCandidate>`. The generic `Named` and `Retry` wrappers pass on the child's controls along with its executor: an executor implementing `IExecutorControlProvider` supplies another executor's controls, and `ExecutorControls.Find` follows it. Stacking `gaussian.Retry(3).Named("inner").Named("outer")` therefore keeps `EvolutionStrategy` strength adaptation, including when inspection wraps the Gaussian child.
+A scope resolves one runtime adaptation per configuration reference. Independent runs remain independent. To retain adaptation across Cycle turns, share the adaptation on the Cycle. Sharing the mutator also requires sharing the adaptation: otherwise the retained mutator reads its original adaptation while each fresh strategy writes a different one. The resolver does not detect unused links.
 
 `Retry(3)` includes the first attempt. It catches only a directly thrown `RetryableOperationException`; cancellation, ordinary failures and aggregate exceptions propagate. Every attempt receives the same arguments, child and RNG. Failed attempts retain their random draws, state changes and inspection effects; retry provides no rollback.
-
-A multi-child composite such as a pipeline exposes its own controls. It does not inherit an arbitrary child's strength control. `ChoosePerInvocation` exposes none, because a different child can run on every call.
 
 ## Randomness and executors
 

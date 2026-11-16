@@ -44,14 +44,6 @@ public static class TerminationOperationResolutionExtensions
         public ITerminationExecutor<TRunSearchState> Resolve(IOperator<Termination, TCandidate> source) =>
             (ITerminationExecutor<TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
 
-        public ITerminationExecutor<TRunSearchState> Resolve<TControl>(IOperator<Termination, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (ITerminationExecutor<TRunSearchState>)scope.ResolveOperator<Termination, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
-
         [return: NotNullIfNotNull(nameof(source))]
         public ITerminationExecutor<TRunSearchState>? ResolveOptional(IOperator<Termination, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 

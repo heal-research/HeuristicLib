@@ -1,14 +1,15 @@
 # Configuration vs executors
 
-Configurations describe reusable settings, child configurations and instrument definitions. Resolution keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters within a scope. Executors own private mutable fields; `Sharing` retains selected executors across child scopes.
+Configurations describe reusable settings, child configurations and instrument definitions. Resolution keeps one execution node per configuration/problem reference pair for algorithms and operators, and per configuration reference for nodes needing no problem, such as counters and adaptations within a scope. Executors own private mutable fields; `Sharing` retains selected executors across child scopes.
 
-| Concept          | Responsibility                                                              |
-| ---------------- | --------------------------------------------------------------------------- |
-| Configuration    | Settings, declared children, instruments and a typed `CreateExecutor` hook. |
-| Executor         | Typed operations, private fields and resolved child references.             |
-| Instrument       | Immutable definition of one result per run and how it is placed.            |
-| Run result       | Runtime data collected for an instrument within one run.                    |
-| Resolution scope | Constructing executors with contextual children and run results.            |
+| Concept          | Responsibility                                                         |
+| ---------------- | ---------------------------------------------------------------------- |
+| Configuration    | Settings, declared children, instruments and a construction hook.      |
+| Execution node   | A runtime object created by a configuration and held by a scope.       |
+| Executor         | Typed operations, private fields and resolved child references.        |
+| Instrument       | Immutable definition of one result per run and how it is placed.       |
+| Run result       | Runtime data collected for an instrument within one run.               |
+| Resolution scope | Constructing execution nodes with contextual children and run results. |
 
 ## Authoring execution behavior
 
@@ -16,7 +17,7 @@ Stateless role bases preserve the typed author override and construct a small ex
 
 An operator builds its executor in `IOperator<TCandidate>.CreateExecutor`. Resolution calls this hook with a typed scope containing the problem object. Resolve every child through that scope and pass it to the executor. Initialize private counters, cursors and adaptation values on that executor. Repeated construction of one configuration creates independent private data.
 
-Algorithms follow the same rule in their typed `CreateExecutor` hook. Consumer defined roles implement `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope)`. Invocation local values stay in the operation or iterator. Never store mutable execution data on a configuration.
+Algorithms follow the same rule in their typed `CreateExecutor` hook. Consumer defined roles and non-executing nodes implement `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope)`. `IExecutionNode` covers executors, adaptations and run results. Invocation local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 
 Keep private execution data in its executor. Use `Sharing` on an enclosing configuration to retain that executor across child scopes. Instrument definitions describe run-bound analysis or accounting; configurations read their results through `scope.Results.Result(instrument)`. Neither configuration contains a live result.
 
@@ -34,8 +35,8 @@ A root scope owns one run result table. Child scopes share its results while kee
 
 Create each run from its configured algorithm. There is no separate setup or supply phase. Reusing an instrument definition across runs creates independent results; reusing a wrapper of your own may intentionally retain its caller-owned runtime dependencies.
 
-Cycle constructs fresh executors for every turn and passes search state to the next turn. `cycle.Sharing(A)` keeps one A executor, with its children, for every turn of one Cycle executor, so `Cycle(A, A)` then uses one A executor. Pipeline stages and racing contenders construct fresh executors through their current context and use the run's result table.
+Cycle constructs fresh executors for every turn and passes search state to the next turn. `cycle.Sharing(A)` keeps one A executor, with its own child bindings, for every turn of one Cycle executor, so `Cycle(A, A)` then uses one A executor. Pipeline stages and racing contenders construct fresh executors through their current context and use the run's result table.
 
 Operator authors own concurrent access correctness. Synchronization must protect every participant using a shared executor. Executors and result tables add no automatic disposal lifecycle.
 
-See [execution resolution](/contributing/architecture/execution-resolution) for ordering, controls, failure retry and lifetime rules, and [operator implementation](/contributing/architecture/operator-implementation) for authoring examples.
+See [execution resolution](/contributing/architecture/execution-resolution) for ordering, adaptation, failure retry and lifetime rules, and [operator implementation](/contributing/architecture/operator-implementation) for authoring examples.

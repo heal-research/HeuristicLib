@@ -34,7 +34,7 @@ public sealed class Counter : IConfigurationNode<CountAccumulator>, IClock<long>
     /// <summary>The substitution that places this counter's wrapper, or none for a counter created with <c>new Counter()</c>.</summary>
     public IReadOnlyList<Substitution> Substitutions => substitutions;
 
-    public CountAccumulator CreateExecutor(ResolutionScope scope) => new();
+    public CountAccumulator CreateExecutionNode(ResolutionScope scope) => new();
 
     Func<object> IClock.Bind(RunResults results)
     {

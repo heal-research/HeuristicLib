@@ -107,8 +107,9 @@ public sealed class OperatorLifecycleTests
         var probe = new Probe();
         var source = new SharedOperations(new ProbeLog());
         var scope = ResolutionScope.Create();
-        var mutation = Typed(scope).Resolve(new Lifecycle<Mutation>(source, probe), out ILiveValue? control);
-        control!.Value = 14;
+        var mutation = Typed(scope).Resolve(new Lifecycle<Mutation>(source, probe));
+        var control = Typed(scope).Resolve((IOperator<Mutation, RealVector>)source).ShouldBeAssignableTo<ILiveValue>();
+        control.Value = 14;
         Check(mutation.Mutate(Input, RandomNumberGenerator.Create(1))[0][0] == 14,
             "invocation wrappers preserve the live state used by the callable operation");
         _ = Typed(scope).Resolve(new Lifecycle<Evaluation>(source, probe)).Evaluate([Input[0], Input[0]], RandomNumberGenerator.Create(1));

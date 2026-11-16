@@ -38,7 +38,7 @@ public sealed class ChildResolutionCodeFixProvider : CodeFixProvider
     {
         replacement = construction;
         if (construction.ArgumentList.Arguments.Count != 1
-            || model.GetSymbolInfo(construction, cancellationToken).Symbol is not IMethodSymbol { Name: "CreateExecutor" } hook)
+            || model.GetSymbolInfo(construction, cancellationToken).Symbol is not IMethodSymbol { Name: "CreateExecutor" or "CreateExecutionNode" } hook)
             return false;
         var scope = construction.ArgumentList.Arguments[0].Expression;
         if (model.GetTypeInfo(scope, cancellationToken).Type is not INamedTypeSymbol scopeType || !ExecutionTypes.Is(scopeType, "ResolutionScope"))

@@ -81,15 +81,16 @@ public sealed class OperatorOwnershipTests
             IOperator<Evaluation, RealVector> evaluation = source;
             if (evaluationFirst)
                 _ = typed.Resolve(evaluation);
-            var operation = typed.Resolve(mutation, out ILiveValue? control);
-            Check(control is not null && control.Value == 3, "control projects from the selected executor");
+            var operation = typed.Resolve(mutation);
+            var control = operation.ShouldBeAssignableTo<ILiveValue>();
+            Check(control is not null && control.Value == 3, "the selected executor holds its runtime value");
             control!.Value = 12;
             _ = typed.Resolve(evaluation);
             Check(Invoke(operation) == 12 && typed.Resolve((IOperator<Checksum, RealVector>)source).Read(RandomNumberGenerator.Create(1)) == 12,
                 "every operation of a configuration uses its one executor in a scope");
-            var named = typed.Resolve(mutation.Named("one").Named("two"), out ILiveValue? namedControl);
-            // The names resolve their child in the same scope, and forwarding preserves that executor's control.
-            Check(namedControl is not null && namedControl.Value == 12 && Invoke(named) == 12, "forwarding preserves controls and operation");
+            var named = typed.Resolve(mutation.Named("one").Named("two"));
+            // The names resolve their child in the same scope.
+            Check(Invoke(named) == 12, "names preserve the shared operation");
             _ = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, ProbeState>(Problem).Resolve(mutation);
             Check(log.Preparations == 1, "a view for another compatible state uses the same executor");
             _ = typed.Resolve(mutation);
@@ -259,7 +260,7 @@ public sealed class OperatorOwnershipTests
 
     private sealed class OwnRoleNode : IConfigurationNode<Node>
     {
-        public Node CreateExecutor(ResolutionScope scope) => new(new object());
+        public Node CreateExecutionNode(ResolutionScope scope) => new(new object());
     }
 
     private sealed class CyclicOperations : IOperator<Mutation, RealVector>, IOperator<Evaluation, RealVector>
@@ -275,7 +276,6 @@ public sealed class OperatorOwnershipTests
             _ = Typed(scope).Resolve((IOperator<Evaluation, RealVector>)this);
             throw new InvalidOperationException("Cycle was not detected.");
         }
-
     }
 
     private sealed class MixedCycle : IOperator<Mutation, RealVector>
@@ -289,7 +289,7 @@ public sealed class OperatorOwnershipTests
 
         private sealed class Bridge(IOperator<Mutation, RealVector> child) : IConfigurationNode<Node>
         {
-            public Node CreateExecutor(ResolutionScope scope)
+            public Node CreateExecutionNode(ResolutionScope scope)
             {
                 _ = Typed(scope).Resolve(child);
                 return new Node();

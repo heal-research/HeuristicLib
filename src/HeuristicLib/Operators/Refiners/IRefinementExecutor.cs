@@ -54,14 +54,6 @@ public static class RefinementOperationResolutionExtensions
         public IRefinementExecutor<TCandidate> Resolve(IOperator<Refinement, TCandidate> source) =>
             (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
-        public IRefinementExecutor<TCandidate> Resolve<TControl>(IOperator<Refinement, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
-
         [return: NotNullIfNotNull(nameof(source))]
         public IRefinementExecutor<TCandidate>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
@@ -77,14 +69,6 @@ public static class RefinementOperationResolutionExtensions
     {
         public IRefinementExecutor<TCandidate> Resolve(IOperator<Refinement, TCandidate> source) =>
             (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-
-        public IRefinementExecutor<TCandidate> Resolve<TControl>(IOperator<Refinement, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
 
         [return: NotNullIfNotNull(nameof(source))]
         public IRefinementExecutor<TCandidate>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);

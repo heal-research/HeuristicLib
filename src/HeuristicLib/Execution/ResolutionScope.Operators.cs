@@ -20,12 +20,12 @@ public partial class ResolutionScope
         SearchConfigurationValidation.RequireSupport(source, ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>());
         using var building = node.Tree.Enter(source);
         var owner = Owner(source);
-        var existing = Existing(owner, source, TOperation.IsExecutor<TCandidate, TSearchState>, problem);
+        var existing = Existing(owner, source, static executionNode => executionNode is IExecutor executor && TOperation.IsExecutor<TCandidate, TSearchState>(executor), problem);
         node.MarkResolved(source);
         try
         {
-            if (existing is not null)
-                return existing;
+            if (existing is IExecutor resolved)
+                return resolved;
             // The resolver is the one place that constructs executors; the delegate only chooses the constructing scope.
 #pragma warning disable HLib0001
             var executor = Build(owner, source, scope => source.CreateExecutor(scope.For<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)), problem);

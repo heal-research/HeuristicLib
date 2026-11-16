@@ -266,7 +266,7 @@ public sealed class RunResultsTests
     public void ACounterHeldByAWiderType_StillCountsForTheRun()
     {
         var counter = new Counter();
-        IConfigurationNode<IExecutor> widened = counter;
+        IConfigurationNode<IExecutionNode> widened = counter;
         var root = ResolutionScope.Create();
 
         ((CountAccumulator)root.CreateChildScope().Resolve(widened)).IncrementBy(1);
@@ -295,7 +295,7 @@ public sealed class RunResultsTests
 
     private sealed record ReadsItself : IConfigurationNode<CountAccumulator>
     {
-        public CountAccumulator CreateExecutor(ResolutionScope scope) => scope.Results.Result(this);
+        public CountAccumulator CreateExecutionNode(ResolutionScope scope) => scope.Results.Result(this);
     }
 
     private sealed class ReadsACounter(Counter counter, Action creating) : Instrument<object>
@@ -311,7 +311,7 @@ public sealed class RunResultsTests
 
     private sealed record ReadsAResult(Instrument<object> Definition, Action Building) : IConfigurationNode<CountAccumulator>
     {
-        public CountAccumulator CreateExecutor(ResolutionScope scope)
+        public CountAccumulator CreateExecutionNode(ResolutionScope scope)
         {
             Building();
             scope.Results.Result(Definition);

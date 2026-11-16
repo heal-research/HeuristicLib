@@ -1,7 +1,7 @@
 namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>
-/// A configuration the <see cref="ResolutionScope"/> can resolve into an executor.
+/// A configuration the <see cref="ResolutionScope"/> can resolve into an execution node.
 /// </summary>
 public interface IConfigurationNode
 {
@@ -39,21 +39,21 @@ public interface IConfigurationNode
 }
 
 /// <summary>
-/// A configuration whose executor type is known without a run's types, such as a consumer-defined role.
+/// A configuration whose execution node type is known without a run's types, such as a consumer-defined role.
 /// </summary>
 /// <remarks>
 /// Operators and algorithms are not of this kind: their executor type depends on the run's search space and problem,
 /// so they build through their own hooks. A wrapper for such a role is another configuration of the role that resolves
 /// the configuration it wraps.
 /// </remarks>
-public interface IConfigurationNode<out TExecutor> : IConfigurationNode
-    where TExecutor : class, IExecutor
+public interface IConfigurationNode<out TExecutionNode> : IConfigurationNode
+    where TExecutionNode : class, IExecutionNode
 {
-    /// <summary>Builds this configuration's executor, resolving children through the scope.</summary>
+    /// <summary>Builds this configuration's execution node, resolving children through the scope.</summary>
     /// <remarks>
     /// Resolution calls this once per resolution scope, on the first request; later requests in the scope receive the same
-    /// executor. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
-    /// Keep private mutable data in executor fields.
+    /// execution node. Validate configuration first. Obtain shared resources through explicit handles when sharing is intended.
+    /// Keep private mutable data in execution node fields.
     /// </remarks>
-    TExecutor CreateExecutor(ResolutionScope scope);
+    TExecutionNode CreateExecutionNode(ResolutionScope scope);
 }

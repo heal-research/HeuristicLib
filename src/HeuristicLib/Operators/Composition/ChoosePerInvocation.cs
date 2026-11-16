@@ -9,8 +9,7 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>Chooses one child by weight for each complete call and runs that call on it.</summary>
 /// <remarks>
 /// Each call samples its child with the call's random number generator and then runs on that child with the same
-/// generator. Per-item routing, which splits one call's items among children, is a different composition. The choice
-/// exposes no controls of its children.
+/// generator. Per-item routing, which splits one call's items among children, is a different composition.
 /// </remarks>
 public sealed record ChoosePerInvocation<TOperation, TCandidate> : MultiOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
@@ -41,13 +40,11 @@ public sealed record ChoosePerInvocation<TOperation, TCandidate> : MultiOperator
     }
 }
 
-/// <summary>Runs each call on a child sampled with the call's random number generator; supplies no controls.</summary>
-file readonly struct ChoiceWrapper(WeightedItemSampler<IExecutor> sampler) : IInvocationWrapper, IExecutorControlProvider
+/// <summary>Runs each call on a child sampled with the call's random number generator.</summary>
+file readonly struct ChoiceWrapper(WeightedItemSampler<IExecutor> sampler) : IInvocationWrapper
 {
     public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult> =>
         invocation.Proceed(sampler.Sample(invocation.Random));
-
-    public TControl? Get<TControl>() where TControl : class => null;
 }
 
 /// <summary>What <see cref="ChoosePerInvocation{TOperation, TCandidate}"/> and <see cref="ChoosePerItem{TOperation, TCandidate}"/> share.</summary>

@@ -6,13 +6,11 @@ namespace HEAL.HeuristicLib.Execution;
 /// <remarks>
 /// An operation's <see cref="IOperation{TSelf}.Wrap{TCandidate, TSearchState, TWrapper}"/> returns
 /// a sealed class that derives from this base and implements the operation's executor interface. Its named method, such
-/// as Mutate, passes each call to <see cref="Wrapper"/> as the operation's invocation over <see cref="Executor"/>. The
-/// base forwards the wrapped executor's controls, unless the wrapper implements <see cref="IExecutorControlProvider"/>
-/// and supplies them.
+/// as Mutate, passes each call to <see cref="Wrapper"/> as the operation's invocation over <see cref="Executor"/>.
 /// </remarks>
 /// <param name="executor">The executor to wrap, which implements <typeparamref name="TExecutor"/>.</param>
 /// <param name="wrapper">The wrapper that receives each call.</param>
-public abstract class WrappingExecutor<TExecutor, TWrapper>(IExecutor executor, TWrapper wrapper) : IExecutorControlProvider
+public abstract class WrappingExecutor<TExecutor, TWrapper>(IExecutor executor, TWrapper wrapper)
     where TExecutor : class, IExecutor
     where TWrapper : struct, IInvocationWrapper
 {
@@ -21,7 +19,4 @@ public abstract class WrappingExecutor<TExecutor, TWrapper>(IExecutor executor, 
 
     /// <summary>The wrapper that receives each call.</summary>
     protected TWrapper Wrapper { get; } = wrapper;
-
-    public TControl? Get<TControl>() where TControl : class =>
-        Wrapper is IExecutorControlProvider provider ? provider.Get<TControl>() : ExecutorControls.Find<TControl>(Executor);
 }

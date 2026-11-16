@@ -552,7 +552,7 @@ Configuration is accepted shorthand for configuration node when the context is c
 
 `IOperator<TOperation, TCandidate>` builds its executor through one `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` hook, which it inherits from `IOperator<TCandidate>`. The hook resolves children and looks up run-bound results through the typed scope. Multi-operation configurations implement the hook once and use one executor per problem in a scope. Wrapping and multi bases expose `ChildOperator` and `ChildOperators`.
 
-Algorithms and consumer-defined roles build the same way. An algorithm's `CreateExecutor<TSearchSpace, TProblem>(scope)` receives a scope typed to the run and its search state; an algorithm bound to a search space and problem overrides a `CreateExecutor` typed to them instead. A consumer-defined role implements `IConfigurationNode<TExecutor>.CreateExecutor(ResolutionScope scope)`. The hook is runtime machinery, not a configuration value strategy.
+Algorithms and consumer-defined roles build the same way. An algorithm's `CreateExecutor<TSearchSpace, TProblem>(scope)` receives a scope typed to the run and its search state; an algorithm bound to a search space and problem overrides a `CreateExecutor` typed to them instead. A consumer-defined role implements `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope scope)`. The hook is runtime machinery, not a configuration value strategy.
 
 Iterative algorithms return an `IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` from that hook. The algorithm author resolves the optional interceptor and other declared children through the scope and passes them to the iterative executor constructor.
 
@@ -662,11 +662,11 @@ See also: Candidate, Evaluated candidate, Executor, Resource, Run, Search space.
 
 Status: `Canonical`
 
-An executor is a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It holds resolved children, private fields and any explicitly shared resources. Private data lives with its executor.
+An executor is the executing kind of execution node: a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It holds resolved children, private fields and any explicitly shared resources. Private data lives with its executor.
 
 Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Use explicit `Sharing` to keep an executor across child scopes. A context-free stateless configuration can also serve as its own executor; other stateless helpers retain the binding in a small executor.
 
-The common interface is `IExecutor`. Operation-specific interfaces include `IMutationExecutor` and `IEvaluationExecutor`; algorithms use `IAlgorithmExecutor`. The term does not give the object scheduling, threading, disposal or run-lifecycle responsibilities.
+The common interface is `IExecutor : IExecutionNode`. Operation-specific interfaces include `IMutationExecutor` and `IEvaluationExecutor`; algorithms use `IAlgorithmExecutor`. The term does not give the object scheduling, threading, disposal or run-lifecycle responsibilities.
 
 See also: Configuration, Execution, Execution graph, Resource, Operation, Operation invocation, Run.
 
@@ -682,11 +682,23 @@ See also: Executor, Execution concurrency, Resource, Operation, Operation invoca
 
 ### Execution node
 
-Status: `Legacy`
+Status: `Canonical`
 
-A former name for executor. Use executor for the callable runtime object; use node only when discussing its position in the execution graph.
+An execution node is a runtime object created by a configuration and held in a resolution scope's table. `IExecutionNode` is its marker interface. An executor performs operations; an adaptation applies a runtime value to a base value; a run result holds collected data. The last two do not need to execute operations.
 
-See also: Executor, Execution graph.
+`IConfigurationNode<TExecutionNode>.CreateExecutionNode` constructs nodes whose type is independent of the run's types. Operators and algorithms retain their typed `CreateExecutor` hooks.
+
+See also: Adaptation, Configuration, Executor, Execution graph, Run result.
+
+### Adaptation
+
+Status: `Canonical`
+
+An adaptation is an optional configuration link applying a runtime value to an operator's configured base value. `IAdaptation.Apply(double)` reads it. Built-in adaptation nodes derive from `Adaptation<TAdapted>` and use reference equality: the same instance links readers and writers to one runtime value within a scope.
+
+`ScaleAdaptation` produces an `AdaptedScale` with a settable `Factor` starting at 1; `OffsetAdaptation` produces an `AdaptedOffset` with a settable `Offset` starting at 0. A reader names `IConfigurationNode<IAdaptation>?`; a rule's writer names the form it updates. Share the adaptation when its value must survive child scopes, including when sharing a mutator that reads it. Independent runs create independent values.
+
+See also: Configuration, Execution node, Parameter, Resolution scope.
 
 ### Execution instance
 
@@ -726,7 +738,7 @@ See also: Executor, Resource, Resolution scope, Shared configuration.
 
 Status: `Canonical`
 
-An execution graph is a graph of executors created from a configuration graph during a run.
+An execution graph is a graph of execution nodes created from a configuration graph during a run. It contains executing nodes and non-executing nodes such as adaptations and run results.
 
 A run may contain more than one execution graph over time or through different observation contexts. A shared configuration has one executor per problem reference for its uses within the sharing node.
 
@@ -736,9 +748,9 @@ See also: Configuration graph, Executor, Run.
 
 Status: `Canonical`
 
-A resolution scope resolves configurations to executors during a run.
+A resolution scope resolves configurations to execution nodes during a run.
 
-The scope holds one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. All its problem views use the root's run results. `For<TCandidate, TSearchSpace, TProblem>(problem)` is a view of the same scope; only `CreateChildScope()` creates a fresh activation. `CreateChildScope()` inherits explicit sharing while constructing independent executors for other configurations. `Share` selects configurations retained for child scopes. Independent roots have separate results.
+The scope holds one execution node per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose execution node needs no problem, such as counters and adaptations. All its problem views use the root's run results. `For<TCandidate, TSearchSpace, TProblem>(problem)` is a view of the same scope; only `CreateChildScope()` creates a fresh activation. `CreateChildScope()` inherits explicit sharing while constructing independent execution nodes for other configurations. `Share` selects configurations retained for child scopes. Independent roots have separate results.
 
 See [execution resolution](/contributing/architecture/execution-resolution) for state, construction and observation rules.
 
@@ -774,7 +786,7 @@ A wrapper chain is the ordered set of wrappers around one configuration, each ho
 
 Wrappers belong to the configuration graph, so the configuration states the order: a wrapper written inside another is closer to the executor. Substitutions apply one after another, and a later one sits closer to the node it matches.
 
-Constructing another chain creates its own executor fields and child bindings. Existing chains keep their controls. Run-bound results are shared within the root scope tree, and `Sharing` retains explicitly selected executors across child scopes.
+Constructing another chain creates its own executor fields and child bindings. Existing chains keep their original children and adaptation links. Run-bound results are shared within the root scope tree, and `Sharing` retains explicitly selected executors across child scopes.
 
 See also: Configuration, Executor, Invocation wrapper, Resolution scope, Substitution bundle.
 
@@ -784,7 +796,7 @@ Status: `Canonical`
 
 An invocation wrapper adds behavior such as retry, timing, counting or per-invocation choice around each call to an executor's named method. The operation builds it into one wrapping executor through `IOperation<TSelf>.Wrap`, which passes every call to the wrapper as an invocation holding the wrapped executor and the call's arguments.
 
-`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `Proceed(executor, random)` to run the call on another executor of the same operation, or with another generator; `ChoosePerInvocation` proceeds on a child it samples with that generator. Each executor runs against the problem it was bound to. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each operation writes its invocation as a private struct. Each wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>` and holds its own wrapped executor, so another binding gets its own children. The wrapping executor exposes the wrapped executor's controls unless the wrapper implements `IExecutorControlProvider` and supplies them.
+`IInvocationWrapper` represents this contract and is implemented by small structs. The wrapper calls the invocation's `Proceed()` to run the wrapped method; retry, for example, calls it again after a retryable failure. It reads the call's random number generator as `Random` and can call `Proceed(executor, random)` to run the call on another executor of the same operation, or with another generator; `ChoosePerInvocation` proceeds on a child it samples with that generator. Each executor runs against the problem it was bound to. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Wrappers measuring candidate work ask the invocation for `CountCandidateWork(result)`. Each operation writes its invocation as a private struct. Each wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>` and holds its own wrapped executor, so another binding gets its own children.
 
 See also: Operation invocation, Executor, Wrapper chain, Retry.
 

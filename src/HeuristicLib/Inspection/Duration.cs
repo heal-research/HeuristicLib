@@ -38,7 +38,7 @@ public sealed class Duration : IConfigurationNode<DurationAccumulator>, IClock<T
     /// <summary>The substitution that places this duration's wrapper, or none for a duration created with <c>new Duration()</c>.</summary>
     public IReadOnlyList<Substitution> Substitutions => substitutions;
 
-    public DurationAccumulator CreateExecutor(ResolutionScope scope) => new();
+    public DurationAccumulator CreateExecutionNode(ResolutionScope scope) => new();
 
     Func<object> IClock.Bind(RunResults results)
     {

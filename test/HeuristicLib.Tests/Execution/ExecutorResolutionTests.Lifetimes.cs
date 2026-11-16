@@ -140,7 +140,7 @@ public partial class ExecutorResolutionTests
 
     private sealed class FrameConfiguration(IConfigurationNode<ICounterExecutor>? source = null) : IConfigurationNode<FrameExecutor>
     {
-        public FrameExecutor CreateExecutor(ResolutionScope scope) => new(scope, source);
+        public FrameExecutor CreateExecutionNode(ResolutionScope scope) => new(scope, source);
     }
 
     private sealed class FrameExecutor(ResolutionScope scope, IConfigurationNode<ICounterExecutor>? source) : IExecutor
@@ -153,7 +153,7 @@ public partial class ExecutorResolutionTests
     private sealed record CollectingCounter(List<WeakReference> Weak) : IConfigurationNode<ICounterExecutor>
     {
 
-        public ICounterExecutor CreateExecutor(ResolutionScope scope)
+        public ICounterExecutor CreateExecutionNode(ResolutionScope scope)
         {
             var count = new Count();
             Weak.Add(new WeakReference(count));

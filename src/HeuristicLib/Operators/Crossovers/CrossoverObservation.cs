@@ -26,7 +26,7 @@ public sealed record CrossoverObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate> executor,
         IOperator<Crossover, TCandidate> crossover, Action<CrossoverObservation<TCandidate>> observe, TProblem problem)
-        : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
+        : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -36,8 +36,6 @@ public sealed record CrossoverObservation<TCandidate>(
             observe(new CrossoverObservation<TCandidate>(crossover, parents, offspring, SearchSpace, Problem));
             return offspring;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

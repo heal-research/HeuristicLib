@@ -40,14 +40,6 @@ public static class ReplacementOperationResolutionExtensions
         public IReplacementExecutor<TCandidate> Resolve(IOperator<Replacement, TCandidate> source) =>
             (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
 
-        public IReplacementExecutor<TCandidate> Resolve<TControl>(IOperator<Replacement, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
-
         [return: NotNullIfNotNull(nameof(source))]
         public IReplacementExecutor<TCandidate>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
 
@@ -63,14 +55,6 @@ public static class ReplacementOperationResolutionExtensions
     {
         public IReplacementExecutor<TCandidate> Resolve(IOperator<Replacement, TCandidate> source) =>
             (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-
-        public IReplacementExecutor<TCandidate> Resolve<TControl>(IOperator<Replacement, TCandidate> source, out TControl? control)
-            where TControl : class
-        {
-            var executor = (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
 
         [return: NotNullIfNotNull(nameof(source))]
         public IReplacementExecutor<TCandidate>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);

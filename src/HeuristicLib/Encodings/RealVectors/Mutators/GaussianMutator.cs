@@ -31,32 +31,31 @@ public record GaussianMutator
 
     public double MutationStrength { get; init; }
 
+    public IConfigurationNode<IAdaptation>? MutationStrengthAdaptation { get; init; }
+
     public static Parameter<GaussianMutator, double> MutationRateParameter { get; } =
         new(nameof(MutationRate), static mutator => mutator.MutationRate, static (mutator, value) => mutator with { MutationRate = value });
 
     public static Parameter<GaussianMutator, double> MutationStrengthParameter { get; } =
         new(nameof(MutationStrength), static mutator => mutator.MutationStrength, static (mutator, value) => mutator with { MutationStrength = value });
 
-    public static IReadOnlyList<IParameter> Parameters { get; } = [MutationRateParameter, MutationStrengthParameter];
+    public static Parameter<GaussianMutator, IConfigurationNode<IAdaptation>?> MutationStrengthAdaptationParameter { get; } =
+        new(nameof(MutationStrengthAdaptation), static mutator => mutator.MutationStrengthAdaptation, static (mutator, value) => mutator with { MutationStrengthAdaptation = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [MutationRateParameter, MutationStrengthParameter, MutationStrengthAdaptationParameter];
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    /// <summary>
-    /// The raw execution offers <see cref="IMutationStrengthControl"/> over its persistent strength.
-    /// Algorithms project this control during resolution and invoke mutation through the wrapped execution.
-    /// </summary>
     protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, TRunSearchState> scope) =>
-        new Executor(MutationRate, MutationStrength, searchSpace: scope.SearchSpace);
+        new Executor(MutationRate, MutationStrength, scope.ResolveOptional(MutationStrengthAdaptation), searchSpace: scope.SearchSpace);
 
-    private sealed class Executor(double mutationRate, double mutationStrength, BoundedRealVectorSearchSpace searchSpace)
-        : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>(searchSpace: searchSpace), IMutationStrengthControl
+    private sealed class Executor(double mutationRate, double mutationStrength, IAdaptation? adaptation, BoundedRealVectorSearchSpace searchSpace)
+        : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>(searchSpace: searchSpace)
     {
-        public double CurrentMutationStrength { get; set; } = mutationStrength;
-
         public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             BatchExecution.Sequential(
                 parents,
-                (SearchSpace, mutationRate, mutationStrength: CurrentMutationStrength),
+                (SearchSpace, mutationRate, mutationStrength: adaptation?.Apply(mutationStrength) ?? mutationStrength),
                 static (parent, itemRandom, parameters) => GaussianMutator.Mutate(parent, itemRandom, parameters.SearchSpace, parameters.mutationRate, parameters.mutationStrength),
                 random);
     }

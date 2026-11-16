@@ -26,7 +26,7 @@ public sealed record MutationObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<TCandidate> executor,
         IOperator<Mutation, TCandidate> mutator, Action<MutationObservation<TCandidate>> observe, TProblem problem)
-        : MutationExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
+        : MutationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -36,8 +36,6 @@ public sealed record MutationObservation<TCandidate>(
             observe(new MutationObservation<TCandidate>(mutator, parents, offspring, SearchSpace, Problem));
             return offspring;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

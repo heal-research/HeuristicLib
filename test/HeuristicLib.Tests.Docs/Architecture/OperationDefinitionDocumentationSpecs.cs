@@ -91,7 +91,7 @@ public sealed record EstimationObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(IEstimationExecutor<TCandidate> executor,
         IOperator<Estimation, TCandidate> estimator, Action<EstimationObservation<TCandidate>> observe, TProblem problem)
-        : IEstimationExecutor<TCandidate>, IExecutorControlProvider
+        : IEstimationExecutor<TCandidate>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -103,8 +103,6 @@ public sealed record EstimationObservation<TCandidate>(
             observe(new EstimationObservation<TCandidate>(estimator, candidates, estimates, searchSpace, problem));
             return estimates;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

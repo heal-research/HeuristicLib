@@ -211,7 +211,7 @@ public class ChildResolutionAnalyzerTests
             file static class CustomResolution
             {
                 public static ICustomExecutor Resolve(ResolutionScope scope, IConfigurationNode<ICustomExecutor> configuration) =>
-                    configuration.CreateExecutor(scope);
+                    configuration.CreateExecutionNode(scope);
             }
             """);
         diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
@@ -240,7 +240,7 @@ public class ChildResolutionAnalyzerTests
             file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
             {
                 public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ICustomExecutor CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
+                public ICustomExecutor CreateExecutionNode(ResolutionScope scope) => Child.CreateExecutionNode(scope);
             }
             """);
 
@@ -253,11 +253,11 @@ public class ChildResolutionAnalyzerTests
         var diagnostics = await AnalyzeAsync(Preamble + """
             file sealed class UnrelatedChild
             {
-                public int CreateExecutor(ResolutionScope scope) => 0;
+                public int CreateExecutionNode(ResolutionScope scope) => 0;
             }
             file sealed class DeliberateCaller
             {
-                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutor(scope);
+                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutionNode(scope);
             }
             """);
 
@@ -273,6 +273,33 @@ public class ChildResolutionAnalyzerTests
                 public RecursiveLeaf? Child { get; init; }
                 protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) =>
                     Child is null ? throw new System.InvalidOperationException() : Child.CreateExecutor(scope);
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Theory]
+    [InlineData("IExecutionNode")]
+    [InlineData("IExecutor")]
+    public async Task Reports_WhenANodeHookBuildsItsChildDirectly(string contract)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+            file sealed class Value : {{contract}};
+            file sealed record Configuration(IConfigurationNode<Value> Child) : IConfigurationNode<Value>
+            {
+                public Value CreateExecutionNode(ResolutionScope scope) => Child.CreateExecutionNode(scope);
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_WhenANonExecutingNodeDefersChildConstruction()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed class Value(IConfigurationNode<IExecutionNode> child, ResolutionScope scope) : IExecutionNode
+            {
+                public IExecutionNode Read() => child.CreateExecutionNode(scope);
             }
             """);
         diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);

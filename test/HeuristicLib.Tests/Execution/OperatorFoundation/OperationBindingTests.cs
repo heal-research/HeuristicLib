@@ -141,34 +141,6 @@ public sealed class OperationBindingTests
         other.RandomSources.ShouldBe([recorder.Random.ShouldNotBeNull()]);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(1)]
-    [InlineData(2)]
-    [InlineData(3)]
-    [InlineData(4)]
-    [InlineData(5)]
-    [InlineData(6)]
-    [InlineData(7)]
-    [InlineData(8)]
-    public void EveryOperationForwardsControlsUnlessItsWrapperSuppliesThem(int operation)
-    {
-        var source = new AllOperations();
-        var root = ResolutionScope.Create();
-        var raw = ResolveOperation(root, source, operation);
-        var forwardingScope = root.CreateChildScope();
-        var forwarding = ResolveOperation(forwardingScope, source, operation, new TwiceWrapping());
-        var supplied = new SuppliedControl();
-        var supplyingScope = root.CreateChildScope();
-        var supplying = ResolveOperation(supplyingScope, source, operation, new ControlSupplyingWrapping(supplied));
-
-        // Each build creates its own executor, so the wrapped build forwards the control of its own raw executor.
-        forwarding.ShouldNotBeOfType(raw.GetType());
-        ExecutorControls.Find<IExecutor>(forwarding).ShouldBeOfType(raw.GetType());
-        ExecutorControls.Find<SuppliedControl>(supplying).ShouldBeSameAs(supplied);
-        ExecutorControls.Find<IExecutor>(supplying).ShouldBeNull();
-    }
-
     [Fact]
     public void InvocationWrappersBindOncePerExecutorAndRetainTheirOwnChildWrappers()
     {
@@ -477,21 +449,6 @@ public sealed class OperationBindingTests
             operation.Wrap(executor, new RedirectingWrapper(target, random, recorder));
     }
 
-    private sealed class SuppliedControl;
-
-    private readonly struct ControlSupplyingWrapper(SuppliedControl control) : IInvocationWrapper, IExecutorControlProvider
-    {
-        public TResult Invoke<TInvocation, TResult>(TInvocation invocation) where TInvocation : struct, IInvocation<TResult> =>
-            invocation.Proceed();
-
-        public TControl? Get<TControl>() where TControl : class => control as TControl;
-    }
-
-    private sealed class ControlSupplyingWrapping(SuppliedControl control) : Wrapping
-    {
-        public override IExecutor Wrap(IExecutor executor, OperationInfo operation) =>
-            operation.Wrap(executor, new ControlSupplyingWrapper(control));
-    }
 
     // Rejects an operation without candidate work when it is placed, before anything is resolved.
     private sealed class CandidateMetric : Wrapping
@@ -582,6 +539,5 @@ public sealed class OperationBindingTests
             public bool IsTerminalState(ISearchState state, IRandomNumberGenerator random) { source.Call(random); return true; }
             public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random) { source.Call(random); return currentState; }
         }
-
     }
 }

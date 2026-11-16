@@ -36,7 +36,7 @@ public class ChildResolutionCodeFixTests
             file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
             {
                 public required IConfigurationNode<ICustomExecutor> Child { get; init; }
-                public ICustomExecutor CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
+                public ICustomExecutor CreateExecutionNode(ResolutionScope scope) => Child.CreateExecutionNode(scope);
             }
             """);
 
@@ -50,7 +50,7 @@ public class ChildResolutionCodeFixTests
         var fixedSource = await ApplyFixAsync(Preamble + """
             file sealed class DeferredExecutor(IConfigurationNode<ICustomExecutor> child, ResolutionScope scope) : ICustomExecutor
             {
-                public ICustomExecutor Activate() => child.CreateExecutor(scope.CreateChildScope());
+                public ICustomExecutor Activate() => child.CreateExecutionNode(scope.CreateChildScope());
             }
             """);
 
@@ -132,7 +132,7 @@ public class ChildResolutionCodeFixTests
             file sealed record CustomConfiguration : ICustomRole<int>
             {
                 public required ICustomRole<int> Child { get; init; }
-                public CustomExecutor<int> CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
+                public CustomExecutor<int> CreateExecutionNode(ResolutionScope scope) => Child.CreateExecutionNode(scope);
             }
             """);
 
@@ -146,14 +146,30 @@ public class ChildResolutionCodeFixTests
         await ApplyFixAsync(Preamble + """
             file interface ICustomRole : IConfigurationNode
             {
-                ICustomExecutor CreateExecutor(ResolutionScope scope);
+                ICustomExecutor CreateExecutionNode(ResolutionScope scope);
             }
             file sealed record CustomConfiguration : ICustomRole
             {
                 public required ICustomRole Child { get; init; }
-                public ICustomExecutor CreateExecutor(ResolutionScope scope) => Child.CreateExecutor(scope);
+                public ICustomExecutor CreateExecutionNode(ResolutionScope scope) => Child.CreateExecutionNode(scope);
             }
             """, expectFix: false);
+    }
+
+    [Theory]
+    [InlineData("ResolutionScope")]
+    [InlineData("ResolutionScope<int, SS, P>")]
+    public async Task FixedCode_Compiles_ForANonExecutingNode(string scopeType)
+    {
+        var fixedSource = await ApplyFixAsync(Preamble + $$"""
+            file sealed class Value : IExecutionNode;
+            file sealed class Caller(IConfigurationNode<Value> child, {{scopeType}} scope) : IExecutionNode
+            {
+                public Value Read() => child.CreateExecutionNode(scope);
+            }
+            """);
+        fixedSource.ShouldContain("=> scope.Resolve(child);");
+        await AssertCompilesWithoutDiagnosticAsync(fixedSource);
     }
 
     private static async Task<string> ApplyFixAsync(string source, bool expectFix = true)

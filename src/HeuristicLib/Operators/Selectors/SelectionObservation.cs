@@ -29,7 +29,7 @@ public sealed record SelectionObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate> executor,
         IOperator<Selection, TCandidate> selector, Action<SelectionObservation<TCandidate>> observe, TProblem problem)
-        : SelectionExecutor<TCandidate, TSearchSpace, TProblem>(problem), IExecutorControlProvider
+        : SelectionExecutor<TCandidate, TSearchSpace, TProblem>(problem)
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -39,8 +39,6 @@ public sealed record SelectionObservation<TCandidate>(
             observe(new SelectionObservation<TCandidate>(selector, population, objective, count, selected, SearchSpace, Problem));
             return selected;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

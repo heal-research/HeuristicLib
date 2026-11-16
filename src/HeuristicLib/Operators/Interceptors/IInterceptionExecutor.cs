@@ -50,15 +50,6 @@ public static class InterceptionOperationResolutionExtensions
             where TSearchState : class, ISearchState =>
             (IInterceptionExecutor<TSearchState>)scope.ResolveOperator<Interception<TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>(source, scope.Problem);
 
-        public IInterceptionExecutor<TSearchState> Resolve<TSearchState, TControl>(IOperator<Interception<TSearchState>, TCandidate> source, out TControl? control)
-            where TSearchState : class, ISearchState
-            where TControl : class
-        {
-            var executor = scope.Resolve(source);
-            control = ExecutorControls.Find<TControl>(executor);
-            return executor;
-        }
-
         [return: NotNullIfNotNull(nameof(source))]
         public IInterceptionExecutor<TSearchState>? ResolveOptional<TSearchState>(IOperator<Interception<TSearchState>, TCandidate>? source)
             where TSearchState : class, ISearchState => source is null ? null : scope.Resolve(source);

@@ -22,7 +22,7 @@ public sealed record ChecksumObservation<TCandidate>(
 
     private sealed class Executor<TSearchSpace, TProblem>(IChecksumExecutor executor,
         IOperator<Checksum, TCandidate> checksum, Action<ChecksumObservation<TCandidate>> observe, TProblem problem)
-        : IChecksumExecutor, IExecutorControlProvider
+        : IChecksumExecutor
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -34,8 +34,6 @@ public sealed record ChecksumObservation<TCandidate>(
             observe(new ChecksumObservation<TCandidate>(checksum, result, searchSpace, problem));
             return result;
         }
-
-        public TControl? Get<TControl>() where TControl : class => ExecutorControls.Find<TControl>(executor);
     }
 }
 

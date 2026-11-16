@@ -514,6 +514,52 @@ Out of scope for this step: the items under "Later simplifications recorded on 2
 
 Accepted (D4). See [the proposal](#executor-control-proposal). `IExecutionNode` arrives here (D19), together with the first node that does not execute anything.
 
+Decided by the developer on 2026-11-16, while drafting the implementation spec:
+
+- `IRunResult` derives from `IExecutionNode` instead of `IExecutor`. A run result is a runtime object created by a configuration node and held in the scope's table, which is what D19 calls an execution node, but it executes nothing.
+- A shared node that links an operator and an algorithm to one runtime value has reference equality. The resolver keys by reference, so value equality would make configurations that adapt and configurations that do not compare equal, and keying by value would silently merge independently created nodes.
+- **The base value stays plain data, and adaptation is a separate optional link.** This amends the proposal's "holds the current value". `GaussianMutator` keeps `double MutationStrength` as its base, a regular property with value equality, and gains a nullable reference to an adaptation node. Two mutators without an adaptation and equal bases are equal; equal bases with the same adaptation reference are equal. The base stays a declared `double` parameter. An adaptation option suggested during review let the link hold only a scale factor; the developer generalized it.
+- **Adaptation is general, not specific to mutation or to the evolution strategy.** Its read side is one interface mapping the base value to the effective value (`double` to `double`), so any operator can make a parameter adaptable through an optional link. Each form is a node with its own runtime object and its own write operation. Scale (multiply) and offset (add) are the first two forms. An algorithm's slot names the form its rule writes, so the evolution strategy's 1/5 success rule takes a scale form. The working name in discussion was "strategy parameter"; the final name is open.
+- The base value's adaptation is not itself a declared parameter in this phase. The baseline comes first, and fitting adaptation into the declared parameter system is later work.
+- **The concept is named adaptation.** The read side is `IAdaptation`, and an abstract class `Adaptation<TAdapted>` is the base of adaptation nodes, so they are classes with reference equality and cannot be records. "Strategy parameter" was rejected because evolution strategies use it for self-adaptive values carried by each individual, and because the library's _parameter_ already means a declared configuration parameter. Scale and offset are the only forms for now; clamping, absolute override and composite forms are added when a rule needs them.
+
+**Implementation spec (accepted 2026-11-16):** Implementing the interface directly, for example with a record, stays open to external authors; the base class only makes the built-in forms and derived adaptations classes. Backward compatibility is not a goal: migrate every in-repository caller, including tests, documentation specs and documentation text, and add no shims.
+
+1. **Execution nodes (D19).**
+   - Add `public interface IExecutionNode;` in `Execution/IExecutionNode.cs`. `IExecutor : IExecutionNode`. `IRunResult : IExecutionNode` instead of `IExecutor`.
+   - `IConfigurationNode<out TExecutionNode> where TExecutionNode : class, IExecutionNode`, with `TExecutionNode CreateExecutionNode(ResolutionScope scope)` replacing `CreateExecutor`. Update its XML documentation.
+   - `ResolutionScope.Resolve`, `ResolveOptional`, `TryResolve` and the private helpers are constrained to `IExecutionNode`. The table becomes `Dictionary<NodeKey, IExecutionNode>`, renamed from `ExecutorKey`. Messages that say "executor" for these nodes say "execution node" where the node need not execute.
+   - Operator and algorithm `CreateExecutor` hooks keep their names.
+   - `ChildResolutionAnalyzer`, its code fix and the direct-call check (HLib0001) recognize `CreateExecutionNode` as they recognize `CreateExecutor`; extend their tests.
+   - Migrate `Counter`, `Duration` and every test node implementing the interface.
+2. **Adaptation** (grouping folder `Operators/Adaptation` in namespace `HEAL.HeuristicLib.Operators`, as `Operators/Composition` is; changed from a top-level `Adaptation` namespace after review, because the base class would share the namespace's name).
+   - `public interface IAdaptation : IExecutionNode { double Apply(double baseValue); }`
+   - `public abstract class Adaptation<TAdapted> : IConfigurationNode<TAdapted> where TAdapted : class, IAdaptation`, with `public abstract TAdapted CreateExecutionNode(ResolutionScope scope)`. Its documentation states the reference-equality contract: an adaptation is a link, and every place that holds the same instance applies the same runtime value.
+   - `public sealed class ScaleAdaptation : Adaptation<AdaptedScale>` and `public sealed class AdaptedScale : IAdaptation`: a settable `Factor` starting at 1.0, and `Apply(b) => b * Factor`.
+   - `public sealed class OffsetAdaptation : Adaptation<AdaptedOffset>` and `public sealed class AdaptedOffset : IAdaptation`: a settable `Offset` starting at 0.0, and `Apply(b) => b + Offset`.
+   - The forms carry no configuration data; the starting point is the operator's base value. Runtime objects have public constructors so external nodes can produce them. Each node and its runtime object share one file. Changed after review: atomic `Multiply`/`Add` with `Interlocked.CompareExchange` and `Volatile.Read` were replaced by plain settable properties, because they only guarded concurrent writers to one shared adaptation.
+   - Slots that read an adaptation are typed `IConfigurationNode<IAdaptation>?`; covariance accepts every form. Slots that write one are typed to the form's node, such as `ScaleAdaptation?`, so `ResolveOptional` infers the runtime type without a cast.
+3. **`GaussianMutator`.** Keeps `double MutationStrength` and `MutationStrengthParameter` unchanged. Adds `IConfigurationNode<IAdaptation>? MutationStrengthAdaptation { get; init; }` with a declared child parameter, so `Substitute` and `Sharing` reach it. The executor resolves it optionally and computes `adaptation?.Apply(MutationStrength) ?? MutationStrength` once per `Mutate` call. The executor no longer implements a control.
+4. **`EvolutionStrategy`.** Adds `ScaleAdaptation? MutationStrengthAdaptation { get; init; }` with a declared parameter. Unset means no adaptation. When set, the 1/5 success rule multiplies `Factor` by the factor it computes today. Factories take no adaptation argument.
+5. **Removals.** `ExecutorControls.cs` with `IExecutorControlProvider`; `IMutationStrengthControl`; control forwarding in `WrappingExecutor`, the nine operation observation executors and `ChoosePerInvocation`'s wrapper; the sixteen `Resolve<TControl>(…, out TControl?)` overloads in the role files; control remarks in `IInvocationWrapper` and `OperationInfo`.
+6. **Tests.**
+   - New, for adaptation: the forms' arithmetic; equality (mutators without adaptation and equal bases are equal; equal bases with the same adaptation are equal; different adaptation instances are not).
+   - New, for the strategy: the D16 table rows with adaptation in place of strength (nothing shared: each turn restarts at the base; adaptation shared: it survives turns; adaptation and mutator shared; mutator shared alone: the strategy adapts a value its mutator does not read, pinned as documented behavior); two mutators under `ChoosePerInvocation` linked to one adaptation both adapt; `Timed`, `Counted` and `PipelineMutator` around the mutator do not stop adaptation; an unset slot does not adapt; an offset adaptation applied by an external test rule; the configuration never changes; independent runs stay independent.
+   - Rewrite: `AdaptableMutationStrengthTests`, `MutationParameterValidationTests` and the control parts of `SelectionSpecs`, `OperatorAuthoringSpecs`, `OperatorPreparationSpecs` and `OperatorOwnershipTests`; `ExecutorResolutionTests`' child-first collision test reads its child directly.
+   - Delete: `OperationBindingTests.EveryOperationForwardsControlsUnlessItsWrapperSuppliesThem` and its helper types; the provider implementations in `OperationDefinitionDocumentationSpecs` and `CustomWrapperDocumentationSpecs`.
+   - Strategies naming `GaussianMutator` stop adapting (D16). Report every expected value that changes with its test name; do not adjust an expectation silently.
+7. **Documentation.**
+   - Rewrite "Mutable run parameters" in `operator-implementation.md` as adaptable parameters: base value, optional adaptation link, `Apply` once per invocation, an algorithm slot typed to the form it writes, and the sharing rules.
+   - Replace the control paragraphs in `execution-resolution.md` § "Controls, failures and lifetime" (rename the section) and "Specialized executor capabilities" in `operator-composition.md` with the adaptation wiring example.
+   - Remove control forwarding from `writing-wrappers.md`, developer guidelines § 4 (wrapping executor sentence) and `layering.md`; add `Adaptation` to the layering table (contract in L1, forms in L3).
+   - Glossary: `Execution node` becomes `Canonical` with D19's meaning; `Executor` says it is the executing kind of execution node; add `Adaptation` as `Canonical`.
+   - Backlog: remove the two entries on controls under "Runs, execution and experiments" and "Optional capabilities and packaging".
+   - Plan: amend the executor control proposal's code sample and description to the adaptation shape.
+
+Out of scope: observing adaptation values in traces (phase 6), declared-parameter integration and grids over adaptation (later), forms beyond scale and offset, `IAdaptation<T>` for non-`double` parameters, and the configuration graph check for an adaptation nobody writes or reads.
+
+- Implemented on 2026-11-16: migrated general configuration construction and resolution to `IExecutionNode`/`CreateExecutionNode`, separated run results from executors, added reference-equal scale and offset adaptation links, wired optional adaptation into Gaussian mutation and the evolution strategy, and removed controls, forwarding and all sixteen control-resolution overloads. Updated analyzer/code-fix coverage, adaptation, sharing and external-author tests, executable documentation, glossary, layering and backlog. No design deviations or compatibility shims. The rewritten pipeline case (`EvolutionStrategy_ConfiguredWrapperDoesNotInheritItsChildStrengthControl` → `EvolutionStrategy_ExplicitAdaptationWorksThroughWrappers("pipeline")`) deliberately changes `[0, -1.5, -3]` to `[0, -1.5, -2.5]` because both strategy and mutator explicitly name the adaptation; no existing regression expectation needed a D16 adjustment. Validation: restore passed after retrying NuGet outside the sandbox; Release build passed with zero errors (the last incremental build reported 8 existing warnings); focused adaptation tests **61 passed**, analyzer/code-fix tests **35 passed**, architecture tests **16 passed**; final solution **3,376 passed**, zero failures or skips (core **2,841**, API usage **221**, documentation **20**, Experimental **267**, scenarios **27**; baseline **3,363**). Whitespace, style and analyzer verification each passed; documentation build passed after retrying generated-output cleanup outside the sandbox; Prettier passed for all **10 changed Markdown files**; `git diff --check` passed.
+
 ### Phase 6: simplify observation
 
 Delivers ideas 10 and 14. Today's concepts are sources, observation records, instruments, traces, value functions, retention, clocks, counters, durations, accumulating results and `IObservationInstrument`. Proposed model: an instrument creates a per-run result and records one observation into it, and `Observed` places it. A trace, a best-so-far curve, a Pareto front and a genealogy are then all such folds, and retention is a setting of the trace. Counting and timing keep their dedicated wrappers, because they allocate no observation and timing must include failed calls. A detailed inventory comes when this phase starts, and it must not close custom clocks or external collectors. A custom accumulating analyzer still needs a class with three overrides after phase 3, which this phase should reduce. `Instrument` is retired no later than this phase, with `Analyzer` as the surviving name. `Instrument` keeps its name until then, with no separate rename. The non-generic base and the static `Analyzer` factory class cannot both use that name, so one of them needs another name or home. `IClock` extends `ISubstitutionBundle` only so that a trace can place its clocks ([D59](#decided-in-round-21)), which gives read-only clocks such as `Clock.Elapsed` an empty list; this phase separates reading a clock from placing it, so that `IClock` only reads and counters and durations are bundles in their own right.
@@ -885,41 +931,44 @@ Decided by the developer on 2026-11-11, at the start of phase 4.
 
 ### Executor control proposal
 
-`EvolutionStrategy` asks the resolved mutator for `IMutationStrengthControl`, and `GaussianMutator` implements it. Every wrapper in between must forward it, and `ExecutorControls`, `IExecutorControlProvider` or the control are referenced in 37 source files. Choices and routers hide it, so the strategy silently stops adapting.
+The strategy and its mutators name one explicit adaptation node. The base strength remains plain configuration data; the adaptation holds a scale factor at runtime.
 
 ```csharp
-// Proposed syntax, not implemented. The strength is data; its runtime object holds the current value.
-var strength = new MutationStrength(initial: 0.1);
-var es = new EvolutionStrategy<RealVector>
+var adaptation = new ScaleAdaptation();
+var gaussian = new GaussianMutator(0.5, 0.1)
+{
+    MutationStrengthAdaptation = adaptation
+};
+var strategy = new EvolutionStrategy<RealVector>
 {
     Creator = creator,
-    Mutator = new GaussianMutator(mutationRate: 0.5, strength).Timed(duration),
-    Strength = strength
+    Mutator = gaussian.Timed(duration),
+    MutationStrengthAdaptation = adaptation
 };
-
-// One executor per scope through default sharing, fresh per Cycle turn, kept across turns on request.
-var cycle = CycleAlgorithm.Create(es, other).Sharing(strength);
 ```
 
-`MutationStrength` implements `IConfigurationNode<TExecutor>`, the existing form for a node that is not an operator, and both the mutator and the strategy call `scope.Resolve(strength)`. Its runtime part is a plain object holding the current value, which implements the empty `IExecutor` marker today and `IExecutionNode` under D19. Default sharing gives both the same object, and no new scope feature is needed. The `Strength` slot is typed `IConfigurationNode<IMutationStrengthControl>?`, so that a consumer's strength node works the same way. Today `GaussianMutator` is the only implementer of the control, and only `EvolutionStrategy` reads it.
+```csharp
+// Fresh adaptation each turn by default; retain it across turns explicitly.
+var cycle = CycleAlgorithm.Create(strategy, other).Sharing(adaptation);
+```
 
-Adaptive strength, per-turn reset, deliberate retention and observation of the value all remain. Wrappers forward nothing. Several mutators adapt together by referencing one strength, so "what is the strength of a choice of two mutators" no longer arises. What is lost is a strategy adapting a strength it was never told about. Keeping the strength as an algorithm-owned operation input, the report's preferred fix, stays rejected because it loses the value at each fresh turn, against the [S7 assessment](operator-unification-system-spec.md#s7-executor-reuse).
+Both the mutator and strategy resolve the adaptation through the ordinary scope. `ScaleAdaptation : Adaptation<AdaptedScale>` creates a runtime factor initially 1. `IAdaptation.Apply(baseValue)` reads the effective value, and the strategy's 1/5 success rule multiplies `AdaptedScale.Factor`. An `OffsetAdaptation` similarly creates an `AdaptedOffset` with a settable `Offset`, for other rules. External nodes can implement `IConfigurationNode<IAdaptation>` directly. The read slot accepts every form; the strategy's write slot names `ScaleAdaptation`. Wrappers forward nothing, and several mutators adapt together by naming the same link. Observing adaptation values waits for phase 6.
 
-Decided details (D16):
+Decided details (D16, amended 2026-11-16):
 
-- **An unset slot means no adaptation,** and the plain `double` constructor means a fixed strength. `new GaussianMutator(0.5, 0.1)` in an `EvolutionStrategy` adapts automatically today, but no recommendation produces `GaussianMutator`, so only callers that name it are affected.
-- **The strength must be shared whenever the mutator is, or whenever its value must survive a turn.** A shared configuration shares its children only when they are shared too.
+- **An unset strategy slot means no adaptation.** A Gaussian mutator with no link uses its configured base unchanged. Strategies naming Gaussian mutators must opt in explicitly; factories take no adaptation argument.
+- **Share the adaptation whenever the mutator is shared or its value must survive a turn.** Sharing a configuration shares its children only when they are shared too.
 
-  | Shared on the Cycle   | Effect                                                                                            |
-  | --------------------- | ------------------------------------------------------------------------------------------------- |
-  | Nothing               | A fresh strength each turn; mutator and strategy agree                                            |
-  | `strength`            | The value survives turns; mutator and strategy agree                                              |
-  | `strength`, `mutator` | The value and the mutator's private data survive turns; mutator and strategy agree                |
-  | `mutator` only        | Wrong: the mutator and the strategy hold different strengths, and nothing reads the adapted value |
+  | Shared on the Cycle     | Effect                                                                                    |
+  | ----------------------- | ----------------------------------------------------------------------------------------- |
+  | Nothing                 | A fresh adaptation each turn; mutator and strategy agree                                  |
+  | `adaptation`            | The value survives turns; mutator and strategy agree                                      |
+  | `adaptation`, `mutator` | Adaptation and mutator private data survive turns; both agree                             |
+  | `mutator` only          | The mutator reads its original adaptation; each strategy writes another that nobody reads |
 
-  The rule stays as it is, with no detection. The documentation and a test cover this case, and the [configuration graph check](developer-backlog.md#scenarios-awaiting-a-concrete-need) may report it later.
+  No detection is added. Documentation and tests cover this case; a later configuration graph check may report it.
 
-- **A strength the mutator does not read** is left to the same later check.
+- An adaptation the mutator does not read is left to that same later check.
 
 ### Problem-bound executor conditions
 
