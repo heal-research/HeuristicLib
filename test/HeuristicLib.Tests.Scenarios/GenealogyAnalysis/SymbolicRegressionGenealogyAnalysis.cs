@@ -49,7 +49,7 @@ public class GenealogyGraphTests
 
         var analysis = ga.Iterations.TracePopulationCandidates();
 
-        var run = ga.AnalyzedBy(analysis).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = ga.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), [analysis]);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var ares = run.Result(analysis).Snapshot();
 
@@ -83,16 +83,16 @@ public class GenealogyGraphTests
             MaximumGenerations = gens
         };
 
-        var evalQualities = algorithm.Evaluator.Invocations.TraceBestCandidateSoFar();
+        var evalQualities = Analyzer.BestSoFar(algorithm.Evaluator);
         var qualities = algorithm.Iterations.TracePopulationCandidates();
         var genealogyAnalysis =
             Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
 
-        var run = algorithm.AnalyzedBy(evalQualities, qualities, genealogyAnalysis).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), [evalQualities, qualities, genealogyAnalysis]);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         var qres = run.Result(qualities).Snapshot();
-        var eres = run.Result(evalQualities).Snapshot();
+        var eres = run.Result(evalQualities).ToArray();
         var gres = run.Result(genealogyAnalysis);
 
         qres.Count.ShouldBe(gens);
@@ -102,7 +102,7 @@ public class GenealogyGraphTests
         res.Population.EvaluatedCandidates.All(solution => solution.ObjectiveVector.Count == 1).ShouldBeTrue();
         var graphViz = gres.ToGraphViz();
         (graphViz.Length > 0).ShouldBeTrue();
-        eres[^1].Value.ObjectiveVector.ShouldBe(qres[^1].Value.Best.ObjectiveVector);
+        eres[^1].Value.ShouldBe(qres[^1].Value.Best.ObjectiveVector);
     }
 
     // Note: be cautious here because Levenberg-Marquardt likely caused an endless loop in the past.
@@ -118,7 +118,7 @@ public class GenealogyGraphTests
         var genealogy =
             new GenealogyAnalyzer<SymbolicExpressionTree, SingleSolutionState<SymbolicExpressionTree>>(
                 mutators: [algorithm.Mutator], algorithms: [algorithm]);
-        var run = algorithm.TerminatedAfterIterations(8).AnalyzedBy(genealogy).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = algorithm.TerminatedAfterIterations(8).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), [genealogy]);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.Result(genealogy);
         res.Population.EvaluatedCandidates.ShouldHaveSingleItem();
@@ -153,7 +153,7 @@ public class GenealogyGraphTests
         var genealogy = Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
         var qualities = algorithm.Iterations.TracePopulationCandidates();
 
-        var run = algorithm.AnalyzedBy(genealogy, qualities).CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(AlgorithmRandomSeed), [genealogy, qualities]);
         var res = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
         var gres = run.Result(genealogy);
         var qres = run.Result(qualities).Snapshot();

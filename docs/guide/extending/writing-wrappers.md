@@ -56,6 +56,8 @@ See [Execution resolution](/contributing/architecture/execution-resolution) for 
 
 ## Runtime dependencies
 
-Supply concrete runtime dependencies through the wrapper's properties and pass them to its executor. A wrapper resolves only its declared children and has no resource lookup. Create a resource-dependent wrapper for each run so independent runs receive independent data.
+A wrapper measures time with `scope.Results.TimeProvider`, as the library's timing wrappers do.
 
-Use `mutator.Invocations.Count()`, `CountCandidates()` or `Duration()` to define a counter or a duration. Attach it with `AnalyzedBy` or place it through `Counted` or `Timed`, and read its result with `run.Result(counter)`. A terminator receives the same definition and reads that run's result. Reusing a definition across runs gives independent accumulators. See [shared accounting](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator).
+Supply other concrete runtime dependencies through the wrapper's properties and pass them to its executor. A wrapper resolves only its declared children and has no resource lookup. Create a resource-dependent wrapper for each run so independent runs receive independent data.
+
+Create a counter with `new Counter()` or a duration with `new Duration()`. Place it with `mutator.Invocations.Counting(counter)`, `CountingCandidates(counter)` or `Timing(duration)` passed to `CreateRun` or `Substitute`, or wrap directly with `Counted` or `Timed`. List its placement after every analyzer that reads it so the reading includes the call. Read its result with `run.Result(counter)`. A terminator receives the same definition and reads that run's result. Reusing a definition across runs gives independent accumulators. See [shared accounting](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator).

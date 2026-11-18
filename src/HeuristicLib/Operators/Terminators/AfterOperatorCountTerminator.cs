@@ -9,8 +9,8 @@ namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>Terminates once the run's result of a counter reaches a maximum count.</summary>
 /// <remarks>
-/// The counter counts wherever it is attached or placed in the run, such as <c>evaluator.Invocations.Count()</c> attached
-/// with <c>AnalyzedBy</c> or placed with <c>Counted</c>, and this terminator reads the same result, whichever is built
+/// The counter counts wherever it is attached or placed in the run, such as <c>evaluator.Invocations.Counting(counter)</c> applied
+/// with <c>CreateRun</c> or placed with <c>Counted</c>, and this terminator reads the same result, whichever is built
 /// first. The count accumulates over the whole run, but the terminator stops only the stream it is placed on; place it
 /// on the root algorithm to stop the run.
 /// </remarks>

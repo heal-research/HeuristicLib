@@ -113,8 +113,8 @@ public static class EstimationObservations
         public InvocationSource<Estimation, TCandidate, EstimationObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Estimation, TCandidate, EstimationObservation<TCandidate>>(estimator);
 
-        public Observed<Estimation, TCandidate, EstimationObservation<TCandidate>> Observed(IObservationInstrument<EstimationObservation<TCandidate>> instrument) =>
-            new(estimator, instrument);
+        public Observed<Estimation, TCandidate, EstimationObservation<TCandidate>> Observed(IObservationReceiver<EstimationObservation<TCandidate>> receiver) =>
+            new(estimator, receiver);
     }
 }
 #endregion operation-observation
@@ -140,13 +140,13 @@ public sealed class OperationDefinitionDocumentationSpecs
     {
         var searchSpace = new BoundedRealVectorSearchSpace(1, -10.0, 10.0);
         var problem = FuncProblem.Create((RealVector candidate) => candidate[0] * candidate[0], searchSpace, SingleObjective.Minimize);
-        var estimator = ChoosePerItem.Create<Estimation, RealVector>(new ScaledEstimator(1.0), new ScaledEstimator(10.0));
+        IOperator<Estimation, RealVector> estimator = ChoosePerItem.Create<Estimation, RealVector>(new ScaledEstimator(1.0), new ScaledEstimator(10.0));
         var counts = estimator.Invocations.Trace(observation => observation.Estimates.Count);
         var root = ResolutionScope.Create();
         var scope = root.For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem);
         RealVector[] candidates = [new(1.0), new(2.0), new(3.0)];
 
-        var estimates = scope.Resolve(estimator.AnalyzedBy(counts)).Estimate(candidates, RandomNumberGenerator.Create(42));
+        var estimates = scope.Resolve(estimator.Substitute(counts)).Estimate(candidates, RandomNumberGenerator.Create(42));
 
         estimates.Count.ShouldBe(candidates.Length);
         for (var i = 0; i < candidates.Length; i++)

@@ -43,7 +43,7 @@ public partial class ResolutionScope
         return root;
     }
 
-    /// <summary>The results of the run this scope tree belongs to, one per instrument.</summary>
+    /// <summary>The results of the run this scope tree belongs to, one per result-producing configuration.</summary>
     /// <remarks>
     /// Configurations look up the results they write into or read, such as the counter a terminator checks. Every scope
     /// of one tree has the same results.

@@ -326,15 +326,14 @@ public class PractitionerUsageSpecs
         var states = algorithm
             .LimitedToDuration(
                 algorithm.Evaluator,
-                TimeSpan.FromSeconds(3),
-                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+                TimeSpan.Zero)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
               .ToList();
 
-        states.Count.ShouldBe(2);
+        states.Count.ShouldBe(1);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
@@ -349,15 +348,14 @@ public class PractitionerUsageSpecs
 
         var states = algorithm
             .LimitedToDuration(
-                TimeSpan.FromSeconds(3),
-                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+                TimeSpan.Zero)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
               .ToList();
 
-        states.Count.ShouldBe(2);
+        states.Count.ShouldBe(1);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
@@ -397,19 +395,19 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void InspectionWrappers_CanBeConstructedDirectlyOrThroughInstrumentSources()
+    public void InspectionWrappers_CanBeConstructedDirectlyOrThroughAnalyzerSources()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var mutator = CreateSimpleGeneticAlgorithm(problem).Mutator;
         var counter = new Counter();
 
         var counted = mutator.Counted(counter, OperatorCountMetric.Candidates);
-        var measurement = mutator.Invocations.Duration();
+        var measurement = new Duration();
 
         counted.ChildOperator.ShouldBeSameAs(mutator);
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
-        mutator.AnalyzedBy(measurement).ShouldBeOfType<Timed<Mutation, RealVector>>().Duration.ShouldBeSameAs(measurement);
+        mutator.Substitute(mutator.Invocations.Timing(measurement)).ShouldBe(mutator.Timed(measurement));
     }
 
     [Fact]
@@ -425,15 +423,14 @@ public class PractitionerUsageSpecs
         var states = algorithm
             .LimitedToDuration(
                 algorithm.Mutator,
-                TimeSpan.FromSeconds(3),
-                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
+                TimeSpan.Zero)
             .Stream(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
               .ToList();
 
-        states.Count.ShouldBe(3);
+        states.Count.ShouldBe(1);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
@@ -447,11 +444,11 @@ public class PractitionerUsageSpecs
             MutationRate = 1.0
         };
         // One counter counts the crossover where it is attached and the mutator where it is placed.
-        var counter = baseAlgorithm.Crossover.Invocations.Count();
+        var counter = new Counter();
         var observedAlgorithm = baseAlgorithm with { Mutator = baseAlgorithm.Mutator.Counted(counter) };
         var algorithm = observedAlgorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
-        var run = algorithm.AnalyzedBy(counter).CreateRun(problem, RandomNumberGenerator.Create(987));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(987), [baseAlgorithm.Crossover.Invocations.Counting(counter)]);
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
               .ToList();
 
@@ -587,20 +584,6 @@ public class PractitionerUsageSpecs
             CheckedStateCount++;
             HasTerminated = CheckedStateCount >= StopOnCheckedStateCount;
             return HasTerminated;
-        }
-    }
-
-    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
-    {
-        private long timestamp;
-
-        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
-
-        public override long GetTimestamp()
-        {
-            var current = timestamp;
-            timestamp += step.Ticks;
-            return current;
         }
     }
 }

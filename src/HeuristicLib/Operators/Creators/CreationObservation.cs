@@ -47,8 +47,8 @@ public static class CreationObservations
         public InvocationSource<Creation, TCandidate, CreationObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Creation, TCandidate, CreationObservation<TCandidate>>(creator);
 
-        /// <summary>Records this creator's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Creation, TCandidate, CreationObservation<TCandidate>> Observed(IObservationInstrument<CreationObservation<TCandidate>> instrument) =>
-            new(creator, instrument);
+        /// <summary>Records this creator's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Creation, TCandidate, CreationObservation<TCandidate>> Observed(IObservationReceiver<CreationObservation<TCandidate>> receiver) =>
+            new(creator, receiver);
     }
 }

@@ -7,80 +7,106 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
 
-// Covers the run's results: one per instrument, created at the first lookup and kept for the run, and the time the
+// Covers the run's results: one per configuration, created at the first lookup and kept for the run, and the time the
 // root algorithm has spent executing.
 public sealed class RunResultsTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> Problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
 
     [Fact]
-    public void AnInstrumentHasOneResultPerRun_CreatedAtItsFirstLookup()
+    public void AnAnalyzerHasOneResultPerRun_CreatedAtItsFirstLookup()
     {
-        var instrument = new CreationCountingInstrument();
+        var analyzer = new CreationCountingAnalyzer();
         var first = ResolutionScope.Create();
         var second = ResolutionScope.Create();
 
-        instrument.Created.ShouldBe(0);
-        var result = first.Results.Result(instrument);
+        analyzer.Created.ShouldBe(0);
+        var result = first.Results.Result(analyzer);
 
-        first.CreateChildScope().Results.Result(instrument).ShouldBeSameAs(result);
-        second.Results.Result(instrument).ShouldNotBeSameAs(result);
-        instrument.Created.ShouldBe(2);
+        first.CreateChildScope().Results.Result(analyzer).ShouldBeSameAs(result);
+        second.Results.Result(analyzer).ShouldNotBeSameAs(result);
+        analyzer.Created.ShouldBe(2);
+    }
+
+    [Fact]
+    public void SharingAnAnalyzer_DoesNotNarrowItsRunResult()
+    {
+        var evaluator = new ProblemEvaluator<int>();
+        var trace = evaluator.Invocations.Trace(observation => observation.Candidates.Single());
+        var root = ResolutionScope.Create();
+        var first = root.CreateChildScope();
+        var second = root.CreateChildScope();
+        first.Share(trace);
+        second.Share(trace);
+
+        var observed = evaluator.Observed(trace);
+        first.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Problem).Resolve(observed)
+            .Evaluate([3], RandomNumberGenerator.Create(1));
+        second.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(Problem).Resolve(observed)
+            .Evaluate([7], RandomNumberGenerator.Create(1));
+        var firstResult = first.Results.Result(trace);
+        var secondResult = second.Results.Result(trace);
+
+        firstResult.ShouldBeSameAs(secondResult);
+        root.Results.Result(trace).ShouldBeSameAs(firstResult);
+        first.Results.Result(trace).ShouldBeSameAs(firstResult);
+        second.CreateChildScope().Results.Result(trace).ShouldBeSameAs(firstResult);
+        firstResult.Snapshot().Values.ShouldBe([3, 7]);
     }
 
     [Fact]
     public async Task ConcurrentLookupsAcrossChildScopesPublishOneResult()
     {
-        var instrument = new CreationCountingInstrument();
+        var analyzer = new CreationCountingAnalyzer();
         var root = ResolutionScope.Create();
         var lookups = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => Task.Run(
-            () => root.CreateChildScope().Results.Result(instrument),
+            () => root.CreateChildScope().Results.Result(analyzer),
             TestContext.Current.CancellationToken)));
 
-        instrument.Created.ShouldBe(1);
+        analyzer.Created.ShouldBe(1);
         lookups.ShouldAllBe(value => ReferenceEquals(value, lookups[0]));
     }
 
     [Fact]
     public void FailedResultCreationPublishesNothingAndCanRetry()
     {
-        var instrument = new FailsFirstCreation();
+        var analyzer = new FailsFirstCreation();
         var results = ResolutionScope.Create().Results;
 
-        Should.Throw<InvalidOperationException>(() => results.Result(instrument));
-        var result = results.Result(instrument);
+        Should.Throw<InvalidOperationException>(() => results.Result(analyzer));
+        var result = results.Result(analyzer);
 
-        instrument.Attempts.ShouldBe(2);
-        results.Result(instrument).ShouldBeSameAs(result);
-        instrument.Attempts.ShouldBe(2);
+        analyzer.Attempts.ShouldBe(2);
+        results.Result(analyzer).ShouldBeSameAs(result);
+        analyzer.Attempts.ShouldBe(2);
     }
 
     [Fact]
-    public void InstrumentsMatchByReference()
+    public void AnalyzersMatchByReference()
     {
         var results = ResolutionScope.Create().Results;
-        var first = new CreationCountingInstrument();
-        var second = new CreationCountingInstrument();
+        var first = new CreationCountingAnalyzer();
+        var second = new CreationCountingAnalyzer();
 
         first.ShouldNotBe(second);
         results.Result(first).ShouldNotBeSameAs(results.Result(second));
     }
 
     [Fact]
-    public void AnInstrumentBuildingOnItself_IsRejected()
+    public void AnAnalyzerBuildingOnItself_IsRejected()
     {
         var results = ResolutionScope.Create().Results;
 
-        Should.Throw<InvalidOperationException>(() => results.Result(new SelfReferencingInstrument()))
-            .Message.ShouldContain("requires that result itself");
+        Should.Throw<InvalidOperationException>(() => results.Result(new SelfReferencingAnalyzer()))
+            .Message.ShouldContain("Recursive construction");
     }
 
     [Fact]
     public async Task ResultsStayReadableAfterAConstructionFailure()
     {
         var evaluator = new ProblemEvaluator<int>();
-        var evaluations = evaluator.Invocations.Count();
-        var algorithm = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.AnalyzedBy(evaluations);
+        var evaluations = new Counter();
+        var algorithm = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Substitute(evaluator.Invocations.Counting(evaluations));
         var root = ResolutionScope.Create();
         await Run(Resolve(root, algorithm));
 
@@ -95,7 +121,7 @@ public sealed class RunResultsTests
     {
         var time = new ManualTimeProvider();
         var run = CreateRun(new SteppingAlgorithm(time, Steps: 3), time);
-        var results = run.Result(new ResultsInstrument());
+        var results = run.Result(new ResultsAnalyzer()).Value;
         time.Advance(TimeSpan.FromSeconds(100));
         results.Elapsed.ShouldBe(TimeSpan.Zero);
 
@@ -118,14 +144,68 @@ public sealed class RunResultsTests
     }
 
     [Fact]
+    public void TimedOperatorAndAlgorithm_MeasureWithTheRunsTimeProvider()
+    {
+        var time = new ManualTimeProvider();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        var work = evaluator.Invocations.Observing(_ => time.Advance(TimeSpan.FromSeconds(2)));
+        var operatorDuration = new Duration();
+        var algorithmDuration = new Duration();
+        var algorithm = new AdditiveStepAlgorithm(1)
+        {
+            Evaluator = evaluator.Substitute(work).Timed(operatorDuration)
+        };
+        var run = CreateRun(algorithm.Timed(algorithmDuration), time);
+        var results = run.Result(new ResultsAnalyzer()).Value;
+
+        results.TimeProvider.ShouldBeSameAs(time);
+        run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(1);
+
+        run.Result(operatorDuration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(2));
+        run.Result(algorithmDuration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(2));
+        results.Elapsed.ShouldBe(TimeSpan.FromSeconds(2));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void DurationBudgets_StopByTheRunsTimeProvider(bool operatorBudget)
+    {
+        var time = new ManualTimeProvider();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        var work = evaluator.Invocations.Observing(_ => time.Advance(TimeSpan.FromSeconds(2)));
+        var step = new AdditiveStepAlgorithm(1) { Evaluator = evaluator.Substitute(work) };
+        var algorithm = new CycleAlgorithm<int, PopulationState<int>>([step]) { MaximumCycles = 5 };
+        IAlgorithm<int, PopulationState<int>> budget = operatorBudget
+            ? algorithm.LimitedToDuration(step.Evaluator, TimeSpan.FromSeconds(3))
+            : algorithm.LimitedToDuration(TimeSpan.FromSeconds(3));
+        var run = CreateRun(budget, time);
+
+        run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+    }
+
+    [Fact]
+    public void AfterElapsedTimeTerminator_StopsByTheRunsTimeProvider()
+    {
+        var time = new ManualTimeProvider();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        var work = evaluator.Invocations.Observing(_ => time.Advance(TimeSpan.FromSeconds(1)));
+        var step = new AdditiveStepAlgorithm(1) { Evaluator = evaluator.Substitute(work) };
+        var algorithm = new CycleAlgorithm<int, PopulationState<int>>([step]) { MaximumCycles = 5 };
+        var run = CreateRun(algorithm.TerminatedBy(AfterElapsedTimeTerminator.For(Problem, TimeSpan.FromSeconds(2))), time);
+
+        run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+    }
+
+    [Fact]
     public async Task DirectScopeExecution_LeavesElapsedAndElapsedClockAtZero()
     {
         var time = new ManualTimeProvider();
-        var algorithm = new SteppingAlgorithm(time, Steps: 2);
+        IAlgorithm<int, PopulationState<int>> algorithm = new SteppingAlgorithm(time, Steps: 2);
         var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
-        var duration = new Duration(time);
+        var duration = new Duration();
         var root = ResolutionScope.Create(time);
-        var configured = algorithm.AnalyzedBy(steps).Timed(duration);
+        var configured = algorithm.Substitute(steps).Timed(duration);
         var executor = Resolve(root, configured);
         Resolve(root, configured).ShouldBeSameAs(executor);
 
@@ -143,10 +223,10 @@ public sealed class RunResultsTests
     public async Task Elapsed_PauseAndCancellationExcludeTimeBeforeResume(bool cancel)
     {
         var time = new ManualTimeProvider();
-        var algorithm = new SteppingAlgorithm(time, Steps: 3);
+        IAlgorithm<int, PopulationState<int>> algorithm = new SteppingAlgorithm(time, Steps: 3);
         var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
-        var run = CreateRun(algorithm.AnalyzedBy(steps), time);
-        var results = run.Result(new ResultsInstrument());
+        var run = CreateRun(algorithm.Substitute(steps), time);
+        var results = run.Result(new ResultsAnalyzer()).Value;
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
         await using (var states = run.Stream(cancellationToken: cancellation.Token).GetAsyncEnumerator(TestContext.Current.CancellationToken))
         {
@@ -180,14 +260,14 @@ public sealed class RunResultsTests
         var time = new ManualTimeProvider();
         var gate = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var run = CreateRun(new GatedAlgorithm(gate.Task), time);
-        var results = run.Result(new ResultsInstrument());
-        var readClock = Clock.Elapsed.Bind(results);
+        var results = run.Result(new ResultsAnalyzer()).Value;
+        var readClock = results.Result<IClockReading<TimeSpan>>(Clock.Elapsed);
         await using var states = run.StreamForTerminalCancellation(null, TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken);
         var move = states.MoveNextAsync();
         time.Advance(TimeSpan.FromSeconds(5));
 
         results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
-        readClock().ShouldBe(TimeSpan.FromSeconds(5));
+        readClock.Read().ShouldBe(TimeSpan.FromSeconds(5));
         Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException("Execution failed.");
         gate.SetException(failure);
         var thrown = await Record.ExceptionAsync(async () => await move);
@@ -196,16 +276,16 @@ public sealed class RunResultsTests
         run.LifecycleState.ShouldBe(canceled ? RunLifecycleState.Canceled : RunLifecycleState.Failed);
         time.Advance(TimeSpan.FromSeconds(100));
         results.Elapsed.ShouldBe(TimeSpan.FromSeconds(5));
-        readClock().ShouldBe(TimeSpan.FromSeconds(5));
+        readClock.Read().ShouldBe(TimeSpan.FromSeconds(5));
     }
 
     [Fact]
     public async Task ElapsedClock_ReadsTheTimeOfEachObservation()
     {
         var time = new ManualTimeProvider();
-        var algorithm = new SteppingAlgorithm(time, Steps: 3);
+        IAlgorithm<int, PopulationState<int>> algorithm = new SteppingAlgorithm(time, Steps: 3);
         var steps = algorithm.Iterations.Trace(observation => observation.Iteration, [Clock.Elapsed]);
-        var run = CreateRun(algorithm.AnalyzedBy(steps), time);
+        var run = CreateRun(algorithm.Substitute(steps), time);
 
         await foreach (var _ in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
             time.Advance(TimeSpan.FromSeconds(10));
@@ -218,11 +298,16 @@ public sealed class RunResultsTests
         IAlgorithm<int, PopulationState<int>> algorithm, TimeProvider time) =>
         new(algorithm, Problem, RandomNumberGenerator.Create(1), time);
 
-    private sealed class ResultsInstrument : Instrument<RunResults>
+    private sealed class CapturedResults(RunResults value) : IRunResult
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+        public RunResults Value { get; } = value;
+    }
 
-        protected override RunResults CreateResult(RunResults results) => results;
+    private sealed class ResultsAnalyzer : Analyzer<CapturedResults>
+    {
+        protected override IReadOnlyList<ISubstitution> CreateSubstitutions() => [];
+
+        public override CapturedResults CreateExecutionNode(ResolutionScope scope) => new(scope.Results);
     }
 
     private static IAlgorithmExecutor<PopulationState<int>> Resolve(
@@ -298,18 +383,18 @@ public sealed class RunResultsTests
         public CountAccumulator CreateExecutionNode(ResolutionScope scope) => scope.Results.Result(this);
     }
 
-    private sealed class ReadsACounter(Counter counter, Action creating) : Instrument<object>
+    private sealed class ReadsACounter(Counter counter, Action creating) : Analyzer<CountAccumulator>
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+        protected override IReadOnlyList<ISubstitution> CreateSubstitutions() => [];
 
-        protected override object CreateResult(RunResults results)
+        public override CountAccumulator CreateExecutionNode(ResolutionScope scope)
         {
             creating();
-            return results.Result(counter);
+            return scope.Results.Result(counter);
         }
     }
 
-    private sealed record ReadsAResult(Instrument<object> Definition, Action Building) : IConfigurationNode<CountAccumulator>
+    private sealed record ReadsAResult(Analyzer<CountAccumulator> Definition, Action Building) : IConfigurationNode<CountAccumulator>
     {
         public CountAccumulator CreateExecutionNode(ResolutionScope scope)
         {
@@ -319,39 +404,39 @@ public sealed class RunResultsTests
         }
     }
 
-    private sealed class CreationCountingInstrument : Instrument<object>
+    private sealed class CreationCountingAnalyzer : Analyzer<CountAccumulator>
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+        protected override IReadOnlyList<ISubstitution> CreateSubstitutions() => [];
 
         public int Created { get; private set; }
 
-        protected override object CreateResult(RunResults results)
+        public override CountAccumulator CreateExecutionNode(ResolutionScope scope)
         {
             Created++;
-            return new object();
+            return new CountAccumulator();
         }
     }
 
-    private sealed class FailsFirstCreation : Instrument<object>
+    private sealed class FailsFirstCreation : Analyzer<CountAccumulator>
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+        protected override IReadOnlyList<ISubstitution> CreateSubstitutions() => [];
 
         public int Attempts { get; private set; }
 
-        protected override object CreateResult(RunResults results)
+        public override CountAccumulator CreateExecutionNode(ResolutionScope scope)
         {
             Attempts++;
             if (Attempts == 1)
                 throw new InvalidOperationException("result creation");
-            return new object();
+            return new CountAccumulator();
         }
     }
 
-    private sealed class SelfReferencingInstrument : Instrument<object>
+    private sealed class SelfReferencingAnalyzer : Analyzer<CountAccumulator>
     {
-        protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+        protected override IReadOnlyList<ISubstitution> CreateSubstitutions() => [];
 
-        protected override object CreateResult(RunResults results) => results.Result(this);
+        public override CountAccumulator CreateExecutionNode(ResolutionScope scope) => scope.Results.Result(this);
     }
 
     private sealed record FailingEvaluator : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>

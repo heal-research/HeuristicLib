@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Inspection;
 
-/// <summary>Adds the time each call of its child algorithm spends advancing to its next state, including failures, to a duration.</summary>
+/// <summary>Adds the time each call of its child algorithm spends advancing to its next state, including failures, to a duration. Uses the run's time provider.</summary>
 /// <remarks>
 /// The time between two states belongs to whoever consumes them, so pauses and the handling of a streamed state are not
 /// measured. A terminator reading the same duration sees this time wherever the wrapper is placed.
@@ -35,7 +35,7 @@ public sealed record TimedAlgorithm<TCandidate, TSearchState> : WrappingAlgorith
     {
         var childAlgorithm = scope.Resolve(ChildAlgorithm);
         var duration = scope.Resolve(Duration);
-        return new Executor(childAlgorithm, duration, Duration.TimeProvider);
+        return new Executor(childAlgorithm, duration, scope.Results.TimeProvider);
     }
 
     private sealed class Executor(IAlgorithmExecutor<TSearchState> childAlgorithm,
@@ -70,48 +70,30 @@ public static class TimedAlgorithmExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        /// <summary>Adds the time this algorithm spends advancing to each state, including failures, to the duration.</summary>
+        /// <summary>Adds the time this algorithm spends advancing to each state, including failures, to the duration. Uses the run's time provider.</summary>
         public TimedAlgorithm<TCandidate, TSearchState> Timed(Duration duration) => new(algorithm, duration);
 
-        /// <summary>Measures an algorithm's advances wherever this configuration holds it, such as <c>ga.Timing(ga.Iterations, out var time)</c>.</summary>
+        /// <summary>Measures an algorithm's advances wherever this configuration holds it, such as <c>ga.Timing(ga.Iterations, out var time)</c>. Uses the run's time provider.</summary>
         /// <param name="target">The iterations to measure. Their algorithm is matched by reference, and it is an error when this configuration does not hold it.</param>
         /// <param name="duration">Receives the new duration, which <c>run.Result(duration).CurrentDuration</c> reads and a terminator can check.</param>
-        /// <param name="timeProvider">Measures each advance. When omitted, the system clock does.</param>
         /// <returns>The interface, because the target may be this algorithm itself, which the wrapper then replaces.</returns>
         public IAlgorithm<TCandidate, TSearchState> Timing(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> target,
-            out Duration duration, TimeProvider? timeProvider = null) =>
-            algorithm.Substitute(Substitution.Timing(target, out duration, timeProvider));
-
-        /// <summary>Adds an algorithm's advances to an existing duration wherever this configuration holds it.</summary>
-        /// <param name="target">The iterations to measure. Their algorithm is matched by reference, and it is an error when this configuration does not hold it.</param>
-        /// <param name="duration">The duration to add to, such as the one <c>LimitedToDuration</c> hands to its placement. Its time provider measures each advance.</param>
-        /// <returns>The interface, because the target may be this algorithm itself, which the wrapper then replaces.</returns>
-        public IAlgorithm<TCandidate, TSearchState> Timing(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> target,
-            Duration duration) =>
-            algorithm.Substitute(Substitution.Timing(target, duration));
+            out Duration duration)
+        {
+            var created = new Duration();
+            duration = created;
+            return algorithm.Substitute(target.Timing(created));
+        }
     }
 
-    extension(Substitution)
+    extension<TCandidate, TSearchState>(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> iterations)
+        where TSearchState : class, ISearchState
     {
-        /// <summary>The substitution behind <c>Timing</c>, for one call with others.</summary>
-        /// <param name="target">The iterations to measure. Their algorithm is matched by reference, and it is an error when the configuration does not hold it.</param>
-        /// <param name="duration">Receives the new duration.</param>
-        /// <param name="timeProvider">Measures each advance. When omitted, the system clock does.</param>
-        public static Substitution Timing<TCandidate, TSearchState>(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> target,
-            out Duration duration, TimeProvider? timeProvider = null)
-            where TSearchState : class, ISearchState
-        {
-            var created = new Duration(timeProvider);
-            duration = created;
-            return Substitution.Timing(target, created);
-        }
-
-        /// <summary>The substitution behind <c>Timing</c> into an existing duration, for one call with others.</summary>
-        /// <param name="target">The iterations to measure. Their algorithm is matched by reference, and it is an error when the configuration does not hold it.</param>
-        /// <param name="duration">The duration to add to.</param>
-        public static Substitution Timing<TCandidate, TSearchState>(AlgorithmSource<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>> target,
-            Duration duration)
-            where TSearchState : class, ISearchState =>
-            Substitution.Of(target.Algorithm, node => node.Timed(duration));
+        /// <summary>Places a wrapper adding time spent advancing to each state, including failures, to the duration. Uses the run's time provider.</summary>
+        /// <remarks>
+        /// In one substitution list, a later part sits closer to its target. List this placement after every analyzer that
+        /// reads the duration so its reading includes the call; listed before them, it reads before the call.
+        /// </remarks>
+        public Substitution Timing(Duration duration) => Substitution.Of(iterations.Algorithm, node => node.Timed(duration));
     }
 }

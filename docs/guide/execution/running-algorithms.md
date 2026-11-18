@@ -4,14 +4,14 @@ Running an algorithm combines an immutable configuration with one problem and on
 
 ## Choose how much control you need
 
-Start with a completion method when you only need the final state. Choose streaming for progress or retain an explicit run when you need setup, inspection or pause and resume. These entry points use the same algorithm configuration and execution machinery.
+Start with a completion method when you only need the final state. Choose streaming for progress or retain an explicit run when you need analysis, inspection or pause and resume. These entry points use the same algorithm configuration and execution machinery.
 
-| What you need                   | Entry point                                                                 | Continue below                                                                                 |
-| ------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Final search state              | `algorithm.Complete(problem, random)` or `CompleteAsync`                    | [Complete or stream](#complete-or-stream)                                                      |
-| Progress from a fresh execution | `algorithm.Stream(problem, random)`                                         | [Complete or stream](#complete-or-stream)                                                      |
-| Retain control of one execution | `algorithm.CreateRun(problem, random)`                                      | [Explicit runs](#explicit-runs-for-control-and-analysis)                                       |
-| Analysis results                | Attach instruments with `AnalyzedBy`, then use `CreateRun` and `run.Result` | [Analysis](#explicit-runs-for-control-and-analysis) and [run results](#read-run-bound-results) |
+| What you need                   | Entry point                                              | Continue below                                                                                 |
+| ------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Final search state              | `algorithm.Complete(problem, random)` or `CompleteAsync` | [Complete or stream](#complete-or-stream)                                                      |
+| Progress from a fresh execution | `algorithm.Stream(problem, random)`                      | [Complete or stream](#complete-or-stream)                                                      |
+| Retain control of one execution | `algorithm.CreateRun(problem, random)`                   | [Explicit runs](#explicit-runs-for-control-and-analysis)                                       |
+| Analysis results                | Pass analyzers to `CreateRun`, then use `run.Result`     | [Analysis](#explicit-runs-for-control-and-analysis) and [run results](#read-run-bound-results) |
 
 Executor construction happens automatically. You do not need to manage those steps to use any of these entry points.
 
@@ -100,15 +100,15 @@ var run = algorithm.CreateRun(problem, random);
 var finalState = await run.CompleteAsync();
 ```
 
-Completing an explicit run follows the same path as `algorithm.CompleteAsync(problem, random)`. Each `CreateRun` creates independent executors and instrument results. The explicit form gives access to the run lifecycle and `run.Result(instrument)`.
+Completing an explicit run follows the same path as `algorithm.CompleteAsync(problem, random)`. Each `CreateRun` creates independent executors and run results. The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
 
-Attach analysis with `AnalyzedBy` before creating the run, and create the run from the configuration it returns. The algorithm owns the search process, including its operators and child algorithms.
+Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. Use `Substitute` when keeping the instrumented configuration. The algorithm owns the search process, including its operators and child algorithms.
 
 See [Observability and analysis](/guide/execution/observability-and-analysis) for an analyzer example.
 
 ## Read run-bound results
 
-An instrument defines one result per run. Attach it through `algorithm.AnalyzedBy(instrument)`, call `CreateRun` on the configuration that returns, then read it with `run.Result(instrument)`. Reading a definition the run's algorithm does not hold is an error, because its result would stay empty. A lookup before execution creates the result lazily; execution and later reads use the same object. Reusing the definition across runs gives each run independent data.
+An analyzer defines one result per run. Pass it to `algorithm.CreateRun(problem, random, [analyzer])`, then read it with `run.Result(analyzer)`. A definition with placement substitutions must be held by the run's algorithm, or lookup throws unless a declared delegate prevents proving it absent. A lookup before execution creates the result lazily; execution and later reads use the same object. Reusing the definition across runs gives each run independent data. Counters and durations also create run results, read through their configurations in the same way.
 
 Private execution data, such as a cache, belongs to its executor. Use `Sharing` on a configuration enclosing its uses to keep one executor across child scopes. Runs provide no live-object supply API.
 

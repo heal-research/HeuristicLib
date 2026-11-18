@@ -69,8 +69,8 @@ public sealed class ResourceCachingDocumentationSpecs
         var memoized = new MemoizingEvaluator(evaluator) { SizeLimit = 100 };
         var space = new UnrestrictedIntegerSpace();
         var problem = FuncProblem.Create((int candidate) => candidate * candidate, space, SingleObjective.Minimize);
-        var evaluations = evaluator.Invocations.CountCandidates();
-        var analyzed = memoized.AnalyzedBy(evaluations);
+        var evaluations = new Counter();
+        var analyzed = memoized.Substitute(evaluator.Invocations.CountingCandidates(evaluations));
         var root = ResolutionScope.Create();
         var scope = root
             .For<int, UnrestrictedIntegerSpace, IProblem<int, UnrestrictedIntegerSpace>>(problem);

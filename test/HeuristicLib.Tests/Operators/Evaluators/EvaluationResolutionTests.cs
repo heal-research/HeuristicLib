@@ -128,6 +128,42 @@ public sealed class EvaluationResolutionTests
         calls.ShouldBe(3);
     }
 
+    [Fact]
+    public void Limit_StrictBatchesConsumeCandidateAllowance()
+    {
+        var preparations = 0;
+        var calls = 0;
+        var leaf = new CountingEvaluator(() => preparations++, () => calls++);
+        var source = new LimitEvaluator<int>(leaf, 3) { FallbackObjectiveVector = new ObjectiveVector(-1), EnforceLimitWithinBatch = true };
+        var scope = ResolutionScope.Create();
+        var first = Resolve(scope, source);
+        var second = Resolve(scope, source);
+
+        Evaluate(first, 1, 2).ShouldBe([new ObjectiveVector(101), new ObjectiveVector(102)]);
+        Evaluate(second, 3, 4).ShouldBe([new ObjectiveVector(203), new ObjectiveVector(-1)]);
+        Evaluate(first, 5).ShouldBe([new ObjectiveVector(-1)]);
+        preparations.ShouldBe(1);
+        calls.ShouldBe(2);
+    }
+
+    [Fact]
+    public void Limit_NonStrictBatchesConsumeCandidateAllowance()
+    {
+        var preparations = 0;
+        var calls = 0;
+        var leaf = new CountingEvaluator(() => preparations++, () => calls++);
+        var source = new LimitEvaluator<int>(leaf, 3) { FallbackObjectiveVector = new ObjectiveVector(-1), EnforceLimitWithinBatch = false };
+        var scope = ResolutionScope.Create();
+        var first = Resolve(scope, source);
+        var second = Resolve(scope, source);
+
+        Evaluate(first, 1, 2).ShouldBe([new ObjectiveVector(101), new ObjectiveVector(102)]);
+        Evaluate(second, 3, 4).ShouldBe([new ObjectiveVector(203), new ObjectiveVector(204)]);
+        Evaluate(first, 5).ShouldBe([new ObjectiveVector(-1)]);
+        preparations.ShouldBe(1);
+        calls.ShouldBe(2);
+    }
+
     private static IEvaluationExecutor<int> Resolve(ResolutionScope scope, IOperator<Evaluation, int> source) =>
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(source, Problem);
 

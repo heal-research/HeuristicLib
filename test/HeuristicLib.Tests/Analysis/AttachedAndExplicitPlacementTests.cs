@@ -14,9 +14,9 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
 
-// An instrument attached with AnalyzedBy and the same instrument placed explicitly with a wrapper configuration collect
-// the same data into the run's one result. Each theory runs both paths over equivalent boundaries.
-public sealed class InstrumentPlacementTests
+// Analysis and accounting attached with CreateRun or placed explicitly with wrapper configurations collect
+// the same data into each definition's run result. Each theory runs both paths over equivalent boundaries.
+public sealed class AttachedAndExplicitPlacementTests
 {
     private static readonly IProblem<int, DummySearchSpace<int>> IntegerProblem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
 
@@ -27,13 +27,13 @@ public sealed class InstrumentPlacementTests
     public void CountingAndTiming_AreEqualThroughBothPaths_IncludingFailedCalls(bool attached)
     {
         var time = new ManualTimeProvider();
-        var evaluator = new FlakyEvaluator(time);
-        var invocations = evaluator.Invocations.Count();
-        var candidates = evaluator.Invocations.CountCandidates();
-        var duration = evaluator.Invocations.Duration(time);
-        var scope = ResolutionScope.Create();
+        IOperator<Evaluation, int> evaluator = new FlakyEvaluator(time);
+        var invocations = new Counter();
+        var candidates = new Counter();
+        var duration = new Duration();
+        var scope = ResolutionScope.Create(time);
         var placed = attached
-            ? evaluator.AnalyzedBy(invocations, candidates, duration)
+            ? evaluator.Substitute(evaluator.Invocations.Counting(invocations), evaluator.Invocations.CountingCandidates(candidates), evaluator.Invocations.Timing(duration))
             : evaluator.Counted(invocations).Counted(candidates, OperatorCountMetric.Candidates).Timed(duration);
         var executor = Resolve(scope, placed);
 
@@ -52,12 +52,12 @@ public sealed class InstrumentPlacementTests
     [InlineData(false)]
     public void CountingObservationAndRetry_ComposeInTheSameOrderThroughBothPaths(bool attached)
     {
-        var evaluator = new FlakyEvaluator(new ManualTimeProvider());
-        var evaluations = evaluator.Invocations.Count();
-        var batches = evaluator.Invocations.Trace(observation => observation.Candidates.Count, [evaluations]);
+        IOperator<Evaluation, int> evaluator = new FlakyEvaluator(new ManualTimeProvider());
+        var evaluations = new Counter();
+        var batches = evaluator.Invocations.Trace(observation => observation.Candidates.Count, [evaluations.Clock]);
         var scope = ResolutionScope.Create();
         var placed = attached
-            ? evaluator.Retry(2).AnalyzedBy(batches)
+            ? evaluator.Retry(2).Substitute(batches, evaluator.Invocations.Counting(evaluations))
             : evaluator.Counted(evaluations).Observed(batches).Retry(2);
         var executor = Resolve(scope, placed);
 
@@ -66,7 +66,7 @@ public sealed class InstrumentPlacementTests
 
         var trace = scope.Results.Result(batches);
         trace.Snapshot().Values.ShouldBe([1, 2, 3]);
-        trace.By(evaluations).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
+        trace.By(evaluations.Clock).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
         scope.Results.Result(evaluations).CurrentCount.ShouldBe(3);
     }
 
@@ -76,17 +76,22 @@ public sealed class InstrumentPlacementTests
     {
         var problem = new TestFunctionProblem(new SphereFunction(2));
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
-        var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
-        var best = algorithm.Evaluator.Invocations.TraceBestSoFar([evaluations], TraceRetention.EveryNth(2));
+        var evaluations = new Counter();
+        var best = Analyzer.BestSoFar(algorithm.Evaluator, [evaluations.Clock], TraceRetention.EveryNth(2));
 
-        var attached = algorithm.AnalyzedBy(best).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var attached = algorithm.CreateRun(problem, RandomNumberGenerator.Create(7), [best, algorithm.Evaluator.Invocations.CountingCandidates(evaluations)]);
         await attached.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
-        var placed = (algorithm with { Evaluator = algorithm.Evaluator.Counted(evaluations, OperatorCountMetric.Candidates).Observed(best) }).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var placed = (algorithm with
+        {
+            Evaluator = algorithm.Evaluator.Counted(evaluations, OperatorCountMetric.Candidates).Counted(best.Evaluations, OperatorCountMetric.Candidates).Observed(best)
+        }).CreateRun(problem, RandomNumberGenerator.Create(7));
         await placed.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        var attachedTrace = attached.Result(best).By(evaluations);
+        var attachedTrace = attached.Result(best).Select(point => new TracePoint<long, ObjectiveVector>(point.At(evaluations.Clock), point.Value)).ToList();
         attachedTrace.Count.ShouldBe(2);
-        placed.Result(best).By(evaluations).ShouldBe(attachedTrace);
+        attached.Result(best).ShouldAllBe(point => point.Evaluations == point.At(evaluations.Clock));
+        placed.Result(best).Select(point => point.Evaluations).ShouldBe(attached.Result(best).Select(point => point.Evaluations));
+        placed.Result(best).Select(point => new TracePoint<long, ObjectiveVector>(point.At(evaluations.Clock), point.Value)).ToList().ShouldBe(attachedTrace);
         placed.Result(evaluations).CurrentCount.ShouldBe(attached.Result(evaluations).CurrentCount);
     }
 
@@ -101,7 +106,7 @@ public sealed class InstrumentPlacementTests
         var states = inner.Iterations.Trace(observation => observation.State.Population.EvaluatedCandidates.Single().Candidate);
         IAlgorithm<int, PopulationState<int>> cycle;
         if (attached)
-            cycle = (CycleAlgorithm.Create(inner) with { MaximumCycles = 3 }).Sharing(inner).AnalyzedBy(states);
+            cycle = (CycleAlgorithm.Create(inner) with { MaximumCycles = 3 }).Sharing(inner).Substitute(states);
         else
         {
             var observed = inner.Observed(states);
@@ -124,11 +129,11 @@ public sealed class InstrumentPlacementTests
     [InlineData(false, false)]
     public void SeparateTermination_ReadsTheCountIndependentOfConstructionOrder(bool attached, bool terminatorFirst)
     {
-        var evaluator = new ProblemEvaluator<int>();
-        var evaluations = evaluator.Invocations.Count();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        var evaluations = new Counter();
         var terminator = new AfterOperatorCountTerminator<int>(evaluations, 2);
         var scope = ResolutionScope.Create();
-        var placed = attached ? evaluator.AnalyzedBy(evaluations) : evaluator.Counted(evaluations);
+        var placed = attached ? evaluator.Substitute(evaluator.Invocations.Counting(evaluations)) : evaluator.Counted(evaluations);
         var typed = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(IntegerProblem);
         var termination = terminatorFirst ? typed.Resolve(terminator) : null;
         var evaluation = typed.Resolve(placed);
@@ -141,6 +146,30 @@ public sealed class InstrumentPlacementTests
         termination.IsTerminalState(state, RandomNumberGenerator.Create(1)).ShouldBeTrue();
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void BestSoFarEvaluations_DrivesATerminatorThroughBothPlacementPaths(bool attached)
+    {
+        var inner = new AdditiveStepAlgorithm(-1);
+        var best = Analyzer.BestSoFar(inner.Evaluator, retention: TraceRetention.EveryObservation());
+        var placed = attached ? inner : inner with
+        {
+            Evaluator = inner.Evaluator.Counted(best.Evaluations, OperatorCountMetric.Candidates).Observed(best)
+        };
+        var algorithm = (CycleAlgorithm.Create(placed) with { MaximumCycles = 20 })
+            .TerminatedBy(new AfterOperatorCountTerminator<int>(best.Evaluations, 3));
+        var run = algorithm.CreateRun(IntegerProblem, RandomNumberGenerator.Create(1), attached ? [best] : null);
+
+        var state = run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        state.Population.EvaluatedCandidates.Single().Candidate.ShouldBe(-3);
+        run.Result(best.Evaluations).CurrentCount.ShouldBe(3);
+        run.Result(best).Select(point => point.Evaluations).ShouldBe([1L, 2L, 3L]);
+        run.Result(best).Select(point => point.Candidate).ShouldBe([-1, -2, -3]);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
+    }
+
     // Reusing one configuration for several runs gives each run fresh results through both paths, including a best so
     // far and a retention that keep state across observations.
     [Theory]
@@ -150,10 +179,11 @@ public sealed class InstrumentPlacementTests
     {
         var problem = new TestFunctionProblem(new SphereFunction(2));
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
-        var best = algorithm.Evaluator.Invocations.TraceBestSoFar();
+        var best = Analyzer.BestSoFar(algorithm.Evaluator);
         var everyOther = algorithm.Iterations.Trace(observation => observation.Iteration, retention: TraceRetention.EveryNth(2));
+        IAlgorithm<RealVector, PopulationState<RealVector>> receiver = algorithm;
         IAlgorithm<RealVector, PopulationState<RealVector>> configured = attached
-            ? algorithm.AnalyzedBy(best, everyOther)
+            ? receiver.Substitute(best, everyOther)
             : (algorithm with { Evaluator = algorithm.Evaluator.Observed(best) }).Observed(everyOther);
 
         var first = configured.CreateRun(problem, RandomNumberGenerator.Create(3));
@@ -162,7 +192,7 @@ public sealed class InstrumentPlacementTests
         await second.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         second.Result(best).ShouldNotBeSameAs(first.Result(best));
-        second.Result(best).Snapshot().Values.ShouldBe(first.Result(best).Snapshot().Values);
+        second.Result(best).Select(point => point.Value).ToList().ShouldBe(first.Result(best).Select(point => point.Value).ToList());
         first.Result(everyOther).Snapshot().Values.ShouldBe([2L, 4L]);
         second.Result(everyOther).Snapshot().Values.ShouldBe([2L, 4L]);
     }
@@ -173,19 +203,19 @@ public sealed class InstrumentPlacementTests
     [InlineData(true)]
     public void ASharedClock_TicksOnceBeforeBothObservations(bool swap)
     {
-        var evaluator = new ProblemEvaluator<int>();
-        var candidates = evaluator.Invocations.CountCandidates();
-        var first = evaluator.Invocations.Trace(observation => observation.Candidates.Count, [candidates]);
-        var second = evaluator.Invocations.Trace(observation => -observation.Candidates.Count, [candidates]);
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        var candidates = new Counter();
+        var first = evaluator.Invocations.Trace(observation => observation.Candidates.Count, [candidates.Clock]);
+        var second = evaluator.Invocations.Trace(observation => -observation.Candidates.Count, [candidates.Clock]);
         var (outer, inner) = swap ? (second, first) : (first, second);
         var root = ResolutionScope.Create();
-        var executor = Resolve(root, evaluator.AnalyzedBy(outer, inner));
+        var executor = Resolve(root, evaluator.Substitute(outer, inner, evaluator.Invocations.CountingCandidates(candidates)));
 
         executor.Evaluate([1, 2], RandomNumberGenerator.Create(1));
         executor.Evaluate([3, 4, 5], RandomNumberGenerator.Create(1));
 
-        root.Results.Result(first).By(candidates).Select(point => point.Time).ShouldBe([2L, 5L]);
-        root.Results.Result(second).By(candidates).Select(point => point.Time).ShouldBe([2L, 5L]);
+        root.Results.Result(first).By(candidates.Clock).Select(point => point.Time).ShouldBe([2L, 5L]);
+        root.Results.Result(second).By(candidates.Clock).Select(point => point.Time).ShouldBe([2L, 5L]);
         root.Results.Result(candidates).CurrentCount.ShouldBe(5);
     }
 
@@ -196,17 +226,17 @@ public sealed class InstrumentPlacementTests
     [InlineData(false)]
     public void AnExternalOperation_IsTracedThroughBothPaths(bool attached)
     {
-        var checksum = new IncrementingChecksum();
-        var reads = checksum.Invocations.Count();
-        var values = checksum.Invocations.Trace(observation => observation.Result, [reads]);
+        IOperator<Checksum, int> checksum = new IncrementingChecksum();
+        var reads = new Counter();
+        var values = checksum.Invocations.Trace(observation => observation.Result, [reads.Clock]);
         var scope = ResolutionScope.Create();
-        var placed = attached ? checksum.AnalyzedBy(values) : checksum.Counted(reads).Observed(values);
+        var placed = attached ? checksum.Substitute(values, checksum.Invocations.Counting(reads)) : checksum.Counted(reads).Observed(values);
         var executor = scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(IntegerProblem).Resolve(placed);
 
         executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(1);
         executor.Read(RandomNumberGenerator.Create(1)).ShouldBe(2);
 
-        scope.Results.Result(values).By(reads).ShouldBe([new(1L, 1), new(2L, 2)]);
+        scope.Results.Result(values).By(reads.Clock).ShouldBe([new(1L, 1), new(2L, 2)]);
     }
 
     // An observation wrapper has one child, ChildOperator: a copy with another child observes that child through
@@ -246,14 +276,14 @@ public sealed class InstrumentPlacementTests
     // Substitutions apply in order and each new one matches the original target, so later entries and later calls sit
     // closer to it and record first.
     [Fact]
-    public void AnalyzedBy_LaterEntriesAndLaterCallsSitCloser()
+    public void CreateRun_LaterEntriesAndLaterCallsSitCloser()
     {
-        var evaluator = new ProblemEvaluator<int>();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         var log = new List<string>();
-        Instrument Logging(string label) => evaluator.Invocations.Observing(_ => log.Add(label));
+        ISubstitution Logging(string label) => evaluator.Invocations.Observing(_ => log.Add(label));
         var algorithm = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }
-            .AnalyzedBy(Logging("first"), Logging("second"))
-            .AnalyzedBy(Logging("outer"));
+            .Substitute(Logging("first"), Logging("second"))
+            .Substitute(Logging("outer"));
 
         algorithm.CreateRun(IntegerProblem, RandomNumberGenerator.Create(1)).Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -262,6 +292,29 @@ public sealed class InstrumentPlacementTests
 
     private static IEvaluationExecutor<int> Resolve(ResolutionScope scope, IOperator<Evaluation, int> evaluator) =>
         scope.For<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(IntegerProblem).Resolve(evaluator);
+
+    [Fact]
+    public void DurationClock_RecordsTheCompletedCallsDuration()
+    {
+        var time = new ManualTimeProvider();
+        IOperator<Evaluation, int> evaluator = new FlakyEvaluator(time);
+        var duration = new Duration();
+        var trace = evaluator.Invocations.Trace(observation => observation.Candidates.Count, [duration.Clock]);
+        var scope = ResolutionScope.Create(time);
+        var executor = Resolve(scope, evaluator.Substitute(trace, evaluator.Invocations.Timing(duration)));
+
+        Should.Throw<RetryableOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1)));
+        executor.Evaluate([1, 2], RandomNumberGenerator.Create(1));
+        time.Advance(TimeSpan.FromSeconds(100));
+        Should.Throw<RetryableOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1)));
+        executor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1));
+
+        var result = scope.Results.Result(trace);
+        result.Select(entry => entry.At(duration.Clock)).ShouldBe([TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(4)]);
+        result.By(duration.Clock).ShouldBe([new(TimeSpan.FromSeconds(2), 2), new(TimeSpan.FromSeconds(4), 3)]);
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(4));
+        Should.Throw<InvalidOperationException>(() => result.First().At(Clock.Elapsed)).Message.ShouldBe("The trace does not use the requested clock.");
+    }
 
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem, int maximumGenerations) =>
         new()

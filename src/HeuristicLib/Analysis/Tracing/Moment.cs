@@ -1,30 +1,24 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-/// <summary>The times a selected set of clocks read together, recorded with one entry or one update.</summary>
-internal sealed class Moment
+/// <summary>A row of clock readings using the trace's shared column layout.</summary>
+internal sealed class Moment(IClock[] columns, object[] times)
 {
-    private readonly ImmutableDictionary<IClock, object> times;
-
-    private Moment(ImmutableDictionary<IClock, object> times)
-    {
-        this.times = times;
-    }
-
     internal TTime At<TTime>(IClock<TTime> clock)
     {
-        if (!times.TryGetValue(clock, out var time))
-            throw new InvalidOperationException("The requested clock is not one of the selected clocks.");
-        return (TTime)time;
+        for (var column = 0; column < columns.Length; column++)
+            if (Equals(columns[column], clock))
+                return (TTime)times[column];
+        throw new InvalidOperationException("The trace does not use the requested clock.");
     }
 
-    // Reads each clock bound to the run.
-    internal static Moment Read(IEnumerable<(IClock Clock, Func<object> Read)> clocks)
+    internal static Moment Read(IClock[] columns, IClockReading[] readings)
     {
-        var times = ImmutableDictionary.CreateBuilder<IClock, object>(ReferenceEqualityComparer.Instance);
-        foreach (var (clock, read) in clocks)
-            times.Add(clock, read());
-        return new Moment(times.ToImmutable());
+        var times = new object[readings.Length];
+        for (var column = 0; column < readings.Length; column++)
+            times[column] = readings[column].Read();
+        return new Moment(columns, times);
     }
 }

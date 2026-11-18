@@ -54,8 +54,8 @@ public static class InterceptionObservations
         public InvocationSource<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>> Invocations =>
             ObservationSource.Create<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>(interceptor);
 
-        /// <summary>Records this interceptor's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>> Observed(IObservationInstrument<InterceptionObservation<TCandidate, TSearchState>> instrument) =>
-            new(interceptor, instrument);
+        /// <summary>Records this interceptor's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>> Observed(IObservationReceiver<InterceptionObservation<TCandidate, TSearchState>> receiver) =>
+            new(interceptor, receiver);
     }
 }

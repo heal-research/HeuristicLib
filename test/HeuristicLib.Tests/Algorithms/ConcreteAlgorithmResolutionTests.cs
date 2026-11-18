@@ -30,7 +30,7 @@ public sealed class ConcreteAlgorithmResolutionTests
 
         var creations = new Counter();
         var interceptions = new Counter();
-        var observing = algorithm.Substitute(Substitution.Counting(creator, creations), countInterceptions(interceptions));
+        var observing = algorithm.Substitute(creator.Invocations.Counting(creations), countInterceptions(interceptions));
         var child = parent.CreateChildScope();
         var observedCreations = parent.Results.Result(creations);
         var observedInterceptions = parent.Results.Result(interceptions);
@@ -100,7 +100,7 @@ public sealed class ConcreteAlgorithmResolutionTests
                 BatchSize = 1,
                 Direction = LocalSearchDirection.FirstImprovement
             };
-            return (hillClimber, counter => Substitution.Counting(solutionInterceptor, counter));
+            return (hillClimber, counter => solutionInterceptor.Invocations.Counting(counter));
         }
 
         var interceptor = new IdentityInterceptor<PopulationState<int>>(prepareInterceptor);
@@ -142,7 +142,7 @@ public sealed class ConcreteAlgorithmResolutionTests
             },
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };
-        return (algorithm, counter => Substitution.Counting(interceptor, counter));
+        return (algorithm, counter => interceptor.Invocations.Counting(counter));
     }
 
     private static IAsyncEnumerable<PopulationState<int>> Run(ResolutionScope scope, IAlgorithm<int> algorithm) =>

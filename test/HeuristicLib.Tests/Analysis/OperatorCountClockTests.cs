@@ -15,12 +15,12 @@ public class OperatorCountClockTests
     [Fact]
     public void CountCandidates_CountsTheCandidateWorkOfAnExternalBatchOperation()
     {
-        var scorer = new LengthScorer();
+        IOperator<Scoring, int> scorer = new LengthScorer();
         var problem = CreateProblem();
-        var candidates = scorer.Invocations.CountCandidates();
-        var invocations = scorer.Invocations.Count();
+        var candidates = new Counter();
+        var invocations = new Counter();
         var scope = ResolutionScope.Create();
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(scorer.AnalyzedBy(candidates, invocations));
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(scorer.Substitute(scorer.Invocations.CountingCandidates(candidates), scorer.Invocations.Counting(invocations)));
 
         executor.Score([1, 2, 3], RandomNumberGenerator.Create(1));
         executor.Score([4, 5], RandomNumberGenerator.Create(1));
@@ -30,13 +30,13 @@ public class OperatorCountClockTests
     }
 
     [Fact]
-    public void CountCandidates_RejectsAnOperationWithoutCandidateWorkWhenCreated()
+    public void CountingCandidates_RejectsAnOperationWithoutCandidateWorkWhenCreated()
     {
         var checksum = new ConstructionRecordingChecksum();
 
-        var exception = Should.Throw<InvalidOperationException>(() => checksum.Invocations.CountCandidates());
+        var exception = Should.Throw<InvalidOperationException>(() => checksum.Invocations.CountingCandidates(new Counter()));
 
-        exception.Message.ShouldContain("reports none");
+        exception.Message.ShouldBe("Counting candidates cannot measure candidate work for ConstructionRecordingChecksum: Checksum reports none.");
     }
 
     // Counting candidates, placed explicitly on an operation without candidate work, fails when the wrapper is built and
@@ -58,9 +58,10 @@ public class OperatorCountClockTests
     {
         var checksum = new ConstructionRecordingChecksum();
         var problem = CreateProblem();
-        var invocations = checksum.Invocations.Count();
+        var invocations = new Counter();
         var scope = ResolutionScope.Create();
-        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(checksum.AnalyzedBy(invocations));
+        IOperator<Checksum, int> receiver = checksum;
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(receiver.Substitute(checksum.Invocations.Counting(invocations)));
 
         executor.Read(RandomNumberGenerator.Create(1));
         executor.Read(RandomNumberGenerator.Create(1));

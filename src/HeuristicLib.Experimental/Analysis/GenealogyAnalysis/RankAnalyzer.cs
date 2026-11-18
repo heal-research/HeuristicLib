@@ -7,30 +7,21 @@ using HEAL.HeuristicLib.Operators;
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
 /// <summary>
-/// Defines a rank result without naming its observation-source types.
-/// </summary>
-public abstract class RankAnalyzer<TCandidate> : Instrument<RankState<TCandidate>>
-    where TCandidate : notnull;
-
-/// <summary>
 /// Records, per generation, the average rank of the descendants of each candidate in the generation before it.
 /// </summary>
 /// <remarks>
 /// Each run creates its own graph and rank history. Genealogy observations update that graph before rank recording.
-/// Both observations share the same explicit objective ordering.
+/// Both observations share the same objective ordering. Read the live graph and history after execution has stopped.
 /// </remarks>
-public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandidate>,
-    IObservationInstrument<CrossoverObservation<TCandidate>>,
-    IObservationInstrument<MutationObservation<TCandidate>>,
-    IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>>
+public sealed class RankAnalyzer<TCandidate, TSearchState> : Analyzer<RankState<TCandidate>>,
+    IObservationReceiver<AlgorithmObservation<TCandidate, TSearchState>>
     where TSearchState : PopulationState<TCandidate>
     where TCandidate : notnull
 {
     /// <param name="crossovers">Crossovers whose offspring become graph edges from two parents.</param>
     /// <param name="mutators">Mutators whose offspring become graph edges from one parent.</param>
     /// <param name="algorithms">
-    /// Algorithms whose yielded populations close a generation, which is also where ranks are read. Without one the
-    /// graph is still built, but no ranks are recorded.
+    /// Algorithms whose yielded populations close a generation, which is also where ranks are read. At least one is required.
     /// </param>
     /// <param name="equality">
     /// Decides which candidates are the same graph node. Defaults to <see cref="EqualityComparer{T}.Default"/>.
@@ -38,53 +29,56 @@ public sealed class RankAnalyzer<TCandidate, TSearchState> : RankAnalyzer<TCandi
     /// <param name="objectiveComparer">
     /// Ranks the candidates of a generation. Without one, the problem's objective must define a total order.
     /// </param>
-    public RankAnalyzer(IReadOnlyList<IOperator<Crossover, TCandidate>>? crossovers = null,
+    /// <exception cref="InvalidOperationException"><paramref name="algorithms"/> is empty.</exception>
+    public RankAnalyzer(IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms,
+                        IReadOnlyList<IOperator<Crossover, TCandidate>>? crossovers = null,
                         IReadOnlyList<IOperator<Mutation, TCandidate>>? mutators = null,
-                        IReadOnlyList<IAlgorithm<TCandidate, TSearchState>>? algorithms = null,
                         IEqualityComparer<TCandidate>? equality = null,
                         IComparer<ObjectiveVector>? objectiveComparer = null)
     {
-        if ((crossovers?.Count ?? 0) + (mutators?.Count ?? 0) + (algorithms?.Count ?? 0) == 0)
-            throw new ArgumentException("A rank analysis needs at least one crossover, mutator or algorithm to observe.");
-        this.equality = equality ?? EqualityComparer<TCandidate>.Default;
+        if (algorithms.Count == 0)
+            throw new InvalidOperationException("A rank analysis needs at least one algorithm to observe.");
+        this.algorithms = algorithms.ToValueArray();
         ObjectiveComparer = objectiveComparer;
-        genealogy = new GenealogyAnalyzer<TCandidate, TSearchState>(crossovers, mutators, algorithms, equality)
+        Genealogy = new GenealogyAnalyzer<TCandidate, TSearchState>(crossovers, mutators, algorithms, equality)
         { ObjectiveComparer = objectiveComparer };
     }
 
-    private readonly GenealogyAnalyzer<TCandidate, TSearchState> genealogy;
-    private readonly IEqualityComparer<TCandidate> equality;
+    private readonly ValueArray<IAlgorithm<TCandidate, TSearchState>> algorithms;
 
+    /// <summary>The genealogy analyzer whose graph this analysis ranks.</summary>
+    /// <remarks>
+    /// Placing the rank analyzer with <c>CreateRun</c> or <c>Substitute</c> also places it. To place the rank analyzer explicitly,
+    /// place this analyzer as well, or no graph is recorded and every rank row stays empty.
+    /// </remarks>
+    public GenealogyAnalyzer<TCandidate, TSearchState> Genealogy { get; }
+
+    /// <summary>Orders each generation; when omitted, the observation's problem must supply a total order.</summary>
     public IComparer<ObjectiveVector>? ObjectiveComparer { get; }
 
-    protected override IReadOnlyList<Substitution> CreateSubstitutions() => genealogy.Recording(this, this, this);
+    protected override IReadOnlyList<ISubstitution> CreateSubstitutions() =>
+    [
+        .. algorithms.Select(algorithm => algorithm.Iterations.RecordingInto(this)),
+        Genealogy
+    ];
 
-    Action<CrossoverObservation<TCandidate>> IObservationInstrument<CrossoverObservation<TCandidate>>.CreateRecorder(RunResults results) =>
-        GenealogyAnalyzer<TCandidate, TSearchState>.RecordCrossovers(results.Result(this).Graph);
-
-    Action<MutationObservation<TCandidate>> IObservationInstrument<MutationObservation<TCandidate>>.CreateRecorder(RunResults results) =>
-        GenealogyAnalyzer<TCandidate, TSearchState>.RecordMutations(results.Result(this).Graph);
-
-    // The graph contains this generation before its ranks are read.
-    Action<AlgorithmObservation<TCandidate, TSearchState>> IObservationInstrument<AlgorithmObservation<TCandidate, TSearchState>>.CreateRecorder(RunResults results)
+    // Genealogy's inner wrapper has closed this generation before ranks are read.
+    /// <summary>Records descendant ranks from this run's graph after genealogy closes the generation.</summary>
+    public Action<AlgorithmObservation<TCandidate, TSearchState>> CreateRecorder(RunResults results)
     {
         var result = results.Result(this);
-        var closeGeneration = genealogy.RecordGenerations(result.Graph);
-        return observation =>
-        {
-            closeGeneration(observation);
-            result.RecordRanks();
-        };
+        return _ => result.RecordRanks();
     }
 
-    protected override RankState<TCandidate> CreateResult(RunResults results) => new(new GenealogyGraph<TCandidate>(equality));
+    /// <inheritdoc/>
+    public override RankState<TCandidate> CreateExecutionNode(ResolutionScope scope) => new(scope.Results.Result(Genealogy));
 }
 
 /// <summary>
 /// The graph a rank analysis builds and the ranks it read from it, one row per closed generation.
 /// </summary>
 /// <remarks>Both are accumulators, so read them once the run has finished.</remarks>
-public class RankState<TCandidate> where TCandidate : notnull
+public class RankState<TCandidate> : IRunResult where TCandidate : notnull
 {
     private readonly List<ImmutableArray<double>> ranks = [];
 
@@ -95,7 +89,7 @@ public class RankState<TCandidate> where TCandidate : notnull
 
     public GenealogyGraph<TCandidate> Graph { get; }
 
-    /// <summary>The average descendant ranks per closed generation, oldest first.</summary>
+    /// <summary>Live rows of average descendant ranks, oldest first; generations without a rank row are omitted.</summary>
     public IReadOnlyList<ImmutableArray<double>> Ranks => ranks;
 
     internal void RecordRanks()
@@ -116,18 +110,23 @@ public static class RankAnalysisTraces
         /// <summary>
         /// Creates a rank analyzer over the given observation sources.
         /// </summary>
+        /// <param name="algorithm">The algorithm whose yielded populations close generations and trigger rank recording.</param>
+        /// <param name="crossover">An optional crossover to observe, matched by reference.</param>
+        /// <param name="mutator">An optional mutator to observe, matched by reference.</param>
+        /// <param name="equality">Candidate identity in the graph; omitted means default equality.</param>
+        /// <param name="objectiveComparer">Orders each generation; omitted means the problem must supply a total order.</param>
         public static RankAnalyzer<T, TR> Rank<T, TR>(
+            IAlgorithm<T, TR> algorithm,
             IOperator<Crossover, T>? crossover = null,
             IOperator<Mutation, T>? mutator = null,
-            IAlgorithm<T, TR>? algorithm = null,
             IEqualityComparer<T>? equality = null,
             IComparer<ObjectiveVector>? objectiveComparer = null)
             where T : notnull
             where TR : PopulationState<T> =>
             new(
+                [algorithm],
                 crossover is null ? null : (IReadOnlyList<IOperator<Crossover, T>>)[crossover],
                 mutator is null ? null : (IReadOnlyList<IOperator<Mutation, T>>)[mutator],
-                algorithm is null ? null : (IReadOnlyList<IAlgorithm<T, TR>>)[algorithm],
                 equality, objectiveComparer);
     }
 }

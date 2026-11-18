@@ -13,8 +13,8 @@ public class ExperimentAnalysisTests
     public async Task RepeatedTrialsKeepIndependentResultsOfOneDefinition(int concurrency)
     {
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
-        var calls = algorithm.Evaluator.Invocations.Count();
-        var run = algorithm.AnalyzedBy(calls).Repeat(3).CreateRun(
+        var calls = new Counter();
+        var run = algorithm.Substitute(algorithm.Evaluator.Invocations.Counting(calls)).Repeat(3).CreateRun(
             MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
         await run.CompleteAsync(ExecutionConcurrency.Concurrent(concurrency), cancellationToken: TestContext.Current.CancellationToken);
@@ -28,8 +28,8 @@ public class ExperimentAnalysisTests
     public async Task ATrialResultIsReadableIndependentlyAsThatTrialFinishes()
     {
         var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
-        var calls = algorithm.Evaluator.Invocations.Count();
-        var run = algorithm.AnalyzedBy(calls).Repeat(2).CreateRun(
+        var calls = new Counter();
+        var run = algorithm.Substitute(algorithm.Evaluator.Invocations.Counting(calls)).Repeat(2).CreateRun(
             MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
         await run.Trials[0].Run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

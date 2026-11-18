@@ -49,8 +49,8 @@ public static class TerminationObservations
         public InvocationSource<Termination, TCandidate, TerminationObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Termination, TCandidate, TerminationObservation<TCandidate>>(terminator);
 
-        /// <summary>Records this terminator's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Termination, TCandidate, TerminationObservation<TCandidate>> Observed(IObservationInstrument<TerminationObservation<TCandidate>> instrument) =>
-            new(terminator, instrument);
+        /// <summary>Records this terminator's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Termination, TCandidate, TerminationObservation<TCandidate>> Observed(IObservationReceiver<TerminationObservation<TCandidate>> receiver) =>
+            new(terminator, receiver);
     }
 }

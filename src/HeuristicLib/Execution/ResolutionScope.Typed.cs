@@ -30,6 +30,16 @@ public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionSco
     /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
     public new ResolutionScope<TCandidate, TSearchSpace, TProblem> CreateChildScope() =>
         new(base.CreateChildScope(), Problem);
+
+    internal virtual IExecutor ResolveOperatorForProblem<TOperation>(IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperation<TOperation> =>
+        ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, Problem);
+
+    internal virtual bool TryResolveOperatorForProblem<TOperation, TExecutor>(IOperator<TOperation, TCandidate> source,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TOperation : IOperation<TOperation>
+        where TExecutor : class, IExecutor =>
+        TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState, TExecutor>(source, Problem, out executor, out reason);
 }
 
 /// <summary>
@@ -54,6 +64,14 @@ public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchS
     /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
     public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildScope() =>
         new(base.CreateChildScope(), Problem);
+
+    internal override IExecutor ResolveOperatorForProblem<TOperation>(IOperator<TOperation, TCandidate> source) =>
+        ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source, Problem);
+
+    internal override bool TryResolveOperatorForProblem<TOperation, TExecutor>(IOperator<TOperation, TCandidate> source,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TExecutor : class =>
+        TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(source, Problem, out executor, out reason);
 }
 
 /// <summary>Creates a typed scope over a resolution scope, naming the triple once per creation method.</summary>
@@ -85,7 +103,7 @@ public static class ResolutionScopeExtensions
         where TOperation : IOperation<TOperation>
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
-        scope.ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
+        scope.ResolveOperatorForProblem(source);
 
     /// <inheritdoc cref="ResolveOperator{TOperation, TCandidate, TSearchSpace, TProblem}"/>
     public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(
@@ -110,7 +128,7 @@ public static class ResolutionScopeExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
         where TExecutor : class, IExecutor =>
-        scope.TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState, TExecutor>(source, scope.Problem, out executor, out reason);
+        scope.TryResolveOperatorForProblem(source, out executor, out reason);
 
     /// <inheritdoc cref="TryResolveOperator{TOperation, TCandidate, TSearchSpace, TProblem, TExecutor}"/>
     public static bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(

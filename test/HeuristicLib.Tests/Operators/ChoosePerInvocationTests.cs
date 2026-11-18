@@ -124,7 +124,7 @@ public class ChoosePerInvocationTests
         var choice = ChoosePerInvocation.Create([first, second], [1.0, 0.0]);
         Counter firstCalls = new(), secondCalls = new(), choiceCalls = new(), choiceCandidates = new();
         var counted = choice
-            .Substitute(Substitution.Counting(first, firstCalls), Substitution.Counting(second, secondCalls))
+            .Substitute(ObservationSource.Create<Mutation, int, MutationObservation<int>>(first).Counting(firstCalls), ObservationSource.Create<Mutation, int, MutationObservation<int>>(second).Counting(secondCalls))
             .Counted(choiceCandidates, OperatorCountMetric.Candidates)
             .Counted(choiceCalls);
         var scope = ResolutionScope.Create();

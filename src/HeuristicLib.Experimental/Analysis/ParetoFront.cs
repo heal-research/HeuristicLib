@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Analysis;
@@ -10,7 +11,7 @@ namespace HEAL.HeuristicLib.Analysis;
 /// mutable and belongs to whatever accumulates it, and <see cref="Points"/> is a live view of it, so read it once the
 /// run has finished rather than during it.
 /// </remarks>
-public sealed class ParetoFront<T>(ObjectiveVector referencePoint, ObjectiveDirections objective)
+public sealed class ParetoFront<T>(ObjectiveVector referencePoint, ObjectiveDirections objective) : IRunResult
 {
     private readonly Lock sync = new();
     private readonly List<EvaluatedCandidate<T>> front = [];

@@ -39,7 +39,7 @@ HeuristicLib separates the optimization problem from the search method. Reuse th
   <div class="flow-arrow" aria-hidden="true"><span>yields</span><strong>↓</strong></div>
   <section class="flow-card flow-card--output">
     <h3>Search states</h3>
-    <p>Evaluated candidates and progress counters</p>
+    <p>Evaluated candidates and populations</p>
   </section>
 </div>
 
@@ -73,7 +73,7 @@ Read [Algorithms](/guide/fundamentals/algorithms) and [Operators](/guide/fundame
 
 ## Search states
 
-Algorithms yield immutable snapshots of useful progress. A population based state contains evaluated candidates. An iterative state also reports counters such as completed iterations.
+Algorithms yield immutable snapshots of useful progress. A population based state contains evaluated candidates. Iteration counts come from observations or counters rather than from the state.
 
 You can consume every state for progress reporting and analysis or ask only for the final state. Read [Search states](/guide/execution/search-states) and [Running algorithms](/guide/execution/running-algorithms).
 

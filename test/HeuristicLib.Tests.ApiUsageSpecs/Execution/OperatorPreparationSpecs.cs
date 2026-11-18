@@ -18,13 +18,13 @@ public sealed partial class OperatorPreparationSpecs
     public void AnExternalInvocationWrapperSupportsABuiltInOperationWithoutChangingIt()
     {
         IOperator<Mutation, RealVector> source = new IdentityMutation();
-        var twice = new Twice<Mutation, RealVector>(source);
-        var childCalls = source.Invocations.Count();
-        var wrapperCalls = twice.Invocations.Count();
+        IOperator<Mutation, RealVector> twice = new Twice<Mutation, RealVector>(source);
+        var childCalls = new Counter();
+        var wrapperCalls = new Counter();
         var scope = ResolutionScope.Create();
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var executor = scope
-            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(twice.AnalyzedBy(childCalls, wrapperCalls));
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(twice.Substitute(source.Invocations.Counting(childCalls), twice.Invocations.Counting(wrapperCalls)));
         IReadOnlyList<RealVector> parents = [new(1.0)];
 
         executor.Mutate(parents, RandomNumberGenerator.Create(1)).ShouldBeSameAs(parents);

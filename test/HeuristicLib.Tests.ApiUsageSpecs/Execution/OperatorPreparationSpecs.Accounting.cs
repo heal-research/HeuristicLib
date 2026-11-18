@@ -16,9 +16,9 @@ public sealed partial class OperatorPreparationSpecs
     {
         var source = new CountingSource();
         var mutator = (IOperator<Mutation, RealVector>)source;
-        var counter = mutator.Invocations.Count();
+        var counter = new Counter();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, 2)).AnalyzedBy(counter);
+        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, 2)).Substitute(mutator.Invocations.Counting(counter));
         var runs = Enumerable.Range(0, 3).Select(_ => algorithm.CreateRun(problem, RandomNumberGenerator.Create(1))).ToArray();
 
         await Task.WhenAll(runs.Select(run => run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken)));
@@ -32,9 +32,9 @@ public sealed partial class OperatorPreparationSpecs
     public void CandidateAccountingAndTheTerminatorUseTheRunsCounter()
     {
         var source = new CountingSource();
-        var candidates = ((IOperator<Mutation, RealVector>)source).Invocations.CountCandidates();
+        var candidates = new Counter();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(new AfterOperatorCountTerminator<RealVector>(candidates, 2)).AnalyzedBy(candidates);
+        var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(new AfterOperatorCountTerminator<RealVector>(candidates, 2)).Substitute(((IOperator<Mutation, RealVector>)source).Invocations.CountingCandidates(candidates));
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
         run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
@@ -49,18 +49,19 @@ public sealed partial class OperatorPreparationSpecs
     public void DurationAccountingAndTheTerminatorUseOneResultPerRun()
     {
         var source = new CountingSource();
-        var clock = new BudgetClock();
-        var duration = ((IOperator<Mutation, RealVector>)source).Invocations.Duration(clock);
+        var duration = new Duration();
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var algorithm = new TwoOperationAlgorithm(source).TerminatedBy(
-            AfterOperatorDurationTerminator.For(problem, duration, TimeSpan.FromTicks(2))).AnalyzedBy(duration);
+            AfterOperatorDurationTerminator.For(problem, duration, TimeSpan.Zero)).Substitute(((IOperator<Mutation, RealVector>)source).Invocations.Timing(duration));
         var first = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
         var second = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1));
+        var firstDuration = first.Result(duration);
+        var secondDuration = second.Result(duration);
 
-        first.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
-        second.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(2);
-        first.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromTicks(2));
-        second.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromTicks(2));
+        first.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(1);
+        second.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(1);
+        first.Result(duration).ShouldBeSameAs(firstDuration);
+        second.Result(duration).ShouldBeSameAs(secondDuration);
         first.Result(duration).ShouldNotBeSameAs(second.Result(duration));
     }
 
@@ -69,9 +70,9 @@ public sealed partial class OperatorPreparationSpecs
     {
         var source = new CountingSource();
         var mutator = (IOperator<Mutation, RealVector>)source;
-        var counter = mutator.Invocations.Count();
+        var counter = new Counter();
         var problem = new TestFunctionProblem(new SphereFunction(1));
-        var run = new TwoOperationAlgorithm(source).AnalyzedBy(counter).CreateRun(problem, RandomNumberGenerator.Create(1));
+        var run = new TwoOperationAlgorithm(source).CreateRun(problem, RandomNumberGenerator.Create(1), [mutator.Invocations.Counting(counter)]);
         run.Result(counter).CurrentCount.ShouldBe(0);
 
         run.Stream(cancellationToken: TestContext.Current.CancellationToken).Count().ShouldBe(4);
@@ -82,6 +83,6 @@ public sealed partial class OperatorPreparationSpecs
     public void FluentCandidateMetricRejectsUnsupportedOperations()
     {
         var source = new CountingSource();
-        Should.Throw<InvalidOperationException>(() => ReadSource(source).CountCandidates()).Message.ShouldContain("candidate work");
+        Should.Throw<InvalidOperationException>(() => ReadSource(source).CountingCandidates(new Counter())).Message.ShouldContain("candidate work");
     }
 }

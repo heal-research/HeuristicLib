@@ -6,7 +6,7 @@ Most applications only configure built-in operators. Use this page when your can
 
 Operator configurations are reusable descriptions. Operator executors perform the work and own their private mutable fields. HeuristicLib provides two authoring paths so an operator can use the smallest execution model that fits its responsibilities.
 
-Operator configurations build their executors in a `CreateExecutor` hook that resolution calls for every build. Each construction binds an executor to contextual children and observations, initializes its private fields and obtains explicit resources if configured.
+Operator configurations build their executors in a `CreateExecutor` hook that resolution calls for every build. Each construction binds an executor to contextual children and observations, initializes its private fields and reads any configured run results.
 
 ## Choose an authoring path
 
@@ -51,7 +51,7 @@ Reduction changes what the author declares, not where the operator fits. **Candi
 
 The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and the stateless helper supplies the bound search space and problem to the typed author override. A consumer, field or child property never names them.
 
-`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They declare their children, so `ExecutionSignature.Supports` asks them too, and they forward candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and initialize private data on the executor. Read run-bound instruments through `scope.Results.Result(instrument)`; share configurations explicitly to retain their executors across child scopes.
+`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They declare their children, so `ExecutionSignature.Supports` asks them too, and they forward candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and initialize private data on the executor. Read run results through `scope.Results.Result(configuration)`; share configurations explicitly to retain their executors across child scopes.
 
 Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. `ChoosePerInvocation` chooses one child per call. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
 
@@ -74,24 +74,31 @@ private sealed record FirstValueEvaluator
 
 Use specialized helpers such as `SingleCandidateEvaluator` when the role offers one that exactly matches the operation shape.
 
-## Private fields and shared resources
+## Private fields and shared executors
 
-Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Different runs, problem objects or fresh child activations construct independent fields. Repeated resolution of the same configuration/problem pair in one scope reuses its fields. Get controls from the same resolved executor that performs the operation.
+Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Different runs, problem objects or fresh child activations construct independent fields. Repeated resolution of the same configuration/problem pair in one scope reuses its fields.
 
 Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are configuration nodes whose executors hold the run's count or time. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` resolve them.
 
-The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Resources must not retain contextual children. Authors own concurrency correctness across all participants. Automatically created resources need no deterministic cleanup. Resources requiring cleanup must be supplied and remain caller owned.
+The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Shared executors retain their resolved children. Authors own concurrency correctness across all participants. Executors have no automatic disposal lifecycle; dependencies requiring cleanup remain caller owned.
 
 ## Explicit executors
 
 Derive an explicit executor from its role's executor base, such as `EvaluationExecutor<TCandidate>`. Use the search-space variant when it retains only a search space, or the search-space and problem variant when it retains a problem, passing that context to the base constructor. These variants expose protected get-only `SearchSpace` and `Problem` properties; use them in operation methods instead of retaining duplicate context fields or capturing a primary constructor parameter. Name a type's sole nested executor `Executor`.
 
-The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected typed `CreateExecutor` runs for every build and exposes the problem on its scope. It resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; private data belongs to executor fields and explicit resources can be shared across constructions.
+The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected typed `CreateExecutor` runs for every build and exposes the problem on its scope. It resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; private data belongs to executor fields and `Sharing` retains selected executors across child scopes.
 
 ```csharp
 private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
     : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
+    public static Parameter<ForwardingEvaluator, IOperator<Evaluation, RealVector>> InnerParameter { get; } =
+        new(nameof(Inner), static evaluator => evaluator.Inner, static (evaluator, value) => evaluator with { Inner = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [InnerParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     protected override IEvaluationExecutor<RealVector> CreateExecutor<TSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TSearchState> scope) =>
         new Executor(scope.Resolve(Inner));
 
@@ -106,7 +113,7 @@ private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inne
 }
 ```
 
-Resolve declared child operators inside `CreateExecutor`. Initialize private counters and helper data in executor fields. Read run-bound results through instrument definitions; share configurations to retain their executors. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
+Resolve declared child operators inside `CreateExecutor`. Initialize private counters and helper data in executor fields. Read run results through their configurations, such as analyzers, counters or durations; share configurations to retain their executors. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
 
 Return the most concrete accessible executor type that is useful to callers. A private nested executor is returned through its role specific executor base.
 
@@ -122,7 +129,7 @@ A scope resolves one runtime adaptation per configuration reference. Independent
 
 ## Wrapping and multi operators
 
-Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep private data in executor fields, declare instrument definitions for run-bound results and resolve current children inside `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
+Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep private data in executor fields, read run results through their configurations, such as counters or durations, and resolve current children inside `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
 
 When a child plays a specific part in the operation, derive from `Operator<TOperation, TCandidate>` and declare that child yourself. This configuration excerpt omits the executor body:
 
@@ -131,6 +138,16 @@ public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
 {
     public required IOperator<Selection, TCandidate> SelectorForRemaining { get; init; }
     public int Elites { get; init; } = 1;
+
+    public static Parameter<EliteSelector<TCandidate>, IOperator<Selection, TCandidate>> SelectorForRemainingParameter { get; } =
+        new(nameof(SelectorForRemaining), static selector => selector.SelectorForRemaining, static (selector, value) => selector with { SelectorForRemaining = value });
+
+    public static Parameter<EliteSelector<TCandidate>, int> ElitesParameter { get; } =
+        new(nameof(Elites), static selector => selector.Elites, static (selector, value) => selector with { Elites = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [SelectorForRemainingParameter, ElitesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -161,13 +178,15 @@ The named method ends with the call's random number generator. The executor rece
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-executor{csharp}
 
-The operation implements the static members of `IOperation<TSelf>` explicitly. It recognizes its executor interface, wraps an executor in a private wrapping executor, and holds a private `Invocation` struct for one call. An item operation, marked with `IItemOperation<TSelf>`, also routes a call's items to several executors through a private routed executor. The library bases `WrappingExecutor<TExecutor, TWrapper>` and `RoutingExecutor<TExecutor>` hold the executors, the wrapper and the router, type them as the operation's executor interface and forward controls:
+The operation implements the static members of `IOperation<TSelf>` explicitly. It recognizes its executor interface, wraps an executor in a private wrapping executor, and holds a private `Invocation` struct for one call. An item operation, marked with `IItemOperation<TSelf>`, also routes a call's items to several executors through a private routed executor. The library bases `WrappingExecutor<TExecutor, TWrapper>` and `RoutingExecutor<TExecutor>` hold the executors, the wrapper and the router, type them as the operation's executor interface:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-type{csharp}
 
 The invocation is what every wrapper receives: its `Random` and `Proceed`. An operation whose calls do not split into items implements `IOperation<TSelf>` instead and needs no routed executor. An operation with candidate work returns true from `SupportsCandidateWork` and implements `CountCandidateWork` on its invocation. The static members, the invocation and the two executors stay per operation: C# needs a nominal class for each executor interface, a struct has no base class, and the operation's static members are the only place that names the executor interface for the run's types.
 
-Resolution extensions cast the resolved executor to the operation's interface. `TryResolve` calls `TryResolveOperator`, which takes the interface from the executor variable and reports a failure as a reason:
+Resolution extensions cast the resolved executor to the operation's interface. Creation, crossover, evaluation, mutation, refinement, replacement and selection each declare one block for the untyped scope with an explicit problem and one for `ResolutionScope<TCandidate, TSearchSpace, TProblem>`. The typed block also serves four-argument scopes through their base class. Resolution uses the scope's search state even when a four-argument scope is held as a three-argument scope; a scope without a search-state argument uses `ISearchState`. Termination and interception retain their four-argument blocks because their executor interfaces name the search state.
+
+`TryResolve` calls `TryResolveOperator`, which takes the interface from the executor variable and reports a failure as a reason:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-resolution{csharp}
 
@@ -177,13 +196,13 @@ An operation is observable once it declares two parts beside the operation, as e
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
 
-`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `estimator.Invocations.Observing(…)` then work as they do for built-in operations. `Wrap` casts because it receives the executor untyped, and resolution has already checked that the executor performs the operation.
+`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `estimator.Invocations.Observing(…)` then work as they do for built-in operations. The `Observed` form takes an `IObservationReceiver<TObservation>` in its `receiver` slot and binds that receiver's recorder when constructed. `Wrap` casts because it receives the executor untyped, and resolution has already checked that the executor performs the operation.
 
 ## Scaffolding roles and cross-cutting concerns
 
 Coding agents are useful optional aids for the repetitive parts of operator authoring. Adding a concrete operator to an existing role is usually small work, because deriving from an existing authoring base is most of it. A new operator role is not: it brings a whole family with it, including configuration and executor arity ladders, stateless bases, applicable single-item bases, wrapping and multi topologies, construction companions, tests and API usage specs. A new cross-cutting concern brings one role-specific adapter for every applicable role. That expansion is mechanical enough for an agent to draft and large enough to make agent assistance worthwhile.
 
-Agent-produced code is normal contributor-owned source. Inspect and refactor it normally, review every public member as a deliberate API addition, and validate it with the compiler, analyzers, focused behavior tests and API usage specs. Point the agent at the current contracts and guidelines in addition to the closest accepted role family: all eight current roles follow the accepted topology, but their operation inputs, applicability and lifecycle semantics still differ.
+Agent-produced code is normal contributor-owned source. Inspect and refactor it normally, review every public member as a deliberate API addition, and validate it with the compiler, analyzers, focused behavior tests and API usage specs. Point the agent at the current contracts and guidelines in addition to the closest accepted role family: all nine current roles follow the accepted topology, but their operation inputs, applicability and lifecycle semantics still differ.
 
 An agent will not settle a concern's semantics for you. Implement and review the concern for one representative role first, then state its lifecycle and applicability independently of that role before expanding it. Similar signatures do not prove identical semantics: duration measurement records failed calls because it updates in `finally`, while counting updates only after a successful child call; candidate-count conveniences apply only when the role produces an appropriate candidate collection.
 
@@ -191,7 +210,7 @@ An agent will not settle a concern's semantics for you. Implement and review the
 
 - Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.
 - Keep randomness explicit in operation calls and bind the problem explicitly during executor construction.
-- Store private mutable data in executor fields and explicitly shared data in resources.
+- Store mutable execution data in executor fields or run results; use `Sharing` to retain selected executors across child scopes.
 - Use `Sharing` when child scopes should retain a selected configuration's executor and its data.
 - Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes create independent executors except for explicitly shared configurations; all child scopes use the root's run-bound results. Separate roots have independent results.
 - Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.

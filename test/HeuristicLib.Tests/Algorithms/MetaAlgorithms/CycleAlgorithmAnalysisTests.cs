@@ -23,7 +23,7 @@ public class CycleAlgorithmAnalysisTests
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = algorithm.AnalyzedBy(analysis1, analysis2).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [analysis1, analysis2]);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -103,9 +103,9 @@ public class CycleAlgorithmAnalysisTests
 
     // An analyzer of its own, built on Observing.
     private sealed class EvaluationTraceAnalysis
-        : ISubstitutionBundle
+        : ISubstitution
     {
-        private readonly Instrument observing;
+        private readonly ISubstitution observing;
 
         public State Result { get; } = new();
 
@@ -114,7 +114,7 @@ public class CycleAlgorithmAnalysisTests
             observing = evaluator.Invocations.Observing(Record);
         }
 
-        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
+        public IReadOnlyList<Substitution> Expand() => observing.Expand();
 
         public void Record(EvaluationObservation<int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);

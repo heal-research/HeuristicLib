@@ -14,19 +14,23 @@ namespace HEAL.HeuristicLib.Analysis;
 /// environment its observations were made against, with no ordering to arrange. Under
 /// <see cref="UpdatePolicy.AfterEachEvaluation"/> one batch can span several versions, and this reads the one that
 /// scored its last candidate; the versions of earlier candidates are not recorded.
+/// This clock places nothing and reads the supplied problem, so reusing it across runs does not
+/// create independent problem state. Synchronization follows the problem's contract.
+/// It holds a live problem, so a configuration holding it is not serializable. This clock matches by reference.
 /// </remarks>
 public sealed class EpochClock<TCandidate, TSearchSpace>(IDynamicProblem<TCandidate, TSearchSpace> problem)
-    : Clock<int, IDynamicProblem<TCandidate, TSearchSpace>>
+    : IClock<int>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
     public IDynamicProblem<TCandidate, TSearchSpace> Problem { get; } = problem;
 
-    protected override IReadOnlyList<Substitution> CreateSubstitutions() => [];
+    /// <summary>Creates a reading of the supplied problem's current epoch.</summary>
+    public IClockReading<int> CreateExecutionNode(ResolutionScope scope) => new Reading(Problem);
 
-    // The problem keeps the version itself, so every run reads it directly.
-    protected override IDynamicProblem<TCandidate, TSearchSpace> CreateResult(RunResults results) => Problem;
-
-    protected override int Read(IDynamicProblem<TCandidate, TSearchSpace> result) => result.CurrentEpoch;
+    private sealed class Reading(IDynamicProblem<TCandidate, TSearchSpace> problem) : IClockReading<int>
+    {
+        public int Read() => problem.CurrentEpoch;
+    }
 }
 
 public static class DynamicClocks

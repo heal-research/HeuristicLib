@@ -31,7 +31,7 @@ public class OperatorAuthoringSpecs
         var gaussian = new GaussianMutator(1.0, 3.0) { MutationStrengthAdaptation = adaptation };
         IOperator<Mutation, RealVector> mutator = gaussian;
         var observedCalls = 0;
-        var observed = mutator.AnalyzedBy(mutator.Invocations.Observing(_ => observedCalls++));
+        var observed = mutator.Substitute(mutator.Invocations.Observing(_ => observedCalls++));
         var scope = ResolutionScope.Create();
         var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(observed);
         scope.Resolve(adaptation).Factor *= 0.0;
@@ -155,8 +155,8 @@ public class OperatorAuthoringSpecs
     public void MutatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Mutation, RealVector> childMutator = new PullTowardZeroMutator();
-        var counting = childMutator.Invocations.Count();
-        childMutator.AnalyzedBy(counting).ShouldNotBeSameAs(childMutator);
+        var counting = new Counter();
+        childMutator.Substitute(childMutator.Invocations.Counting(counting)).ShouldNotBeSameAs(childMutator);
     }
 
     [Fact]
@@ -245,9 +245,9 @@ public class OperatorAuthoringSpecs
     public void RefinerCompositionFactories_InferRoleTypes()
     {
         IOperator<Refinement, RealVector> childRefiner = new HalveRefiner();
-        var counting = childRefiner.Invocations.Count();
+        var counting = new Counter();
         var iterated = IteratedRefiner.Create(childRefiner, 2);
-        childRefiner.AnalyzedBy(counting).ShouldNotBeSameAs(childRefiner);
+        childRefiner.Substitute(childRefiner.Invocations.Counting(counting)).ShouldNotBeSameAs(childRefiner);
         iterated.ChildOperator.ShouldBeSameAs(childRefiner);
     }
 
@@ -434,12 +434,12 @@ public class OperatorAuthoringSpecs
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
         IOperator<Evaluation, RealVector> child = new FirstValueEvaluator();
-        var counting = child.Invocations.Count();
-        var duration = child.Invocations.Duration();
+        var counting = new Counter();
+        var duration = new Duration();
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
-        child.AnalyzedBy(counting).ShouldNotBeSameAs(child);
-        child.AnalyzedBy(duration).ShouldNotBeSameAs(child);
+        child.Substitute(child.Invocations.Counting(counting)).ShouldNotBeSameAs(child);
+        child.Substitute(child.Invocations.Timing(duration)).ShouldNotBeSameAs(child);
         repeating.ChildOperator.ShouldBeSameAs(child);
         repeating.Aggregator.ShouldBe(ObjectiveVectorAggregation.Median);
         caching.ChildOperator.ShouldBeSameAs(child);
@@ -525,9 +525,9 @@ public class OperatorAuthoringSpecs
     public void SelectorCompositionFactories_InferRoleTypes()
     {
         IOperator<Selection, RealVector> childSelector = new FirstSelector();
-        var counting = childSelector.Invocations.Count();
+        var counting = new Counter();
         var chooseOne = ChoosePerInvocation.Create(childSelector, new LastSelector());
-        childSelector.AnalyzedBy(counting).ShouldNotBeSameAs(childSelector);
+        childSelector.Substitute(childSelector.Invocations.Counting(counting)).ShouldNotBeSameAs(childSelector);
         chooseOne.ChildOperators[0].ShouldBeSameAs(childSelector);
     }
 
@@ -603,10 +603,10 @@ public class OperatorAuthoringSpecs
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
         IOperator<Replacement, RealVector> child = new OffspringReplacer();
-        var counting = child.Invocations.Count();
-        var duration = child.Invocations.Duration();
-        child.AnalyzedBy(counting).ShouldNotBeSameAs(child);
-        child.AnalyzedBy(duration).ShouldNotBeSameAs(child);
+        var counting = new Counter();
+        var duration = new Duration();
+        child.Substitute(child.Invocations.Counting(counting)).ShouldNotBeSameAs(child);
+        child.Substitute(child.Invocations.Timing(duration)).ShouldNotBeSameAs(child);
     }
 
     [Fact]

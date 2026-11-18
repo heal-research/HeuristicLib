@@ -132,8 +132,8 @@ Parameter search can overfit benchmark instances. Keep separate instances for fi
 
 Analyzers can collect progress during each trial rather than only final states. Continue with [Observability and analysis](/guide/execution/observability-and-analysis).
 
-Attach instruments before constructing the experiment. Every trial receives its own result even when all trials use the same definition:
+Attach analyzers before constructing the experiment. Every trial receives its own result even when all trials use the same definition:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-experiment-setup{csharp}
 
-Read each result with `trial.Run.Result(instrument)`, including while processing completed trials. For a parameter grid, configure each concrete algorithm before attaching its analysis and use the existing grid over analyzed algorithms. The wrapper boundary preserves candidate and search-state typing but does not expose the concrete algorithm's properties through the grid key. When a case replaces an observed operator, create an instrument targeting that replacement and retain the definition for reading its trial result.
+Read each result with `trial.Run.Result(analyzer)`, including while processing completed trials. For a parameter grid, configure each concrete algorithm before attaching its analysis and use the existing grid over analyzed algorithms. The wrapper boundary preserves candidate and search-state typing but does not expose the concrete algorithm's properties through the grid key. When a case replaces an observed operator, create an analyzer targeting that replacement and retain the definition for reading its trial result.

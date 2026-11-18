@@ -15,12 +15,12 @@ public class ObservationModuleTests
     [Fact]
     public void AMutatorObservation_CapturesTheCallWithTheRunsSearchSpaceAndProblem()
     {
-        var mutator = new AddOneMutator();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
         var problem = CreateProblem();
         var observations = new List<MutationObservation<int>>();
         var scope = ResolutionScope.Create();
 
-        var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.AnalyzedBy(mutator.Invocations.Observing(observations.Add)), problem)
+        var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.Substitute(mutator.Invocations.Observing(observations.Add)), problem)
             .Mutate([1, 2], RandomNumberGenerator.Create(1));
 
         var observation = observations.ShouldHaveSingleItem();
@@ -39,7 +39,7 @@ public class ObservationModuleTests
     public void AnObservationWrittenForANarrowerProblem_IsReportedWhenTheGraphIsResolved()
     {
         IOperator<Mutation, int> mutator = new AddOneMutator();
-        var observed = mutator.AnalyzedBy(mutator.Invocations.Observing(_ => { }));
+        var observed = mutator.Substitute(mutator.Invocations.Observing(_ => { }));
         var scope = ResolutionScope.Create();
 
         var exception = Should.Throw<InvalidOperationException>(() =>
@@ -76,7 +76,7 @@ public class ObservationModuleTests
         IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         var problem = CreateProblem();
         var observed = new List<IOperator<Evaluation, int>>();
-        var analyzed = evaluator.AnalyzedBy(evaluator.Invocations.Observing(observation => observed.Add(observation.Evaluator)));
+        var analyzed = evaluator.Substitute(evaluator.Invocations.Observing(observation => observed.Add(observation.Evaluator)));
         var budgeted = analyzed.Counting(evaluator, out var calls);
         var root = ResolutionScope.Create();
         var budget = root.CreateChildScope();
@@ -91,12 +91,12 @@ public class ObservationModuleTests
     [Fact]
     public async Task AnAlgorithmObservation_NumbersIterationsPerCallAndCarriesTheStateItFollowed()
     {
-        var algorithm = new AdditiveStepAlgorithm(2);
+        IAlgorithm<int, PopulationState<int>> algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
         var observations = new List<AlgorithmObservation<int, PopulationState<int>>>();
         var scope = ResolutionScope.Create();
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-            algorithm.AnalyzedBy(algorithm.Iterations.Observing(observations.Add)), problem);
+            algorithm.Substitute(algorithm.Iterations.Observing(observations.Add)), problem);
 
         var states = new List<PopulationState<int>>();
         await foreach (var state in executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
@@ -124,7 +124,7 @@ public class ObservationModuleTests
         var scope = ResolutionScope.Create();
 
         scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
-                interceptor.AnalyzedBy(interceptor.Invocations.Observing(observation => observed.Add(observation.State))), problem)
+                interceptor.Substitute(interceptor.Invocations.Observing(observation => observed.Add(observation.State))), problem)
             .Transform(state, null, RandomNumberGenerator.Create(1));
 
         observed.ShouldHaveSingleItem().ShouldBeSameAs(state);
@@ -138,7 +138,7 @@ public class ObservationModuleTests
     {
         IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         IOperator<Mutation, int> mutator = new AddOneMutator();
-        var algorithm = new AdditiveStepAlgorithm(2);
+        IAlgorithm<int, PopulationState<int>> algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
         var recorder = new Recorder();
         var scope = ResolutionScope.Create();
@@ -146,9 +146,9 @@ public class ObservationModuleTests
         var mutations = mutator.Invocations.Observing(recorder.Record);
         _ = algorithm.Iterations.Observing(recorder.Record);
 
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.AnalyzedBy(evaluations), problem)
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Substitute(evaluations), problem)
             .Evaluate([3], RandomNumberGenerator.Create(1));
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.AnalyzedBy(mutations), problem)
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.Substitute(mutations), problem)
             .Mutate([1], RandomNumberGenerator.Create(1));
 
         recorder.Problems.ShouldBe([problem, problem]);

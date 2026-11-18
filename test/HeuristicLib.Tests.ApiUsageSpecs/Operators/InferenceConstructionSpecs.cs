@@ -39,7 +39,7 @@ public class InferenceConstructionSpecs
         var elitismReplacer = ElitismReplacer.For(problem, elites: 2);
         var paretoReplacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true);
         var randomCrossover = RandomCrossover.For(problem, bias: 0.75);
-        var identityInterceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
+        IOperator<Interception<PopulationState<RealVector>>, RealVector> identityInterceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var reconfiguredAlgorithm = algorithm with
         {
             Evaluator = directEvaluator,
@@ -55,8 +55,8 @@ public class InferenceConstructionSpecs
         var fluentTransformedCrossover = algorithm.Crossover.TransformWith(algorithm.Mutator);
         var pipelineInterceptor = PipelineInterceptor.Create(identityInterceptor, identityInterceptor);
         var fluentPipelineInterceptor = identityInterceptor.Then(identityInterceptor);
-        var countingInterceptor = identityInterceptor.Invocations.Count();
-        var measuredInterceptor = identityInterceptor.Invocations.Duration();
+        var countingInterceptor = new Counter();
+        var measuredInterceptor = new Duration();
         var eliteSelector = EliteSelector.Create(algorithm.Selector, elites: 1);
         var fluentEliteSelector = algorithm.Selector.CombinedWithElites(elites: 1);
         var genderSpecificSelector = GenderSpecificSelector.Create(algorithm.Selector, algorithm.Selector);
@@ -79,8 +79,8 @@ public class InferenceConstructionSpecs
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
         var fluentAllTerminator = firstTerminator.And(secondTerminator);
-        var countingTerminator = firstTerminator.Invocations.Count();
-        var measuredTerminator = firstTerminator.Invocations.Duration();
+        var countingTerminator = new Counter();
+        var measuredTerminator = new Duration();
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
         var fluentTerminatedAlgorithm = algorithm.TerminatedBy(firstTerminator);
 
@@ -123,8 +123,8 @@ public class InferenceConstructionSpecs
         fluentTransformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
         pipelineInterceptor.ChildOperators.Count.ShouldBe(2);
         fluentPipelineInterceptor.ChildOperators.Count.ShouldBe(2);
-        identityInterceptor.AnalyzedBy(countingInterceptor).ShouldNotBeSameAs(identityInterceptor);
-        identityInterceptor.AnalyzedBy(measuredInterceptor).ShouldNotBeSameAs(identityInterceptor);
+        identityInterceptor.Substitute(identityInterceptor.Invocations.Counting(countingInterceptor)).ShouldNotBeSameAs(identityInterceptor);
+        identityInterceptor.Substitute(identityInterceptor.Invocations.Timing(measuredInterceptor)).ShouldNotBeSameAs(identityInterceptor);
         eliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
         fluentEliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
         genderSpecificSelector.FemaleSelector.ShouldBeSameAs(algorithm.Selector);
@@ -144,8 +144,8 @@ public class InferenceConstructionSpecs
         fluentAnyTerminator.ShouldNotBeNull();
         allTerminator.ShouldNotBeNull();
         fluentAllTerminator.ShouldNotBeNull();
-        firstTerminator.AnalyzedBy(countingTerminator).ShouldNotBeSameAs(firstTerminator);
-        firstTerminator.AnalyzedBy(measuredTerminator).ShouldNotBeSameAs(firstTerminator);
+        firstTerminator.Substitute(firstTerminator.Invocations.Counting(countingTerminator)).ShouldNotBeSameAs(firstTerminator);
+        firstTerminator.Substitute(firstTerminator.Invocations.Timing(measuredTerminator)).ShouldNotBeSameAs(firstTerminator);
         terminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         fluentTerminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         pipelineAlgorithm.Algorithms.Count.ShouldBe(2);

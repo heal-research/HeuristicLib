@@ -50,7 +50,7 @@ public class DynamicAnalysisTests
         var epoch = Clock.FromEpoch(problem);
         var bestPerEpoch = algorithm.Evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
 
-        var run = algorithm.AnalyzedBy(bestPerEpoch).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [bestPerEpoch]);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -67,17 +67,17 @@ public class DynamicAnalysisTests
             [5, 3, 7],
             [10, 1]
         ]);
-        var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
+        var evaluations = new Counter();
         var epoch = Clock.FromEpoch(problem);
-        var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
+        var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations.Clock, epoch);
 
-        var run = algorithm.AnalyzedBy(work).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [work, algorithm.Evaluator.Invocations.CountingCandidates(evaluations)]);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // Under a batch policy an epoch ending mid-batch leaves the rest of that batch scored by the old environment:
         // 7 runs after the boundary at 3, and 1 after the boundary at 10.
-        EpochWorkTrace.PerEpoch(run.Result(work), evaluations, epoch, evaluationsPerEpoch: 2)
+        EpochWorkTrace.PerEpoch(run.Result(work), evaluations.Clock, epoch, evaluationsPerEpoch: 2)
                       .ShouldBe([new EpochWork(0, 3, 1), new EpochWork(1, 2, 1)]);
     }
 
@@ -209,6 +209,43 @@ public class DynamicAnalysisTests
     }
 
     [Fact]
+    public void BestBeforeChangeAnalyzer_KeepsEvaluatorReferencesOnce()
+    {
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator();
+        IOperator<Evaluation, int> equalButDistinct = new ProblemEvaluator();
+        equalButDistinct.ShouldBe(evaluator);
+        equalButDistinct.ShouldNotBeSameAs(evaluator);
+        var recorded = new List<double>();
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>(
+            [evaluator, evaluator, equalButDistinct], objectiveValueSelector: vector =>
+            {
+                recorded.Add(vector[0]);
+                return vector[0];
+            });
+        analysis.Expand().Count.ShouldBe(2);
+        var problem = new IntegerDynamicProblem(epochLength: 1);
+        var scope = ResolutionScope.Create();
+        var typed = scope.For<int, IntegerSearchSpace, IntegerDynamicProblem>(problem);
+        var first = typed.Resolve(evaluator.Substitute(analysis.Expand()[0]));
+        var second = typed.Resolve(equalButDistinct.Substitute(analysis.Expand()[1]));
+
+        first.Evaluate([5], RandomNumberGenerator.Create(1));
+        second.Evaluate([3], RandomNumberGenerator.Create(1));
+        first.Evaluate([1], RandomNumberGenerator.Create(1));
+
+        recorded.ShouldBe([5d, 3d]);
+        scope.Results.Result(analysis).BestBeforeChange.Select(entry => (entry.Candidate, entry.Epoch)).ShouldBe([(5, 0), (3, 1)]);
+    }
+
+    [Fact]
+    public void BestBeforeChangeAnalyzer_RejectsEmptyEvaluators()
+    {
+        Should.Throw<InvalidOperationException>(() =>
+            new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([]))
+            .Message.ShouldBe("An analyzer needs at least one observation source.");
+    }
+
+    [Fact]
     public void BestBeforeChangePerformanceAnalyzer_RecordsTheBestOfEveryCompletedEpoch()
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);
@@ -222,7 +259,7 @@ public class DynamicAnalysisTests
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.AnalyzedBy(analysis).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [analysis]);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -238,7 +275,7 @@ public class DynamicAnalysisTests
         var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
         var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([algorithm.Evaluator], predictionEpochMultiplier: 2);
 
-        var run = algorithm.Substitute(analysis.Substitutions).CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(0));
+        var run = algorithm.Substitute(analysis.Expand()).CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(0));
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(analysis).BestBeforeChange.Select(entry => (entry.Candidate, entry.ObjectiveValue, entry.Epoch)).ShouldBe([(3, 3.0, 0), (1, 1.0, 1)]);
@@ -250,7 +287,7 @@ public class DynamicAnalysisTests
     {
         var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
         var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([algorithm.Evaluator]);
-        var configured = algorithm.AnalyzedBy(analysis);
+        var configured = algorithm.Substitute(analysis);
         var first = configured.CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(1));
         var second = configured.CreateRun(new IntegerDynamicProblem(epochLength: 100), RandomNumberGenerator.Create(2));
 
@@ -267,12 +304,12 @@ public class DynamicAnalysisTests
     [Fact]
     public void PerformanceAnalysisRejectsAnObservationFromAnUnsupportedProblemBeforeUpdatingItsResult()
     {
-        var evaluator = new ProblemEvaluator<int>();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([evaluator]);
         var scope = ResolutionScope.Create();
         var space = new IntegerSearchSpace();
         var problem = FuncProblem.Create((int candidate) => candidate, space, SingleObjective.Minimize);
-        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator.AnalyzedBy(analysis), problem);
+        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator.Substitute(analysis), problem);
 
         var error = Should.Throw<InvalidOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1)));
 

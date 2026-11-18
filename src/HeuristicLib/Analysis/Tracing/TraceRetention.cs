@@ -2,13 +2,13 @@ using System.Collections;
 
 namespace HEAL.HeuristicLib.Analysis;
 
-/// <summary>What a trace does with one aggregated observation.</summary>
+/// <summary>What a trace does with one computed value.</summary>
 public enum RetentionDecision
 {
     /// <summary>Store the value as a new entry. This is the value an unset decision has.</summary>
     Append,
 
-    /// <summary>Store the value over the entry before it, so the trace keeps no history of it.</summary>
+    /// <summary>Replace the latest entry, or append the first entry when none exists.</summary>
     ReplaceLatest,
 
     /// <summary>Drop the value. The entries already stored are untouched.</summary>
@@ -16,18 +16,24 @@ public enum RetentionDecision
 }
 
 /// <summary>
-/// Decides what a trace does with each aggregated observation.
+/// Decides which computed values a trace retains.
 /// </summary>
 /// <remarks>
 /// A retention is an immutable policy. What it counts or remembers belongs to the <see cref="RetentionDecider{TValue}"/>
 /// it creates for each trace, so traces sharing one retention, and the runs of one trace analyzer, decide
-/// independently.
+/// independently. The value function runs before retention, including for skipped values. A best-so-far curve
+/// applies retention to the running best candidate, rather than to the whole point.
 /// </remarks>
 public abstract class TraceRetention
 {
     public static TraceRetention EveryObservation() => new EveryObservationRetention();
+    /// <summary>Retains values at observations n, 2n, 3n, and so on, without extra initial or final entries.</summary>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="interval"/> is not positive.</exception>
     public static TraceRetention EveryNth(int interval) => new EveryNthRetention(interval);
+    /// <summary>Retains the first value and subsequent changes under the given equality.</summary>
+    /// <param name="equality">Compares values; <see langword="null"/> uses the value type's default equality.</param>
     public static TraceRetention OnChange(IEqualityComparer? equality = null) => new OnChangeRetention { Equality = equality };
+    /// <summary>Retains only the most recent value and its own clock readings.</summary>
     public static TraceRetention LatestOnly() => new LatestOnlyRetention();
 
     /// <summary>Creates the decider of one trace, which keeps whatever progress the retention needs.</summary>
@@ -38,9 +44,12 @@ public abstract class TraceRetention
 /// <remarks>The trace calls its decider under its own lock, one value at a time.</remarks>
 public abstract class RetentionDecider<TValue>
 {
+    /// <summary>Decides how to retain the value, updating this result's retention progress.</summary>
+    /// <remarks>Must return a defined <see cref="RetentionDecision"/>; an unknown value fails collection.</remarks>
     public abstract RetentionDecision Decide(TValue value);
 }
 
+/// <summary>Appends every computed value without keeping retention progress.</summary>
 public sealed class EveryObservationRetention : TraceRetention
 {
     public override RetentionDecider<TValue> CreateDecider<TValue>() => new Decider<TValue>();
@@ -54,6 +63,7 @@ public sealed class EveryObservationRetention : TraceRetention
 /// <summary>Records observations n, 2n, 3n, and so on. No extra initial or final entry is added.</summary>
 public sealed class EveryNthRetention : TraceRetention
 {
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="interval"/> is not positive.</exception>
     public EveryNthRetention(int interval)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(interval);

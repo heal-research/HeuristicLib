@@ -47,8 +47,8 @@ public static class CrossoverObservations
         public InvocationSource<Crossover, TCandidate, CrossoverObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Crossover, TCandidate, CrossoverObservation<TCandidate>>(crossover);
 
-        /// <summary>Records this crossover's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Crossover, TCandidate, CrossoverObservation<TCandidate>> Observed(IObservationInstrument<CrossoverObservation<TCandidate>> instrument) =>
-            new(crossover, instrument);
+        /// <summary>Records this crossover's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Crossover, TCandidate, CrossoverObservation<TCandidate>> Observed(IObservationReceiver<CrossoverObservation<TCandidate>> receiver) =>
+            new(crossover, receiver);
     }
 }

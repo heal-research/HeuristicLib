@@ -16,7 +16,7 @@ public sealed class NamedOperatorTests
         IOperator<Mutation, int> refinement = leaf.Named("refinement");
         Counter explored = new(), childCalls = new();
         var countingExploration = CountingNamed("exploration", explored);
-        ISubstitutionBundle[] observing = [Substitution.Counting(leaf, childCalls), countingExploration];
+        ISubstitution[] observing = [leaf.Invocations.Counting(childCalls), countingExploration];
         var scope = ResolutionScope.Create();
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var typedScope = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem);

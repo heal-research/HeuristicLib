@@ -44,9 +44,9 @@ public class EvaluatorInspectionTests
     public void MeasureEvaluatorDuration_AddsElapsedEvaluatorExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var evaluator = CreateEvaluator();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration), problem);
 
@@ -73,11 +73,12 @@ public class EvaluatorInspectionTests
     [Fact]
     public void MeasureEvaluatorDuration_RecordsFailedCall()
     {
-        var duration = new Duration(new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var evaluator = new ThrowingEvaluator();
         var problem = CreateProblem();
 
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         Should.Throw<InvalidOperationException>(() =>
             scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Timed(duration), problem).Evaluate([1], RandomNumberGenerator.Create(1)));
 

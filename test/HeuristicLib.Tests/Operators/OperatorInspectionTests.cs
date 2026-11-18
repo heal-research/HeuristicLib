@@ -30,7 +30,7 @@ public class OperatorInspectionTests
         outer.Mutate([0, 0], random).ShouldBe([1, 1]);
 
         var child = parent.CreateChildScope();
-        var inner = child.ResolveMutator(source.Counting(leaf, observedCalls));
+        var inner = child.ResolveMutator(source.Substitute(leaf.Invocations.Counting(observedCalls)));
         inner.ShouldNotBeSameAs(outer);
         inner.Mutate([0], random).ShouldBe([1]);
         outer.Mutate([0, 0, 0], random).ShouldBe([2, 2, 2]);
@@ -56,11 +56,11 @@ public class OperatorInspectionTests
         var preparations = 0;
         var observedCalls = new Counter();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var leaf = new AdvancingMutator(() => preparations++);
         var source = leaf.Timed(duration);
         var random = RandomNumberGenerator.Create(1);
-        var parent = ResolutionScope.Create();
+        var parent = ResolutionScope.Create(timeProvider);
         var measured = parent.Results.Result(duration);
         var outer = parent.ResolveMutator(source);
         measured.CurrentDuration.ShouldBe(TimeSpan.Zero);
@@ -68,7 +68,7 @@ public class OperatorInspectionTests
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
 
         var child = parent.CreateChildScope();
-        var inner = child.ResolveMutator(source.Counting(leaf, observedCalls));
+        var inner = child.ResolveMutator(source.Substitute(leaf.Invocations.Counting(observedCalls)));
         inner.ShouldNotBeSameAs(outer);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
         inner.Mutate([0], random).ShouldBe([1]);
@@ -80,7 +80,7 @@ public class OperatorInspectionTests
         parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
         preparations.ShouldBe(2);
 
-        var independentScope = ResolutionScope.Create();
+        var independentScope = ResolutionScope.Create(timeProvider);
         var independent = independentScope.ResolveMutator(source);
         independent.Mutate([0], random).ShouldBe([1]);
         measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
@@ -105,8 +105,8 @@ public class OperatorInspectionTests
             return failOperation ? throw operationFailure : parents;
         });
         var time = new CallbackTimeProvider(() => ++timestamps == 2 && failTimer ? throw timerFailure : timestamps);
-        var duration = new Duration(time);
-        var scope = ResolutionScope.Create();
+        var duration = new Duration();
+        var scope = ResolutionScope.Create(time);
         var executor = scope.ResolveMutator(source.Timed(duration));
 
         var failure = Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1)));
@@ -125,8 +125,8 @@ public class OperatorInspectionTests
         var timestamps = 0;
         var source = new CallbackMutator((parents, _, _, _) => { calls++; return parents; });
         var time = new CallbackTimeProvider(() => { timestamps++; throw failure; });
-        var duration = new Duration(time);
-        var scope = ResolutionScope.Create();
+        var duration = new Duration();
+        var scope = ResolutionScope.Create(time);
         var executor = scope.ResolveMutator(source.Timed(duration));
 
         Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1)))
@@ -173,9 +173,9 @@ public class OperatorInspectionTests
     public void MeasureCreatorDuration_AddsElapsedCreatorExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var creator = new SequenceCreator();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveCreator(creator.Timed(duration));
 
         executor.Create(3, RandomNumberGenerator.Create(1));
@@ -202,9 +202,9 @@ public class OperatorInspectionTests
     public void MeasureCreatorDuration_RecordsElapsedDurationWhenCreationThrows()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var source = new ThrowingCreator();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveCreator(source.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() =>
@@ -263,9 +263,9 @@ public class OperatorInspectionTests
     public void MeasureMutatorDuration_AddsElapsedMutatorExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var mutator = new AddOneMutator();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveMutator(mutator.Timed(duration));
 
         executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1));
@@ -278,9 +278,9 @@ public class OperatorInspectionTests
     public void MeasureMutatorDuration_RecordsElapsedDurationWhenMutationThrows()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var mutator = new ThrowingMutator();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveMutator(mutator.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() =>
@@ -297,8 +297,8 @@ public class OperatorInspectionTests
         var random = RandomNumberGenerator.Create(1);
         var problem = CreateProblem();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var innerDuration = new Duration(timeProvider);
-        var outerDuration = new Duration(timeProvider);
+        var innerDuration = new Duration();
+        var outerDuration = new Duration();
         var childMutator = new CallbackMutator((actualParents, actualRandom, actualSearchSpace, actualProblem) =>
         {
             calls++;
@@ -308,7 +308,7 @@ public class OperatorInspectionTests
             actualProblem.ShouldBeSameAs(problem);
             return actualParents;
         });
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(childMutator.Timed(innerDuration).Timed(outerDuration), problem);
 
         var result = executor.Mutate(parents, random);
@@ -325,14 +325,14 @@ public class OperatorInspectionTests
         var calls = 0;
         var problem = CreateProblem();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var innerDuration = new Duration(timeProvider);
-        var outerDuration = new Duration(timeProvider);
+        var innerDuration = new Duration();
+        var outerDuration = new Duration();
         var childMutator = new CallbackMutator((_, _, _, _) =>
         {
             calls++;
             throw new InvalidOperationException();
         });
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(childMutator.Timed(innerDuration).Timed(outerDuration), problem);
 
         Should.Throw<InvalidOperationException>(() =>
@@ -387,9 +387,9 @@ public class OperatorInspectionTests
     public void MeasureCrossoverDuration_AddsElapsedCrossoverExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var crossover = new SumParentsCrossover();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveCrossover(crossover.Timed(duration));
 
         executor.Cross(
@@ -420,9 +420,9 @@ public class OperatorInspectionTests
     public void MeasureCrossoverDuration_RecordsElapsedDurationWhenCrossoverThrows()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var source = new ThrowingCrossover();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveCrossover(source.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() =>
@@ -484,9 +484,9 @@ public class OperatorInspectionTests
     public void MeasureSelectorDuration_AddsElapsedSelectorExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var selector = new FirstCandidatesSelector();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveSelector(selector.Timed(duration));
         var problem = CreateProblem();
 
@@ -500,9 +500,9 @@ public class OperatorInspectionTests
     public void MeasureSelectorDuration_RecordsElapsedDurationWhenSelectionThrows()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var selector = new ThrowingSelector();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveSelector(selector.Timed(duration));
         var problem = CreateProblem();
 
@@ -589,9 +589,9 @@ public class OperatorInspectionTests
     public void MeasureReplacerDuration_AddsElapsedReplacerExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveReplacer(replacer.Timed(duration));
         var problem = CreateProblem();
 
@@ -614,9 +614,10 @@ public class OperatorInspectionTests
     [Fact]
     public void MeasureReplacerDuration_RecordsFailedCall()
     {
-        var duration = new Duration(new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingReplacer();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveReplacer(source.Timed(duration));
         var problem = CreateProblem();
 
@@ -651,9 +652,9 @@ public class OperatorInspectionTests
     public void MeasureInterceptorDuration_AddsElapsedInterceptorExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var interceptor = new AddOneInterceptor();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor.Timed(duration), problem);
 
@@ -680,9 +681,10 @@ public class OperatorInspectionTests
     [Fact]
     public void MeasureInterceptorDuration_RecordsFailedCall()
     {
-        var duration = new Duration(new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingInterceptor();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration), problem);
 
@@ -712,9 +714,9 @@ public class OperatorInspectionTests
     public void MeasureTerminatorDuration_AddsElapsedTerminatorExecutionDuration()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var terminator = new NeverTerminalStateTerminator();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator.Timed(duration), problem);
 
@@ -741,9 +743,10 @@ public class OperatorInspectionTests
     [Fact]
     public void MeasureTerminatorDuration_RecordsFailedCall()
     {
-        var duration = new Duration(new AdvancingTimeProvider(TimeSpan.FromSeconds(3)));
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingTerminator();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
         var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration), problem);
 

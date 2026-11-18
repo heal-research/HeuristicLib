@@ -55,29 +55,24 @@ public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCan
 public sealed record SlowCallReporter<TOperation, TCandidate> : WrappingOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
 {
-    public SlowCallReporter(IOperator<TOperation, TCandidate> childOperator, TimeSpan threshold, TimeProvider time,
+    public SlowCallReporter(IOperator<TOperation, TCandidate> childOperator, TimeSpan threshold,
         Action<IOperator, TimeSpan> report)
         : base(childOperator)
     {
         Threshold = threshold;
-        Time = time;
         Report = report;
     }
 
     public TimeSpan Threshold { get; init; }
-    public TimeProvider Time { get; init; }
     public Action<IOperator, TimeSpan> Report { get; init; }
 
     public static Parameter<SlowCallReporter<TOperation, TCandidate>, TimeSpan> ThresholdParameter { get; } =
         new(nameof(Threshold), static wrapper => wrapper.Threshold, static (wrapper, value) => wrapper with { Threshold = value });
 
-    public static Parameter<SlowCallReporter<TOperation, TCandidate>, TimeProvider> TimeParameter { get; } =
-        new(nameof(Time), static wrapper => wrapper.Time, static (wrapper, value) => wrapper with { Time = value });
-
     public static Parameter<SlowCallReporter<TOperation, TCandidate>, Action<IOperator, TimeSpan>> ReportParameter { get; } =
         new(nameof(Report), static wrapper => wrapper.Report, static (wrapper, value) => wrapper with { Report = value });
 
-    public new static IReadOnlyList<IParameter> Parameters { get; } = [ThresholdParameter, TimeParameter, ReportParameter];
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [ThresholdParameter, ReportParameter];
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
@@ -85,7 +80,7 @@ public sealed record SlowCallReporter<TOperation, TCandidate> : WrappingOperator
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var operation = OperationInfo.For<TOperation, TCandidate, TSearchState>();
-        return operation.Wrap(scope.ResolveOperator(ChildOperator), new ReportSlowCalls(Threshold, Time, Report, ChildOperator));
+        return operation.Wrap(scope.ResolveOperator(ChildOperator), new ReportSlowCalls(Threshold, scope.Results.TimeProvider, Report, ChildOperator));
     }
 
     private readonly struct ReportSlowCalls(TimeSpan threshold, TimeProvider time, Action<IOperator, TimeSpan> report,
@@ -185,9 +180,9 @@ public sealed class CustomWrapperDocumentationSpecs
         Action<IOperator, TimeSpan> report = (source, elapsed) => slow.Add(source.GetType().Name);
         var reporting = algorithm.Substitute(
             Substitution.Of(algorithm.Mutator, mutator =>
-                new SlowCallReporter<Mutation, RealVector>(mutator, TimeSpan.Zero, TimeProvider.System, report)),
+                new SlowCallReporter<Mutation, RealVector>(mutator, TimeSpan.Zero, report)),
             Substitution.Of(algorithm.Evaluator, evaluator =>
-                new SlowCallReporter<Evaluation, RealVector>(evaluator, TimeSpan.Zero, TimeProvider.System, report)));
+                new SlowCallReporter<Evaluation, RealVector>(evaluator, TimeSpan.Zero, report)));
         var run = reporting.CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
         #endregion general-wrapper-run
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

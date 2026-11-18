@@ -50,8 +50,8 @@ public static class SelectionObservations
         public InvocationSource<Selection, TCandidate, SelectionObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Selection, TCandidate, SelectionObservation<TCandidate>>(selector);
 
-        /// <summary>Records this selector's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Selection, TCandidate, SelectionObservation<TCandidate>> Observed(IObservationInstrument<SelectionObservation<TCandidate>> instrument) =>
-            new(selector, instrument);
+        /// <summary>Records this selector's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Selection, TCandidate, SelectionObservation<TCandidate>> Observed(IObservationReceiver<SelectionObservation<TCandidate>> receiver) =>
+            new(selector, receiver);
     }
 }

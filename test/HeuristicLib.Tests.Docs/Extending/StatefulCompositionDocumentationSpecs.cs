@@ -74,14 +74,14 @@ public sealed class StatefulCompositionDocumentationSpecs
             .Resolve(composition);
         original.Mutate(parents, random); // First child.
 
-        var firstCalls = first.Invocations.Count();
-        var secondCalls = second.Invocations.Count();
+        var firstCalls = new Counter();
+        var secondCalls = new Counter();
         var observedScope = scope.CreateChildScope();
         var observed = observedScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
             IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem)
-            .Resolve(composition.AnalyzedBy(firstCalls, secondCalls));
+            .Resolve(composition.Substitute(first.Invocations.Counting(firstCalls), second.Invocations.Counting(secondCalls)));
 
         observed.Mutate(parents, random); // First child with its own cursor.
         original.Mutate(parents, random); // Second child with the original cursor.
@@ -91,13 +91,13 @@ public sealed class StatefulCompositionDocumentationSpecs
         observedScope.Results.Result(secondCalls).CurrentCount.ShouldBe(0);
 
         #region stateful-composition-independent
-        var independentFirstCalls = first.Invocations.Count();
+        var independentFirstCalls = new Counter();
         var independentScope = ResolutionScope.Create();
         var independent = independentScope.For<
             RealVector,
             BoundedRealVectorSearchSpace,
             IProblem<RealVector, BoundedRealVectorSearchSpace>>(problem)
-            .Resolve(composition.AnalyzedBy(independentFirstCalls));
+            .Resolve(composition.Substitute(first.Invocations.Counting(independentFirstCalls)));
         independent.Mutate(parents, random); // First child with a fresh cursor.
         #endregion stateful-composition-independent
 

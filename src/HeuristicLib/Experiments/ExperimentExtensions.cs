@@ -53,6 +53,10 @@ public static class ExperimentExtensions
 
                 throw;
             }
+            finally
+            {
+                await run.ExecutionCompletion;
+            }
         }
 
         public ImmutableArray<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> Complete(

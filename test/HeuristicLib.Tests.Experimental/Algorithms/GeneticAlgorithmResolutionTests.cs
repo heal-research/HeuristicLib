@@ -76,7 +76,7 @@ public sealed class GeneticAlgorithmResolutionTests
     }
 
     // Each algorithm gets an interceptor over its own search state, together with a way to count that interceptor's calls.
-    private static (IAlgorithm<int> Algorithm, Func<CountAccumulator, ISubstitutionBundle> CountInterceptions) CreateAlgorithm(bool alps, IOperator<Creation, int> creator,
+    private static (IAlgorithm<int> Algorithm, Func<CountAccumulator, ISubstitution> CountInterceptions) CreateAlgorithm(bool alps, IOperator<Creation, int> creator,
         Action prepareInterceptor, double mutationRate = 0.5)
     {
         if (alps)

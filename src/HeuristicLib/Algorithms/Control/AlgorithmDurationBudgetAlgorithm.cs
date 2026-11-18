@@ -12,10 +12,8 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
 
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
-
     /// <summary>
-    /// Gets the duration budget. The expected value is positive.
+    /// Gets the duration budget measured with the run's time provider. The expected value is positive.
     /// </summary>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
@@ -23,13 +21,10 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
     public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
         new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
 
-    public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeProvider> TimeProviderParameter { get; } =
-        new(nameof(TimeProvider), static algorithm => algorithm.TimeProvider, static (algorithm, value) => algorithm with { TimeProvider = value });
-
     public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
         new(nameof(MaximumDuration), static algorithm => algorithm.MaximumDuration, static (algorithm, value) => algorithm with { MaximumDuration = value });
 
-    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, TimeProviderParameter, MaximumDurationParameter];
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, MaximumDurationParameter];
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
@@ -37,7 +32,7 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var algorithm = scope.Resolve(Algorithm);
-        return new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, MaximumDuration, TimeProvider, scope.Problem);
+        return new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, MaximumDuration, scope.Results.TimeProvider, scope.Problem);
     }
 }
 
@@ -99,22 +94,12 @@ public static class AlgorithmDurationBudgetExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
-            TimeSpan maximumDuration)
-        {
-            return algorithm.LimitedToDuration(maximumDuration, TimeProvider.System);
-        }
-
-        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(
-            TimeSpan maximumDuration,
-            TimeProvider timeProvider)
-        {
-            return new()
+        /// <summary>Stops after the produced state that reaches the duration budget, measured with the run's time provider.</summary>
+        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(TimeSpan maximumDuration) =>
+            new()
             {
                 Algorithm = algorithm,
-                MaximumDuration = maximumDuration,
-                TimeProvider = timeProvider
+                MaximumDuration = maximumDuration
             };
-        }
     }
 }

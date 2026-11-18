@@ -7,38 +7,24 @@ namespace HEAL.HeuristicLib.Inspection;
 /// It stays in the configuration graph, so the wrapper, the terminator and a <c>Sharing</c> entry that hold it show who
 /// uses which counter. It is a link rather than a value: two counters are different counters, and copies of a configuration
 /// keep the link to the same one. The count itself belongs to the run, as its executor, so runs of such copies count
-/// separately. The count spans the run, unless a scope narrows it with <see cref="ResolutionScope.Share"/>, as a budget does
-/// to restart it each time it is built. Keep the variable, and read it with <c>run.Result(counter).CurrentCount</c>.
+/// separately. Ordinary resolution uses the root's accumulator unless a scope narrows it with
+/// <see cref="ResolutionScope.Share"/>, as a budget does to restart it each time it is built.
+/// <see cref="AlgorithmRun.Result{TResult}"/> and clocks from <see cref="Clock"/> always read the root's accumulator, which can differ
+/// from a scope-local shared accumulator. Accumulator reads and additions are thread-safe.
 /// <para>
-/// A counter created from a source, such as <c>evaluator.Invocations.Count()</c>, holds the substitution that places its
-/// wrapper, so <c>AnalyzedBy</c> attaches it and a trace listing it as a clock places it. A counter created with
-/// <c>new Counter()</c> holds none and counts wherever it is placed explicitly, such as with <c>Counted</c>. The wrapper
-/// decides what is counted, so placing a counter explicitly states the metric.
+/// A counter places nothing. A wrapper counts into it, such as <c>Counted</c>, <c>CountedAlgorithm</c> or the
+/// substitution a source's <c>Counting</c> returns. The wrapper says what is counted. A counter placed nowhere reads
+/// zero, also when a trace reads it.
 /// </para>
 /// </remarks>
-public sealed class Counter : IConfigurationNode<CountAccumulator>, IClock<long>
+public sealed class Counter : IConfigurationNode<CountAccumulator>
 {
-    private readonly IReadOnlyList<Substitution> substitutions;
+    /// <summary>Creates a counter whose count each run accumulates from zero.</summary>
+    public Counter() { }
 
-    public Counter()
-    {
-        substitutions = [];
-    }
+    /// <summary>A clock reading this node, equal on every read of this property.</summary>
+    public CounterClock Clock => new(this);
 
-    // A counter of a source, which holds its placement outside its declared parameters.
-    internal Counter(Func<Counter, Substitution> placement)
-    {
-        substitutions = [placement(this)];
-    }
-
-    /// <summary>The substitution that places this counter's wrapper, or none for a counter created with <c>new Counter()</c>.</summary>
-    public IReadOnlyList<Substitution> Substitutions => substitutions;
-
+    /// <summary>Creates a fresh accumulator starting at zero.</summary>
     public CountAccumulator CreateExecutionNode(ResolutionScope scope) => new();
-
-    Func<object> IClock.Bind(RunResults results)
-    {
-        var accumulator = results.Result(this);
-        return () => accumulator.CurrentCount;
-    }
 }

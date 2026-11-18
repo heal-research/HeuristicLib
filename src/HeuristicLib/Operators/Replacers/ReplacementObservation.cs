@@ -52,8 +52,8 @@ public static class ReplacementObservations
         public InvocationSource<Replacement, TCandidate, ReplacementObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Replacement, TCandidate, ReplacementObservation<TCandidate>>(replacer);
 
-        /// <summary>Records this replacer's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Replacement, TCandidate, ReplacementObservation<TCandidate>> Observed(IObservationInstrument<ReplacementObservation<TCandidate>> instrument) =>
-            new(replacer, instrument);
+        /// <summary>Records this replacer's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Replacement, TCandidate, ReplacementObservation<TCandidate>> Observed(IObservationReceiver<ReplacementObservation<TCandidate>> receiver) =>
+            new(replacer, receiver);
     }
 }

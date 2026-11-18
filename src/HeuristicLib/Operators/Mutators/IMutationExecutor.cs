@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -36,23 +35,7 @@ public static class MutationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IMutationExecutor<TCandidate> Resolve(IOperator<Mutation, TCandidate> source) =>
-            (IMutationExecutor<TCandidate>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-
-        [return: NotNullIfNotNull(nameof(source))]
-        public IMutationExecutor<TCandidate>? ResolveOptional(IOperator<Mutation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
-
-        public bool TryResolve(IOperator<Mutation, TCandidate> source,
-            [NotNullWhen(true)] out IMutationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
-            scope.TryResolveOperator(source, out executor, out reason);
-    }
-
-    extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TRunSearchState : class, ISearchState
-    {
-        public IMutationExecutor<TCandidate> Resolve(IOperator<Mutation, TCandidate> source) =>
-            (IMutationExecutor<TCandidate>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
+            (IMutationExecutor<TCandidate>)scope.ResolveOperator<Mutation, TCandidate, TSearchSpace, TProblem>(source);
 
         [return: NotNullIfNotNull(nameof(source))]
         public IMutationExecutor<TCandidate>? ResolveOptional(IOperator<Mutation, TCandidate>? source) => source is null ? null : scope.Resolve(source);

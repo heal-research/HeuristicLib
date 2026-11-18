@@ -401,7 +401,9 @@ public class SubstitutedBudgetTests
         var changed = a.Counting(m, out var first);
         changed.Counting(changed.Mutator, out var second).ShouldBe(Expected(first, second));
         // One call.
-        a.Substitute(Substitution.Counting(m, out var innerCall), Substitution.Counting(cached, out var outerCall)).ShouldBe(Expected(innerCall, outerCall));
+        var innerCall = new Counter();
+        var outerCall = new Counter();
+        a.Substitute(m.Invocations.Counting(innerCall), cached.Invocations.Counting(outerCall)).ShouldBe(Expected(innerCall, outerCall));
     }
 
     // A read is not a resolution, so looking at a result before the run cannot break the run.

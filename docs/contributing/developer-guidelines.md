@@ -155,7 +155,7 @@ See [execution resolution](/contributing/architecture/execution-resolution) for 
 
 ### § 4.1 Separate reusable configurations from executors
 
-Configurations own immutable settings, child configurations and instrument definitions. Executors own private mutable data. Share an executor explicitly with `Sharing`; instrument results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
+Configurations own immutable settings, child configurations and analyzer definitions. Executors own private mutable data. Share an executor explicitly with `Sharing`; analyzer results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
@@ -173,7 +173,7 @@ Constructing a node never changes the rules for its siblings. A `CreateExecutor`
 
 ### § 4.4 Expose one construction hook
 
-Every configuration exposes one construction hook, which resolution calls for every build. Operation-parameterized operators expose `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds an executor for the operation and run types. Algorithms expose `CreateExecutor<TSearchSpace, TProblem>(scope)` with a scope typed to the run and their search state. A consumer-defined role implements `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope)`. Private data belongs to executor fields. Use `Sharing` for shared executors and `scope.Results.Result(instrument)` for run-bound results. Do not add a second initializer per operation, role-named alternatives or a competing public entry.
+Every configuration exposes one construction hook, which resolution calls for every build. Operation-parameterized operators expose `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds an executor for the operation and run types. Algorithms expose `CreateExecutor<TSearchSpace, TProblem>(scope)` with a scope typed to the run and their search state. A consumer-defined role implements `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope)`. Private data belongs to executor fields. Use `Sharing` to share executors and `scope.Results.Result(configuration)` to read run results. Do not add a second initializer per operation, role-named alternatives or a competing public entry.
 
 Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor` with a scope typed to their candidate, search space, problem and search state; generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or wrap that resolved child with `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(childOperator, wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
 
@@ -198,9 +198,9 @@ A setting has one input path.
 
 Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor` and throw `InvalidOperationException` before execution begins. Bound bases validate run-type compatibility before calling the hook. Do not add a separate validation API.
 
-For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before requesting resources. `Supports` supplies preflight metadata and resolution checks each executor against its requested interface. A wrapper rejects a child it cannot serve in its constructor, or in `CreateExecutor` before it resolves the child. A construction failure ends the scope tree while retaining published results.
+For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before resolving children. `Supports` supplies preflight metadata and resolution checks each executor against its requested interface. A wrapper rejects a child it cannot serve in its constructor, or in `CreateExecutor` before it resolves the child. A construction failure ends the scope tree while retaining published results.
 
-Instrument result creation must not depend on a requesting executor or its children. Its hooks receive only `RunResults`. Failed creation publishes no result; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
+Analyzer result creation must not depend on a requesting executor or its children. Its `CreateExecutionNode` receives a root `ResolutionScope`; recorders receive only `RunResults`. Clock readings are run results created by clocks in the root scope and obtained through `results.Result(clock)`. Failed creation publishes no result; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
 
 ### § 4.8 Represent configured behavior with value strategies
 
@@ -210,14 +210,14 @@ This guideline is held very highly but is not absolute. A special case with a te
 
 Current exceptions:
 
-- Analysis definitions and `Observing` may retain value functions and runtime callbacks, including Python callbacks, and `AnalyzedBy` or `Substitute` may place them in a configuration. The source of a role of your own retains the function that places its wrapper, and a trace over it reaches that function. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
+- Analysis definitions and `Observing` may retain value functions and runtime callbacks, including Python callbacks, and `CreateRun` or `Substitute` may place them in a configuration. The source of a role of your own retains the function that places its wrapper, and a trace over it reaches that function. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
 - `HeuristicLib.PythonInterop` operators such as `VisualizationCallbackEvaluator` hold Python-facing callbacks.
+- `EpochClock` in `HeuristicLib.Experimental` holds its live dynamic problem, so a configuration holding it is not serializable.
 - `DynamicRacingAlgorithm` and `DelegatingRacingStateMerger` in `HeuristicLib.Experimental` hold delegates that build, inspect and merge contenders.
-- Duration-based terminators, budgets and observations hold a replaceable `TimeProvider`.
 
 ### § 4.9 Use records only for value semantics
 
-Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry. Instrument definitions use reference identity, including when compared as properties of configuration records. Record copies retain those references.
+Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry. Analyzer definitions use reference identity, including when compared as properties of configuration records. Record copies retain those references.
 
 ### § 4.10 Validate operation inputs before side effects
 
@@ -233,7 +233,7 @@ Executors keep resolved children and machinery private or protected. Use nested 
 
 ### § 4.12 Keep role authoring hierarchies symmetric
 
-Keep configuration and executor authoring hierarchies symmetric. Every full role base has a matching executor base and derived types use that pair. An executor that reads neither the search space nor the problem derives from the candidate-only executor base, such as `MutationExecutor<TCandidate>`, or `AlgorithmExecutor<TSearchState>` for algorithms, instead of carrying run types it does not use. `WrappingOperator` and `MultiOperator` have none. Their hooks resolve current children and construct an executor holding those children, its private fields and any explicit resources.
+Keep configuration and executor authoring hierarchies symmetric. Every full role base has a matching executor base and derived types use that pair. An executor that reads neither the search space nor the problem derives from the candidate-only executor base, such as `MutationExecutor<TCandidate>`, or `AlgorithmExecutor<TSearchState>` for algorithms, instead of carrying run types it does not use. `WrappingOperator` and `MultiOperator` have none. Their hooks resolve current children and construct an executor holding those children, its private fields and explicit runtime dependencies.
 
 ### § 4.13 Give each child slot one public name
 
@@ -249,10 +249,10 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 - Use a stateless base for configuration data without mutable run data.
 - Author an executor for private mutable fields, child executors or custom execution structure.
 - Use a single item base for independent per item work.
-- Keep mutable data in executors or run-bound instrument results; definitions contain no live result or executor.
+- Keep mutable data in executors or run results; definitions contain no live result or executor.
 - Coordinate concurrent access across every executor sharing a resource. An executor local lock cannot protect a shared resource.
 
-Stateless leaf bases hide executor construction. Other authors keep private mutable data in executor fields. Configurations contain immutable settings, children and instrument definitions. Share configurations explicitly when their executors should retain data across child scopes. There is no automatic disposal contract.
+Stateless leaf bases hide executor construction. Other authors keep private mutable data in executor fields. Configurations contain immutable settings, children and analyzer definitions. Share configurations explicitly when their executors should retain data across child scopes. There is no automatic disposal contract.
 
 ### § 4.15 Keep single item batching explicit and deterministic
 
@@ -427,7 +427,7 @@ Where a parameter carries both, its documentation points at the member that defi
 ### § 8.3 Use variance only when substitution is meaningful
 
 - `TCandidate` is invariant throughout the public API. It identifies the exact shared representation.
-- Operator executor interfaces declare `in TSearchSpace` and `in TProblem` so general operators compose with specific problems. New roles must do the same.
+- Operator executors bind the search space and problem at construction; their interfaces omit those type parameters. General operators compose with specific problems through the authoring bases' run-type checks.
 - A returned type parameter cannot be contravariant. This makes `TSearchState` contravariant on `ITerminationExecutor` but invariant on `IInterceptionExecutor`.
 - Other domain parameters use variance only for a concrete substitution requirement and use a domain specific name.
 - Sonar S3246 is disabled because permitted positions alone do not establish meaningful substitution.
@@ -638,6 +638,12 @@ An incremental build does not re-emit these diagnostics, so verification needs a
 ### § 9.8 Use consistent Markdown emphasis
 
 Use `_italic text_` for emphasis and `**bold text**` for strong emphasis, following the repository's Prettier output. Code spans, fenced code and literal underscores retain their original meaning. Let Prettier choose an alternative delimiter only when necessary to preserve nested or intraword emphasis.
+
+### § 9.9 Keep an interface beside its primary implementation
+
+An interface with one primary implementation shares a file with that implementation, and the file is named after the implementation, as `IQuadraticAssignmentProblemData` sits in `QuadraticAssignmentProblemData.cs`. An interface with several implementations of equal standing keeps a file of its own.
+
+Question an interface that has a single implementation and will likely keep it. A concrete need justifies it, such as an external implementation, a test double or a variance requirement; without one, the class alone is the contract. This is a reason to reconsider new interfaces, not to remove published ones: a public interface ships in the package, and removing it needs its own decision.
 
 ## § 10 Enforcement and implementation style
 

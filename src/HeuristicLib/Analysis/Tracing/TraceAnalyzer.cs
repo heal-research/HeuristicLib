@@ -7,24 +7,24 @@ namespace HEAL.HeuristicLib.Analysis;
 /// <summary>Defines a trace: the values one function reads from each observation of its sources, recorded against clocks.</summary>
 /// <remarks>
 /// <para>
-/// The analyzer is an instrument and holds immutable settings only: its sources, clocks, retention and value function.
-/// Each run creates its own <see cref="Trace{TObservation, TValue}"/>, read with <c>run.Result(trace)</c>, so reusing one
-/// analyzer for several runs gives each run an independent trace. Attach it with <c>AnalyzedBy</c>, which wraps its
+/// The analyzer holds immutable settings only: its sources, clocks, retention and value function.
+/// Each run creates its own <see cref="Trace{TValue}"/>, read with <c>run.Result(trace)</c>, so reusing one
+/// analyzer for several runs gives each run an independent trace. Attach it with <c>CreateRun</c>, which wraps its
 /// sources wherever the configuration holds them, or place it explicitly with an <c>Observed</c> wrapper, which records
-/// into the same result.
+/// into the same result. Value functions are delegates, so a configuration holding the analyzer is not persistable.
 /// </para>
 /// <para>
 /// A trace observes each boundary once, by its configuration and observation type, so a source given twice counts
-/// once. Attaching it also attaches its clocks, closer to the nodes than its observations, so an observation made
-/// after a call, such as an invocation or a yielded state, reads clocks that already include that call. The start of an
-/// algorithm call is the exception: it is reported before the wrappers inside it run, so it reads a counter of that
-/// algorithm's calls before its own call is counted.
+/// once. Clocks only read; the caller places any clock that needs placement, or its counter's or duration's placement,
+/// after every analyzer that reads it in one list, so its reading includes the call. Listed before them, it reads before
+/// the call. The start of an algorithm call is the exception: it is reported before the wrappers inside it run, so it
+/// reads a counter of that algorithm's calls before its own call is counted.
 /// </para>
 /// </remarks>
-public sealed class TraceAnalyzer<TObservation, TValue> : Instrument<Trace<TObservation, TValue>>, IObservationInstrument<TObservation>
+public sealed class TraceAnalyzer<TObservation, TValue> : Analyzer<Trace<TValue>>, IObservationReceiver<TObservation>
 {
-    private readonly ImmutableArray<ObservationSource<TObservation>> sources;
-    private readonly ImmutableArray<IClock> clocks;
+    private readonly ValueArray<ObservationSource<TObservation>> sources;
+    private readonly ValueArray<IClock> clocks;
     private readonly TraceRetention retention;
     private readonly Func<Func<TObservation, TValue>> createValue;
 
@@ -33,45 +33,60 @@ public sealed class TraceAnalyzer<TObservation, TValue> : Instrument<Trace<TObse
     {
         // Sources of one observation type observe one boundary per configuration reference.
         this.sources = [.. sources.DistinctBy(static source => source.Configuration, ReferenceEqualityComparer.Instance)];
-        if (this.sources.Length == 0)
+        if (this.sources.Count == 0)
             throw new InvalidOperationException("A trace analyzer requires at least one observation source.");
-        this.clocks = [.. (clocks ?? []).Distinct<IClock>(ReferenceEqualityComparer.Instance)];
+        this.clocks = [.. (clocks ?? []).Distinct()];
         this.retention = retention ?? TraceRetention.EveryObservation();
         this.createValue = createValue;
     }
 
-    /// <summary>Records at the trace's sources, with its clocks closer to the nodes, so an entry reads clocks that already include its call.</summary>
-    protected override IReadOnlyList<Substitution> CreateSubstitutions() =>
-        [.. sources.Select(source => source.RecordingInto(this)), .. clocks.SelectMany(static clock => clock.Substitutions)];
+    /// <summary>Lists only source recordings; clocks place nothing through this trace.</summary>
+    protected override IReadOnlyList<ISubstitution> CreateSubstitutions() =>
+        [.. sources.Select(source => source.RecordingInto(this))];
 
     /// <summary>Creates the callback that records one observation into this run's trace.</summary>
-    public Action<TObservation> CreateRecorder(RunResults results) => results.Result(this).Record;
+    /// <remarks>Value computation, retention and publication are serialized by the result.</remarks>
+    /// <param name="results">The result table of the run being observed.</param>
+    public Action<TObservation> CreateRecorder(RunResults results) => ((Trace<TObservation, TValue>)results.Result(this)).Record;
 
-    protected override Trace<TObservation, TValue> CreateResult(RunResults results) =>
-        new(createValue(), [.. clocks.Select(clock => (clock, clock.Bind(results)))], retention.CreateDecider<TValue>());
+    /// <inheritdoc/>
+    public override Trace<TValue> CreateExecutionNode(ResolutionScope scope) =>
+        new Trace<TObservation, TValue>(createValue(), [.. clocks], [.. clocks.Select(clock => scope.Results.Result(clock))], retention.CreateDecider<TValue>());
 }
 
 /// <summary>A run's trace: the entries a trace analyzer recorded, read through immutable snapshots.</summary>
 /// <remarks>
 /// The trace is safe to read while the run writes to it. It belongs to one run; the analyzer that defines it creates a
-/// new trace for every run.
+/// new trace for every run, spanning all Cycle turns. Values must be immutable; snapshots retain their references.
+/// Entries follow collection order, which need not be deterministic for concurrent observations. Results remain
+/// readable after completion, cancellation or failure.
 /// </remarks>
-public abstract class Trace<TValue>
+public abstract class Trace<TValue> : IRunResult, IEnumerable<TraceEntry<TValue>>
 {
     private readonly Lock sync = new();
     private readonly List<TraceEntry<TValue>> entries = [];
-    private readonly ImmutableArray<(IClock Clock, Func<object> Read)> clocks;
     private readonly RetentionDecider<TValue> decider;
+    private readonly IClock[] columns;
+    private readonly IClockReading[] readings;
 
-    private protected Trace(ImmutableArray<(IClock Clock, Func<object> Read)> clocks, RetentionDecider<TValue> decider)
+    private protected Trace(IClock[] columns, IClockReading[] readings, RetentionDecider<TValue> decider)
     {
-        this.clocks = clocks;
+        this.columns = columns;
+        this.readings = readings;
         this.decider = decider;
     }
 
+    /// <summary>Enumerates a snapshot taken when this method is called.</summary>
+    public IEnumerator<TraceEntry<TValue>> GetEnumerator() => ((IEnumerable<TraceEntry<TValue>>)Snapshot()).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>The number of retained entries, rather than the number of observations.</summary>
     public int SampleCount { get { lock (sync) return entries.Count; } }
+    /// <summary>The last retained entry, or <see langword="null"/> before any entry is retained.</summary>
     public TraceEntry<TValue>? Latest { get { lock (sync) return entries.Count == 0 ? null : entries[^1]; } }
 
+    /// <summary>Reads the value of the last retained entry.</summary>
+    /// <exception cref="InvalidOperationException">The trace has retained no entry.</exception>
     public TValue RequireLatestValue()
     {
         lock (sync)
@@ -80,19 +95,21 @@ public abstract class Trace<TValue>
                 : entries[^1].Value;
     }
 
+    /// <summary>Copies the retained entries in collection order, keeping value references.</summary>
     public TraceSnapshot<TValue> Snapshot()
     {
         lock (sync)
-            return new TraceSnapshot<TValue>([.. entries], [.. clocks.Select(clock => clock.Clock)]);
+            return new TraceSnapshot<TValue>([.. entries], columns);
     }
 
+    /// <summary>Copies the retained values and their recorded readings of the clock, in collection order.</summary>
+    /// <param name="clock">A clock equal to one supplied when defining the analyzer.</param>
+    /// <exception cref="InvalidOperationException">The trace does not record this clock.</exception>
     public IReadOnlyList<TracePoint<TTime, TValue>> By<TTime>(IClock<TTime> clock) => Snapshot().By(clock);
 
     /// <summary>
-    /// Reads and stores under one lock. An observation of one source arrives on the thread that called the
-    /// operator, so the lock is not about parallel evaluation: it is what lets a caller read the trace while a run
-    /// writes to it. The value is read under the lock too, so a value function that keeps state, such as a best so far,
-    /// sees the observations one at a time.
+    /// Serializes value computation, retention and publication with other observations and live reads.
+    /// Retention never skips value computation; clock readings are taken only for retained values.
     /// </summary>
     private protected void Record<TObservation>(Func<TObservation, TValue> read, TObservation observation)
     {
@@ -103,10 +120,10 @@ public abstract class Trace<TValue>
             switch (decision)
             {
                 case RetentionDecision.Append:
-                    entries.Add(new TraceEntry<TValue>(Moment.Read(clocks), value));
+                    entries.Add(new TraceEntry<TValue>(Moment.Read(columns, readings), value));
                     break;
                 case RetentionDecision.ReplaceLatest:
-                    var entry = new TraceEntry<TValue>(Moment.Read(clocks), value);
+                    var entry = new TraceEntry<TValue>(Moment.Read(columns, readings), value);
                     if (entries.Count == 0)
                         entries.Add(entry);
                     else
@@ -122,12 +139,12 @@ public abstract class Trace<TValue>
 }
 
 /// <summary>A run's trace of the values read from observations of the type <typeparamref name="TObservation"/>.</summary>
-public sealed class Trace<TObservation, TValue> : Trace<TValue>
+internal sealed class Trace<TObservation, TValue> : Trace<TValue>
 {
     private readonly Func<TObservation, TValue> value;
 
-    internal Trace(Func<TObservation, TValue> value, ImmutableArray<(IClock Clock, Func<object> Read)> clocks, RetentionDecider<TValue> decider)
-        : base(clocks, decider)
+    internal Trace(Func<TObservation, TValue> value, IClock[] columns, IClockReading[] readings, RetentionDecider<TValue> decider)
+        : base(columns, readings, decider)
     {
         this.value = value;
     }
@@ -136,6 +153,7 @@ public sealed class Trace<TObservation, TValue> : Trace<TValue>
     public void Record(TObservation observation) => Record(value, observation);
 }
 
+/// <summary>A retained value with the clock readings taken when it was recorded.</summary>
 public readonly record struct TraceEntry<TValue>
 {
     private readonly Moment moment;
@@ -148,30 +166,39 @@ public readonly record struct TraceEntry<TValue>
 
     public TValue Value { get; }
 
+    /// <summary>Returns the recorded reading of a clock supplied to the analyzer.</summary>
+    /// <param name="clock">A clock equal to one supplied when defining the analyzer.</param>
+    /// <exception cref="InvalidOperationException">The trace does not record this clock.</exception>
     public TTime At<TTime>(IClock<TTime> clock) => moment.At(clock);
 }
 
+/// <summary>A retained trace value paired with one of its recorded clock readings.</summary>
 public readonly record struct TracePoint<TTime, TValue>(TTime Time, TValue Value);
 
+/// <summary>A stable copy of retained trace entries in collection order; value references are not copied.</summary>
 public sealed class TraceSnapshot<TValue> : IReadOnlyList<TraceEntry<TValue>>
 {
     private readonly ImmutableArray<TraceEntry<TValue>> entries;
-    private readonly ImmutableArray<IClock> clocks;
+    private readonly IClock[] columns;
 
-    internal TraceSnapshot(ImmutableArray<TraceEntry<TValue>> entries, ImmutableArray<IClock> clocks)
+    internal TraceSnapshot(ImmutableArray<TraceEntry<TValue>> entries, IClock[] columns)
     {
         this.entries = entries;
-        this.clocks = clocks;
+        this.columns = columns;
     }
 
+    /// <summary>Copies values paired with their recorded clock readings, preserving entry order.</summary>
+    /// <param name="clock">A clock equal to one supplied when defining the analyzer.</param>
+    /// <exception cref="InvalidOperationException">The trace does not record this clock, even if the snapshot is empty.</exception>
     public IReadOnlyList<TracePoint<TTime, TValue>> By<TTime>(IClock<TTime> clock)
     {
-        if (!clocks.Any(selected => ReferenceEquals(selected, clock)))
+        if (!columns.Any(selected => Equals(selected, clock)))
             throw new InvalidOperationException("The trace does not use the requested clock.");
         return entries.Select(entry => new TracePoint<TTime, TValue>(entry.At(clock), entry.Value)).ToImmutableArray();
     }
 
     public int Count => entries.Length;
+    /// <summary>Copies the values in entry order, retaining their references.</summary>
     public ImmutableArray<TValue> Values => entries.Select(entry => entry.Value).ToImmutableArray();
     public TraceEntry<TValue> this[int index] => entries[index];
     public ImmutableArray<TraceEntry<TValue>>.Enumerator GetEnumerator() => entries.GetEnumerator();

@@ -19,39 +19,29 @@ public abstract class AlgorithmRun
         this.configuration = configuration;
     }
 
-    /// <summary>Returns this run's result of the instrument, creating it when the run has not looked it up yet.</summary>
-    /// <remarks>
-    /// The result can be read before, during and after execution, also after a failure. Each result type states how it
-    /// may be read while the run writes to it, such as a trace through its snapshots.
-    /// </remarks>
-    /// <exception cref="InvalidOperationException">
-    /// The instrument needs placing and the run's algorithm does not hold it, so it would read empty. What a delegate
-    /// creates cannot be seen, so nothing is reported once the algorithm holds a delegate.
-    /// </exception>
-    public TResult Result<TResult>(Instrument<TResult> instrument) where TResult : class
-    {
-        RequireHeld(instrument);
-        return scope.Results.Result(instrument);
-    }
-
     /// <summary>Returns this run's result of the configuration, such as the accumulator of a counter.</summary>
-    /// <remarks>It can be read before, during and after execution, also after a failure.</remarks>
+    /// <remarks>
+    /// Creates the root scope's result on first lookup. It can be read before, during and after execution, also after
+    /// a failure; the result type defines whether live reads are safe. Analyzer results span every Cycle turn.
+    /// </remarks>
+    /// <param name="configuration">The result-producing configuration, identified by reference.</param>
     /// <exception cref="InvalidOperationException">
-    /// The configuration holds substitutions that place it, as a counter created from a source does, and the run's
-    /// algorithm does not hold it, so it would read empty. Nothing is reported once the algorithm holds a delegate.
+    /// The configuration holds substitutions that place it, and the run's
+    /// algorithm provably does not hold it, so it would read empty; or result construction recursively requests itself.
+    /// A reachable declared delegate prevents proving absence, so the placement check permits it.
     /// </exception>
     public TResult Result<TResult>(IConfigurationNode<TResult> configuration) where TResult : class, IRunResult
     {
-        if (configuration is ISubstitutionBundle bundle)
-            RequireHeld(bundle);
+        RequireHeld(configuration);
         return scope.RunResult(configuration);
     }
 
-    private void RequireHeld(ISubstitutionBundle bundle)
+    internal void RequireHeld(IConfigurationNode node)
     {
-        if (bundle.Substitutions.Count > 0 && !MayHold(configuration, bundle))
-            throw new InvalidOperationException($"This run's algorithm does not hold the {ExecutionSignature.Name(bundle.GetType())}, so its result would stay empty. " +
-                "Attach it with algorithm.AnalyzedBy(analyzer) and create the run from the configuration that call returns.");
+        if (node is ISubstitution substitution && substitution.Expand().Count > 0 && !MayHold(configuration, node))
+            throw new InvalidOperationException($"This run's algorithm does not hold the {ExecutionSignature.Name(node.GetType())}, so its result would stay empty. " +
+                "Place it with algorithm.CreateRun(problem, random, [substitution]), or with Substitute for a configuration you keep, " +
+                "and check that the configuration holds what it observes, such as an evaluator of its candidate type.");
     }
 
     // Whether a declared parameter reachable from the root holds the value, or a delegate could have placed it unseen.
@@ -128,6 +118,8 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     public IRandomNumberGenerator Random { get; }
 
+    /// <summary>Creates a ready run without placing substitutions or validating configuration contracts.</summary>
+    /// <remarks>The executor graph is resolved on first start. Use <c>algorithm.CreateRun(...)</c> for validation and substitution placement.</remarks>
     public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
         : this(algorithm, problem, random, TimeProvider.System)
     {
@@ -142,6 +134,11 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         Random = random;
     }
 
+    /// <summary>Starts or resumes the retained execution with a single-consumer stream.</summary>
+    /// <param name="initialState">An optional starting state, permitted only before execution first starts.</param>
+    /// <param name="cancellationToken">Cancels this stream at root yield boundaries, pausing the run for later resumption.</param>
+    /// <remarks>Stopping consumption pauses the run. Completion and failure are terminal; results remain readable.</remarks>
+    /// <exception cref="InvalidOperationException">A stream is active, the run is canceled or failed, or a resumed run receives an initial state.</exception>
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
         CreateStream(initialState, cancellationToken, cancellationTerminatesRun: false);
 
@@ -185,9 +182,12 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         }
     }
 
+    /// <summary>Consumes a new execution stream to its last state, resuming a paused run if necessary.</summary>
+    /// <remarks>Cancellation pauses the run as for <see cref="Stream"/>. An execution yielding no state has no last state.</remarks>
     public async Task<TSearchState> CompleteAsync(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
         await Stream(initialState, cancellationToken).LastAsync(cancellationToken);
 
+    /// <summary>Blocks while <see cref="CompleteAsync"/> consumes execution to its last state.</summary>
     public TSearchState Complete(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
         CompleteAsync(initialState, cancellationToken).GetAwaiter().GetResult();
 

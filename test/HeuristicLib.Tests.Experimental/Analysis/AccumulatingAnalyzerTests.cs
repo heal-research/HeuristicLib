@@ -14,6 +14,16 @@ public class AccumulatingAnalyzerTests
         new([ObjectiveDirection.Minimize, ObjectiveDirection.Minimize], NoTotalOrderComparer.Instance);
 
     [Fact]
+    public void ParetoAnalyzerKeepsEvaluatorReferencesOnce()
+    {
+        var evaluator = new ProblemEvaluator<int>();
+        var equalEvaluator = new ProblemEvaluator<int>();
+        var analyzer = new ParetoFrontAnalyzer<int>(SingleObjective.Minimize, new ObjectiveVector(100),
+            evaluator, evaluator, equalEvaluator);
+        analyzer.Expand().Count.ShouldBe(2);
+    }
+
+    [Fact]
     public void OneAccumulator_MergesEveryObservedSource()
     {
         var first = new SketchEvaluator();
@@ -21,7 +31,7 @@ public class AccumulatingAnalyzerTests
         var analyzer = new ParetoFrontAnalyzer<int>(
             TwoMinimized, new ObjectiveVector(100, 100), first, second);
         var scope = ResolutionScope.Create();
-        var placed = new TwoEvaluators(first, second).Substitute(analyzer.Substitutions);
+        var placed = new TwoEvaluators(first, second).Substitute(analyzer.Expand());
 
         scope.Results.Result(analyzer).Count.ShouldBe(0);
         Evaluate(scope, placed.First, 1, 9);
@@ -39,7 +49,7 @@ public class AccumulatingAnalyzerTests
     {
         var evaluator = new SketchEvaluator();
         var analyzer = new ParetoFrontAnalyzer<int>(TwoMinimized, new ObjectiveVector(100, 100), evaluator);
-        var placed = new TwoEvaluators(evaluator, evaluator).Substitute(analyzer.Substitutions).First;
+        var placed = new TwoEvaluators(evaluator, evaluator).Substitute(analyzer.Expand()).First;
         var first = ResolutionScope.Create();
         var second = ResolutionScope.Create();
 
@@ -61,8 +71,9 @@ public class AccumulatingAnalyzerTests
             crossover: new AlphaBetaBlendCrossover(), mutator: new GaussianMutator(1, 0.1),
             populationSize: 4, maximumGenerations: 3, mutationRate: 1);
         var genealogy = Analyzer.Genealogy(algorithm.Crossover, algorithm.Mutator, algorithm);
-        RankAnalyzer<RealVector> ranks = Analyzer.Rank(algorithm.Crossover, algorithm.Mutator, algorithm);
-        var configured = algorithm.AnalyzedBy(genealogy, ranks);
+        Analyzer<RankState<RealVector>> ranks = Analyzer.Rank(algorithm, algorithm.Crossover, algorithm.Mutator);
+        IAlgorithm<RealVector, PopulationState<RealVector>> receiver = algorithm;
+        var configured = receiver.Substitute(genealogy, ranks);
         var first = configured.CreateRun(problem, RandomNumberGenerator.Create(1));
         var second = configured.CreateRun(problem, RandomNumberGenerator.Create(2));
 
@@ -81,6 +92,80 @@ public class AccumulatingAnalyzerTests
         first.Result(genealogy).ShouldNotBeSameAs(second.Result(genealogy));
         first.Result(ranks).ShouldNotBeSameAs(second.Result(ranks));
         first.Result(ranks).Graph.ShouldNotBeSameAs(second.Result(ranks).Graph);
+    }
+
+    [Fact]
+    public void RankCompositionMatchesTheCombinedGenealogyAndRankRecording()
+    {
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        var algorithm = GeneticAlgorithm.For(problem, creator: new UniformDistributedCreator(problem.SearchSpace),
+            crossover: new AlphaBetaBlendCrossover(), mutator: new GaussianMutator(1, 0.1),
+            populationSize: 4, maximumGenerations: 3, mutationRate: 1);
+        var ranks = Analyzer.Rank(algorithm, algorithm.Crossover, algorithm.Mutator);
+        var graph = new GenealogyGraph<RealVector>(EqualityComparer<RealVector>.Default);
+        var expectedRanks = new List<double[]>();
+        var crossovers = algorithm.Crossover.Invocations.Observing(observation =>
+        {
+            foreach (var (parents, child) in observation.Parents.Zip(observation.Offspring))
+                graph.AddConnection([parents.Parent1, parents.Parent2], child);
+        });
+        var mutations = algorithm.Mutator.Invocations.Observing(observation =>
+        {
+            foreach (var (parent, child) in observation.Parents.Zip(observation.Offspring))
+                graph.AddConnection([parent], child);
+        });
+        var generations = algorithm.Iterations.Observing(observation =>
+        {
+            graph.SetAsNewGeneration(observation.State.Population.OrderBy(candidate => candidate.ObjectiveVector,
+                observation.Problem.Objective.RequireTotalOrder()).Select(candidate => candidate.Candidate));
+            var row = graph.AverageDescendantRanksOfPreviousGeneration();
+            if (!row.IsEmpty)
+                expectedRanks.Add([.. row]);
+        });
+        var expected = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1), [crossovers, mutations, generations]);
+        var actual = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1), [ranks]);
+
+        expected.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        actual.Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        actual.Result(ranks).Graph.ToGraphViz().ShouldBe(graph.ToGraphViz());
+        actual.Result(ranks).Ranks.Count.ShouldBe(expectedRanks.Count);
+        foreach (var (actualRow, expectedRow) in actual.Result(ranks).Ranks.Zip(expectedRanks))
+            actualRow.ShouldBe(expectedRow);
+    }
+
+    [Fact]
+    public void AnExplicitlyPlacedRankAnalyzerWithItsGenealogy_RecordsWhatAttachingItRecords()
+    {
+        var problem = new TestFunctionProblem(new SphereFunction(1));
+        var algorithm = GeneticAlgorithm.For(problem, creator: new UniformDistributedCreator(problem.SearchSpace),
+            crossover: new AlphaBetaBlendCrossover(), mutator: new GaussianMutator(1, 0.1),
+            populationSize: 4, maximumGenerations: 3, mutationRate: 1);
+        var attachedRank = Analyzer.Rank(algorithm, algorithm.Crossover, algorithm.Mutator);
+        var explicitRank = Analyzer.Rank(algorithm, algorithm.Crossover, algorithm.Mutator);
+        IAlgorithm<RealVector, PopulationState<RealVector>> receiver = algorithm;
+        var explicitlyPlaced = receiver.Substitute(explicitRank.Genealogy).Observed(explicitRank);
+        var attachedRun = algorithm.CreateRun(problem, RandomNumberGenerator.Create(1), [attachedRank]);
+        var explicitRun = explicitlyPlaced.CreateRun(problem, RandomNumberGenerator.Create(1));
+
+        attachedRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        explicitRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        var attachedResult = attachedRun.Result(attachedRank);
+        var explicitResult = explicitRun.Result(explicitRank);
+        explicitResult.Graph.ToGraphViz().ShouldBe(attachedResult.Graph.ToGraphViz());
+        explicitResult.Ranks.ShouldNotBeEmpty();
+        explicitResult.Ranks.ShouldAllBe(row => !row.IsEmpty);
+        explicitResult.Ranks.Count.ShouldBe(attachedResult.Ranks.Count);
+        foreach (var (explicitRow, attachedRow) in explicitResult.Ranks.Zip(attachedResult.Ranks))
+            explicitRow.ShouldBe(attachedRow);
+    }
+
+    [Fact]
+    public void ARankAnalyzerWithoutAnAlgorithmIsRejected()
+    {
+        Should.Throw<InvalidOperationException>(() => new RankAnalyzer<RealVector, PopulationState<RealVector>>(
+            algorithms: [], crossovers: [new AlphaBetaBlendCrossover()]));
     }
 
     private sealed record TwoEvaluators(IOperator<Evaluation, int> First, IOperator<Evaluation, int> Second) : IConfigurationNode

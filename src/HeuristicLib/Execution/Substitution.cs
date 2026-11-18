@@ -6,15 +6,19 @@ namespace HEAL.HeuristicLib.Execution;
 /// <summary>What to match in a configuration graph and what to put in its place.</summary>
 /// <remarks>
 /// A substitution maps one configuration graph to another and stores nothing in the configuration it returns, so its
-/// delegates are not configuration data. The type argument of each factory says which nodes are considered.
+/// delegates are not configuration data. A substitution is never stored or serialized; persist the configuration it
+/// produced, an ordinary graph containing the nodes it placed. The type argument of each factory says which nodes
+/// are considered.
 /// </remarks>
-public sealed class Substitution : ISubstitutionBundle
+public sealed class Substitution : ISubstitution
 {
+    private readonly IReadOnlyList<Substitution> expansion;
     private readonly Func<IConfigurationNode, bool> selects;
     private readonly Func<IConfigurationNode, IConfigurationNode> replace;
 
     private Substitution(Type nodeType, Func<IConfigurationNode, bool> selects, Func<IConfigurationNode, IConfigurationNode> replace, IConfigurationNode? target)
     {
+        expansion = [this];
         NodeType = nodeType;
         this.selects = selects;
         this.replace = replace;
@@ -31,7 +35,8 @@ public sealed class Substitution : ISubstitutionBundle
 
     internal IConfigurationNode Replace(IConfigurationNode node) => replace(node);
 
-    IReadOnlyList<Substitution> ISubstitutionBundle.Substitutions => [this];
+    /// <summary>Returns the cached one-element list containing this substitution.</summary>
+    public IReadOnlyList<Substitution> Expand() => expansion;
 
     /// <summary>Replaces every node of the type <typeparamref name="TNode"/> the predicate selects.</summary>
     /// <remarks>
@@ -39,17 +44,20 @@ public sealed class Substitution : ISubstitutionBundle
     /// <c>op</c> is typed by an interface; use <c>op.Equals(x)</c> or a parameter typed by the concrete record for value
     /// equality.
     /// </remarks>
+    /// <param name="selects">Tests nodes from the graph the substitution call received.</param>
+    /// <param name="replace">Receives each selected node with its children already substituted.</param>
     public static Substitution Of<TNode>(Func<TNode, bool> selects, Func<TNode, TNode> replace)
         where TNode : class, IConfigurationNode =>
         new(typeof(TNode), node => node is TNode typed && selects(typed), node => replace((TNode)node), null);
 
     /// <summary>Replaces every node of the type <typeparamref name="TNode"/>, which the lambda's parameter type states.</summary>
+    /// <param name="replace">Receives each matched node with its children already substituted.</param>
     public static Substitution Of<TNode>(Func<TNode, TNode> replace)
         where TNode : class, IConfigurationNode =>
         new(typeof(TNode), static node => node is TNode, node => replace((TNode)node), null);
 
     /// <summary>Replaces the given configuration, which it is an error not to find.</summary>
-    /// <param name="target">The configuration to replace.</param>
+    /// <param name="target">The configuration to match in the graph the substitution call received.</param>
     /// <param name="replace">Receives the matched node with its children already substituted.</param>
     /// <param name="comparer">
     /// Decides what counts as the target. <see langword="null"/> means reference equality, unlike the usual .NET default:
@@ -100,9 +108,14 @@ public static class SubstitutionExtensions
 {
     extension<TRoot>(TRoot root) where TRoot : class, IConfigurationNode
     {
-        /// <summary>Applies the substitutions one after another, such as those of traces and counters.</summary>
-        public TRoot Substitute(params IReadOnlyList<ISubstitutionBundle> substitutions) =>
-            SubstitutionCall.Apply(root, [.. substitutions.SelectMany(static bundle => bundle.Substitutions)]);
+        /// <summary>Expands and applies the substitutions, keeping each single substitution only at its last position.</summary>
+        /// <param name="substitutions">Parts in application order; later wrappers sit closer to their targets.</param>
+        /// <returns>The rewritten graph, or the receiver itself when nothing changes.</returns>
+        /// <exception cref="InvalidOperationException">
+        /// A named target is unreachable, a replacement does not fit its slot, or a group contains itself.
+        /// </exception>
+        public TRoot Substitute(params IReadOnlyList<ISubstitution> substitutions) =>
+            SubstitutionCall.Apply(root, [.. substitutions.SelectMany(static substitution => substitution.Expand())]);
 
         /// <inheritdoc cref="Substitution.Of{TNode}(Func{TNode, bool}, Func{TNode, TNode})"/>
         public TRoot Substitute<TNode>(Func<TNode, bool> selects, Func<TNode, TNode> replace)
@@ -257,7 +270,7 @@ internal sealed class SubstitutionCall
                 $"through declared parameters, so this placement selects nothing.{delegates} A reference matches exactly that object, and it stops matching once an " +
                 "earlier Substitute call copied it, which happens to every ancestor of what that call changed. Three routes reach the node: pass all substitutions " +
                 "in one Substitute call, which resolves every target against the same input; substitute ancestors first; or name the target from the current " +
-                "configuration, as in limited.Counting(limited.Algorithm.Iterations, out var iterations). AnalyzedBy is one such call, so analyze first and apply budgets afterwards.");
+                "configuration, as in limited.Algorithm.Iterations for a budget. CreateRun places substitutions into the configuration it receives; name targets from that configuration.");
         }
 
         private readonly record struct Visited(IConfigurationNode Rewritten, IConfigurationNode Replaced, bool Selected, bool PlacedBelow);

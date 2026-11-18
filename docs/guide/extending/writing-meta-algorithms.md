@@ -88,7 +88,7 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 Five details carry the design:
 
 - **Both children are declared as parameters.** Analysis and other substitutions reach only declared children, so an undeclared child could not be observed.
-- **Both children are resolved in `CreateExecutor`.** Each build receives children with the requesting context's observations, with independent private fields and any explicitly shared resources.
+- **Both children are resolved in `CreateExecutor`.** Each build receives children with the requesting context's observations, with independent private fields except for explicitly shared executors.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
 - **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those as the method type arguments `TSearchSpace` and `TProblem` on `CreateExecutor`. The resolved children retain their problem bindings, so the nested executor derives from `AlgorithmExecutor<TSearchState>` and needs only the search state. A wrapper that only forwards to one child can derive from `WrappingAlgorithmExecutor<TSearchState>` and use its protected `ChildAlgorithm`. The scope the hook receives is typed to them, which keeps the two `Resolve` calls free of type arguments.
@@ -109,7 +109,7 @@ var staged = new TwoStageAlgorithm<RealVector, PopulationState<RealVector>>
 };
 
 var wholeRun = staged.Iterations.TracePopulationQuality();
-var run = staged.AnalyzedBy(wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [wholeRun]);
 ```
 
 Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
@@ -120,7 +120,7 @@ Because the children are declared, either stage can also be observed on its own:
 var exploreQuality = explore.Iterations.TracePopulationQuality();
 
 var wholeRun = staged.Iterations.TracePopulationQuality();
-var run = staged.AnalyzedBy(exploreQuality, wholeRun).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [exploreQuality, wholeRun]);
 ```
 
 `run.Result(exploreQuality)` then holds only the first stage's generations, and `run.Result(wholeRun)` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
@@ -154,4 +154,4 @@ A meta-algorithm should:
 3. Pass the cancellation token to every child stream.
 4. Keep configurations immutable, private data in executor fields and invocation progress in iterators. Use explicit `Sharing` for intentional sharing.
 
-Read [Observability and analysis](/guide/execution/observability-and-analysis) for what observing a child algorithm means for the resulting series.
+Read [Observability and analysis](/guide/execution/observability-and-analysis) for what observing a child algorithm means for the resulting traces.

@@ -131,9 +131,9 @@ public class RefinerCompositionTests
     public void MeasureRefinerDuration_RecordsElapsedDurationWhenRefinementThrows()
     {
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var duration = new Duration(timeProvider);
+        var duration = new Duration();
         var observed = new ThrowingRefiner();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed.Timed(duration), CreateProblem());
 
         Should.Throw<InvalidOperationException>(() => Refine(executor, 3));

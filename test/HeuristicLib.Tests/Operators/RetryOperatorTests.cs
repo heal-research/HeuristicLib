@@ -29,13 +29,13 @@ public sealed class RetryOperatorTests
             return input;
         });
         var clock = new TickClock();
-        var innerTime = new Duration(clock);
-        var outerTime = new Duration(clock);
+        var innerTime = new Duration();
+        var outerTime = new Duration();
         var retry = leaf.Timed(innerTime).Retry(3).Named("retry");
         Counter innerCalls = new(), outerWork = new();
-        var scope = ResolutionScope.Create();
+        var scope = ResolutionScope.Create(clock);
         var executor = scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(retry.Timed(outerTime).Substitute(
-            Substitution.Counting(leaf, innerCalls), Substitution.Counting(retry, outerWork, OperatorCountMetric.Candidates)), Problem());
+            leaf.Invocations.Counting(innerCalls), retry.Invocations.CountingCandidates(outerWork)), Problem());
         executor.Mutate(parents, random).ShouldBeSameAs(parents);
         attempts.ShouldBe(failures + 1);
         scope.Results.Result(innerCalls).CurrentCount.ShouldBe(1);
@@ -105,7 +105,7 @@ public sealed class RetryOperatorTests
         var inner = leaf.Retry(2);
         var outer = inner.Retry(2);
         Counter childCalls = new(), innerCalls = new(), outerCalls = new();
-        var counted = outer.Substitute(Substitution.Counting(leaf, childCalls), Substitution.Counting(inner, innerCalls)).Counted(outerCalls);
+        var counted = outer.Substitute(leaf.Invocations.Counting(childCalls), inner.Invocations.Counting(innerCalls)).Counted(outerCalls);
         var scope = ResolutionScope.Create();
         scope.Resolve<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>>(counted, Problem())
             .Mutate([0], RandomNumberGenerator.Create(1)).ShouldBe([4]);

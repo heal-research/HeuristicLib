@@ -48,8 +48,8 @@ public static class EvaluationObservations
         public InvocationSource<Evaluation, TCandidate, EvaluationObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Evaluation, TCandidate, EvaluationObservation<TCandidate>>(evaluator);
 
-        /// <summary>Records this evaluator's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Evaluation, TCandidate, EvaluationObservation<TCandidate>> Observed(IObservationInstrument<EvaluationObservation<TCandidate>> instrument) =>
-            new(evaluator, instrument);
+        /// <summary>Records this evaluator's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Evaluation, TCandidate, EvaluationObservation<TCandidate>> Observed(IObservationReceiver<EvaluationObservation<TCandidate>> receiver) =>
+            new(evaluator, receiver);
     }
 }

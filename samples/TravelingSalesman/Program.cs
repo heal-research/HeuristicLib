@@ -11,10 +11,10 @@ var cityCount = problem.SearchSpace.Length;
 
 var algorithm = GeneticAlgorithm.For(problem, populationSize: 100, maximumGenerations: 300);
 
-// A run pairs the configuration with a problem and a random source. Attach analyzers with AnalyzedBy, so the same
-// configuration can be run again under different observation, and read each run's own result from the run.
+// A run pairs the configuration with a problem and a random source. CreateRun places the analyzers for this run only,
+// so the same configuration can be run again under different observation; read each run's own result from the run.
 var quality = algorithm.Iterations.TracePopulationCandidates();
-var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality]);
 
 var finalState = await run.CompleteAsync();
 

@@ -59,11 +59,11 @@ Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs th
 
 Operator records are reusable configuration. Do not store counters, caches or other changing run data in their properties.
 
-Author an executor with fields for mutable counters, cursors and adaptation values. Each separate construction starts with independent fields. Share a configuration explicitly with `Sharing` when its executor must outlive a child scope. Instruments describe run-bound results; their definitions contain no live result.
+Author an executor with fields for mutable counters, cursors and adaptation values. Each separate construction starts with independent fields. Share a configuration explicitly with `Sharing` when its executor must outlive a child scope. Configurations such as analyzers, counters and durations create run results; their definitions contain no live result.
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
 
-Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and reads run-bound instrument results through `scope.Results.Result(instrument)`. A fixed-signature leaf using an explicit executor instead overrides `CreateExecutor` with a typed scope exposing its bound `Problem` and `SearchSpace`.
+Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and reads run results through `scope.Results.Result(configuration)`. A fixed-signature leaf using an explicit executor instead overrides `CreateExecutor` with a typed scope exposing its bound `Problem` and `SearchSpace`.
 
 A wrapper for one operation derives from `WrappingOperator<TOperation, TCandidate>` for that operation and wraps its typed executor. A wrapper for every operation stays generic in its operation and passes a struct `IInvocationWrapper` to the operation's `Wrap`. Place either with `Substitute`. See [Write wrappers](/guide/extending/writing-wrappers) for complete examples.
 
@@ -78,6 +78,6 @@ Test the operator directly before placing it in an algorithm. Check these proper
 1. The result belongs to the search space.
 2. The same input and random seed produce the same result.
 3. The input candidate remains unchanged.
-4. Concurrent calls do not share mutable state.
+4. Concurrent calls safely coordinate access to shared mutable execution data.
 
 Use [operator composition](/guide/extending/operator-composition) when several existing operators already express the required behavior.

@@ -13,8 +13,8 @@ input features. HeuristicLib composes it from parts that each own one concern:
 | `SymbolicRegressor`              | The fitted predictor used after the search.                                               |
 
 The genotype owns structure only. Search spaces and operators produce and validate
-candidates but never evaluate them; the problem evaluates but never changes them;
-refiners are the one place a candidate is transformed.
+candidates; evaluators and the problem score them without changing them;
+variation operators and refiners produce transformed candidates.
 
 ## Search space
 
@@ -218,8 +218,8 @@ Refiner composition, evaluation accounting, and the cost measurements behind the
 recommendations are covered in
 [operator composition](/guide/extending/operator-composition#refiner-composition).
 
-A search space may allow operations the differentiable compiler cannot lower. There
-is currently no pre-run validation phase, so the refiner reports the incompatibility
+A search space may allow operations the differentiable compiler cannot lower. Pre-run
+validation does not check differentiability, so the refiner reports the incompatibility
 when it first encounters an affected candidate.
 
 ## Compiled execution

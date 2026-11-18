@@ -18,7 +18,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
         var observed = algorithm.Iterations.Trace(observation => observation.State.Population.EvaluatedCandidates.Count);
 
-        var run = algorithm.AnalyzedBy(observed).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [observed]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(observed).SampleCount.ShouldBe(4);
@@ -35,7 +35,7 @@ public class AlgorithmObservationTests
         };
         var observed = algorithm.Iterations.Trace(observation => observation.State.Population.EvaluatedCandidates.Count);
 
-        var run = algorithm.AnalyzedBy(observed).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [observed]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(observed).SampleCount.ShouldBe(4);
@@ -57,7 +57,7 @@ public class AlgorithmObservationTests
                 return observation.Iteration;
             });
 
-        var run = algorithm.AnalyzedBy(observed).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [observed]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         previousStates.Count.ShouldBe(3);
@@ -73,7 +73,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
         var analysis = algorithm.Iterations.TracePopulationCandidates();
 
-        var run = algorithm.AnalyzedBy(analysis).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [analysis]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(analysis).SampleCount.ShouldBe(4);
@@ -87,7 +87,7 @@ public class AlgorithmObservationTests
         var first = algorithm.Iterations.TracePopulationCandidates();
         var second = algorithm.Iterations.TracePopulationCandidates();
 
-        var run = algorithm.AnalyzedBy(first, second).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [first, second]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(first).SampleCount.ShouldBe(3);
@@ -104,7 +104,7 @@ public class AlgorithmObservationTests
         var atInterceptor = interceptor.Invocations.Trace(
             static observation => observation.State.Population.BestMedianWorst(observation.Problem.Objective));
 
-        var run = algorithm.AnalyzedBy(atIterationEnd, atInterceptor).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [atIterationEnd, atInterceptor]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         run.Result(atIterationEnd).SampleCount.ShouldBe(3);
@@ -122,7 +122,7 @@ public class AlgorithmObservationTests
         var analysis = algorithm.Iterations.TracePopulationCandidates();
 
         var copy = algorithm with { PopulationSize = PopulationSize * 2 };
-        Should.Throw<InvalidOperationException>(() => copy.AnalyzedBy(analysis)).Message.ShouldContain("not reachable");
+        Should.Throw<InvalidOperationException>(() => copy.Substitute(analysis)).Message.ShouldContain("not reachable");
     }
 
     [Fact]
@@ -130,9 +130,9 @@ public class AlgorithmObservationTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 4);
-        var iterations = algorithm.Iterations.Count();
-        var quality = algorithm.Iterations.TracePopulationCandidates([iterations]);
-        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var iterations = new Counter();
+        var quality = algorithm.Iterations.TracePopulationCandidates([iterations.Clock]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality, algorithm.Iterations.Counting(iterations)]);
         var observedIterations = 0;
 
         await foreach (var state in run.Stream(cancellationToken: TestContext.Current.CancellationToken))
@@ -141,7 +141,7 @@ public class AlgorithmObservationTests
             run.Result(quality).SampleCount.ShouldBe(observedIterations);
             var latest = run.Result(quality).Latest;
             latest.ShouldNotBeNull();
-            latest.Value.At(iterations).ShouldBe(observedIterations);
+            latest.Value.At(iterations.Clock).ShouldBe(observedIterations);
             state.Population.EvaluatedCandidates.ShouldContain(latest.Value.Value.Best);
         }
 
@@ -152,11 +152,11 @@ public class AlgorithmObservationTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
-        var iterations = algorithm.Iterations.Count();
+        var iterations = new Counter();
         var quality = algorithm.Iterations.Trace(
             static observation => observation.State.Population.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective),
-            [iterations]);
-        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+            [iterations.Clock]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality, algorithm.Iterations.Counting(iterations)]);
 
         await using var enumerator = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
                                         .GetAsyncEnumerator(TestContext.Current.CancellationToken);
@@ -167,7 +167,7 @@ public class AlgorithmObservationTests
         (await enumerator.MoveNextAsync()).ShouldBeTrue();
 
         firstIteration.Count.ShouldBe(1);
-        firstIteration[0].At(iterations).ShouldBe(1);
+        firstIteration[0].At(iterations.Clock).ShouldBe(1);
         run.Result(quality).SampleCount.ShouldBe(2);
         run.Result(quality).Snapshot().Count.ShouldBe(2);
     }
@@ -177,13 +177,13 @@ public class AlgorithmObservationTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
-        var iterations = algorithm.Iterations.Count();
-        var quality = algorithm.Iterations.TracePopulationCandidates([iterations]);
-        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var iterations = new Counter();
+        var quality = algorithm.Iterations.TracePopulationCandidates([iterations.Clock]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality, algorithm.Iterations.Counting(iterations)]);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        var byIteration = run.Result(quality).By(iterations);
+        var byIteration = run.Result(quality).By(iterations.Clock);
         byIteration.Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
     }
 
@@ -192,17 +192,17 @@ public class AlgorithmObservationTests
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
-        var iterations = algorithm.Iterations.Count();
-        var evaluations = algorithm.Evaluator.Invocations.CountCandidates();
+        var iterations = new Counter();
+        var evaluations = new Counter();
         var elapsed = Clock.Elapsed;
-        var quality = algorithm.Iterations.TracePopulationCandidates([iterations, evaluations, elapsed]);
-        var run = algorithm.AnalyzedBy(quality).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var quality = algorithm.Iterations.TracePopulationCandidates([iterations.Clock, evaluations.Clock, elapsed]);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality, algorithm.Iterations.Counting(iterations), algorithm.Evaluator.Invocations.CountingCandidates(evaluations)]);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.Result(quality).By(iterations).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
+        run.Result(quality).By(iterations.Clock).Select(point => point.Time).ShouldBe([1L, 2L, 3L]);
 
-        var evaluationCounts = run.Result(quality).By(evaluations).Select(point => point.Time).ToArray();
+        var evaluationCounts = run.Result(quality).By(evaluations.Clock).Select(point => point.Time).ToArray();
         evaluationCounts.ShouldAllBe(count => count > 0);
         evaluationCounts.ShouldBe(evaluationCounts.Order());
 
@@ -242,13 +242,13 @@ public class AlgorithmObservationTests
         var fresh = CycleAlgorithm.Create(inner) with { MaximumCycles = 2 };
         IAlgorithm<RealVector, PopulationState<RealVector>> cycle = shared ? fresh.Sharing(inner) : fresh;
 
-        var iterations = inner.Iterations.Count();
-        var iteration = inner.Iterations.Trace(observation => observation.Iteration, [iterations]);
-        var run = cycle.AnalyzedBy(iteration).CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+        var iterations = new Counter();
+        var iteration = inner.Iterations.Trace(observation => observation.Iteration, [iterations.Clock]);
+        var run = cycle.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [iteration, inner.Iterations.Counting(iterations)]);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.Result(iteration).By(iterations).ShouldBe([new(1, 1), new(2, 2), new(3, 3), new(4, 1), new(5, 2), new(6, 3)]);
+        run.Result(iteration).By(iterations.Clock).ShouldBe([new(1, 1), new(2, 2), new(3, 3), new(4, 1), new(5, 2), new(6, 3)]);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));

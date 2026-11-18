@@ -24,9 +24,9 @@ A scope selects sharing by configuration reference and holds each execution node
 
 `algorithm.Sharing(configurations)` declares the configurations whose executors child scopes reuse. Configuration reference identity selects them; equal but distinct configurations keep separate entries. A new sharing owner or root starts independently. A request for incompatible run types is rejected rather than constructing a second executor. Configurations never requested construct nothing.
 
-`AlgorithmRun` creates an independent root scope and starts in `Ready`. Executor construction remains lazy until first execution. Experiment trials each own an algorithm run and its result table. Analysis is attached to the configuration through `AnalyzedBy` before creating the run.
+`AlgorithmRun` creates an independent root scope and starts in `Ready`. Executor construction remains lazy until first execution. Experiment trials each own an algorithm run and its result table. Analysis may be kept in the configuration through `Substitute` or placed only for the run through the `substitutions` list of `CreateRun`.
 
-`Instrument<TResult>` defines one result per run and the substitutions that place what collects into it. Its immutable definition is identified by reference. `RunResults.Result` lazily creates and publishes the result, without supply bindings or child resolution. Callers read results through `AlgorithmRun.Result`.
+`Analyzer<TResult>` is a configuration node defining one `IRunResult` per run and the substitutions that place what collects into it. Its immutable definition is identified by reference. `RunResults.Result` reads the root scope's one configuration result table, lazily creating the result through `CreateExecutionNode`. The analyzer's result spans every Cycle turn; a `Share` does not narrow the result that recording and `AlgorithmRun.Result` use, while resolving a shared analyzer directly through a scope creates a separate execution node that nothing records into. Counters and durations also create run results, but resolving them honors the nearest sharing scope, which owns a separate accumulator. Callers read results through `AlgorithmRun.Result`.
 
 ### Operation-parameterized operators
 
@@ -48,7 +48,7 @@ A consumer-defined role is an `IConfigurationNode<TExecutionNode>` resolved thro
 
 ### Observation sources
 
-Operator invocations and algorithm iterations or calls are observed by wrapping their executors. Sources create the same observation wrapper for explicit `Observed` placement and automatic instrument attachment. A Cycle turn is a call of an inner algorithm; observe that algorithm's `Calls` for its start and outcome.
+Operator invocations and algorithm iterations or calls are observed by wrapping their executors. Sources create the same observation wrapper for explicit `Observed` placement and automatic analyzer attachment. A Cycle turn is a call of an inner algorithm; observe that algorithm's `Calls` for its start and outcome.
 
 ## Substitution and ordering
 
@@ -56,7 +56,7 @@ Operator invocations and algorithm iterations or calls are observed by wrapping 
 
 A predicate selects by name through `INamedConfiguration.Name`, as in `node is INamedConfiguration { Name: "exploration" }`. Concrete configurations can implement that contract, or users can configure a role-preserving wrapper through `operator.Named(name)` or `algorithm.Named(name)`. Named wrappers forward the child's executor and use the ordinary child resolution rules. They and their children remain separate selectable configurations. Repeated names select every matching configuration; they do not identify shared state or caller paths.
 
-The configuration states the order of wrappers: a wrapper written inside another is closer to the executor. Substitutions apply one after another, and a later one, in the same call or a later one, sits closer to the node it matches. A wrapper is an ordinary configuration, so building it changes nothing for the other configurations of its scope, and a shared wrapper has one executor whose private data every request in its sharing scope uses. Data that must accumulate across scopes or runs belongs to an object the wrapper receives, such as a `CountAccumulator`, or to a run result. Instrument results follow the run lifetime, so reusing a definition across trials creates independent counters. Invocation local values stay in the operation or iterator.
+The configuration states the order of wrappers: a wrapper written inside another is closer to the executor. Substitutions apply one after another, and a later one, in the same call or a later one, sits closer to the node it matches. A wrapper is an ordinary configuration, so building it changes nothing for the other configurations of its scope, and a shared wrapper has one executor whose private data every request in its sharing scope uses. Data that must accumulate across scopes or runs belongs to an object the wrapper receives, such as a `CountAccumulator`, or to a run result. Run results follow the run lifetime, so reusing a counter definition across trials creates independent accumulators. Invocation local values stay in the operation or iterator.
 
 ## Deferred construction
 
@@ -86,4 +86,4 @@ Operator budgets remain configurations. A budget holds its algorithm with the `C
 
 `LimitEvaluator` accounting is private to its executor. Sharing the limited evaluator lets several uses draw from one allowance. Atomic accumulation does not turn separate checking, evaluation and accounting into a strict concurrent budget. Such reservation semantics remain outside this contract.
 
-A budget applied after `AnalyzedBy` wraps closer to the operator than the analysis, which keeps observer work outside the measured operation. Applied before it, the analysis sits inside the budget's wrappers, and a duration budget measures the observers too.
+A budget applied after `Substitute` wraps closer to the operator than the analysis, which keeps observer work outside the measured operation. Applied before it, the analysis sits inside the budget's wrappers, and a duration budget measures the observers too.

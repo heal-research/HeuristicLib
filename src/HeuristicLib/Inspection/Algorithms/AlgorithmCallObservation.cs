@@ -132,18 +132,9 @@ public static class AlgorithmCalls
         public AlgorithmSource<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>> Calls =>
             new(algorithm);
 
-        /// <summary>Records the start and end of each call of this algorithm into the instrument, wherever this configuration is placed.</summary>
+        /// <summary>Records the start and end of each call of this algorithm into the receiver, wherever this configuration is placed.</summary>
         public ObservedAlgorithm<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>> Observed(
-            IObservationInstrument<AlgorithmCallObservation<TCandidate, TSearchState>> instrument) =>
-            new(algorithm, instrument);
-    }
-
-    extension<TCandidate, TSearchState>(AlgorithmSource<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>> calls)
-        where TSearchState : class, ISearchState
-    {
-        /// <summary>Creates a counter of the calls that started, so a call's number is known when it begins and a stopped call counts.</summary>
-        public Counter Count() =>
-            new(counter => Substitution.Of(calls.Algorithm,
-                node => new CountedAlgorithm<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>(node, counter)));
+            IObservationReceiver<AlgorithmCallObservation<TCandidate, TSearchState>> receiver) =>
+            new(algorithm, receiver);
     }
 }

@@ -107,7 +107,7 @@ public class AutoEcPaperScenarioTests
                 ActivatedTravelingSalesmanProblem>(
                 [evaluator]);
 
-        var run = racing.AnalyzedBy(qualityCurve).AnalyzedBy(bbcp).CreateRun(problem, RandomNumberGenerator.Create(123));
+        var run = racing.Substitute(qualityCurve).CreateRun(problem, RandomNumberGenerator.Create(123), [bbcp]);
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -132,13 +132,13 @@ public class AutoEcPaperScenarioTests
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator();
+        IOperator<Evaluation, RealVector> evaluator = problem.CreateEvaluator();
         var epoch = Clock.FromEpoch(problem);
         var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
         var bbcp =
             new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
                 [evaluator]);
-        var analyzed = evaluator.AnalyzedBy(qualityCurve, bbcp);
+        var analyzed = evaluator.Substitute(qualityCurve, bbcp);
 
         var racing = new DynamicRacingAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem,
             PopulationState<RealVector>, GeneticAlgorithm<RealVector>>(

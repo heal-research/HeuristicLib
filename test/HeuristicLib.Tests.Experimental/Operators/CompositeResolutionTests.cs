@@ -23,7 +23,7 @@ public class CompositeResolutionTests
         var root = ResolutionScope.Create();
         var outer = root.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(source, problem);
         var calls = new CountAccumulator();
-        var observed = source.AnalyzedBy(left.Invocations.Observing(_ => calls.IncrementBy(1)));
+        var observed = source.Substitute(left.Invocations.Observing(_ => calls.IncrementBy(1)));
         var child = root.CreateChildScope();
         var inner = child.Resolve<CompositeCandidate, CompositeSpace, IProblem<CompositeCandidate, CompositeSpace>>(observed, problem);
 

@@ -1,4 +1,5 @@
 using System.Text;
+using HEAL.HeuristicLib.Execution;
 
 namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 
@@ -10,7 +11,7 @@ namespace HEAL.HeuristicLib.Analysis.GenealogyAnalysis;
 /// graph. Everything it exposes is a live view, so read it once the run has finished rather than during it. Its own
 /// writes take a lock so one run can collect observations from concurrent boundaries.
 /// </remarks>
-public class GenealogyGraph<TCandidate> where TCandidate : notnull
+public class GenealogyGraph<TCandidate> : IRunResult where TCandidate : notnull
 {
     private readonly Lock sync = new();
     private readonly List<Dictionary<TCandidate, Node>> nodes = [];

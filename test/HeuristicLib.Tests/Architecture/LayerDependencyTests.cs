@@ -45,9 +45,7 @@ public sealed class LayerDependencyTests
             ("Execution.ExecutionConcurrency", "Execution/Concurrency/"),
             ("Execution.ExecutionConcurrencyKind", "Execution/Concurrency/"),
             ("Execution.BatchExecution", "Execution/Concurrency/"),
-            ("Execution.ISubstitutionBundle", "Execution/"),
-            ("Execution.Instrument", "Execution/Results/"),
-            ("Execution.Instrument`1", "Execution/Results/"),
+            ("Execution.ISubstitution", "Execution/"),
             ("Execution.RunResults", "Execution/Results/"),
             ("Inspection.AlgorithmObservation`2", "Inspection/Algorithms/"),
             ("Inspection.AlgorithmCallObservation`2", "Inspection/Algorithms/"),
@@ -58,11 +56,15 @@ public sealed class LayerDependencyTests
             ("Inspection.ObservedAlgorithm`3", "Inspection/Algorithms/"),
             ("Inspection.ObservationSource`1", "Inspection/"),
             ("Inspection.InvocationSource`3", "Inspection/"),
-            ("Inspection.IObservationInstrument`1", "Inspection/"),
+            ("Inspection.IObservationReceiver`1", "Inspection/"),
             ("Inspection.IClock", "Inspection/"),
             ("Inspection.IClock`1", "Inspection/"),
+            ("Inspection.IClockReading", "Inspection/"),
+            ("Inspection.IClockReading`1", "Inspection/"),
+            ("Inspection.CounterClock", "Inspection/"),
+            ("Inspection.DurationClock", "Inspection/"),
+            ("Inspection.ElapsedClock", "Inspection/"),
             ("Inspection.Clock", "Inspection/"),
-            ("Inspection.Clock`2", "Inspection/"),
             ("Inspection.Counter", "Inspection/"),
             ("Inspection.Duration", "Inspection/"),
             ("Inspection.Counted`2", "Inspection/"),
@@ -211,7 +213,7 @@ public sealed class LayerDependencyTests
         var repositoryRoot = FindRepositoryRoot();
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
-            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe(RunResults results, Instrument<object> instrument) { object Value => results.Result(instrument); }",
+            "namespace HEAL.HeuristicLib.Execution; internal class HostProbe(RunResults results, IConfigurationNode<IRunResult> analyzer) { object Value => results.Result(analyzer); }",
             ParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);

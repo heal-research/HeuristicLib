@@ -34,7 +34,7 @@ public sealed class ConcreteOperatorResolutionTests
         var eliteSelector = new EliteSelector<int>(female);
         var genderSelector = new GenderSpecificSelector<int>(female, male);
         var counters = Enumerable.Range(0, 7).Select(_ => new Counter()).ToArray();
-        ISubstitutionBundle[] counting =
+        ISubstitution[] counting =
         [
             CountingIfHeld(creator, counters[0]), CountingIfHeld(crossover, counters[1]), CountingIfHeld(mutator, counters[2]),
             CountingIfHeld(refiner, counters[3]), CountingIfHeld(evaluator, counters[4]), CountingIfHeld(female, counters[5]),

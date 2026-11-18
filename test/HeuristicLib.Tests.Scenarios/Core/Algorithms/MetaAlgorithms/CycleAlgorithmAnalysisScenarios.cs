@@ -67,7 +67,7 @@ public class CycleAlgorithmAnalysisScenarios
             encoding: DummySearchSpace<int>.Instance,
             objective: SingleObjective.Minimize);
 
-        var run = cycleAlgorithm.AnalyzedBy(evaluationTrace1, evaluationTrace2, interceptionTrace).CreateRun(problem, RandomNumberGenerator.Create(0));
+        var run = cycleAlgorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [evaluationTrace1, evaluationTrace2, interceptionTrace]);
         var finalState = run.Complete();
 
         return new CycleRunResult(
@@ -160,9 +160,9 @@ public class CycleAlgorithmAnalysisScenarios
 
     // An analyzer of its own, built on Observing.
     private sealed class EvaluationTraceAnalysis
-        : ISubstitutionBundle
+        : ISubstitution
     {
-        private readonly Instrument observing;
+        private readonly ISubstitution observing;
 
         public State Result { get; } = new();
 
@@ -171,7 +171,7 @@ public class CycleAlgorithmAnalysisScenarios
             observing = evaluator.Invocations.Observing(Record);
         }
 
-        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
+        public IReadOnlyList<Substitution> Expand() => observing.Expand();
 
         public void Record(EvaluationObservation<int> observation) =>
             Result.RecordObjectiveValues(observation.ObjectiveVectors);
@@ -190,9 +190,9 @@ public class CycleAlgorithmAnalysisScenarios
     }
 
     private sealed class InterceptionTraceAnalysis
-        : ISubstitutionBundle
+        : ISubstitution
     {
-        private readonly Instrument observing;
+        private readonly ISubstitution observing;
 
         public State Result { get; } = new();
 
@@ -201,7 +201,7 @@ public class CycleAlgorithmAnalysisScenarios
             observing = interceptor.Invocations.Observing(Record);
         }
 
-        public IReadOnlyList<Substitution> Substitutions => observing.Substitutions;
+        public IReadOnlyList<Substitution> Expand() => observing.Expand();
 
         public void Record(InterceptionObservation<int, PopulationState<int>> observation) =>
             Result.RecordObjectiveValue(observation.UntransformedState);

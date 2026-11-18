@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -37,23 +36,7 @@ public static class EvaluationOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IEvaluationExecutor<TCandidate> Resolve(IOperator<Evaluation, TCandidate> source) =>
-            (IEvaluationExecutor<TCandidate>)scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-
-        [return: NotNullIfNotNull(nameof(source))]
-        public IEvaluationExecutor<TCandidate>? ResolveOptional(IOperator<Evaluation, TCandidate>? source) => source is null ? null : scope.Resolve(source);
-
-        public bool TryResolve(IOperator<Evaluation, TCandidate> source,
-            [NotNullWhen(true)] out IEvaluationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
-            scope.TryResolveOperator(source, out executor, out reason);
-    }
-
-    extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TRunSearchState : class, ISearchState
-    {
-        public IEvaluationExecutor<TCandidate> Resolve(IOperator<Evaluation, TCandidate> source) =>
-            (IEvaluationExecutor<TCandidate>)scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
+            (IEvaluationExecutor<TCandidate>)scope.ResolveOperator<Evaluation, TCandidate, TSearchSpace, TProblem>(source);
 
         [return: NotNullIfNotNull(nameof(source))]
         public IEvaluationExecutor<TCandidate>? ResolveOptional(IOperator<Evaluation, TCandidate>? source) => source is null ? null : scope.Resolve(source);

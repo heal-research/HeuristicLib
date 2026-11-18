@@ -28,8 +28,8 @@ The library is developed by the [Heuristic and Evolutionary Algorithms Laborator
 
 ## Why HeuristicLib
 
-- Configure algorithms with C# object initializers and records. There is no operator graph or separate configuration language.
-- Keep candidate, search space, problem and operator types connected through the whole algorithm. The compiler catches incompatible combinations.
+- Configure algorithms with C# object initializers and records.
+- Keep candidate types connected through the whole algorithm. Run validation checks search space, problem and operator compatibility.
 - Stream search states or attach analyzers for quality, diversity, genealogy and evaluation counts.
 - Reproduce a run from its root seed. Forked random streams keep parallel work independent of scheduling.
 - Repeat configurations, build typed parameter grids and process independent trials concurrently.
@@ -68,8 +68,7 @@ var algorithm = GeneticAlgorithm.For(
     mutationRate: 0.05);
 
 var quality = algorithm.Iterations.TracePopulationCandidates();
-var run = algorithm.AnalyzedBy(quality)
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 42));
+var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality]);
 
 await run.CompleteAsync();
 
@@ -89,9 +88,9 @@ foreach (var (entry, generation) in qualityCurve.Select((entry, i) => (entry, i 
 }
 ```
 
-`GeneticAlgorithm.For(problem, ...)` asks the problem and its encoding for suggested operators. Here the traveling salesperson problem supplies order crossover, while the permutation encoding supplies random creation and inversion mutation. Algorithm settings come from `GeneticAlgorithmDefaults` unless the call overrides them. Defaults are starting points rather than tuned choices. Configure an operator explicitly when an experiment depends on that choice.
+`GeneticAlgorithm.For(problem, ...)` asks the problem and its search space for suggested operators. Here the traveling salesperson problem supplies order crossover, while the permutation search space supplies random creation and inversion mutation. Algorithm settings come from `GeneticAlgorithmDefaults` unless the call overrides them. Defaults are starting points rather than tuned choices. Configure an operator explicitly when an experiment depends on that choice.
 
-The algorithm configuration stays reusable. Change the TSPLIB file to run another named instance. Use a `with` expression to change the crossover or mutation operator and test another search policy. Keep the problem, seed schedule and analyzer unchanged when comparing configurations.
+The algorithm configuration stays reusable. Change the TSPLIB file to run another named instance. Use a `with` expression to change the crossover or mutation operator and test another search policy. Keep the problem, seed schedule and analysis settings unchanged when comparing configurations; create the trace from each modified algorithm's iterations.
 
 See [problems](https://heuristiclib.github.io/guide/fundamentals/problems.html), [operators](https://heuristiclib.github.io/guide/fundamentals/operators.html), [observability and analysis](https://heuristiclib.github.io/guide/execution/observability-and-analysis.html) and [experiments](https://heuristiclib.github.io/guide/execution/experiments.html) for the underlying APIs.
 

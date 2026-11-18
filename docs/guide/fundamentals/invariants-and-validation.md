@@ -36,7 +36,7 @@ public sealed record BoolVectorCardinality(int Cardinality) : ICandidateInvarian
 {
     public string Name => $"Cardinality({Cardinality})";
 
-    public bool Holds(BoolVector candidate) => CountSetElements(candidate) == Cardinality;
+    public bool Holds(BoolVector candidate) => candidate.TrueCount() == Cardinality;
 }
 ```
 
@@ -60,6 +60,8 @@ Nothing enumerates invariants. Any type may declare a new one, and a custom sear
 ```csharp
 public record FixedCardinalityBoolVectorSearchSpace : SearchSpace<BoolVector>
 {
+    // ... constructor, Length and Cardinality properties, and Contains override omitted.
+
     public override IReadOnlyList<ICandidateInvariant<BoolVector>> Invariants =>
         [new BoolVectorLength(Length), new BoolVectorCardinality(Cardinality)];
 }
@@ -80,6 +82,11 @@ public record BitSwapMutator
         BoolVectorLength or BoolVectorCardinality => true,
         _ => null
     };
+
+    public override BoolVector MutateCandidate(
+        BoolVector parent,
+        IRandomNumberGenerator random,
+        FixedCardinalityBoolVectorSearchSpace searchSpace) => ...;
 }
 ```
 
@@ -120,7 +127,14 @@ authored at a bound rung names the search space and problem it was written for, 
 ```csharp
 // Written for one specific problem.
 public sealed record TravellingSalesmanSpecificCrossover
-    : SingleCandidateCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>;
+    : SingleCandidateCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
+{
+    public override Permutation CrossParents(
+        Parents<Permutation> parents,
+        IRandomNumberGenerator random,
+        PermutationSearchSpace searchSpace,
+        TravelingSalesmanProblem problem) => ...;
+}
 ```
 
 Put that in an algorithm running over a different permutation problem and it cannot work. That is decided entirely by
@@ -136,7 +150,7 @@ public interface IConfigurationNode
 
 `ExecutionSignature` is the triple an executor is built for — its search space, its problem, and the search state it
 produces. It is built where an execution graph is created, by a run or by validation asking what a run would do, and
-passed down unchanged; a configuration reads the parts it is written about and ignores
+passed through the configuration and parameter mappings for declared children; a configuration reads the parts it is written about and ignores
 the rest, so an ordinary operator never builds one:
 
 ```csharp
@@ -149,11 +163,11 @@ A mutator is not written about a search state, so it does not look at that field
 for it — contravariant, like the other two. An interceptor _returns_ its search state, so it is invariant in it and
 compares exactly.
 
-The assignability runs toward the declared type because the instance contracts are contravariant in the search space
-and problem: an operator written for `BoundedRealVectorSearchSpace` accepts a run over exactly that or narrower.
+The assignability runs toward the declared type because the authoring bases accept compatible search space
+and problem types: an operator written for `BoundedRealVectorSearchSpace` accepts a run over exactly that or narrower.
 
-A meta algorithm that starts an inner run over different types states the signature of **that** run on the slot of its
-child. Every signature belongs to exactly one run, as the next section shows.
+A meta-algorithm that binds a child to different types states **that** execution signature on the slot of its
+child. Every signature describes that child's execution, as the next section shows.
 
 **This is the same rule the authoring bases apply when they bridge**, so a run and a validation pass cannot disagree.
 It is also cheap: two type checks, about 4 ns, paid once per operator per run rather than per iteration.
@@ -172,6 +186,9 @@ public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
         new(nameof(SelectorForRemaining), static selector => selector.SelectorForRemaining, static (selector, value) => selector with { SelectorForRemaining = value });
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), SelectorForRemainingParameter];
+
+    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => ...;
 }
 ```
 
@@ -251,7 +268,7 @@ Diagnostics carry the path that leads to the operator:
 var pipeline = PipelineMutator.Create(new BitSwapMutator(), new FlipOneBitMutator());
 var report = SearchConfigurationValidation.Validate(pipeline, constrained);
 
-report.Diagnostics.Single().Path;    // "PipelineMutator.ChildOperators[1]"
+Console.WriteLine(report.Diagnostics.Single().Path); // PipelineMutator`1.ChildOperators[1]
 ```
 
 A composition's own failure is suppressed when a child already reported the same invariant. A composed operator inherits its children's limits, so repeating them would bury the one diagnostic naming the operator you actually have to change.

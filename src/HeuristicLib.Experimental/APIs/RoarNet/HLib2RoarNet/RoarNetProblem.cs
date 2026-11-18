@@ -7,6 +7,27 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.APIs.RoarNet;
 
+public interface IRoarNetProblem<TG> : Problem
+{
+    IRoarNetNeighborhood<TG> ConstructionNeighbourhood();
+    IRoarNetNeighborhood<TG> DestructionNeighbourhood();
+    IRoarNetNeighborhood<TG> LocalNeighbourhood();
+
+    IRoarNetSolution<TG> EmptySolution();
+    IRoarNetSolution<TG> RandomSolution();
+    IRoarNetSolution<TG>? HeuristicSolution();
+    double? LowerBound(TG genotype);
+    double? Objective(TG genotype);
+}
+
+public interface IRoarNetOperationsProblem<TG, out TS, out TP> : IRoarNetProblem<TG>
+    where TS : class, ISearchSpace<TG>
+    where TP : class, IProblem<TG, TS>
+{
+    TP Problem { get; }
+    TS SearchSpace { get; }
+}
+
 public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     TP Problem,
     IEvaluationExecutor<TG> Evaluator,

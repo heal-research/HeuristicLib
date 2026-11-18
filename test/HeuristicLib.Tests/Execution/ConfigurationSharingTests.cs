@@ -157,9 +157,9 @@ public class ConfigurationSharingTests
         var (box, m) = Mutator();
         var cached = m.Cached();
         var cycle = Cycle(NewCaller("A", 3, 1, cached, box), NewCaller("B", 2, 1, cached, box)).Sharing(cached);
-        var counter = m.Invocations.Count();
+        var counter = new Counter();
 
-        var run = cycle.AnalyzedBy(counter).CreateRun(Problem, Rng);
+        var run = cycle.CreateRun(Problem, Rng, [m.Invocations.Counting(counter)]);
         run.Complete();
 
         run.Result(counter).CurrentCount.ShouldBe(1); // the inner evaluator is reached once: candidate 1 is cached for every later call

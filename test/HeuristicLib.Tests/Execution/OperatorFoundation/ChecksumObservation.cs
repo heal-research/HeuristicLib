@@ -44,7 +44,7 @@ public static class ChecksumObservations
         public InvocationSource<Checksum, TCandidate, ChecksumObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Checksum, TCandidate, ChecksumObservation<TCandidate>>(checksum);
 
-        public Observed<Checksum, TCandidate, ChecksumObservation<TCandidate>> Observed(IObservationInstrument<ChecksumObservation<TCandidate>> instrument) =>
-            new(checksum, instrument);
+        public Observed<Checksum, TCandidate, ChecksumObservation<TCandidate>> Observed(IObservationReceiver<ChecksumObservation<TCandidate>> receiver) =>
+            new(checksum, receiver);
     }
 }

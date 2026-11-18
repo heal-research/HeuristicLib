@@ -127,7 +127,7 @@ public static class OperatorCountBudgetExtensions
     {
         /// <summary>
         /// Stops the algorithm once the counts that <paramref name="placement"/> places reach the given number, such as
-        /// <c>ga.LimitedToCount(1_000, (g, calls) => g.Counting(g.Mutator, calls).Counting(g.Crossover, calls))</c>.
+        /// <c>ga.LimitedToCount(1_000, (g, calls) => g.Substitute(g.Mutator.Invocations.Counting(calls), g.Crossover.Invocations.Counting(calls)))</c>.
         /// </summary>
         /// <remarks>
         /// The placement runs during this call and is not stored. It states what each wrapper counts, so one budget can add

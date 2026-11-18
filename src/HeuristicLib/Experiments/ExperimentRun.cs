@@ -17,6 +17,9 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     private readonly Lock sync = new();
     private RunLifecycleState lifecycleState = RunLifecycleState.Ready;
 
+    // Completes once the lifecycle has left Running after StartTrials, so CompleteAsync can join the transition.
+    internal Task ExecutionCompletion { get; private set; } = Task.CompletedTask;
+
     public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
 
     public TProblem Problem { get; }
@@ -73,7 +76,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     {
         var execution = PrepareCombinedExecution(initialState, cancellationToken);
         var scheduledExecution = ScheduleTrials(execution, concurrency ?? ExecutionConcurrency.Sequential(), null, cancellationToken);
-        _ = TrackCompletion(scheduledExecution.TrialCompletions, scheduledExecution.WorkersCompletion, cancellationToken);
+        ExecutionCompletion = TrackCompletion(scheduledExecution.TrialCompletions, scheduledExecution.WorkersCompletion, cancellationToken);
         return scheduledExecution.TrialCompletions.Select((completion, index) => RequireFinalState(Trials[index], completion)).ToImmutableArray();
     }
 

@@ -8,7 +8,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-/// <summary>Stops its algorithm once a duration reaches a maximum, checked after each produced state.</summary>
+/// <summary>Stops its algorithm once a duration reaches a maximum, checked after each produced state. Uses the run's time provider.</summary>
 /// <remarks>
 /// The duration restarts each time this budget is built, such as in each Cycle turn, because the budget shares it in its
 /// own scope. The wrappers measuring into it live in <see cref="Algorithm"/>, where <c>LimitedToDuration</c> places them.
@@ -96,7 +96,7 @@ public static class OperatorDurationBudgetExtensions
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time.</summary>
+        /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time. Uses the run's time provider.</summary>
         /// <remarks>
         /// The operator is matched by reference, and it is an error when the algorithm does not hold it. The operation is
         /// inferred from the operator; for an operator implementing several operations, pass it through a variable of the
@@ -104,31 +104,29 @@ public static class OperatorDurationBudgetExtensions
         /// </remarks>
         /// <param name="observedOperator">The operator whose calls are measured.</param>
         /// <param name="maximumDuration">The time after which the budget stops, checked after each produced state.</param>
-        /// <param name="timeProvider">Measures each call. When omitted, the system clock does.</param>
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration<TOperation>(
-            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration, TimeProvider? timeProvider = null)
+            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
             where TOperation : IOperation<TOperation> =>
-            new(algorithm.Timing(observedOperator, out var duration, timeProvider), duration, maximumDuration);
+            new(algorithm.Timing(observedOperator, out var duration), duration, maximumDuration);
     }
 
     extension<TAlgorithm>(TAlgorithm algorithm) where TAlgorithm : class, IConfigurationNode
     {
         /// <summary>
         /// Stops the algorithm once the time that <paramref name="placement"/> measures reaches the given duration, such as
-        /// <c>ga.LimitedToDuration(TimeSpan.FromSeconds(10), (g, time) => g.Timing(g.Mutator, time).Timing(g.Crossover, time))</c>.
+        /// <c>ga.LimitedToDuration(TimeSpan.FromSeconds(10), (g, time) => g.Substitute(g.Mutator.Invocations.Timing(time), g.Crossover.Invocations.Timing(time)))</c>.
         /// </summary>
         /// <remarks>
-        /// The placement runs during this call and is not stored. Timing a target twice adds every call twice. The duration
+        /// The run's time provider measures each call. The placement runs during this call and is not stored. Timing a target twice adds every call twice. The duration
         /// restarts with the budget and stays inside it; a placement that ignores it leaves a budget that never stops.
         /// </remarks>
         /// <param name="maximumDuration">The time after which the budget stops, checked after each produced state.</param>
         /// <param name="placement">Places the timing wrappers on the algorithm it receives, which is this one, and returns the algorithm to limit.</param>
-        /// <param name="timeProvider">Measures each call. When omitted, the system clock does.</param>
         public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration<TCandidate, TSearchState>(TimeSpan maximumDuration,
-            Func<TAlgorithm, Duration, IAlgorithm<TCandidate, TSearchState>> placement, TimeProvider? timeProvider = null)
+            Func<TAlgorithm, Duration, IAlgorithm<TCandidate, TSearchState>> placement)
             where TSearchState : class, ISearchState
         {
-            var duration = new Duration(timeProvider);
+            var duration = new Duration();
             return new(placement(algorithm, duration), duration, maximumDuration);
         }
     }

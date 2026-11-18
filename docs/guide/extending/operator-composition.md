@@ -172,9 +172,9 @@ A refinement that has to pass through a worse candidate to reach a better one is
 
 ### Evaluation accounting for refinement
 
-Improvement checking evaluates twice and the algorithm evaluates the returned candidate again. Without caching this costs three problem evaluations per refined candidate. Use the same evaluator configuration to select all those calls for observation. Share the evaluator configuration with `Sharing` when those uses should share one cache or evaluation allowance.
+Improvement checking evaluates twice and the algorithm evaluates the returned candidate again. Without caching this costs three problem evaluations per refined candidate. Use the same evaluator configuration to select all those calls for observation and, within one scope, to use one cache or evaluation allowance.
 
-Configuration reference identity selects observation targets and shared executors. Reusing an evaluator configuration alone does not share its private fields or cache: every use constructs its own executor unless a node shares the configuration.
+Configuration reference identity selects observation targets and executors. Reusing the evaluator configuration for the same problem within one scope gives both uses one executor and its private fields, including its cache. The algorithm and improvement check resolve their evaluators in that same scope. Use `Sharing(evaluator)` on an enclosing composition to retain the executor across child scopes, such as Cycle turns.
 
 The snippets in this section use these namespaces:
 
@@ -185,28 +185,28 @@ using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 ```
 
-Counters and durations are configuration nodes created from the source they measure. They select the evaluator by reference and collect into one result per run:
+Counters and durations are configuration nodes that place nothing. A source creates their placement substitution, selecting the evaluator by reference and collecting into one result per run:
 
 ```csharp
 var evaluator = algorithm.Evaluator;
-var counter = evaluator.Invocations.CountCandidates();
+var counter = new Counter();
 var unshared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement()
 };
-var run = unshared.AnalyzedBy(counter).CreateRun(problem, random);
+var run = unshared.CreateRun(problem, random, [evaluator.Invocations.CountingCandidates(counter)]);
 ```
 
-The improvement check uses its own evaluator configuration here, so the counter measures only the algorithm's evaluations. Share the selected evaluator to include comparison work:
+The improvement check uses its own evaluator configuration here, so the counter measures only the algorithm's evaluations. Pass the selected evaluator to the improvement check to include comparison work:
 
 ```csharp
 var evaluator = algorithm.Evaluator;
-var counter = evaluator.Invocations.CountCandidates();
+var counter = new Counter();
 var shared = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(evaluator)
 };
-var run = shared.AnalyzedBy(counter).CreateRun(problem, random);
+var run = shared.CreateRun(problem, random, [evaluator.Invocations.CountingCandidates(counter)]);
 ```
 
 Each refined candidate causes two comparison evaluations and the algorithm's subsequent evaluation. All three reach the selected evaluator and increment the same counter.
@@ -216,7 +216,7 @@ An external terminator reads the same run-bound counter definition. Read its val
 ```csharp
 var budgeted = shared.TerminatedBy(
     AfterOperatorCountTerminator.For(problem, counter, maximumCount: 100_000));
-var run = budgeted.AnalyzedBy(counter).CreateRun(problem, random);
+var run = budgeted.CreateRun(problem, random, [evaluator.Invocations.CountingCandidates(counter)]);
 ```
 
 `shared.LimitedToCandidates(evaluator, 100_000)` places a candidate counter around the selected evaluator inside the budgeted algorithm, and stops the algorithm once that count reaches the limit. Comparison work counts when the refiner holds the selected evaluator. A different evaluator is outside that selection. The budget is checked after a yielded state, so a batch or iteration can take the count past the limit. A nonpositive limit stops after the first state.
@@ -224,26 +224,26 @@ var run = budgeted.AnalyzedBy(counter).CreateRun(problem, random);
 The same budgets apply to any operator, whatever its operation:
 
 ```csharp
-var calls = shared.LimitedToInvocations(refiner, 1_000);
-var timed = shared.LimitedToDuration(evaluator, TimeSpan.FromSeconds(10));
+var calls = shared.LimitedToInvocations(shared.Refiner!, 1_000);
+var timed = shared.LimitedToDuration(shared.Evaluator, TimeSpan.FromSeconds(10));
 ```
 
-`LimitedToInvocations` counts successful calls, and `LimitedToCandidates` counts the candidates they return for an operation that reports candidate work. Timing also records failed calls. Timing accepts an explicit `TimeProvider`. The operator is matched by reference, and it is an error when the algorithm does not hold it. For an operator implementing several operations, pass it through a variable of the operation's operator type. Apply budgets after `AnalyzedBy`, so that a budget measures the operator rather than the analysis observing it.
+`LimitedToInvocations` counts successful calls, and `LimitedToCandidates` counts their candidate work: input candidates for evaluation and returned candidates for candidate-producing operations. Timing uses the run's time provider and also records failed calls. The operator is matched by reference, and it is an error when the algorithm does not hold it. For an operator implementing several operations, pass it through a variable of the operation's operator type. With `CreateRun`, apply budgets first and name analysis targets from the budgeted configuration. To exclude observer time from a duration budget, place analysis with `Substitute` before applying that budget.
 
 Pass a placement to combine work from several operators in one budget. It receives the algorithm and the budget's counter or duration, places the wrappers, and returns the algorithm to limit:
 
 ```csharp
-var combined = algorithm.LimitedToCount(1_000, (ga, calls) => ga
-    .Counting(ga.Mutator, calls)
-    .Counting(ga.Crossover, calls));
-var timed = algorithm.LimitedToDuration(TimeSpan.FromSeconds(10), (ga, time) => ga
-    .Timing(ga.Mutator, time)
-    .Timing(ga.Crossover, time));
+var combined = algorithm.LimitedToCount(1_000, (ga, calls) => ga.Substitute(
+    ga.Mutator.Invocations.Counting(calls),
+    ga.Crossover.Invocations.Counting(calls)));
+var timed = algorithm.LimitedToDuration(TimeSpan.FromSeconds(10), (ga, time) => ga.Substitute(
+    ga.Mutator.Invocations.Timing(time),
+    ga.Crossover.Invocations.Timing(time)));
 ```
 
-The placement runs during the call and is not stored. Each `Counting` states what it counts, so `Counting(ga.Evaluator, calls, OperatorCountMetric.Candidates)` adds evaluated candidates where the default adds successful calls. Each `Counting` or `Timing` places one wrapper, so naming a target twice counts it twice, and an operator implementing several operations takes one call for each operation to count.
+The placement runs during the call and is not stored. Each `Counting` states what it counts, so `ga.Evaluator.Invocations.CountingCandidates(calls)` adds evaluated candidates where the default adds successful calls. Each `Counting` or `Timing` places one wrapper, so naming a target twice counts it twice, and an operator implementing several operations takes one call for each operation to count.
 
-The counter or duration stays inside the budget and restarts each time the budget is built, such as in each Cycle turn, while a run-bound counter from `Invocations.Count()` spans the run. Duration is the sum of invocation durations, including overlapping and nested time, rather than wall clock time for the algorithm. Repeated runs remain independent.
+The counter or duration stays inside the budget and restarts each time the budget is built, such as in each Cycle turn, while a counter placed outside the budget with `Invocations.Counting(counter)` spans the run. Duration is the sum of invocation durations, including overlapping and nested time, rather than wall clock time for the algorithm. Repeated runs remain independent.
 
 Budgets are ordinary configurations that hold their algorithm with the wrappers in place:
 
@@ -254,17 +254,19 @@ var constructed = new OperatorCountBudgetAlgorithm<RealVector, PopulationState<R
 
 `OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>` likewise takes the algorithm, the `Duration` its wrappers add to, and the limit. Because the budget holds a copy of the algorithm, a separate run of the original algorithm neither counts against the budget nor shares its executors.
 
-Sharing the cached evaluator gives the algorithm and the improvement check one executor, and therefore one cache, which avoids the final repeated problem evaluation:
+Reusing the cached evaluator configuration gives the algorithm and the improvement check one executor and cache within their scope, so the algorithm's evaluation of the returned candidate is a cache hit:
 
 ```csharp
 var evaluator = new ProblemEvaluator<RealVector>().Cached();
 
-var cached = (algorithm with
+var cached = algorithm with
 {
     Evaluator = evaluator,
     Refiner = parameterFitting.CheckedForImprovement(evaluator)
-}).Sharing(evaluator);
+};
 ```
+
+To retain that cache across child scopes, such as Cycle turns, apply `Sharing(evaluator)` to the enclosing composition.
 
 `EvaluationCache<TKey>` uses MemoryCache for concurrent storage, key equality and eviction, with an optional entry count limit. Lookup, evaluation and publication are separate operations, so concurrent misses may evaluate the same key more than once. Share only when keys and evaluation semantics agree across every use. Child evaluators, key selectors and other dependencies must support the concurrency the author permits. A cache cannot make incompatible problems, parameter settings or stochastic results interchangeable.
 
@@ -275,16 +277,16 @@ Select the outer cache configuration to count evaluation requests and its child 
 ```csharp
 var problemEvaluator = new ProblemEvaluator<RealVector>();
 var cache = problemEvaluator.Cached();
-var requests = cache.Invocations.CountCandidates();
-var solves = problemEvaluator.Invocations.CountCandidates();
+var requests = new Counter();
+var solves = new Counter();
 
 var cached = algorithm with { Evaluator = cache };
-var run = cached.AnalyzedBy(requests, solves).CreateRun(problem, random);
+var run = cached.CreateRun(problem, random, [cache.Invocations.CountingCandidates(requests), problemEvaluator.Invocations.CountingCandidates(solves)]);
 ```
 
-After the run, `run.Result(requests).CurrentCount` includes cache hits and `run.Result(solves).CurrentCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration, and share it so both uses hit one cache. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
+After the run, `run.Result(requests).CurrentCount` includes cache hits and `run.Result(solves).CurrentCount` excludes them. To include refinement comparisons, give `CheckedForImprovement` the same `cache` configuration; both uses reach one cache within their scope. Use `Sharing(cache)` on the enclosing composition to retain it across child scopes. Counting selects an existing configuration; it does not return an evaluator that can be placed inside the cache.
 
-`LimitEvaluator` accounting is private to its executor. Share the limited evaluator, for example with `algorithm.Sharing(limited)`, when the refiner and algorithm need one allowance. Its separate check, evaluation and increment do not promise a strict limit under concurrent use. Cache and limit ordering determines whether hits consume allowance:
+`LimitEvaluator` accounting is private to its executor. Reuse the limited evaluator configuration when the refiner and algorithm need one allowance within their scope. Use `Sharing(limited)` on the enclosing composition to retain that allowance across child scopes. Its separate check, evaluation and increment do not promise a strict limit under concurrent use. Cache and limit ordering determines whether hits consume allowance:
 
 ```csharp
 new CachingEvaluator<...>(problemEvaluator, keySelector).LimitEvaluations(100_000) // cache hits consume budget
@@ -297,12 +299,12 @@ To attribute refinement effort separately instead of folding it into one counter
 
 ```csharp
 var refinementEvaluator = new ProblemEvaluator<RealVector>();
-var refinementCount = refinementEvaluator.Invocations.CountCandidates();
+var refinementCount = new Counter();
 var attributed = algorithm with
 {
     Refiner = parameterFitting.CheckedForImprovement(refinementEvaluator)
 };
-var run = attributed.AnalyzedBy(refinementCount).CreateRun(problem, random);
+var run = attributed.CreateRun(problem, random, [refinementEvaluator.Invocations.CountingCandidates(refinementCount)]);
 ```
 
 `run.Result(refinementCount).CurrentCount` measures the improvement check's comparison evaluations. The algorithm's own evaluator is a different configuration, so its calls do not contribute to that count.
@@ -389,7 +391,7 @@ These types should document their own batching, state and cardinality behavior b
 
 ## Observation and inspection boundaries
 
-Source counters, durations, analyzers and `Observing`, attached with `AnalyzedBy`, add `Counted`, `Timed` or `Observed` wrappers around the configurations they select.
+Source counters, durations, analyzers and `Observing`, attached with `Substitute`, add `Counted`, `Timed` or `Observed` wrappers around the configurations they select.
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work.
 
@@ -449,13 +451,13 @@ Two distinct no-change mutators make the selection order visible through counter
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-usage{csharp}
 
-`firstCalls.CurrentCount` is one and `secondCalls.CurrentCount` is zero. The observed executor starts at the first child. The original executor continues to its second child with its original unobserved children.
+The results read through `observedScope.Results.Result(firstCalls)` and `observedScope.Results.Result(secondCalls)` have counts one and zero. The observed executor starts at the first child. The original executor continues to its second child with its original unobserved children.
 
 An independent root prepares a fresh cursor:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-independent{csharp}
 
-`independentFirstCalls.CurrentCount` is one. A new context constructed with `With` also creates fresh private fields. See [Execution resolution](/contributing/architecture/execution-resolution#resources-and-construction).
+`independentScope.Results.Result(independentFirstCalls).CurrentCount` is one. A fresh child scope also creates private fields for configurations that are not shared. See [Execution resolution](/contributing/architecture/execution-resolution#results-and-construction).
 
 ### Author a concurrent cache wrapper
 
@@ -465,7 +467,7 @@ This executable example keeps an `EvaluationCache<int>` in its executor. MemoryC
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-authoring{csharp}
 
-The following usage shares the wrapper, so both resolutions receive one executor and one cache, and calls it concurrently. Separate RNGs belong to the separate calls. `AnalyzedBy` places the count on the child evaluator in the configuration, so the shared executor counts through it.
+The following usage shares the wrapper, so both resolutions receive one executor and one cache, and calls it concurrently. Separate RNGs belong to the separate calls. `Substitute` places the count on the child evaluator in the configuration, so the shared executor counts through it.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-usage{csharp}
 

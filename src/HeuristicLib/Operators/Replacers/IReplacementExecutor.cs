@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems;
@@ -38,23 +37,7 @@ public static class ReplacementOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IReplacementExecutor<TCandidate> Resolve(IOperator<Replacement, TCandidate> source) =>
-            (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-
-        [return: NotNullIfNotNull(nameof(source))]
-        public IReplacementExecutor<TCandidate>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
-
-        public bool TryResolve(IOperator<Replacement, TCandidate> source,
-            [NotNullWhen(true)] out IReplacementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
-            scope.TryResolveOperator(source, out executor, out reason);
-    }
-
-    extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TRunSearchState : class, ISearchState
-    {
-        public IReplacementExecutor<TCandidate> Resolve(IOperator<Replacement, TCandidate> source) =>
-            (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
+            (IReplacementExecutor<TCandidate>)scope.ResolveOperator<Replacement, TCandidate, TSearchSpace, TProblem>(source);
 
         [return: NotNullIfNotNull(nameof(source))]
         public IReplacementExecutor<TCandidate>? ResolveOptional(IOperator<Replacement, TCandidate>? source) => source is null ? null : scope.Resolve(source);

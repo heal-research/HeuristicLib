@@ -144,7 +144,7 @@ public sealed class DynamicRacingResolutionTests
         var parent = ResolutionScope.Create();
         // Prebind the contender so its internal evaluator must be rebound for each performance observer.
         _ = parent.Resolve<int, UnrestrictedSearchSpace<int>, EpochProblem, PopulationState<int>>(contender, problem);
-        await using var paused = Run(parent, racing.AnalyzedBy(creatorObservation, mutatorObservation), problem).GetAsyncEnumerator();
+        await using var paused = Run(parent, racing.Substitute(creatorObservation, mutatorObservation), problem).GetAsyncEnumerator();
         (await paused.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(1);
         mutations.CurrentCount.ShouldBe(0);
@@ -155,7 +155,7 @@ public sealed class DynamicRacingResolutionTests
         // D3: the builder's contenders are out of the substitution's reach, so the builder observes their evaluator.
         var observedContender = contender.Substitute(contender.Evaluator.Invocations.Observing(_ => evaluations.IncrementBy(1)));
         var observedRacing = (racing with { AlgBuilder = (_, source) => { sources.Add(source); return observedContender; } })
-            .AnalyzedBy(creatorObservation, mutatorObservation, interceptor.Invocations.Observing(_ => interceptions.IncrementBy(1)));
+            .Substitute(creatorObservation, mutatorObservation, interceptor.Invocations.Observing(_ => interceptions.IncrementBy(1)));
         var child = parent.CreateChildScope();
         await using var observed = Run(child, observedRacing, problem).GetAsyncEnumerator();
         (await observed.MoveNextAsync()).ShouldBeTrue();
@@ -174,7 +174,7 @@ public sealed class DynamicRacingResolutionTests
 
         var independentSourceIndex = sources.Count;
         var independent = ResolutionScope.Create();
-        await using var fresh = Run(independent, racing.AnalyzedBy(creatorObservation), problem).GetAsyncEnumerator();
+        await using var fresh = Run(independent, racing.Substitute(creatorObservation), problem).GetAsyncEnumerator();
         (await fresh.MoveNextAsync()).ShouldBeTrue();
         creations.CurrentCount.ShouldBe(3);
         sources[independentSourceIndex].ShouldBeNull();
@@ -190,12 +190,12 @@ public sealed class DynamicRacingResolutionTests
         var trace = contender.Evaluator.Invocations.Trace(_ => 1);
 
         var outer = Racing(_ => contender);
-        Should.Throw<InvalidOperationException>(() => outer.Substitute(trace.Substitutions)).Message.ShouldContain("AlgBuilder");
+        Should.Throw<InvalidOperationException>(() => outer.Substitute(trace.Expand())).Message.ShouldContain("AlgBuilder");
 
         using var innerProblem = new EpochProblem(epochLength: 10_000);
         innerProblem.UpdateOnce();
         var placed = ResolutionScope.Create();
-        await Steps(placed, Racing(_ => contender.Substitute(trace.Substitutions)), innerProblem);
+        await Steps(placed, Racing(_ => contender.Substitute(trace.Expand())), innerProblem);
 
         placed.Results.Result(trace).SampleCount.ShouldBeGreaterThan(0);
 

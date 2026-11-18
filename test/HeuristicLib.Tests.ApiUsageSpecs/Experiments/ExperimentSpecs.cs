@@ -53,10 +53,10 @@ public class ExperimentSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleHillClimber(problem);
-        var best = algorithm.Evaluator.Invocations.TraceBestSoFar();
-        var experiment = algorithm.AnalyzedBy(best)
+        var best = Analyzer.BestSoFar(algorithm.Evaluator);
+        var experiment = algorithm.Substitute(best)
             .AsGrid()
-            .VaryBy([4, 8], (_, maximumNeighbors) => (algorithm with { MaxNeighbors = maximumNeighbors }).AnalyzedBy(best));
+            .VaryBy([4, 8], (_, maximumNeighbors) => (algorithm with { MaxNeighbors = maximumNeighbors }).Substitute(best));
         var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(456));
 
         _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -75,7 +75,7 @@ public class ExperimentSpecs
         {
             var evaluator = new ProblemEvaluator<RealVector>();
             var observations = evaluator.Invocations.Trace(observation => observation.Evaluator);
-            var configured = (algorithm with { Evaluator = evaluator }).AnalyzedBy(observations);
+            var configured = (algorithm with { Evaluator = evaluator }).Substitute(observations);
             return (Algorithm: configured, Trace: observations, Evaluator: evaluator);
         }).ToArray();
         var experiment = cases[0].Algorithm.AsGrid().VaryBy(cases, (_, value) => value.Algorithm).Repeat(2);

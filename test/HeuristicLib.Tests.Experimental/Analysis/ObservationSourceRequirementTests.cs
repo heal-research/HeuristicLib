@@ -12,13 +12,13 @@ public class ObservationSourceRequirementTests
     [Fact]
     public void RequiredSources_RejectAnEmptyCollection()
     {
-        var exception = Should.Throw<ArgumentException>(() =>
+        var exception = Should.Throw<InvalidOperationException>(() =>
             new ParetoFrontAnalyzer<RealVector>(
                 SingleObjective.Minimize,
                 new ObjectiveVector(1.0),
                 []));
 
-        exception.ParamName.ShouldBe("evaluators");
+        exception.Message.ShouldContain("at least one observation source");
     }
 
     [Fact]

@@ -47,8 +47,8 @@ public static class RefinementObservations
         public InvocationSource<Refinement, TCandidate, RefinementObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Refinement, TCandidate, RefinementObservation<TCandidate>>(refiner);
 
-        /// <summary>Records this refiner's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Refinement, TCandidate, RefinementObservation<TCandidate>> Observed(IObservationInstrument<RefinementObservation<TCandidate>> instrument) =>
-            new(refiner, instrument);
+        /// <summary>Records this refiner's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Refinement, TCandidate, RefinementObservation<TCandidate>> Observed(IObservationReceiver<RefinementObservation<TCandidate>> receiver) =>
+            new(refiner, receiver);
     }
 }

@@ -77,10 +77,10 @@ public sealed class AlpsMutationCompositionTests
         var algorithm = CreateAlgorithm(rate);
         if (noChange)
             algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
-        var candidates = algorithm.Mutator.Invocations.CountCandidates();
+        var candidates = new Counter();
         var scope = ResolutionScope.Create();
 
-        await States(scope, algorithm.AnalyzedBy(candidates));
+        await States(scope, algorithm.Substitute(algorithm.Mutator.Invocations.CountingCandidates(candidates)));
 
         scope.Results.Result(candidates).CurrentCount.ShouldBe(0);
     }

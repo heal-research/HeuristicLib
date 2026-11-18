@@ -2,8 +2,9 @@ namespace HEAL.HeuristicLib.Execution;
 
 /// <summary>An execution node that holds what one run produces, such as the count of a counter.</summary>
 /// <remarks>
-/// A configuration whose execution node is a run result is an ordinary configuration node, built once for the whole run: its
-/// execution node lives in the run's root scope, unless a nearer scope shares the configuration, as a budget does to restart its
-/// count each time it is built. <c>run.Result(configuration)</c> reads the root scope's result, also after a failure.
+/// A result defaults to the resolution tree's root scope. <see cref="ResolutionScope.Share"/> can narrow ordinary
+/// resolution, as a budget does for a counter; <see cref="RunResults.Result{TResult}"/> always reads the root's result.
+/// Analyzer recording uses that root result across all Cycle turns. Results remain readable after failure; each result
+/// defines its own synchronization and live-read contract. There is no automatic disposal contract.
 /// </remarks>
 public interface IRunResult : IExecutionNode;

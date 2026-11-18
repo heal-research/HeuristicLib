@@ -8,7 +8,7 @@ Glossary entries may identify related terms by status:
 
 - `Canonical`: the preferred project term.
 - `Alias`: an accepted alternate term that may be useful in prose.
-- `Legacy`: an older or transitional term that should be replaced with the canonical term when encountered in docs, examples, tests, plans, or new code.
+- `Legacy`: a term released on `main` that should be replaced with the canonical term when encountered in docs, examples, tests, plans, or new code.
 - `Avoid`: a term that should not be used for this concept, usually because it has a different meaning or creates ambiguity.
 - `Provisional`: a current term or candidate term that may change after further design discussion.
 
@@ -270,7 +270,7 @@ See also: Expression metric, Refiner, Regression metric.
 
 Status: `Canonical`
 
-An algorithm defines a reusable search process through an algorithm configuration and its run scoped executors.
+An algorithm defines a reusable search process through an algorithm configuration and its executors, constructed within a run.
 
 In a run, an algorithm executor advances search state until the run stops. It holds its resolved child executors, and its own fields hold private execution data. One shot algorithms are still algorithms. They produce a search process with a single state.
 
@@ -348,12 +348,11 @@ An operation is a named action an operator performs, such as mutation or evaluat
 
 An operation is distinct from the executor that performs it. One executor can support several operations. Use operation for the action, executor for the callable runtime object, and invocation for one actual use of an operation.
 
-`IOperation<TSelf>` identifies an operation in an operator contract. For example, `Mutation` in `IOperator<Mutation, TCandidate>` identifies mutation, whose executor interface is `IMutationExecutor<...>`. Its static members recognize that executor interface for the run types, wrap an executor so that each invocation passes through an invocation wrapper and state whether invocations report candidate work. Resolution and wrappers reach them through `OperationInfo`. `IItemOperation<TSelf>` marks an operation whose invocations split into items and adds routing them.
+`IOperation<TSelf>` identifies an operation in an operator contract. For example, `Mutation` in `IOperator<Mutation, TCandidate>` identifies mutation, whose executor interface is `IMutationExecutor<TCandidate>`. Its static members recognize that executor interface for the run types, wrap an executor so that each invocation passes through an invocation wrapper and state whether invocations report candidate work. Resolution and wrappers reach them through `OperationInfo`. `IItemOperation<TSelf>` marks an operation whose invocations split into items and adds routing them.
 
 Related terms:
 
 - `IOperation` and `IItemOperation`: `Provisional`. The type names may change because they read close to operator.
-- `Operation descriptor`: `Legacy`. The former name of `IOperation<TSelf>`. Use operation.
 
 See also: Executor, Item, Operation invocation, Operator roles.
 
@@ -419,13 +418,13 @@ See also: Candidate, Operator, Search space.
 
 Status: `Canonical`
 
-An evaluator is the operator role that turns candidates into evaluated candidates.
+An evaluator is the operator role that obtains one objective vector for each input candidate, in input order. Its executor returns objective vectors; pairing them with the input candidates produces evaluated candidates.
 
-The evaluator may return the input candidate as evaluated, or return a transformed candidate as evaluated. In either case, the objective vector must describe the candidate that is returned as evaluated.
+Use a refiner to transform candidates. Refinement evaluation may evaluate temporary refined candidates and return their objective vectors for the original candidates.
 
 Use evaluator for the operator role. Use evaluation for the act of obtaining an objective vector.
 
-See also: Candidate, Evaluated candidate, Evaluation, Objective vector, Operator.
+See also: Candidate, Evaluated candidate, Evaluation, Objective vector, Operator, Refiner.
 
 #### Selector
 
@@ -463,7 +462,7 @@ Status: `Canonical`
 
 A refiner is an operator that works on existing candidates to improve a chosen aspect of them. Common refinements include fitting candidate parameters, repairing invalid candidates, simplifying or normalizing representations, and applying local-improvement procedures.
 
-Algorithms normally refine newly created or varied candidates before evaluation and then continue with the refined candidates. Refiners can be chained in pipelines, repeated, selected, wrapped, observed, and instrumented.
+Algorithms normally refine newly created or varied candidates before evaluation and then continue with the refined candidates. Refiners can be chained in pipelines, repeated, selected, wrapped, observed, and analyzed.
 
 A refiner may use an evaluator when objective values guide the refinement or decide whether to retain its result. Continuing the search with the refined candidate is Lamarckian refinement; refinement evaluation instead evaluates a temporary refined candidate and associates its objective vector with the original candidate, providing Baldwinian refinement.
 
@@ -529,7 +528,7 @@ Status: `Canonical`
 
 A configuration is a reusable object that users set up before execution, such as an algorithm or operator.
 
-A configuration can contain settings, child configurations, instrument definitions and validation or construction logic. It need not be a passive data object. Mutable data belongs to executor fields or run-bound results; the configuration contains no live executor or result.
+A configuration can contain settings, child configurations, analyzer definitions and validation or construction logic. It need not be a passive data object. Mutable data belongs to executor fields or run-bound results; the configuration contains no live executor or result.
 
 Use more specific terms when the context benefits from them:
 
@@ -576,7 +575,7 @@ Status: `Legacy`
 
 A former selector of the configurations whose executors received advice. A substitution selects instead: by reference, by the type of a lambda's parameter or by a predicate, such as `node is INamedConfiguration { Name: "exploration" }` for a name.
 
-See also: Named configuration, Substitution bundle.
+See also: Named configuration, Substitution group.
 
 ### Named configuration
 
@@ -586,7 +585,7 @@ A named configuration carries a descriptive `Name` through `INamedConfiguration`
 
 Names are case-sensitive labels and need not be unique. A named wrapper and its child are separate configuration nodes. A selection by name selects the wrapper; it does not assign that name to the child or introduce a caller path. Configuration identity and execution sharing still use configuration references.
 
-See also: Configuration node, Substitution bundle.
+See also: Configuration node, Substitution group.
 
 ### Advice
 
@@ -594,7 +593,7 @@ Status: `Legacy`
 
 A former mechanism that wrapped the executors built for selected configurations from outside the configuration graph. Use a wrapper: a configuration that holds the configuration it wraps as its declared child, placed with `Substitute`. See [Writing wrappers](/guide/extending/writing-wrappers).
 
-See also: Invocation wrapper, Substitution bundle, Wrapper chain.
+See also: Invocation wrapper, Substitution group, Wrapper chain.
 
 ### Join point
 
@@ -608,9 +607,9 @@ See also: Advice, Executor.
 
 Status: `Legacy`
 
-A former ordered list of pointcut and advice pairs, attached through `Advised` or `AddAspect`. Use a substitution bundle.
+A former ordered list of pointcut and advice pairs, attached through `AddAspect`. Use a substitution group.
 
-See also: Advice, Pointcut, Substitution bundle.
+See also: Advice, Pointcut, Substitution group.
 
 ### Run
 
@@ -622,27 +621,19 @@ An `AlgorithmRun` executes one algorithm configuration on a problem. An `Experim
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
-Attach analysis definitions to the algorithm with `AnalyzedBy` before creating its run. Their results span nested algorithms and fresh executor activations within that run. The returned run starts in `Ready` and accepts no later attachments.
+An algorithm's `CreateRun` accepts an optional list of `ISubstitution` values as `substitutions`, including analyzers, counter and duration placements, clocks that observe and plain substitutions. It places the whole list in one call before validation and checks that result-producing definitions with non-empty expansions are held by the graph. Place them with `Substitute` when keeping the resulting configuration. The returned run starts in `Ready` and accepts no later attachments.
 
 See also: Analyzer, Configuration, Executor, Search state.
-
-### Instrument
-
-Status: `Canonical`
-
-An instrument is an immutable definition of one typed result per run and the substitutions that place what collects into it. `Instrument<TResult>` creates the result on the first lookup. Definitions use reference identity. Several placements within one run share its result; another run creates independent data.
-
-Attach instruments through `AnalyzedBy` or explicit placement such as `Observed`.
-
-See also: Analyzer, Clock, Run result.
 
 ### Run result
 
 Status: `Canonical`
 
-A run result is the runtime data created for one instrument in one run. `RunResults` looks it up by definition reference, and callers use `AlgorithmRun.Result(instrument)`. The result remains available after stopping or failure and defines its supported concurrent reads. All scopes of one root use the same result table.
+A run result is an execution node implementing `IRunResult`, such as an analyzer's collected data, a counter's or duration's accumulator, or a clock reading. `RunResults` looks it up by configuration reference; callers use `run.Result(configuration)`. It is created at the first lookup and remains available after stopping or failure. Each result defines its supported concurrent reads.
 
-See also: Instrument, Run, Resolution scope.
+All scopes of one root use the same result lookup, which reads the root scope. An analyzer's result spans the run, including Cycle turns. Resolving counters and durations honors a nearer sharing scope, whose accumulator is separate from the root result.
+
+See also: Analyzer, Counter, Duration, Run, Resolution scope.
 
 ### Search state
 
@@ -712,7 +703,7 @@ See also: Executor.
 
 Status: `Canonical`
 
-A resource is a runtime dependency with its own ownership and concurrency contract. Private resources such as an evaluation cache belong to an executor. Share that executor through `Sharing` when several uses need the same data. Accounting and analysis accumulators are run-bound instrument results.
+A resource is a runtime dependency with its own ownership and concurrency contract. Private resources such as an evaluation cache belong to an executor. Share that executor through `Sharing` when several uses need the same data. Accounting and analysis accumulators are run results.
 
 See also: Executor, Run result, Shared configuration.
 
@@ -768,15 +759,21 @@ See [execution resolution](/contributing/architecture/execution-resolution#share
 
 See also: Configuration, Executor, Resolution scope.
 
-### Substitution bundle
+### Substitution
 
 Status: `Provisional`
 
-A substitution bundle is an ordered, flat list of substitutions that belong together, such as the placement of a trace together with its clocks. `ISubstitutionBundle` represents it. A single `Substitution` is a bundle of one, and traces, counters, durations and custom clocks are bundles of the substitutions that place them. `Substitute` takes bundles and applies their substitutions one after another; `AnalyzedBy` is the same call for analysis. A substitution listed twice in one call applies once, at its last position.
+A substitution is a rewrite applied while building a configuration, never stored or serialized. Persist the ordinary configuration it produced, containing the nodes it placed. `ISubstitution.Expand()` returns the single substitutions it stands for in application order, with the same instances on every call; applying belongs to the call. `Substitution` is one sealed rewrite created through its `Of` factories, selecting by reference, type or predicate. A call matches targets against the graph it received and applies a repeated substitution instance once, at its last position.
 
-The type name is a working name.
+See also: Configuration node, Substitution group.
 
-See also: Analyzer, Clock, Instrument.
+### Substitution group
+
+Status: `Provisional`
+
+A substitution group holds parts that belong together and caches their depth-first expansion. A part may itself be a group; a group containing itself is an error. Later parts sit closer to their targets; list a shared clock after what reads it. `SubstitutionGroup` is the authoring base used by analyzers and observation callbacks, and by clocks that observe.
+
+See also: Analyzer, Clock, Substitution.
 
 ### Wrapper chain
 
@@ -788,7 +785,7 @@ Wrappers belong to the configuration graph, so the configuration states the orde
 
 Constructing another chain creates its own executor fields and child bindings. Existing chains keep their original children and adaptation links. Run-bound results are shared within the root scope tree, and `Sharing` retains explicitly selected executors across child scopes.
 
-See also: Configuration, Executor, Invocation wrapper, Resolution scope, Substitution bundle.
+See also: Configuration, Executor, Invocation wrapper, Resolution scope, Substitution group.
 
 ### Invocation wrapper
 
@@ -848,13 +845,13 @@ See also: Executor, Run.
 
 Status: `Canonical`
 
-An analyzer is an immutable instrument definition that derives data from selected execution boundaries. Each run creates its own collector and typed result, obtained through `run.Result(analyzer)`. Attach the definition with `AnalyzedBy` or explicit observation placement. An analyzer is a [substitution bundle](#substitution-bundle) of its placement, which is what `AnalyzedBy` takes.
+An analyzer places observation wrappers and defines how observations are handled. A result-producing analyzer creates each run's collected data and derives from `Analyzer<TResult>`, an immutable configuration node whose execution node implements `IRunResult`. Read it with `run.Result(analyzer)`. It is also a substitution group, placed through `CreateRun` or `Substitute`, or through explicit observation wrappers.
 
-A trace result supports live reads and immutable snapshots. An accumulating result publishes its domain accumulator and is read after execution has stopped. Reusing a definition across runs keeps their data independent.
+`IObservationReceiver<TObservation>` is the part that receives one observation type through `CreateRecorder(RunResults)`. One analyzer may implement it for several observation types; other configuration nodes placed by `Observed`, such as clocks that observe, implement it too. The callback behind `Observing` implements it without a result or the `Analyzer<TResult>` base.
 
-Use Roslyn analyzer for compiler diagnostics when the context could be ambiguous.
+An analyzer's result spans the run, including Cycle turns; a `Share` does not narrow the result that recording and `run.Result` use, and resolving a shared analyzer directly gives a separate result that nothing records into. Reusing a definition across runs keeps their data independent. Use Roslyn analyzer for compiler diagnostics when the context could be ambiguous.
 
-See also: Accumulator, Analysis snapshot, Instrument, Observation, Run result.
+See also: Accumulator, Analysis snapshot, Observation, Observer, Run result, Substitution group.
 
 ### Analysis snapshot
 
@@ -876,19 +873,18 @@ Status: `Canonical`
 
 A trace is an ordered history of values that a trace analyzer records while a run executes.
 
-Each trace entry contains an analyzed value and its recorded clock readings. A per-run trace result owns the entries and supports live reads and immutable snapshots during or after execution.
+Each `TraceEntry<TValue>` contains an analyzed value and its recorded clock readings. The per-run result, `Trace<TValue>`, owns the entries, supports live reads and immutable snapshots, and enumerates a snapshot. A general trace records only the clocks it is given.
 
 Do not use series for this concept. In HeuristicLib, a series is a named column in tabular data.
 
-`Analyzer.Trace` reads each observation through one function, as in `crossover.Invocations.Trace(observation => observation.Offspring.Count)`. Counting, collecting and single values are plain functions. Ranking functions such as `BestMedianWorst` receive the objective directions they order by, usually the observed invocation's own, as in `observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective)`. A best-so-far object keeps its running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. The first directions it receives fix it, and other directions or another dimensionality throw.
+`Analyzer.Trace` reads each observation through one function, as in `crossover.Invocations.Trace(observation => observation.Offspring.Count)`. Counting, collecting and single values are plain functions. Ranking functions such as `BestMedianWorst` receive the objective directions they order by, usually the observed invocation's own, as in `observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective)`. A best-so-far object keeps its running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. Create that state through the trace's state factory so each run has its own. The first directions it receives fix it, and other directions or another dimensionality throw.
 
 Related terms:
 
-- `Readings`: `Legacy`. The former projection of a source's observations. A trace reads each observation through its function.
 - `Aggregation`: `Legacy`. The former object a trace summarized readings with. Use a function, a ranking function or a best-so-far object.
 - `Measurement`: `Legacy`. The former value strategy a trace read from observations. Use a function of each observation.
 
-See also: Analysis snapshot, Analyzer, Run.
+See also: Analysis snapshot, Analyzer, Best-so-far analyzer, Moment, Run.
 
 ### Accumulator
 
@@ -896,9 +892,45 @@ Status: `Canonical`
 
 An accumulator is one mutable object updated in place rather than a history of immutable values. A Pareto front, genealogy graph and performance model are accumulators.
 
-An accumulating analysis creates its accumulator separately for each run through `Instrument<TResult>`. Synchronization belongs to the result or its collector. Read its live collections after execution has stopped. Clocks and retention apply to trace entries rather than to the accumulator itself.
+An accumulating analysis creates its accumulator separately for each run through `Analyzer<TResult>`. `Aggregate` wraps plain state for this purpose. Read live collections after execution has stopped unless the state type supports concurrent reads. Clocks and retention apply to trace entries rather than to the accumulator itself.
 
-See also: Analyzer, Run result, Trace.
+See also: Aggregate, Analyzer, Run result, Trace.
+
+### Aggregate
+
+Status: `Provisional`
+
+An aggregate updates one run's state in place from observations. `Analyzer.Aggregate(sources, create, update)` and `source.Aggregate(create, update)` create an `AggregateAnalyzer<TObservation, TState>`. Each run calls the state factory once and serializes updates to its state. The result, `Aggregate<TState>`, exposes that state as `Value`; the state type needs no `IRunResult` marker.
+
+The analyzer holds delegates, so a configuration containing it is not serializable. Concurrent reads are the state type's concern.
+
+See also: Accumulator, Analyzer, Observation source, Run result.
+
+### Best-so-far analyzer
+
+Status: `Canonical`
+
+A best-so-far analyzer records the running best evaluated candidate. `Analyzer.BestSoFar<TCandidate>()` creates a `BestSoFarAnalyzer<TCandidate>` selecting evaluators of that candidate type with no such evaluator among their declared descendants. `Analyzer.BestSoFar(evaluator)` selects one evaluator by reference and infers the candidate type. Name the evaluator when a composite evaluator or an inner problem needs a different boundary.
+
+It places an observer and its public `Evaluations` counter, counting evaluated candidates before the observer records. Its result retains improvements only by default, with optional retention, objective comparer and additional clocks. Explicit placement must place both the counter and the observer.
+
+See also: Analyzer, Best-so-far curve, Best-so-far point, Counter, Evaluator.
+
+### Best-so-far curve
+
+Status: `Provisional`
+
+A best-so-far curve is one run's retained running bests, represented by `BestSoFarCurve<TCandidate>`. It implements `IRunResult`, exposes `Count` and nullable `Latest`, and enumerates a snapshot safe to read during collection. It continues across fresh executor activations in the run.
+
+See also: Best-so-far analyzer, Best-so-far point, Run result.
+
+### Best-so-far point
+
+Status: `Provisional`
+
+A best-so-far point is one retained entry of a best-so-far curve, represented by `BestSoFarPoint<TCandidate>`. It gives the cumulative `Evaluations`, the best objective vector as `Value` and its `Candidate`. Evaluation count is its only default axis. Additional clock readings, such as elapsed time, are read with `At(clock)` using a clock given to the analyzer.
+
+See also: Best-so-far curve, Clock, Moment.
 
 ### Trace retention
 
@@ -910,17 +942,47 @@ Trace retention is an immutable policy that creates a separate `RetentionDecider
 
 Status: `Canonical`
 
-A clock defines one typed notion of time for a trace, which reads it through `IClock<TTime>`. Counters and durations are clocks. A custom clock derives from `Clock<TTime, TResult>`, an instrument whose run-bound result is read as a time. Operator sources offer counters of calls or candidate work and durations; algorithm sources offer counters of iterations or started calls and a duration of iterations. `Clock.Elapsed` reads the time an `AlgorithmRun` spends advancing its retained algorithm iterator, including the current call and any deferred child construction during that advance. Executor construction before the first advance, pauses and consumer work between states are excluded. Direct scope execution leaves it and `scope.Results.Elapsed` at zero; explicit `algorithm.Timed(duration)` measurement remains available. Custom clocks may read domain quantities such as dynamic-problem epochs.
+A clock implements `IClock<TTime>`, a configuration node whose execution node is an `IClockReading<TTime>`. Its reading is a run result owned by the root; `Read()` returns its typed time. Mixed clock lists use `IReadOnlyList<IClock>`. Typed reads such as `At` and `By` infer `TTime`; `results.Result(clock)` infers through `IClock`, while `IClock<TTime>` needs an explicit result type because it has two configuration-node constructions. `IClockReading.Read()` boxes values for mixed clock lists. A clock only reads. One needing placement also implements `ISubstitution`, and the caller lists it after the analyzers that read it. `counter.Clock`, `duration.Clock` and `Clock.Elapsed` place nothing. Custom clocks may read domain quantities such as dynamic-problem epochs.
 
-A counter keeps progressing across executor activations within the run. Reusing its definition in another run creates independent state. A trace explicitly selects its clocks and is projected through those same definition references.
+A trace explicitly selects its clocks, deduplicates them by equality and projects entries through equal clocks. Two clocks of one counter or duration are equal; every `ElapsedClock` equals every other. A class clock without an equality override, such as the epoch clock, matches by reference. Column order and readings are fixed when the result is created; each retained entry stores one row of readings. Each clock instance has one reading per run, even when another instance is equal. Reads may be concurrent and must preserve the observed computation.
 
-See also: Instrument, Moment, Time, Trace.
+See also: Counter, Duration, Elapsed time, Moment, Time, Trace.
+
+### Counter
+
+Status: `Canonical`
+
+A counter is a configuration link to a `CountAccumulator`, read with `run.Result(counter).CurrentCount`. Its `counter.Clock` property creates a `CounterClock` reading that root accumulator, whatever a nearer `Share` narrows. Repeated reads of the property give equal clocks. Operator sources offer `Counting(counter)` and `CountingCandidates(counter)` placements for successful invocations or candidate work; algorithm sources offer `Counting(counter)` for iterations or started calls.
+
+A counter places nothing. Create one with `new Counter()` and place a wrapper with a source substitution or directly with `Counted` or `CountedAlgorithm`, which states what is counted. A counter placed nowhere reads zero, also through its clock in a trace. Counts span the run unless resolution shares the counter in a nearer scope, as a budget does to restart its allowance. Independent runs keep separate counts.
+
+See also: Clock, Duration, Run result, Shared configuration.
+
+### Duration
+
+Status: `Canonical`
+
+A duration is a configuration link to a `DurationAccumulator`, read with `run.Result(duration).CurrentDuration`. Its `duration.Clock` property creates a `DurationClock` reading that root accumulator, whatever a nearer `Share` narrows. Repeated reads of the property give equal clocks. `Timed` wrappers add the time spent in calls, including failed calls, using the run's time provider.
+
+A duration places nothing. Create one with `new Duration()` and place a wrapper with a source's `Timing(duration)` substitution or directly with `Timed` or `TimedAlgorithm`. A duration placed nowhere reads zero, also through its clock in a trace. It spans the run unless resolution shares it in a nearer scope, as a budget does. Independent runs keep separate durations.
+
+See also: Clock, Counter, Elapsed time, Run result.
+
+### Elapsed time
+
+Status: `Canonical`
+
+Elapsed time is the time an `AlgorithmRun` spends advancing its retained algorithm iterator, read through an `ElapsedClock` such as `Clock.Elapsed`, or `RunResults.Elapsed`. All elapsed clocks are equal, so `new ElapsedClock()` identifies the column selected with `Clock.Elapsed`. It includes the current advance and deferred child construction during it. Initial executor construction, pauses and consumer work between states are excluded.
+
+Direct scope execution leaves it at zero; use `algorithm.Timed(duration)` to measure that execution explicitly.
+
+See also: Clock, Duration, Run.
 
 ### Time
 
 Status: `Canonical`
 
-Time is the typed value read from one clock. Examples include an iteration count, a cumulative candidate count, elapsed
+Time is the typed value returned by one clock reading's `Read()`. Examples include an iteration count, a cumulative candidate count, elapsed
 duration and epoch number.
 
 See also: Clock, Moment.
@@ -929,10 +991,11 @@ See also: Clock, Moment.
 
 Status: `Provisional`
 
-A moment is the collective time of one trace entry. It contains simultaneous readings from every clock selected by
-that trace analyzer, and is read back one clock at a time through `TraceEntry.At`.
+A moment is the row of clock readings recorded for one trace entry or best-so-far point. Its internal `Moment` shares a fixed column layout with the other rows in that result. Clocks are read in column order when an entry is retained; the row is not an atomic snapshot of all clocks.
 
-See also: Clock, Time, Trace.
+`TraceEntry.At(clock)` and `BestSoFarPoint.At(clock)` find a clock by equality and reject a clock unequal to every clock the analyzer was given. Equal clocks identify one column.
+
+See also: Best-so-far point, Clock, Time, Trace.
 
 ### Inspection
 
@@ -948,7 +1011,7 @@ See also: Analyzer, Observation, Wrapper chain.
 
 Status: `Canonical`
 
-An observation is a read-only capture at a defined algorithm or operator boundary, or at a named observation point.
+An observation is a read-only capture at a defined algorithm or operator boundary, or at the boundary of a consumer-defined role.
 
 An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run.
 
@@ -959,20 +1022,30 @@ Related terms:
 - `Observation callback`: the method or runtime delegate that receives an observation.
 - `Observed configuration`: the algorithm or operator configuration whose boundary is observed. It is matched by reference, so a copied configuration is observed separately.
 - `Operator observation`: the observation record of one operation's invocation. It keeps the operation's domain names for the invocation's inputs and result.
-- `Observable operator`: a runtime operator wrapper that reports completed operations to observation callbacks.
-- `Observable algorithm`: a runtime algorithm wrapper that reports the search states an algorithm yields, at the end of every iteration.
+- `Observable operator`: an operator configuration wrapped with an observer that reports completed operations.
+- `Observable algorithm`: an algorithm configuration wrapped with an observer that reports its iterations or call starts and outcomes.
 
-See also: Algorithm, Analyzer, Observation source, Operator, Run.
+See also: Algorithm, Analyzer, Observation source, Observer, Operator, Run.
+
+### Observer
+
+Status: `Canonical`
+
+An observer is a configuration wrapper that captures observations during execution and passes them to its receiver, usually an analyzer. `Observed` wraps an operator; `ObservedAlgorithm` wraps an algorithm. It holds its receiver and binds the recorder for that run through `IObservationReceiver<TObservation>.CreateRecorder`.
+
+Explicit placement and substitution use the same wrappers.
+
+See also: Analyzer, Observation, Observation source, Wrapper chain.
 
 ### Observation source
 
 Status: `Canonical`
 
-An observation source names the observations of one observed configuration: `Invocations` on an operator for its successful invocations, `Iterations` on an algorithm for the search states it yields, or a point the configuration publishes, such as `Cycles` and `Turns` on a cycle algorithm. `ObservationSource<TObservation>` represents it; the type name is `Provisional`. `ObservationSource.Create` creates a boundary source. An observation point is itself a source, identified by the point reference rather than its value type.
+An observation source names a boundary of one configuration: `Invocations` on an operator for successful invocations, or `Iterations` and `Calls` on an algorithm for yielded states and call starts and outcomes. `ObservationSource<TObservation>` represents it; the type name is `Provisional`. `ObservationSource.Create` also supports a consumer-defined role with its own observation wrapper.
 
-A source describes observations; creating one installs nothing. `AnalyzedBy` places a wrapper recording it into the configuration graph, for a trace and for a callback from `Observing` alike. In that it resembles a cold `IObservable<T>`, but the library implements neither that interface nor Rx-style operators. A trace observes each boundary once, matched by configuration reference and observation type, so two sources of one configuration and observation type record each observation once. An operator implementing several operations offers each operation's source through a view typed to that operation.
+Creating a source installs nothing. `RecordingInto(analyzer)` creates its placement substitution; `CreateRun` or `Substitute` applies it as part of an analyzer's group. `Observing` forwards observations to a callback without collecting a result. Sources are matched by configuration reference and observation type, so a trace over two sources of the same boundary observes it once. An operator supporting several operations offers each source through a view typed to that operation.
 
-See also: Observation, Trace.
+See also: Analyzer, Observation, Observer, Substitution, Trace.
 
 ### Experiment
 
@@ -1002,4 +1075,4 @@ Status: `Canonical`
 
 A trial analyzer is an analysis definition attached to a trial's algorithm configuration. Each trial's algorithm run creates an independent result, read through `trial.Run.Result(definition)`. A definition may be shared across trials while their collectors, clocks and retention progress remain separate.
 
-See also: Analyzer, Experiment trial, Instrument, Run result.
+See also: Analyzer, Experiment trial, Run result.

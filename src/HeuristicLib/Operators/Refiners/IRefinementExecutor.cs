@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -52,23 +51,7 @@ public static class RefinementOperationResolutionExtensions
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
         public IRefinementExecutor<TCandidate> Resolve(IOperator<Refinement, TCandidate> source) =>
-            (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, ISearchState>(source, scope.Problem);
-
-        [return: NotNullIfNotNull(nameof(source))]
-        public IRefinementExecutor<TCandidate>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);
-
-        public bool TryResolve(IOperator<Refinement, TCandidate> source,
-            [NotNullWhen(true)] out IRefinementExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
-            scope.TryResolveOperator(source, out executor, out reason);
-    }
-
-    extension<TCandidate, TSearchSpace, TProblem, TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TRunSearchState : class, ISearchState
-    {
-        public IRefinementExecutor<TCandidate> Resolve(IOperator<Refinement, TCandidate> source) =>
-            (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem, TRunSearchState>(source, scope.Problem);
+            (IRefinementExecutor<TCandidate>)scope.ResolveOperator<Refinement, TCandidate, TSearchSpace, TProblem>(source);
 
         [return: NotNullIfNotNull(nameof(source))]
         public IRefinementExecutor<TCandidate>? ResolveOptional(IOperator<Refinement, TCandidate>? source) => source is null ? null : scope.Resolve(source);

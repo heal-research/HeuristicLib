@@ -14,7 +14,7 @@ public sealed class AlgorithmCallTests
     [Fact]
     public async Task ACall_ReportsItsStartAndCompletion()
     {
-        var algorithm = new ScriptedAlgorithm(States: 2);
+        IAlgorithm<int, PopulationState<int>> algorithm = new ScriptedAlgorithm(States: 2);
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
         var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
         await using var states = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
@@ -35,7 +35,7 @@ public sealed class AlgorithmCallTests
     [Fact]
     public async Task ACallThatFails_ReportsFailed()
     {
-        var algorithm = new ScriptedAlgorithm(States: 1, Failure: new InvalidOperationException("Step failed."));
+        IAlgorithm<int, PopulationState<int>> algorithm = new ScriptedAlgorithm(States: 1, Failure: new InvalidOperationException("Step failed."));
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
 
         await Should.ThrowAsync<InvalidOperationException>(() => Run(Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events))));
@@ -46,7 +46,7 @@ public sealed class AlgorithmCallTests
     [Fact]
     public async Task ACanceledCall_ReportsStopped()
     {
-        var algorithm = new ScriptedAlgorithm(States: 1, Failure: new OperationCanceledException());
+        IAlgorithm<int, PopulationState<int>> algorithm = new ScriptedAlgorithm(States: 1, Failure: new OperationCanceledException());
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
 
         await Should.ThrowAsync<OperationCanceledException>(() => Run(Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events))));
@@ -57,7 +57,7 @@ public sealed class AlgorithmCallTests
     [Fact]
     public async Task ACallWhoseCallerStopsEarly_ReportsStopped()
     {
-        var algorithm = new ScriptedAlgorithm(States: 3);
+        IAlgorithm<int, PopulationState<int>> algorithm = new ScriptedAlgorithm(States: 3);
         var events = new List<AlgorithmCallObservation<int, PopulationState<int>>>();
         var executor = Resolve(ResolutionScope.Create(), ObservingCalls(algorithm, events));
 
@@ -72,9 +72,9 @@ public sealed class AlgorithmCallTests
     [Fact]
     public async Task APausedRun_ReportsNoEndUntilItResumesAndCompletes()
     {
-        var algorithm = new ScriptedAlgorithm(States: 2);
+        IAlgorithm<int, PopulationState<int>> algorithm = new ScriptedAlgorithm(States: 2);
         var calls = algorithm.Calls.Trace(call => call.Event);
-        var run = algorithm.AnalyzedBy(calls).CreateRun(Problem, RandomNumberGenerator.Create(1));
+        var run = algorithm.CreateRun(Problem, RandomNumberGenerator.Create(1), [calls]);
         await using (var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).GetAsyncEnumerator(TestContext.Current.CancellationToken))
             (await states.MoveNextAsync()).ShouldBeTrue();
 
@@ -89,11 +89,11 @@ public sealed class AlgorithmCallTests
     [Fact]
     public async Task CallAndIterationCounters_CountStartedCallsAndYieldedStates()
     {
-        var algorithm = new ScriptedAlgorithm(States: 3);
-        var calls = algorithm.Calls.Count();
-        var iterations = algorithm.Iterations.Count();
+        IAlgorithm<int, PopulationState<int>> algorithm = new ScriptedAlgorithm(States: 3);
+        var calls = new Counter();
+        var iterations = new Counter();
         var root = ResolutionScope.Create();
-        var executor = Resolve(root, algorithm.AnalyzedBy(calls, iterations));
+        var executor = Resolve(root, algorithm.Substitute(algorithm.Calls.Counting(calls), algorithm.Iterations.Counting(iterations)));
 
         await Run(executor);
         await using (var states = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
@@ -120,7 +120,7 @@ public sealed class AlgorithmCallTests
         var turns = Analyzer.Trace([explore.Calls, idle.Calls],
             call => (Turn: ReferenceEquals(call.Algorithm, explore) ? "explore" : "idle", call.Event, call.Iterations));
         IAlgorithm<int, PopulationState<int>> cycle = attached
-            ? (CycleAlgorithm.Create<int, PopulationState<int>>(explore, idle) with { MaximumCycles = 2 }).AnalyzedBy(turns)
+            ? (CycleAlgorithm.Create<int, PopulationState<int>>(explore, idle) with { MaximumCycles = 2 }).Substitute(turns)
             : CycleAlgorithm.Create<int, PopulationState<int>>(explore.Observed(turns), idle.Observed(turns)) with { MaximumCycles = 2 };
         var run = cycle.CreateRun(Problem, RandomNumberGenerator.Create(1));
 
@@ -142,12 +142,12 @@ public sealed class AlgorithmCallTests
     public async Task TurnNumbers_ComeFromACounterOfTheInnerCalls(bool attached)
     {
         var turn = new ScriptedAlgorithm(States: 1);
-        var turnCounter = turn.Calls.Count();
-        var states = turn.Iterations.Trace(observation => observation.Iteration, [turnCounter]);
-        var calls = turn.Calls.Trace(call => call.Event, [turnCounter]);
+        var turnCounter = new Counter();
+        var states = turn.Iterations.Trace(observation => observation.Iteration, [turnCounter.Clock]);
+        var calls = turn.Calls.Trace(call => call.Event, [turnCounter.Clock]);
         IAlgorithm<int, PopulationState<int>> cycle;
         if (attached)
-            cycle = (CycleAlgorithm.Create(turn, turn) with { MaximumCycles = 2 }).AnalyzedBy(states, calls);
+            cycle = (CycleAlgorithm.Create(turn, turn) with { MaximumCycles = 2 }).Substitute(states, calls, turn.Calls.Counting(turnCounter));
         else
         {
             var placed = new CountedAlgorithm<int, PopulationState<int>, AlgorithmCallObservation<int, PopulationState<int>>>(turn, turnCounter).Observed(calls).Observed(states);
@@ -157,11 +157,11 @@ public sealed class AlgorithmCallTests
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.Result(states).By(turnCounter).Select(point => point.Time).ShouldBe([1L, 2L, 3L, 4L]);
+        run.Result(states).By(turnCounter.Clock).Select(point => point.Time).ShouldBe([1L, 2L, 3L, 4L]);
         run.Result(calls).Snapshot().Where(entry => entry.Value == AlgorithmCallEvent.Completed)
-            .Select(entry => entry.At(turnCounter)).ShouldBe([1L, 2L, 3L, 4L]);
+            .Select(entry => entry.At(turnCounter.Clock)).ShouldBe([1L, 2L, 3L, 4L]);
         run.Result(calls).Snapshot().Where(entry => entry.Value == AlgorithmCallEvent.Started)
-            .Select(entry => entry.At(turnCounter)).ShouldBe([0L, 1L, 2L, 3L]);
+            .Select(entry => entry.At(turnCounter.Clock)).ShouldBe([0L, 1L, 2L, 3L]);
     }
 
     [Fact]
@@ -191,7 +191,7 @@ public sealed class AlgorithmCallTests
     }
 
     private static IAlgorithm<int, PopulationState<int>> ObservingCalls(IAlgorithm<int, PopulationState<int>> algorithm, List<AlgorithmCallObservation<int, PopulationState<int>>> events) =>
-        algorithm.AnalyzedBy(algorithm.Calls.Observing(events.Add));
+        algorithm.Substitute(algorithm.Calls.Observing(events.Add));
 
     private static IAlgorithmExecutor<PopulationState<int>> Resolve(
         ResolutionScope scope, IAlgorithm<int, PopulationState<int>> algorithm) =>

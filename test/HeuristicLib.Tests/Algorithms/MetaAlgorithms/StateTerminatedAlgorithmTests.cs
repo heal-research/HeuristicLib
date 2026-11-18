@@ -135,8 +135,8 @@ public class StateTerminatedAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
-        var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator, problem);
+        var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5));
+        var executor = ResolutionScope.Create(timeProvider).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator, problem);
 
         executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0)).ShouldBeFalse();
 

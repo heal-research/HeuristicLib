@@ -20,8 +20,8 @@ public sealed partial class OperatorPreparationSpecs
     public void BothOperationsOfOneConfigurationShareItsExecutorWithinAScope()
     {
         var source = new CountingSource();
-        var reads = ReadSource(source).Count();
-        var counted = ((IOperator<ReadValue, RealVector>)source).AnalyzedBy(reads);
+        var reads = new Counter();
+        var counted = ((IOperator<ReadValue, RealVector>)source).Substitute(ReadSource(source).Counting(reads));
         var root = ResolutionScope.Create();
         var problem = new TestFunctionProblem(new SphereFunction(1));
         var scope = root.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem);
@@ -67,9 +67,9 @@ public sealed partial class OperatorPreparationSpecs
         var first = new RepeatedEvaluation(cached, new RealVector(2.0));
         var second = first with { };
         var cycle = CycleAlgorithm.Create(first.TerminatedAfterIterations(2), second.TerminatedAfterIterations(2)) with { MaximumCycles = 3 };
-        var calls = evaluator.Invocations.Count();
-        var produced = cycle.Iterations.Count();
-        var run = cycle.Sharing(cached).AnalyzedBy(calls, produced).Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var calls = new Counter();
+        var produced = new Counter();
+        var run = cycle.Sharing(cached).Substitute(evaluator.Invocations.Counting(calls), cycle.Iterations.Counting(produced)).Repeat(3).CreateRun(problem, RandomNumberGenerator.Create(7));
         var results = await run.CompleteAsync(ExecutionConcurrency.Concurrent(3), cancellationToken: TestContext.Current.CancellationToken);
 
         results.Length.ShouldBe(3);

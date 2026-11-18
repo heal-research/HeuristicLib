@@ -134,10 +134,10 @@ public sealed class OperatorLifecycleTests
     public void Duration()
     {
         var clock = new ManualClock();
-        var timed = new Duration(clock);
+        var timed = new Duration();
         var probe = new Probe { ChildAction = () => clock.Advance(17) };
         var source = new ProbeMutation(probe);
-        var operationScope = ResolutionScope.Create();
+        var operationScope = ResolutionScope.Create(clock);
         var operation = Typed(operationScope).Resolve(source.Timed(timed));
         var duration = operationScope.Results.Result(timed);
         InvokeOperation(operation);
@@ -166,14 +166,14 @@ public sealed class OperatorLifecycleTests
         foreach (var timingInside in new[] { false, true })
         {
             var clock = new ManualClock();
-            var duration = new Duration(clock);
+            var duration = new Duration();
             var source = new ProbeMutation(new Probe { ChildAction = () => clock.Advance(17) });
             var observer = new Probe { AfterSuccess = () => clock.Advance(5) };
             // The wrapper closer to the executor runs inside the other.
             IOperator<Mutation, RealVector> configured = timingInside
                 ? new Lifecycle<Mutation>(source.Timed(duration), observer)
                 : new Lifecycle<Mutation>(source, observer).Timed(duration);
-            var scope = ResolutionScope.Create();
+            var scope = ResolutionScope.Create(clock);
             InvokeOperation(Typed(scope).Resolve(configured));
             Check(scope.Results.Result(duration).CurrentDuration.Ticks == (timingInside ? 17 : 22),
                 "the nesting of the wrappers determines whether an observer's callback is inside the timed boundary");

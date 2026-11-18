@@ -13,7 +13,7 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Execution;
 public sealed class PredefinedAnalyzerSpecs
 {
     [Fact]
-    public void PredefinedAnalyzersInferEveryRoleFromTheirArguments()
+    public void PredefinedPlacementsInferEveryRoleFromTheirArguments()
     {
         var creator = new UniformDistributedCreator();
         var crossover = SelectFirstParentCrossover<RealVector>.Instance;
@@ -26,36 +26,35 @@ public sealed class PredefinedAnalyzerSpecs
         var terminator = new NeverTerminator<RealVector>();
         var algorithm = GeneticAlgorithm.Create(creator, crossover, mutator);
         var results = ResolutionScope.Create().Results;
-        var timeProvider = TimeProvider.System;
-        (IConfigurationNode Source, ISubstitutionBundle Analyzer)[] analyzers =
+        (IConfigurationNode Source, ISubstitution Placement)[] placements =
         [
-            (algorithm, algorithm.Calls.Count()),
-            (creator, creator.Invocations.Count()),
-            (creator, creator.Invocations.Duration(timeProvider)),
-            (crossover, crossover.Invocations.Count()),
-            (crossover, crossover.Invocations.Duration(timeProvider)),
-            (evaluator, evaluator.Invocations.Count()),
-            (evaluator, evaluator.Invocations.Duration(timeProvider)),
-            (mutator, mutator.Invocations.Count()),
-            (mutator, mutator.Invocations.Duration(timeProvider)),
-            (refiner, refiner.Invocations.Count()),
-            (refiner, refiner.Invocations.Duration(timeProvider)),
-            (selector, selector.Invocations.Count()),
-            (selector, selector.Invocations.Duration(timeProvider)),
-            (replacer, replacer.Invocations.Count()),
-            (replacer, replacer.Invocations.Duration(timeProvider)),
-            (interceptor, interceptor.Invocations.Count()),
-            (interceptor, interceptor.Invocations.Duration(timeProvider)),
-            (terminator, terminator.Invocations.Count()),
-            (terminator, terminator.Invocations.Duration(timeProvider)),
-            (creator, creator.Invocations.CountCandidates()),
-            (crossover, crossover.Invocations.CountCandidates()),
-            (evaluator, evaluator.Invocations.CountCandidates()),
-            (mutator, mutator.Invocations.CountCandidates()),
-            (refiner, refiner.Invocations.CountCandidates()),
-            (selector, selector.Invocations.CountCandidates()),
-            (replacer, replacer.Invocations.CountCandidates()),
-            (algorithm, algorithm.Iterations.Count()),
+            (algorithm, algorithm.Calls.Counting(new Counter())),
+            (creator, creator.Invocations.Counting(new Counter())),
+            (creator, creator.Invocations.Timing(new Duration())),
+            (crossover, crossover.Invocations.Counting(new Counter())),
+            (crossover, crossover.Invocations.Timing(new Duration())),
+            (evaluator, evaluator.Invocations.Counting(new Counter())),
+            (evaluator, evaluator.Invocations.Timing(new Duration())),
+            (mutator, mutator.Invocations.Counting(new Counter())),
+            (mutator, mutator.Invocations.Timing(new Duration())),
+            (refiner, refiner.Invocations.Counting(new Counter())),
+            (refiner, refiner.Invocations.Timing(new Duration())),
+            (selector, selector.Invocations.Counting(new Counter())),
+            (selector, selector.Invocations.Timing(new Duration())),
+            (replacer, replacer.Invocations.Counting(new Counter())),
+            (replacer, replacer.Invocations.Timing(new Duration())),
+            (interceptor, interceptor.Invocations.Counting(new Counter())),
+            (interceptor, interceptor.Invocations.Timing(new Duration())),
+            (terminator, terminator.Invocations.Counting(new Counter())),
+            (terminator, terminator.Invocations.Timing(new Duration())),
+            (creator, creator.Invocations.CountingCandidates(new Counter())),
+            (crossover, crossover.Invocations.CountingCandidates(new Counter())),
+            (evaluator, evaluator.Invocations.CountingCandidates(new Counter())),
+            (mutator, mutator.Invocations.CountingCandidates(new Counter())),
+            (refiner, refiner.Invocations.CountingCandidates(new Counter())),
+            (selector, selector.Invocations.CountingCandidates(new Counter())),
+            (replacer, replacer.Invocations.CountingCandidates(new Counter())),
+            (algorithm, algorithm.Iterations.Counting(new Counter())),
             (algorithm, algorithm.Iterations.Observing(_ => { })),
             (crossover, crossover.Invocations.Observing(_ => { })),
             (evaluator, evaluator.Invocations.Observing(_ => { })),
@@ -63,8 +62,8 @@ public sealed class PredefinedAnalyzerSpecs
             (interceptor, interceptor.Invocations.Observing(_ => { }))
         ];
 
-        foreach (var (source, analyzer) in analyzers)
-            source.Substitute(analyzer).ShouldNotBeSameAs(source);
+        foreach (var (source, placement) in placements)
+            source.Substitute(placement).ShouldNotBeSameAs(source);
 
         results.Elapsed.ShouldBe(TimeSpan.Zero);
     }

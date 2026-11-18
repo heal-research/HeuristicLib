@@ -1,12 +1,16 @@
 using HEAL.HeuristicLib.Algorithms.AutoEC;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 
 namespace HEAL.HeuristicLib.Analysis;
 
 /// <summary>The completed epochs and fitted prediction collected during one run.</summary>
-/// <remarks>Read the live accumulator after execution has stopped. The epoch in progress is not published.</remarks>
-public sealed class BestBeforeChangePerformance<TCandidate>
+/// <remarks>
+/// Read the live accumulator after execution has stopped. An epoch is published only when a nonempty batch from a
+/// different epoch is observed; the last observed epoch is not published when execution ends.
+/// </remarks>
+public sealed class BestBeforeChangePerformance<TCandidate> : IRunResult
 {
     private readonly Lock sync = new();
     private readonly List<BestBeforeChangePerformanceEntry<TCandidate>> bestBeforeChange = [];
@@ -24,15 +28,17 @@ public sealed class BestBeforeChangePerformance<TCandidate>
     private int PredictionEpochMultiplier { get; }
 
     /// <summary>
-    /// The best candidate of every epoch that has ended. The epoch in progress appears once it does.
+    /// The best candidate of each published epoch, in observation order; this is a live view.
     /// </summary>
     public IReadOnlyList<BestBeforeChangePerformanceEntry<TCandidate>> BestBeforeChange => bestBeforeChange;
 
+    /// <summary>The mean selected objective value across published epochs, or <see cref="double.NaN"/> before any is published.</summary>
     public double Performance
     {
         get { lock (sync) return bestBeforeChange.Count == 0 ? double.NaN : objectiveValueSum / bestBeforeChange.Count; }
     }
 
+    /// <summary>The fitted performance at the configured horizon, or <see cref="double.NaN"/> before any epoch is published.</summary>
     public double Prediction
     {
         get { lock (sync) return prediction; }

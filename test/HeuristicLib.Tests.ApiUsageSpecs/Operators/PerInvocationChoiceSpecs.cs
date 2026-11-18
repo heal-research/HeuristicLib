@@ -25,11 +25,11 @@ public sealed class PerInvocationChoiceSpecs
             populationSize: 10,
             maximumGenerations: 5,
             mutationRate: 1.0);
-        var fineTuningCalls = fineTuning.Invocations.Count();
-        var exploringCalls = exploring.Invocations.Count();
-        var choiceCalls = mutator.Invocations.Count();
+        var fineTuningCalls = new Counter();
+        var exploringCalls = new Counter();
+        var choiceCalls = new Counter();
 
-        var run = algorithm.AnalyzedBy(fineTuningCalls, exploringCalls, choiceCalls).CreateRun(problem, RandomNumberGenerator.Create(7));
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(7), [fineTuning.Invocations.Counting(fineTuningCalls), exploring.Invocations.Counting(exploringCalls), mutator.Invocations.Counting(choiceCalls)]);
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
             .ToList();
 

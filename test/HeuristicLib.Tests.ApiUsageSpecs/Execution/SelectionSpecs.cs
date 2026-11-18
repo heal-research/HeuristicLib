@@ -39,7 +39,7 @@ public class SelectionSpecs
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task OneSubstitutionCanCountEveryConfiguredMutatorInAnAlgorithm(bool useBundle)
+    public async Task OneSubstitutionCanCountEveryConfiguredMutatorInAnAlgorithm(bool useGroup)
     {
         var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
         var exploration = new GaussianMutator(mutationRate: 0.5, mutationStrength: 1.0);
@@ -56,7 +56,7 @@ public class SelectionSpecs
             Elites = 1
         };
         var mutations = new Counter();
-        ISubstitutionBundle counting = useBundle
+        ISubstitution counting = useGroup
             ? new MutationCounter(mutations)
             : Substitution.Of((IOperator<Mutation, RealVector> mutator) => mutator.Counted(mutations));
 
@@ -96,7 +96,7 @@ public class SelectionSpecs
         var temperatures = Analyzer.Trace([Temperatures(warmup), Temperatures(warmup), Temperatures(main)],
             static temperature => temperature);
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve(plan.Substitute(temperatures.Substitutions));
+        var executor = scope.Resolve(plan.Substitute(temperatures.Expand()));
 
         executor.Temperature(step: 0).ShouldBe(100);
         var first = scope.Results.Result(temperatures).Snapshot();
@@ -104,6 +104,21 @@ public class SelectionSpecs
 
         first.Values.ShouldBe([100]);
         scope.Results.Result(temperatures).Snapshot().Values.ShouldBe([100, 2]);
+    }
+
+    [Fact]
+    public void ConsumerDefinedRoleSourcesCanFeedACallback()
+    {
+        ICoolingSchedule schedule = new GeometricCooling(StartTemperature: 8, Factor: 0.5);
+        var values = new List<double>();
+        var callback = Temperatures(schedule).Observing(values.Add);
+        var plan = new AnnealingPlan(schedule, schedule, WarmupSteps: 3);
+        var executor = ResolutionScope.Create().Resolve(plan.Substitute(callback));
+
+        callback.Expand().Single().ShouldBeSameAs(callback.Expand().Single());
+        executor.Temperature(step: 0).ShouldBe(8);
+        executor.Temperature(step: 5).ShouldBe(2);
+        values.ShouldBe([8, 2]);
     }
 
     // A role of your own is observed by substituting its own wrapper for it, or explicitly by writing that wrapper.
@@ -119,7 +134,7 @@ public class SelectionSpecs
             ? new AnnealingPlan(warmup, main, WarmupSteps: 3)
             : new AnnealingPlan(new ObservedCooling(warmup, temperatures), new ObservedCooling(main, temperatures), WarmupSteps: 3);
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve(attached ? plan.Substitute(temperatures.Substitutions) : plan);
+        var executor = scope.Resolve(attached ? plan.Substitute(temperatures.Expand()) : plan);
 
         executor.Temperature(step: 0).ShouldBe(100);
         executor.Temperature(step: 5).ShouldBe(2);
@@ -137,7 +152,7 @@ public class SelectionSpecs
         var first = Analyzer.Trace([Temperatures(warmup)], static temperature => temperature);
         var second = Analyzer.Trace([Temperatures(warmup)], static temperature => temperature);
         var scope = ResolutionScope.Create();
-        var executor = scope.Resolve(plan.Substitute(first.Substitutions).Substitute(second.Substitutions));
+        var executor = scope.Resolve(plan.Substitute(first.Expand()).Substitute(second.Expand()));
 
         executor.Temperature(step: 0).ShouldBe(100);
 
@@ -151,7 +166,7 @@ public class SelectionSpecs
     {
         ICoolingSchedule schedule = new GeometricCooling(StartTemperature: 100, Factor: 0.5);
         var temperatures = Analyzer.Trace([Temperatures(schedule)], static temperature => temperature);
-        var algorithm = new CoolingAlgorithm(schedule).AnalyzedBy(temperatures);
+        var algorithm = new CoolingAlgorithm(schedule).Substitute(temperatures);
 
         var run = algorithm.CreateRun(new TestFunctionProblem(new SphereFunction(1)), RandomNumberGenerator.Create(seed: 42));
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -161,12 +176,12 @@ public class SelectionSpecs
 
     // The role's calls receive no problem, so its observations are the plain temperatures each call returned.
     private static ObservationSource<double> Temperatures(ICoolingSchedule schedule) =>
-        ObservationSource.Create<ICoolingSchedule, double>(schedule, static (node, instrument) => new ObservedCooling(node, instrument));
+        ObservationSource.Create<ICoolingSchedule, double>(schedule, static (node, receiver) => new ObservedCooling(node, receiver));
 
-    // A bundle of one's own: it counts every mutator the configuration it is applied to holds.
-    private sealed class MutationCounter(Counter mutations) : ISubstitutionBundle
+    // A group of one's own: it counts every mutator the configuration it is applied to holds.
+    private sealed class MutationCounter(Counter mutations) : SubstitutionGroup
     {
-        public IReadOnlyList<Substitution> Substitutions { get; } =
+        protected override IReadOnlyList<ISubstitution> CreateSubstitutions() =>
             [Substitution.Of((IOperator<Mutation, RealVector> mutator) => mutator.Counted(mutations))];
     }
 
@@ -209,19 +224,19 @@ public class SelectionSpecs
         }
     }
 
-    // The role's own observation wrapper, recording each temperature into the instrument.
-    private sealed record ObservedCooling(ICoolingSchedule Schedule, IObservationInstrument<double> Instrument) : ICoolingSchedule
+    // The role's own observation wrapper, recording each temperature into the receiver.
+    private sealed record ObservedCooling(ICoolingSchedule Schedule, IObservationReceiver<double> Receiver) : ICoolingSchedule
     {
         public static Parameter<ObservedCooling, ICoolingSchedule> ScheduleParameter { get; } =
             new(nameof(Schedule), static node => node.Schedule, static (node, value) => node with { Schedule = value });
 
-        public static Parameter<ObservedCooling, IObservationInstrument<double>> InstrumentParameter { get; } =
-            new(nameof(Instrument), static node => node.Instrument, static (node, value) => node with { Instrument = value });
+        public static Parameter<ObservedCooling, IObservationReceiver<double>> ReceiverParameter { get; } =
+            new(nameof(Receiver), static node => node.Receiver, static (node, value) => node with { Receiver = value });
 
-        public IReadOnlyList<IParameter> GetParameters() => [ScheduleParameter, InstrumentParameter];
+        public IReadOnlyList<IParameter> GetParameters() => [ScheduleParameter, ReceiverParameter];
 
         public ICoolingScheduleExecutor CreateExecutionNode(ResolutionScope scope) =>
-            new RecordingExecutor(scope.Resolve(Schedule), Instrument.CreateRecorder(scope.Results));
+            new RecordingExecutor(scope.Resolve(Schedule), Receiver.CreateRecorder(scope.Results));
     }
 
     private sealed record CoolingAlgorithm(ICoolingSchedule Schedule)

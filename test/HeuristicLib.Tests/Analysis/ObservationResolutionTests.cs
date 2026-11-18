@@ -20,10 +20,10 @@ public class ObservationResolutionTests
     [Fact]
     public async Task AlgorithmObservation_NumbersEachCallAndPreservesThePausedInvocationContext()
     {
-        var algorithm = new TwoStepAlgorithm();
+        IAlgorithm<int, PopulationState<int>> algorithm = new TwoStepAlgorithm();
         var problem = CreateProblem();
         var parentObservations = new List<AlgorithmObservation<int, PopulationState<int>>>();
-        var observed = algorithm.AnalyzedBy(algorithm.Iterations.Observing(parentObservations.Add));
+        var observed = algorithm.Substitute(algorithm.Iterations.Observing(parentObservations.Add));
         var root = ResolutionScope.Create();
         var original = root.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(observed, problem);
         var parentInitial = CreateState(1);
@@ -290,7 +290,7 @@ public class ObservationResolutionTests
 
     // The observation reports after the operation returned, from the wrapper the analyzer placed around the source.
     private static void AssertObservation<TNode, TExecutor>(List<string> events, TNode source,
-        Func<Action, ISubstitutionBundle> observing, Func<ResolutionScope, TNode, TExecutor> resolve, Action<TExecutor> invoke)
+        Func<Action, ISubstitution> observing, Func<ResolutionScope, TNode, TExecutor> resolve, Action<TExecutor> invoke)
         where TNode : class, IConfigurationNode
         where TExecutor : class, IExecutor
     {

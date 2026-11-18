@@ -15,12 +15,12 @@ public sealed class AlgorithmInspectionTests
     public async Task CountsSuccessfulCompletionAndTimesIterationWorkIncludingFailures(bool fail)
     {
         var time = new ManualTimeProvider();
-        var algorithm = new ProbeAlgorithm(time, fail);
+        IAlgorithm<int, PopulationState<int>> algorithm = new ProbeAlgorithm(time, fail);
         var completions = new Counter();
-        var duration = new Duration(time);
+        var duration = new Duration();
         var observed = new List<IAlgorithm<int, PopulationState<int>>>();
-        var scope = ResolutionScope.Create();
-        var analyzed = new CountingCompletions(algorithm.AnalyzedBy(algorithm.Iterations.Observing(observation => observed.Add(observation.Algorithm))), completions);
+        var scope = ResolutionScope.Create(time);
+        var analyzed = new CountingCompletions(algorithm.Substitute(algorithm.Iterations.Observing(observation => observed.Add(observation.Algorithm))), completions);
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(problem).Resolve(analyzed.Timed(duration));
         var count = scope.Results.Result(completions);
@@ -50,11 +50,12 @@ public sealed class AlgorithmInspectionTests
     [Fact]
     public void TimingTheIterations_PlacesTheTimedWrapper()
     {
-        var algorithm = new ProbeAlgorithm(new ManualTimeProvider(), Fail: false);
-        var time = algorithm.Iterations.Duration();
+        IAlgorithm<int, PopulationState<int>> algorithm = new ProbeAlgorithm(new ManualTimeProvider(), Fail: false);
+        var time = new Duration();
 
         algorithm.Timing(algorithm.Iterations, out var timed).ShouldBe(algorithm.Timed(timed));
-        algorithm.AnalyzedBy(time).ShouldBe(algorithm.Timed(time));
+        IAlgorithm<int, PopulationState<int>> receiver = algorithm;
+        receiver.Substitute(algorithm.Iterations.Timing(time)).ShouldBe(algorithm.Timed(time));
     }
 
     private sealed record ProbeAlgorithm(ManualTimeProvider Time, bool Fail) : Algorithm<ProbeAlgorithm, int, PopulationState<int>>

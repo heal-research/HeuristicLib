@@ -47,8 +47,8 @@ public static class MutationObservations
         public InvocationSource<Mutation, TCandidate, MutationObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Mutation, TCandidate, MutationObservation<TCandidate>>(mutator);
 
-        /// <summary>Records this mutator's successful calls into the instrument, wherever this configuration is placed.</summary>
-        public Observed<Mutation, TCandidate, MutationObservation<TCandidate>> Observed(IObservationInstrument<MutationObservation<TCandidate>> instrument) =>
-            new(mutator, instrument);
+        /// <summary>Records this mutator's successful calls into the receiver, wherever this configuration is placed.</summary>
+        public Observed<Mutation, TCandidate, MutationObservation<TCandidate>> Observed(IObservationReceiver<MutationObservation<TCandidate>> receiver) =>
+            new(mutator, receiver);
     }
 }

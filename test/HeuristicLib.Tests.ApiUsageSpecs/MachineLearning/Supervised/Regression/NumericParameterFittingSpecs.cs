@@ -138,9 +138,9 @@ public class NumericParameterFittingSpecs
     {
         var problem = CreateProblem();
         var sharedEvaluator = new ProblemEvaluator<ExpressionTree>();
-        var sharedCounter = sharedEvaluator.Invocations.CountCandidates();
+        var sharedCounter = new Counter();
         var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>();
-        var ownCounter = algorithmEvaluator.Invocations.CountCandidates();
+        var ownCounter = new Counter();
 
         var sharing = CreateAlgorithm(problem) with
         {
@@ -153,9 +153,9 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
-        var sharedRun = sharing.AnalyzedBy(sharedCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var sharedRun = sharing.CreateRun(problem, RandomNumberGenerator.Create(42), [sharedEvaluator.Invocations.CountingCandidates(sharedCounter)]);
         sharedRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
-        var ownRun = notSharing.AnalyzedBy(ownCounter).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var ownRun = notSharing.CreateRun(problem, RandomNumberGenerator.Create(42), [algorithmEvaluator.Invocations.CountingCandidates(ownCounter)]);
         ownRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.

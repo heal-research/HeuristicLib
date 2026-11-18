@@ -62,41 +62,12 @@ public static class CountedOperatorExtensions
         /// <param name="counter">Receives the new counter, which <c>run.Result(counter).CurrentCount</c> reads and a terminator can check.</param>
         /// <param name="metric">Whether to count successful calls or their candidate work.</param>
         public TRoot Counting<TOperation, TCandidate>(IOperator<TOperation, TCandidate> target, out Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations)
-            where TOperation : IOperation<TOperation> =>
-            root.Substitute(Substitution.Counting(target, out counter, metric));
-
-        /// <summary>Counts the operator's successful calls, or their candidate work, into an existing counter wherever this configuration holds it.</summary>
-        /// <remarks>Counting the same target twice into one counter places two wrappers, which count every call twice.</remarks>
-        /// <param name="target">The operator to count, matched by reference. It is an error when this configuration does not hold it.</param>
-        /// <param name="counter">The counter to add to, such as the one <c>LimitedToCount</c> hands to its placement.</param>
-        /// <param name="metric">Whether to count successful calls or their candidate work.</param>
-        public TRoot Counting<TOperation, TCandidate>(IOperator<TOperation, TCandidate> target, Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations)
-            where TOperation : IOperation<TOperation> =>
-            root.Substitute(Substitution.Counting(target, counter, metric));
-    }
-
-    extension(Substitution)
-    {
-        /// <summary>The substitution behind <c>Counting</c>, for one call with others: <c>ga.Substitute(Substitution.Counting(ga.Mutator, out var mutations), Substitution.Counting(ga.Evaluator, out var evaluations))</c>.</summary>
-        /// <remarks>One call resolves every target against the graph it received, so a target stays reachable although an earlier substitution of the call changed what is below it.</remarks>
-        /// <param name="target">The operator to count, matched by reference. It is an error when the configuration does not hold it.</param>
-        /// <param name="counter">Receives the new counter.</param>
-        /// <param name="metric">Whether to count successful calls or their candidate work.</param>
-        public static Substitution Counting<TOperation, TCandidate>(IOperator<TOperation, TCandidate> target, out Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations)
             where TOperation : IOperation<TOperation>
         {
             var created = new Counter();
             counter = created;
-            return Substitution.Counting(target, created, metric);
+            return root.Substitute(Substitution.Of(target, node => node.Counted(created, metric)));
         }
-
-        /// <summary>The substitution behind <c>Counting</c> into an existing counter, for one call with others.</summary>
-        /// <param name="target">The operator to count, matched by reference. It is an error when the configuration does not hold it.</param>
-        /// <param name="counter">The counter to add to.</param>
-        /// <param name="metric">Whether to count successful calls or their candidate work.</param>
-        public static Substitution Counting<TOperation, TCandidate>(IOperator<TOperation, TCandidate> target, Counter counter, OperatorCountMetric metric = OperatorCountMetric.Invocations)
-            where TOperation : IOperation<TOperation> =>
-            Substitution.Of(target, node => node.Counted(counter, metric));
     }
 }
 
