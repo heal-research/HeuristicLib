@@ -7,27 +7,27 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.LocalSearch;
 public class HillClimberTests
 {
     [Fact]
-    public void Stream_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
+    public void RunStreaming_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
 
         var states = algorithm.TerminatedAfterIterations(5)
-            .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .ToList();
 
         states.Select(StateCandidate).ShouldBe([0]);
     }
 
     [Fact]
-    public void Stream_WithInitialLocalOptimum_YieldsNoStates()
+    public void RunStreaming_WithInitialLocalOptimum_YieldsNoStates()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
         var initialState = SingleSolutionState.From(0, new ObjectiveVector(0.0));
 
         var states = algorithm.TerminatedAfterIterations(5)
-            .Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
             .ToList();
 
         states.ShouldBeEmpty();

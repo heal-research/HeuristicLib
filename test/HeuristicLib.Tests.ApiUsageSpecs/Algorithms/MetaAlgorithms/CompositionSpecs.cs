@@ -17,7 +17,7 @@ public class CompositionSpecs
         var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).TerminatedAfterIterations(3);
         var pipeline = firstStage.Then(secondStage);
 
-        var finalState = await pipeline.CompleteAsync(
+        var finalState = await pipeline.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(111),
           ct: TestContext.Current.CancellationToken);
@@ -34,7 +34,7 @@ public class CompositionSpecs
         var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).TerminatedAfterIterations(2);
         var cycle = firstStage.CycleWith(secondStage, maximumCycles: 2);
 
-        var finalState = await cycle.CompleteAsync(
+        var finalState = await cycle.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(222),
           ct: TestContext.Current.CancellationToken);

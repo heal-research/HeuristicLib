@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Parlot;
 using Parlot.Fluent;
 using static HEAL.HeuristicLib.Encodings.SymbolicExpressions.ExpressionDraft;
@@ -36,7 +37,7 @@ public static class InfixExpressionParser
         throw new FormatException(failure);
     }
 
-    public static bool TryParseDraft(string text, out ExpressionDraft draft, NumericLiteralInterpretation numericLiterals = NumericLiteralInterpretation.Fixed)
+    public static bool TryParseDraft(string text, [NotNullWhen(true)] out ExpressionDraft? draft, NumericLiteralInterpretation numericLiterals = NumericLiteralInterpretation.Fixed)
     {
         return TryParseDraft(text, symbols: null, out draft, out _, numericLiterals);
     }
@@ -57,12 +58,12 @@ public static class InfixExpressionParser
         throw new FormatException(failure);
     }
 
-    public static bool TryParse(string text, out ExpressionTree expression, NumericLiteralInterpretation numericLiterals = NumericLiteralInterpretation.Fixed)
+    public static bool TryParse(string text, [NotNullWhen(true)] out ExpressionTree? expression, NumericLiteralInterpretation numericLiterals = NumericLiteralInterpretation.Fixed)
     {
         return TryParse(text, searchSpace: null, out expression, out _, numericLiterals);
     }
 
-    public static bool TryParse(string text, ExpressionTreeSearchSpace searchSpace, out ExpressionTree expression, NumericLiteralInterpretation numericLiterals = NumericLiteralInterpretation.Fixed)
+    public static bool TryParse(string text, ExpressionTreeSearchSpace searchSpace, [NotNullWhen(true)] out ExpressionTree? expression, NumericLiteralInterpretation numericLiterals = NumericLiteralInterpretation.Fixed)
     {
         return TryParse(text, searchSpace, out expression, out _, numericLiterals);
     }
@@ -120,11 +121,11 @@ public static class InfixExpressionParser
 
     private static SyntaxNode ParseSyntax(string text) => Parser.Parse(text)!;
 
-    private static bool TryParse(string text, ExpressionTreeSearchSpace? searchSpace, out ExpressionTree expression, out string failure, NumericLiteralInterpretation numericLiterals)
+    private static bool TryParse(string text, ExpressionTreeSearchSpace? searchSpace, [NotNullWhen(true)] out ExpressionTree? expression, out string failure, NumericLiteralInterpretation numericLiterals)
     {
         if (!TryParseDraft(text, searchSpace?.Symbols, out var draft, out failure, numericLiterals))
         {
-            expression = null!;
+            expression = null;
             return false;
         }
 
@@ -133,7 +134,7 @@ public static class InfixExpressionParser
             expression = searchSpace is null ? draft.Build() : draft.Build(searchSpace);
             if (searchSpace is not null && !searchSpace.Contains(expression))
             {
-                expression = null!;
+                expression = null;
                 failure = "The infix expression exceeds the supplied search-space constraints.";
                 return false;
             }
@@ -142,13 +143,13 @@ public static class InfixExpressionParser
         }
         catch (InvalidOperationException exception)
         {
-            expression = null!;
+            expression = null;
             failure = $"The infix expression could not be bound: {exception.Message}";
             return false;
         }
     }
 
-    private static bool TryParseDraft(string text, IReadOnlyList<Symbol>? symbols, out ExpressionDraft draft, out string failure, NumericLiteralInterpretation numericLiterals)
+    private static bool TryParseDraft(string text, IReadOnlyList<Symbol>? symbols, [NotNullWhen(true)] out ExpressionDraft? draft, out string failure, NumericLiteralInterpretation numericLiterals)
     {
         ValidateNumericLiteralInterpretation(numericLiterals);
         try
@@ -159,13 +160,13 @@ public static class InfixExpressionParser
         }
         catch (ParseException exception)
         {
-            draft = null!;
+            draft = null;
             failure = $"Invalid infix expression at line {exception.Position.Line}, column {exception.Position.Column}: {exception.Message}";
             return false;
         }
         catch (InvalidOperationException exception)
         {
-            draft = null!;
+            draft = null;
             failure = $"The infix expression could not be bound: {exception.Message}";
             return false;
         }

@@ -10,6 +10,7 @@ using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
@@ -173,8 +174,10 @@ public class InferenceConstructionSpecs
         var populationState = PopulationState.From(population);
         var fluentPopulationState = population.ToPopulationState();
         var bestMedianWorst = BestMedianWorstEntry.From(evaluatedCandidate, evaluatedCandidate, evaluatedCandidate);
-        var experimentCase = ExperimentCase.From("algorithm", "configuration", [1, 2]);
-        var streamEntry = ExperimentStreamEntry.From(experimentCase, populationState);
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
+        var run = CreateAlgorithm(problem).Repeat(1).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var trial = run.Trials[0];
+        var streamEntry = ExperimentStreamEntry.From(trial, populationState);
 
         parents.Parent1.ShouldBeSameAs(first);
         fluentParents.Parent2.ShouldBeSameAs(second);
@@ -183,8 +186,7 @@ public class InferenceConstructionSpecs
         populationState.Population.ShouldBeSameAs(population);
         fluentPopulationState.Population.ShouldBeSameAs(population);
         bestMedianWorst.Best.ShouldBeSameAs(evaluatedCandidate);
-        experimentCase.RandomForkPath.ShouldBe([1, 2]);
-        streamEntry.Trial.ShouldBeSameAs(experimentCase);
+        streamEntry.Trial.ShouldBeSameAs(trial);
     }
 
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem)

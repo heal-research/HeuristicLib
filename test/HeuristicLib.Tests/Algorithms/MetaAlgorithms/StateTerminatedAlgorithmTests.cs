@@ -9,61 +9,61 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 public class StateTerminatedAlgorithmTests
 {
     [Fact]
-    public void Stream_DoesNotCheckSuppliedInitialState()
+    public void RunStreaming_DoesNotCheckSuppliedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => false);
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
         terminator.CheckedCandidates.ShouldBe([42]);
     }
 
     [Fact]
-    public void Stream_YieldsFirstProducedStateBeforeCheckingTerminator()
+    public void RunStreaming_YieldsFirstProducedStateBeforeCheckingTerminator()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => true);
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
         terminator.CheckedCandidates.ShouldBe([42]);
     }
 
     [Fact]
-    public void Stream_TerminatorThatStopsImmediatelyStillIncludesTriggeringState()
+    public void RunStreaming_TerminatorThatStopsImmediatelyStillIncludesTriggeringState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var terminator = new RecordingTerminator(_ => true);
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
         terminator.CheckedCandidates.ShouldBe([1]);
     }
 
     [Fact]
-    public void Stream_GivesTheTerminatorAStreamPerStateApartFromTheIterationStreams()
+    public void RunStreaming_GivesTheTerminatorAStreamPerStateApartFromTheIterationStreams()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var iterationDraws = new List<double>();
         var terminator = new DrawingTerminator(StopAfter: 3);
 
         var states = new DrawingIterativeAlgorithm(iterationDraws).TerminatedBy(terminator)
-            .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
         var repeated = new DrawingTerminator(StopAfter: 3);
         _ = new DrawingIterativeAlgorithm([]).TerminatedBy(repeated)
-            .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
         var undrawnIterationDraws = new List<double>();
         _ = new DrawingIterativeAlgorithm(undrawnIterationDraws).TerminatedAfterIterations(3)
-            .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2, 3]);
         terminator.Draws.Distinct().Count().ShouldBe(3);
@@ -78,7 +78,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(1);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
@@ -89,43 +89,43 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(0);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
-    public void Stream_WithCanceledRunToken_InterruptsBeforeProducingState()
+    public void RunStreaming_WithCanceledRunToken_InterruptsBeforeProducingState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => new AdditiveStepAlgorithm(1).Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+        Should.Throw<OperationCanceledException>(() => new AdditiveStepAlgorithm(1).RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
     }
 
     [Fact]
-    public void Stream_WithCanceledTerminatorToken_YieldsProducedStateThenStops()
+    public void RunStreaming_WithCanceledTerminatorToken_YieldsProducedStateThenStops()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
         var algorithm = CreateStateTerminatedAlgorithm(new CancellationTokenTerminator<int>(cts.Token));
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
-    public void Stream_WithTerminatorTokenCanceledImmediatelyBeforeRun_YieldsProducedStateThenStops()
+    public void RunStreaming_WithTerminatorTokenCanceledImmediatelyBeforeRun_YieldsProducedStateThenStops()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
         var algorithm = CreateStateTerminatedAlgorithm(new CancellationTokenTerminator<int>(cts.Token));
 
         cts.Cancel();
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }

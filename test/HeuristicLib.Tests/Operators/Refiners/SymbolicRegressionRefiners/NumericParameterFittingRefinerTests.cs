@@ -231,7 +231,7 @@ public sealed class NumericParameterFittingRefinerTests
             Refiner = new NumericParameterFittingRefiner { MaximumIterations = 5, FittingData = fittingData }
         };
 
-        Should.Throw<ArgumentException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<ArgumentException>(() => algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
     }
 
     private static readonly double[] Inputs = [-2.0, -1.0, 0.0, 1.0, 2.0];

@@ -201,7 +201,7 @@ public class PractitionerUsageSpecs
             maximumGenerations: 8,
             mutationRate: 0.2);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
@@ -225,12 +225,12 @@ public class PractitionerUsageSpecs
 
         var cannotExtendPastInternalCompletion = internallyCappedAlgorithm
             .TerminatedAfterIterations(5)
-            .Stream(
+            .RunStreaming(
                 problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
             .ToList();
         var canStopEarlierThanInternalCompletion = externallyCappedAlgorithm
             .TerminatedAfterIterations(2)
-            .Stream(
+            .RunStreaming(
                 problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
             .ToList();
 
@@ -251,7 +251,7 @@ public class PractitionerUsageSpecs
 
         var earlyStoppedStates = algorithm
             .TerminatedAfterIterations(2)
-            .Stream(
+            .RunStreaming(
                 problem, RandomNumberGenerator.Create(789), ct: TestContext.Current.CancellationToken)
             .ToList();
 
@@ -273,7 +273,7 @@ public class PractitionerUsageSpecs
 
         var states = algorithm
             .LimitedToInvocations(algorithm.Evaluator, 2)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
@@ -296,14 +296,14 @@ public class PractitionerUsageSpecs
 
         var statesByEvaluatorCalls = algorithm
             .LimitedToInvocations(algorithm.Evaluator, 2)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
               .ToList();
         var statesByEvaluatedCandidates = algorithm
             .LimitedToCandidates(algorithm.Evaluator, 2)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
@@ -327,7 +327,7 @@ public class PractitionerUsageSpecs
             .LimitedToDuration(
                 algorithm.Evaluator,
                 TimeSpan.Zero)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
@@ -349,7 +349,7 @@ public class PractitionerUsageSpecs
         var states = algorithm
             .LimitedToDuration(
                 TimeSpan.Zero)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
@@ -373,7 +373,7 @@ public class PractitionerUsageSpecs
             .LimitedToInvocations(
                 algorithm.Mutator,
                 maximumInvocations: 1)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
@@ -382,7 +382,7 @@ public class PractitionerUsageSpecs
             .LimitedToCandidates(
                 algorithm.Mutator,
                 maximumCandidates: 20)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
@@ -424,7 +424,7 @@ public class PractitionerUsageSpecs
             .LimitedToDuration(
                 algorithm.Mutator,
                 TimeSpan.Zero)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
@@ -470,7 +470,7 @@ public class PractitionerUsageSpecs
             MaxNeighbors = 12
         }.TerminatedAfterIterations(10);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(321),
           ct: TestContext.Current.CancellationToken);
@@ -491,7 +491,7 @@ public class PractitionerUsageSpecs
             MaxNeighbors = 12
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(654),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -514,13 +514,13 @@ public class PractitionerUsageSpecs
         }.TerminatedAfterIterations(6);
         var repeated = algorithm.Repeat(3);
 
-        var results = await repeated.CompleteAsync(
+        var results = await repeated.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(999),
           cancellationToken: TestContext.Current.CancellationToken);
 
         results.Length.ShouldBe(3);
-        results.Select(result => result.Trial.Key).ShouldBe([0, 1, 2]);
+        results.Select(result => result.Trial.Repetition).ShouldBe([0, 1, 2]);
         results.All(result => problem.SearchSpace.Contains(result.State.EvaluatedCandidate.Candidate)).ShouldBeTrue();
     }
 
@@ -540,7 +540,7 @@ public class PractitionerUsageSpecs
             MaximumGenerations = 5
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(555),
           ct: TestContext.Current.CancellationToken);

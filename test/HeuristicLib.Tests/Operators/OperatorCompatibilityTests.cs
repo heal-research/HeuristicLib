@@ -32,7 +32,7 @@ public class OperatorCompatibilityTests
       var algorithm = new {GetCompilableName(algorithmType)}();
       var problem = new {GetCompilableName(problemType)}();
       var rng = HEAL.HeuristicLib.Random.RandomNumberGenerator.Create(0);
-      algorithm.Stream(problem, rng);
+      algorithm.RunStreaming(problem, rng);
     ";
 
         return DoesCompile(code, typeof(object), algorithmType, problemType);

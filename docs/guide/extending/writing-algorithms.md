@@ -9,7 +9,7 @@ An algorithm has two parts:
 1. An immutable configuration record that holds operators and settings.
 2. An executor bound to resolved operators and the interceptor, with private fields and references to any run-bound results it uses.
 
-Each call to `Stream` or `CompleteAsync` starts an independent root execution. Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes construct their own executors unless an ancestor explicitly shares a configuration through `Sharing`.
+Each call to `RunStreaming` or `RunToCompletionAsync` starts an independent root execution. Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes construct their own executors unless an ancestor explicitly shares a configuration through `Sharing`.
 
 For custom streaming control flow, derive the executor from `AlgorithmExecutor<TSearchState>` when it reads neither the search space nor the problem. Use `AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` when it needs those bound contracts. Its protected get-only `Problem` and `SearchSpace` properties retain the constructor context for derived executors. A wrapper can use the corresponding `WrappingAlgorithmExecutor<TSearchState>` or problem-bound `WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` to retain its resolved `ChildAlgorithm`.
 

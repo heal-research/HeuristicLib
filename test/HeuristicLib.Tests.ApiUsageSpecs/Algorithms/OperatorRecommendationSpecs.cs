@@ -103,8 +103,8 @@ public class OperatorRecommendationSpecs
         var assignment = new QuadraticAssignmentProblem(
             new QuadraticAssignmentProblemData(SymmetricMatrix(), SymmetricMatrix()));
 
-        algorithm.Complete(tour, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
-        algorithm.Complete(assignment, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
+        algorithm.RunToCompletion(tour, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
+        algorithm.RunToCompletion(assignment, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
     }
 
     [Fact]

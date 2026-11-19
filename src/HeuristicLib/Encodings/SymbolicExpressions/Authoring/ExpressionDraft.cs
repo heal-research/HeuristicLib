@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 
 public abstract record ExpressionDraft
@@ -17,7 +19,7 @@ public abstract record ExpressionDraft
         return Build(new ExpressionTreeSearchSpace(int.MaxValue, int.MaxValue, symbols));
     }
 
-    public bool TryBuild(ExpressionTreeSearchSpace searchSpace, out ExpressionTree expression)
+    public bool TryBuild(ExpressionTreeSearchSpace searchSpace, [NotNullWhen(true)] out ExpressionTree? expression)
     {
         try
         {
@@ -26,12 +28,12 @@ public abstract record ExpressionDraft
         }
         catch (InvalidOperationException)
         {
-            expression = null!;
+            expression = null;
             return false;
         }
     }
 
-    public bool TryBuild(IReadOnlyList<Symbol> symbols, out ExpressionTree expression)
+    public bool TryBuild(IReadOnlyList<Symbol> symbols, [NotNullWhen(true)] out ExpressionTree? expression)
     {
         try
         {
@@ -40,7 +42,7 @@ public abstract record ExpressionDraft
         }
         catch (InvalidOperationException)
         {
-            expression = null!;
+            expression = null;
             return false;
         }
     }

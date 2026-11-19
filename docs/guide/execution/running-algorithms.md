@@ -6,12 +6,12 @@ Running an algorithm combines an immutable configuration with one problem and on
 
 Start with a completion method when you only need the final state. Choose streaming for progress or retain an explicit run when you need analysis, inspection or pause and resume. These entry points use the same algorithm configuration and execution machinery.
 
-| What you need                   | Entry point                                              | Continue below                                                                                 |
-| ------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Final search state              | `algorithm.Complete(problem, random)` or `CompleteAsync` | [Complete or stream](#complete-or-stream)                                                      |
-| Progress from a fresh execution | `algorithm.Stream(problem, random)`                      | [Complete or stream](#complete-or-stream)                                                      |
-| Retain control of one execution | `algorithm.CreateRun(problem, random)`                   | [Explicit runs](#explicit-runs-for-control-and-analysis)                                       |
-| Analysis results                | Pass analyzers to `CreateRun`, then use `run.Result`     | [Analysis](#explicit-runs-for-control-and-analysis) and [run results](#read-run-bound-results) |
+| What you need                   | Entry point                                                            | Continue below                                                                                 |
+| ------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Final search state              | `algorithm.RunToCompletion(problem, random)` or `RunToCompletionAsync` | [Run to completion or stream](#run-to-completion-or-stream)                                    |
+| Progress from a fresh execution | `algorithm.RunStreaming(problem, random)`                              | [Run to completion or stream](#run-to-completion-or-stream)                                    |
+| Retain control of one execution | `algorithm.CreateRun(problem, random)`                                 | [Explicit runs](#explicit-runs-for-control-and-analysis)                                       |
+| Analysis results                | Pass analyzers to `CreateRun`, then use `run.Result`                   | [Analysis](#explicit-runs-for-control-and-analysis) and [run results](#read-run-bound-results) |
 
 Executor construction happens automatically. You do not need to manage those steps to use any of these entry points.
 
@@ -40,23 +40,23 @@ Executor construction happens automatically. You do not need to manage those ste
   </div>
 </div>
 
-## Complete or stream
+## Run to completion or stream
 
-Use `CompleteAsync` when the final state is enough:
+Use `RunToCompletionAsync` when the final state is enough:
 
 ```csharp
-var finalState = await algorithm.CompleteAsync(
+var finalState = await algorithm.RunToCompletionAsync(
     problem,
     random,
     ct: cancellationToken);
 ```
 
-Use `Complete` for synchronous completion. Both completion methods return the final search state without requiring you to retain a run object.
+Use `RunToCompletion` for synchronous completion. Both completion methods return the final search state without requiring you to retain a run object.
 
-Use `Stream` when the caller needs progress:
+Use `RunStreaming` when the caller needs progress:
 
 ```csharp
-await foreach (var state in algorithm.Stream(problem, random, ct: cancellationToken))
+await foreach (var state in algorithm.RunStreaming(problem, random, ct: cancellationToken))
 {
     RenderProgress(state);
 }
@@ -76,7 +76,7 @@ Pass a cancellation token from the host application. Cancellation is for externa
 
 ```csharp
 using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(2));
-var finalState = await algorithm.CompleteAsync(problem, random, ct: timeout.Token);
+var finalState = await algorithm.RunToCompletionAsync(problem, random, ct: timeout.Token);
 ```
 
 ## Reproducibility
@@ -100,7 +100,7 @@ var run = algorithm.CreateRun(problem, random);
 var finalState = await run.CompleteAsync();
 ```
 
-Completing an explicit run follows the same path as `algorithm.CompleteAsync(problem, random)`. Each `CreateRun` creates independent executors and run results. The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
+Completing an explicit run follows the same path as `algorithm.RunToCompletionAsync(problem, random)`. Each `CreateRun` creates independent executors and run results. The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
 
 Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. Use `Substitute` when keeping the instrumented configuration. The algorithm owns the search process, including its operators and child algorithms.
 

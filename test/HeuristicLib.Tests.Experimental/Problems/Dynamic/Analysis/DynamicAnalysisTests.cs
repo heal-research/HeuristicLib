@@ -124,7 +124,7 @@ public class DynamicAnalysisTests
     {
         var problem = new IntegerDynamicProblem(epochLength: 100, UpdatePolicy.AfterEachIteration);
         var algorithm = new BatchEvaluationAlgorithm([[1], [2]]).ApplyingIterationUpdates();
-        using var states = algorithm.Stream(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator();
+        using var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator();
 
         states.MoveNext().ShouldBeTrue();
         problem.RequestUpdate();
@@ -140,7 +140,7 @@ public class DynamicAnalysisTests
     {
         var problem = new IntegerDynamicProblem(epochLength: 100, UpdatePolicy.AfterEachIteration);
         var algorithm = new BatchEvaluationAlgorithm([[1], [2]]).ApplyingIterationUpdates();
-        using (var states = algorithm.Stream(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator())
+        using (var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator())
         {
             states.MoveNext().ShouldBeTrue();
             problem.RequestUpdate();

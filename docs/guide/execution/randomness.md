@@ -4,7 +4,7 @@ Every HeuristicLib run receives an `IRandomNumberGenerator`. Create it from a re
 
 ```csharp
 var random = RandomNumberGenerator.Create(seed: 123);
-var finalState = await algorithm.CompleteAsync(problem, random);
+var finalState = await algorithm.RunToCompletionAsync(problem, random);
 ```
 
 Keep the seed with the algorithm configuration, package version and problem data. The same inputs reproduce the same random sequence.
@@ -94,12 +94,12 @@ var rootRandom = RandomNumberGenerator.Create(seed: 123);
 for (ulong runIndex = 0; runIndex < 20; runIndex++)
 {
     var runRandom = rootRandom.Fork(runIndex);
-    var state = await algorithm.CompleteAsync(problem, runRandom);
+    var state = await algorithm.RunToCompletionAsync(problem, runRandom);
     Save(runIndex, state);
 }
 ```
 
-The [experiments API](/guide/execution/experiments) handles trial keys, independent runs and concurrency when you need repetitions or parameter grids.
+The [experiments API](/guide/execution/experiments#compare-problems-and-control-random-streams) assigns random streams by problem and repetition. An experiment can also fork an independent starting stream for each parameter candidate.
 
 ## Rules to keep
 

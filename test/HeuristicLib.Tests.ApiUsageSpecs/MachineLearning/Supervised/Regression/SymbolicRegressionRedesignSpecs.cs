@@ -200,7 +200,7 @@ public class SymbolicRegressionRedesignSpecs
             maximumGenerations: 8,
             mutationRate: 0.2);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);

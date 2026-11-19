@@ -1,18 +1,12 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Experiments.TestSupport;
-
-internal sealed record FixedExperiment<TAlgorithm>(ImmutableArray<ExperimentCase<TAlgorithm, int>> Cases)
-    : Experiment<int, TAlgorithm, PopulationState<int>, int>
-    where TAlgorithm : class, IAlgorithm<int, PopulationState<int>>
-{
-    public override ImmutableArray<ExperimentCase<TAlgorithm, int>> MaterializeCases() => Cases;
-}
 
 internal sealed record ProbeAlgorithm(
     int Value,
@@ -132,11 +126,22 @@ internal sealed class ExecutionProbe
 
 internal static class ExperimentTestSupport
 {
-    public static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int> CreateRun<TAlgorithm>(
-        IExperiment<int, TAlgorithm, PopulationState<int>, int> experiment,
+    public static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm> CreateRun<TAlgorithm>(
+        Experiment<int, TAlgorithm, PopulationState<int>> experiment,
         int seed = 42)
         where TAlgorithm : class, IAlgorithm<int, PopulationState<int>> =>
         experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(seed));
+
+    public static GeneticAlgorithm<RealVector> CreateGeneticAlgorithm()
+    {
+        return new()
+        {
+            Creator = new UniformDistributedCreator(),
+            Crossover = SelectFirstParentCrossover<RealVector>.Instance,
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            MaximumGenerations = 2
+        };
+    }
 
     public static PopulationState<int> CreateState(int candidate) => new()
     {

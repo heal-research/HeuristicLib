@@ -105,7 +105,7 @@ public class PreflightValidationSpecs
         report.IsValid.ShouldBeTrue();
         report.Diagnostics.ShouldBeEmpty();
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
 
@@ -221,7 +221,7 @@ public class PreflightValidationSpecs
 
         // Skipping the check does not make the configuration work; it only moves the failure to run start.
         var atRunStart = Record.Exception(
-            () => algorithm.Complete(problem, RandomNumberGenerator.Create(seed: 1), validate: false));
+            () => algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(seed: 1), validate: false));
         atRunStart.ShouldNotBeNull();
         atRunStart.Message.ShouldContain(nameof(RandomBoolVectorCreator));
     }

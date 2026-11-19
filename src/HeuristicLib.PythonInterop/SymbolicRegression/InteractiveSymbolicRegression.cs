@@ -145,7 +145,7 @@ public static class InteractiveSymbolicRegression
             : System.Random.Shared.Next();
 
         return algorithm
-            .Complete(problem, RandomNumberGenerator.Create(seed), ct: ct)
+            .RunToCompletion(problem, RandomNumberGenerator.Create(seed), ct: ct)
             .Population;
     }
 }

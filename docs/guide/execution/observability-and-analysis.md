@@ -6,7 +6,7 @@ Track improvements with `Analyzer.BestSoFar<RealVector>()`, pass the analyzer to
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-simple-best{csharp}
 
-An algorithm observation captures each search state it yields, after its interceptors have transformed that state. No placeholder interceptor is needed. For simple progress logging, consuming `algorithm.Stream(problem, random)` directly is also sufficient.
+An algorithm observation captures each search state it yields, after its interceptors have transformed that state. No placeholder interceptor is needed. For simple progress logging, consuming `algorithm.RunStreaming(problem, random)` directly is also sufficient.
 
 ## Choose the right tool
 
@@ -14,12 +14,12 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 
 | Need                                                                                        | Use                                                                                                                    |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Look at every state the algorithm yields                                                    | `algorithm.Stream(problem, random)`                                                                                    |
-| Only the final state                                                                        | `algorithm.CompleteAsync(problem, random)`                                                                             |
+| Look at every state the algorithm yields                                                    | `algorithm.RunStreaming(problem, random)`                                                                              |
+| Only the final state                                                                        | `algorithm.RunToCompletionAsync(problem, random)`                                                                      |
 | Typed data from chosen boundaries, such as a quality curve or an operator's offspring       | An analyzer passed to `CreateRun`                                                                                      |
 | Behavior at a boundary that is not analysis, such as logging or bridging to another runtime | A [wrapper](/guide/extending/writing-wrappers) placed with `Substitute`                                                |
 | A count or duration that stops or limits the run                                            | Inspection such as `Invocations.CountingCandidates(counter)` or `LimitedToCandidates`, read by terminators and budgets |
-| The same analysis for every experiment trial                                                | A trial analyzer, see [Experiments](/guide/execution/experiments)                                                      |
+| The same analysis for every experiment trial                                                | Pass the analyzer to [experiment run creation](/guide/execution/experiments#add-analysis)                              |
 
 Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs; they receive live references rather than isolated deep copies. Wrappers of your own may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop.
 
@@ -151,7 +151,9 @@ A turn is one call of an inner algorithm. Its `Calls` source reports `Started`, 
 
 ## Experiments
 
-Attach analysis definitions to the algorithms before constructing an experiment, then read each trial's result through `trial.Run.Result(definition)`. See [Experiments](/guide/execution/experiments) for analyzed grids and repetition.
+A parameter grid declares variation on a prototype with a descriptor, a top-level parameter name or a typed configurator. Each dimension takes a nonempty value list. An experiment combines grids through `Experiment.Create` and sets repetitions and stream sharing. The experiment accepts analysis definitions in `CreateRun(problem, random, [definition])`. The run applies them after variation once per parameter candidate, validates once per problem and parameter candidate by default, and checks placement for every trial. Pass `validate: false` to skip configuration validation.
+
+Descriptor and name dimensions label `trial.Settings` in declaration order. Read each trial's result through `trial.Run.Result(definition)`. A reference-based source on the prototype root only matches a parameter candidate that retains that original instance, such as in `algorithm.Repeat(n)`. For varied parameter candidates, use a default-selecting analyzer or name a child that all parameter candidates retain. See [Experiments](/guide/execution/experiments#add-analysis) for examples.
 
 ## Observe an operation of your own
 

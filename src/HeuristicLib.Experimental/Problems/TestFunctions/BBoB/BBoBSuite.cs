@@ -440,7 +440,6 @@ public static class BBoBSuite
 
     private static void Bbob2009Gauss(double[] g, int n, long seed)
     {
-        ArgumentNullException.ThrowIfNull(g);
         if (n < 0 || n > g.Length)
         {
             throw new ArgumentOutOfRangeException(nameof(n));

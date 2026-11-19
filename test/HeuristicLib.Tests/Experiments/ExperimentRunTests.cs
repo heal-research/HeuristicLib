@@ -7,14 +7,14 @@ namespace HEAL.HeuristicLib.Tests.Experiments;
 public class ExperimentRunTests
 {
     [Fact]
-    public void MaterializeCases_ProvidesCasesForManualInspection()
+    public void RepeatingOneConfigurationRetainsTheOriginalAlgorithm()
     {
-        var experiment = CreateExperiment();
+        var algorithm = new AdditiveStepAlgorithm(1);
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42));
 
-        var cases = experiment.MaterializeCases();
-
-        cases.Select(experimentCase => experimentCase.Key).ShouldBe([0, 1]);
-        cases.Select(experimentCase => experimentCase.Algorithm).ShouldAllBe(algorithm => ReferenceEquals(algorithm, experiment.Algorithm));
+        run.Trials.Select(trial => (trial.ProblemPosition, trial.ParameterCandidateIndex, trial.Repetition)).ShouldBe([(0, 0, 0), (0, 0, 1)]);
+        run.Trials.ShouldAllBe(trial => ReferenceEquals(trial.Algorithm, algorithm) && ReferenceEquals(trial.Problem, problem));
     }
 
     [Fact]
@@ -37,6 +37,9 @@ public class ExperimentRunTests
         var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var experiment = algorithm.Repeat(2);
         var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+
+        algorithm.ExecutionCount.ShouldBe(0);
+        evaluator.ExecutionCount.ShouldBe(0);
 
         _ = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
@@ -104,9 +107,9 @@ public class ExperimentRunTests
         run.LifecycleState.ShouldBe(RunLifecycleState.Stopped);
     }
 
-    private static RepeatedExperiment<int, AdditiveStepAlgorithm, PopulationState<int>> CreateExperiment() =>
+    private static Experiment<int, AdditiveStepAlgorithm, PopulationState<int>> CreateExperiment() =>
         new AdditiveStepAlgorithm(1).Repeat(2);
 
-    private static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm, int> CreateRun() =>
+    private static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm> CreateRun() =>
         CreateExperiment().CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 }

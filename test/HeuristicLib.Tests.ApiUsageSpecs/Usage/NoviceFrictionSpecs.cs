@@ -43,7 +43,7 @@ public class NoviceFrictionSpecs
 
         var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
             problem,
             RandomNumberGenerator.Create(seed: 42),
             ct: TestContext.Current.CancellationToken);

@@ -88,6 +88,8 @@ See [Observability and analysis](/guide/execution/observability-and-analysis) fo
 
 `CreateRun` places analyzers after budgets into the configuration it receives. A budget holds a copy of its algorithm, so name an iteration target from that configuration, such as `limited.Algorithm.Iterations`. A source from the original algorithm no longer matches. Ready-made default selections need no named target.
 
+An experiment applies substitutions once per parameter candidate, validates the resulting configuration on each problem, and checks held definitions for each trial. The trial retains the decoded configuration, and its algorithm run uses the resulting graph and owns the results. Reference-based sources must match nodes in the decoded graph. See [Experiments](/guide/execution/experiments#add-analysis).
+
 A substitution is a rewrite applied while building a configuration. It is never stored or serialized. Persist the configuration it produced, an ordinary graph containing the placed nodes. `ga.Substitute(best)` keeps analysis in that graph; `ga.CreateRun(problem, random, [best])` places it only for the run. What is placed must be data for persistence: delegates in traces, aggregates and callbacks prevent it. A substitution cannot be undone; persist an uninstrumented configuration before substituting if it is also needed.
 
 ## Best so far

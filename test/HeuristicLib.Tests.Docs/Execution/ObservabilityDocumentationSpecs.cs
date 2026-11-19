@@ -69,8 +69,8 @@ public sealed class ObservabilityDocumentationSpecs
         var evaluations = new Counter();
         var quality = algorithm.Iterations.TracePopulationQuality(
             clocks: [evaluations.Clock]);
-        IAlgorithm<RealVector, PopulationState<RealVector>> receiver = algorithm;
-        var run = receiver.Substitute(quality, algorithm.Evaluator.Invocations.CountingCandidates(evaluations)).Repeat(2).CreateRun(problem, random);
+        var run = algorithm.Repeat(2).CreateRun(problem, random,
+            [quality, algorithm.Evaluator.Invocations.CountingCandidates(evaluations)]);
         await run.CompleteAsync(cancellationToken: cancellationToken);
         var analyses = run.Trials.Select(trial => trial.Run.Result(quality)).ToList();
         #endregion observability-experiment-setup
@@ -78,6 +78,36 @@ public sealed class ObservabilityDocumentationSpecs
         analyses.Count.ShouldBe(2);
         analyses.ShouldAllBe(analysis => analysis.SampleCount == 3);
         analyses[0].ShouldNotBeSameAs(analyses[1]);
+    }
+
+    [Fact]
+    public async Task AnalyzedGridReportsItsSettingsAndResults()
+    {
+        var ga = CreateAlgorithm(maximumGenerations: 3);
+        var problem = Problem;
+        var random = RandomNumberGenerator.Create(42);
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        #region observability-analyzed-grid
+        var best = Analyzer.BestSoFar<RealVector>();
+        var grid = ga.AsParameterGrid()
+            .VaryBy(GeneticAlgorithm<RealVector>.PopulationSizeParameter, [4, 8])
+            .VaryBy("MutationRate", [0.1, 0.3]);
+        var run = Experiment.Create(grid).CreateRun(problem, random, [best]);
+        await run.CompleteAsync(cancellationToken: cancellationToken);
+
+        foreach (var trial in run.Trials)
+        {
+            foreach (var (parameter, value) in trial.Settings)
+                Console.WriteLine($"Parameter candidate {trial.ParameterCandidateIndex}, {parameter.Name} = {value}");
+            var improvements = trial.Run.Result(best);
+            Console.WriteLine($"Best-so-far updates: {improvements.Count}");
+        }
+        #endregion observability-analyzed-grid
+
+        run.Trials.Length.ShouldBe(4);
+        run.Trials[2].Settings[0].Value.ShouldBe(8);
+        run.Trials.ShouldAllBe(trial => trial.Run.Result(best).Count > 0);
     }
 
     [Fact]

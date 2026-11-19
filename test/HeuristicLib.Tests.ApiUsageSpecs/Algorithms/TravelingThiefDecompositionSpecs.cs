@@ -27,7 +27,7 @@ public sealed class TravelingThiefDecompositionSpecs
             new BestOf<BoolVector, BoolVectorSearchSpace, PackingProblem>(
                 [[false, false], [true, false], [false, true], [true, true]]));
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).ToArray();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).ToArray();
 
         states.Length.ShouldBe(3);
         states.ShouldAllBe(state => problem.SearchSpace.Contains(new ThiefCandidate(state.Tour, state.Packing)));
@@ -122,8 +122,8 @@ public sealed class TravelingThiefDecompositionSpecs
             {
                 for (var turn = 0; turn < 3; turn++)
                 {
-                    packingProblem.Tour = tours.Complete(random, ct: ct).EvaluatedCandidate.Candidate;
-                    tourProblem.Packing = packings.Complete(random, ct: ct).EvaluatedCandidate.Candidate;
+                    packingProblem.Tour = tours.RunToCompletion(random, ct: ct).EvaluatedCandidate.Candidate;
+                    tourProblem.Packing = packings.RunToCompletion(random, ct: ct).EvaluatedCandidate.Candidate;
                     yield return new ThiefState(packingProblem.Tour, tourProblem.Packing);
                 }
                 await Task.CompletedTask;

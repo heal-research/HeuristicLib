@@ -70,7 +70,7 @@ The creator generates trees of different shapes and depths. Crossover exchanges 
 ## Run and use the best model
 
 ```csharp
-var finalState = await algorithm.CompleteAsync(
+var finalState = await algorithm.RunToCompletionAsync(
     problem,
     RandomNumberGenerator.Create(seed: 42));
 

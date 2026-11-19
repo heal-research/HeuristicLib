@@ -144,7 +144,7 @@ var algorithm = GeneticAlgorithm.Create(
     maximumGenerations: 50,
     mutationRate: 0.25);
 
-var finalState = await algorithm.CompleteAsync(
+var finalState = await algorithm.RunToCompletionAsync(
     problem,
     RandomNumberGenerator.Create(seed: 42));
 

@@ -433,9 +433,11 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         }
 
         // Each restart builds fresh executors in a child scope of its own, from the graph this entry built once.
-        private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct) =>
-            ParentRegistry.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(tracked, problem)
-                .Stream(random, initialState, ct).GetEnumerator();
+        private IEnumerator<TSearchState> CreateEnumerator(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState, CancellationToken ct)
+        {
+            var executor = ParentRegistry.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(tracked, problem);
+            return executor.RunStreaming(random, initialState, ct).GetEnumerator();
+        }
     }
 
     /// <summary>Tracks one contender's evaluations, without affecting sibling contenders.</summary>

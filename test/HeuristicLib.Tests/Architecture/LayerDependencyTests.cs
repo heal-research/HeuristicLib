@@ -70,7 +70,7 @@ public sealed class LayerDependencyTests
             ("Inspection.Counted`2", "Inspection/"),
             ("Inspection.Timed`2", "Inspection/"),
             ("Inspection.Observed`3", "Inspection/"),
-            ("Experiments.ExperimentRun`6", "Experiments/"),
+            ("Experiments.ExperimentRun`5", "Experiments/"),
         ]);
     }
 

@@ -58,7 +58,7 @@ public class NumericParameterFittingSpecs
                 .CheckedForImprovement(evaluator)
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
@@ -75,7 +75,7 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().AppliedAtRate(0.25)
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
@@ -93,17 +93,18 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner { FittingData = everySecondRow }
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
 
     private static double BestMeanSquaredError(
         GeneticAlgorithm<ExpressionTree> algorithm,
-        SymbolicRegressionProblem problem) =>
-        algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
-            .Population.EvaluatedCandidates
-            .Min(candidate => candidate.ObjectiveVector[0]);
+        SymbolicRegressionProblem problem)
+    {
+        var state = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        return state.Population.EvaluatedCandidates.Min(candidate => candidate.ObjectiveVector[0]);
+    }
 
     private static SymbolicRegressionProblem CreateProblem()
     {

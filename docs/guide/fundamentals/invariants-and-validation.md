@@ -225,7 +225,7 @@ var run = algorithm.CreateRun(problem, random);
 //     run over PermutationSearchSpace with FuncProblem`2 producing PopulationState`1.
 ```
 
-`Stream`, `Complete` and `CompleteAsync` go through `CreateRun`, so they validate too.
+`RunStreaming`, `RunToCompletion` and `RunToCompletionAsync` go through `CreateRun`, so they validate too.
 
 **Opt out with `validate: false`** when deliberately running a configuration whose declared contracts do not hold — while an operator is being written, or to observe what a mismatched operator actually does:
 

@@ -471,9 +471,12 @@ public class SubstitutedBudgetTests
     }
 
     private static List<string> States<TSearchState>(IAlgorithm<RealVector, TSearchState> algorithm, TestFunctionProblem problem)
-        where TSearchState : PopulationState<RealVector> =>
-        [.. Enumerable.Select(algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: Ct),
+        where TSearchState : PopulationState<RealVector>
+    {
+        var stream = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: Ct);
+        return [.. Enumerable.Select(stream,
             static state => string.Join(";", state.Population.Select(static member => $"{member.Candidate}|{member.ObjectiveVector}")))];
+    }
 
     private static GeneticAlgorithm<RealVector> RealGa(TestFunctionProblem problem) => new()
     {

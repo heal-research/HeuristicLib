@@ -6,7 +6,7 @@ Use it when an answer must be found among many possible candidates and checking 
 
 ## Choose your path
 
-For ordinary use, configure an algorithm and call `Complete` or `CompleteAsync` with a problem and random source. The library creates the run and constructs its executors automatically. Start with [Build your first optimizer](/guide/getting-started).
+For ordinary use, configure an algorithm and call `RunToCompletion` or `RunToCompletionAsync` with a problem and random source. The library creates the run and constructs its executors automatically. Start with [Build your first optimizer](/guide/getting-started).
 
 | Your goal                                                  | Start here                                                                                                                                                      | Learn when needed                               |
 | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |

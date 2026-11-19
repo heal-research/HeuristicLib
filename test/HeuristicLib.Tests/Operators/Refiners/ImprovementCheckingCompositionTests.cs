@@ -69,7 +69,7 @@ public class ImprovementCheckingCompositionTests
             Refiner = new UpperBoundRefiner().CheckedForImprovement()
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldAllBe(candidate => candidate.Candidate != worsened);
     }

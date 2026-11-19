@@ -114,7 +114,7 @@ public class PythonInterOptEquationScoring(
         };
 
         return algorithm
-            .Complete(problem, RandomNumberGenerator.Create(seed), ct: CancellationToken.None)
+            .RunToCompletion(problem, RandomNumberGenerator.Create(seed), ct: CancellationToken.None)
             .Population;
     }
 

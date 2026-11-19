@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Inspection;
 /// </remarks>
 public sealed record DurationClock(Duration Duration) : IClock<TimeSpan>
 {
-    public Duration Duration { get; init; } = Duration ?? throw new ArgumentNullException(nameof(Duration));
+    public Duration Duration { get; init; } = Duration;
 
     public static Parameter<DurationClock, Duration> DurationParameter { get; } =
         new(nameof(Duration), static clock => clock.Duration, static (clock, value) => clock with { Duration = value });

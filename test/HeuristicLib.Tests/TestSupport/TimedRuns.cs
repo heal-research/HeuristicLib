@@ -5,10 +5,13 @@ namespace HEAL.HeuristicLib.Tests.TestSupport;
 
 internal static class TimedRuns
 {
-    public static ExecutionStream<TSearchState> StreamWithTime<TSearchState>(
+    public static ExecutionStream<TSearchState> RunStreamingWithTime<TSearchState>(
         this IAlgorithm<RealVector, TSearchState> algorithm, TestFunctionProblem problem,
         IRandomNumberGenerator random, TimeProvider timeProvider, CancellationToken ct = default)
-        where TSearchState : class, ISearchState =>
-        new AlgorithmRun<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TSearchState>(
-            algorithm, problem, random, timeProvider).Stream(cancellationToken: ct);
+        where TSearchState : class, ISearchState
+    {
+        var run = new AlgorithmRun<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TSearchState>(
+            algorithm, problem, random, timeProvider);
+        return run.Stream(cancellationToken: ct);
+    }
 }

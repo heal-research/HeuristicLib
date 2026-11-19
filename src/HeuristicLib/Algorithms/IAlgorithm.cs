@@ -7,7 +7,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms;
 
 /// <remarks>
-/// Says nothing about what a run yields, so <c>Stream</c> and <c>Complete</c> are not available here. Hold this form
+/// Says nothing about what a run yields, so <c>RunStreaming</c> and <c>RunToCompletion</c> are not available here. Hold this form
 /// to keep algorithms with different search states in one collection, and
 /// <see cref="IAlgorithm{TCandidate, TSearchState}"/> to run one. Resolving it for a search state checks that it
 /// produces that state.

@@ -54,10 +54,8 @@ public sealed class ObjectiveVector : IReadOnlyList<double>, IEquatable<Objectiv
     /// <summary>
     /// Determines the Pareto relation of this vector to <paramref name="other"/> under the given objective directions.
     /// </summary>
-    public DominanceRelation CompareTo(ObjectiveVector? other, ObjectiveDirections objective)
+    public DominanceRelation CompareTo(ObjectiveVector other, ObjectiveDirections objective)
     {
-        ArgumentNullException.ThrowIfNull(other);
-
         if (Count != other.Count)
         {
             throw new ArgumentException("Objective values must have the same length");

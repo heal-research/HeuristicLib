@@ -24,6 +24,34 @@ public interface IParameter
 
     // Returns the owner with this parameter's slots passed through the rewriter, or the same instance when none changed.
     internal IConfigurationNode Rewrite(IConfigurationNode owner, ISlotRewriter rewriter);
+
+    internal bool AcceptsValue<T>(T value);
+
+    internal TNode WithValue<TNode, T>(TNode owner, T value) where TNode : class, IConfigurationNode;
+}
+
+/// <summary>Typed access to a declared configuration parameter.</summary>
+public interface IParameter<TOwner, TValue> : IParameter
+    where TOwner : class, IConfigurationNode
+{
+    /// <summary>Reads this parameter's value from the supplied configuration.</summary>
+    TValue Get(TOwner owner);
+
+    /// <summary>Returns the supplied configuration with this parameter set to the given value.</summary>
+    TOwner With(TOwner owner, TValue value);
+
+    bool IParameter.AcceptsValue<T>(T value) => value is TValue || (value is null && default(TValue) is null);
+
+    TNode IParameter.WithValue<TNode, T>(TNode owner, T value)
+    {
+        if (!AcceptsValue(value))
+            throw new ArgumentException($"Value for parameter '{Name}' must match its declared value type.", nameof(value));
+
+        var replacement = value is TValue typedValue ? typedValue : default!;
+        return owner is TOwner typedOwner && With(typedOwner, replacement) is TNode configured
+            ? configured
+            : throw new InvalidOperationException($"Parameter '{Name}' must apply to and preserve the configuration type {typeof(TNode).Name}.");
+    }
 }
 
 // What a walk supplies for each slot it visits.
@@ -49,7 +77,7 @@ internal interface ISlotRewriter
 /// configuration and is still data, so declare it with a <see cref="SettingParameter{TOwner, TValue}"/>.
 /// </para>
 /// </remarks>
-public sealed class Parameter<TOwner, TValue> : IParameter
+public sealed class Parameter<TOwner, TValue> : IParameter<TOwner, TValue>
     where TOwner : class, IConfigurationNode
 {
     private readonly Func<TOwner, TValue> get;
@@ -110,7 +138,7 @@ public sealed class Parameter<TOwner, TValue> : IParameter
 /// only a <see cref="Parameter{TOwner, TValue}"/>, and a delegate that creates configurations should stay one, so that a
 /// substitution can report it.
 /// </remarks>
-public sealed class SettingParameter<TOwner, TValue>(string name, Func<TOwner, TValue> get, Func<TOwner, TValue, TOwner> with) : IParameter
+public sealed class SettingParameter<TOwner, TValue>(string name, Func<TOwner, TValue> get, Func<TOwner, TValue, TOwner> with) : IParameter<TOwner, TValue>
     where TOwner : class, IConfigurationNode
 {
     public string Name { get; } = name;
@@ -129,7 +157,7 @@ public sealed class SettingParameter<TOwner, TValue>(string name, Func<TOwner, T
 }
 
 /// <summary>An ordered list of configurations, declared on the configuration type <typeparamref name="TOwner"/>.</summary>
-public sealed class ListParameter<TOwner, TChild>(string name, Func<TOwner, IReadOnlyList<TChild>> get, Func<TOwner, IReadOnlyList<TChild>, TOwner> with) : IParameter
+public sealed class ListParameter<TOwner, TChild>(string name, Func<TOwner, IReadOnlyList<TChild>> get, Func<TOwner, IReadOnlyList<TChild>, TOwner> with) : IParameter<TOwner, ValueArray<TChild>>
     where TOwner : class, IConfigurationNode
     where TChild : class, IConfigurationNode
 {
@@ -140,6 +168,10 @@ public sealed class ListParameter<TOwner, TChild>(string name, Func<TOwner, IRea
     public IReadOnlyList<TChild> Get(TOwner owner) => get(owner);
 
     public TOwner With(TOwner owner, IReadOnlyList<TChild> value) => with(owner, value);
+
+    ValueArray<TChild> IParameter<TOwner, ValueArray<TChild>>.Get(TOwner owner) => Get(owner).ToValueArray();
+
+    TOwner IParameter<TOwner, ValueArray<TChild>>.With(TOwner owner, ValueArray<TChild> value) => With(owner, value);
 
     public object? GetValue(IConfigurationNode owner) => get((TOwner)owner);
 
@@ -167,7 +199,7 @@ public sealed class ListParameter<TOwner, TChild>(string name, Func<TOwner, IRea
 /// An entry is not a place in the graph. A substitution keeps it naming the configuration it named while the
 /// replacement still contains that configuration, and otherwise lets it follow the replacement.
 /// </remarks>
-public sealed class ReferenceListParameter<TOwner>(string name, Func<TOwner, IReadOnlyList<IConfigurationNode>> get, Func<TOwner, IReadOnlyList<IConfigurationNode>, TOwner> with) : IParameter
+public sealed class ReferenceListParameter<TOwner>(string name, Func<TOwner, IReadOnlyList<IConfigurationNode>> get, Func<TOwner, IReadOnlyList<IConfigurationNode>, TOwner> with) : IParameter<TOwner, ValueArray<IConfigurationNode>>
     where TOwner : class, IConfigurationNode
 {
     public string Name { get; } = name;
@@ -177,6 +209,10 @@ public sealed class ReferenceListParameter<TOwner>(string name, Func<TOwner, IRe
     public IReadOnlyList<IConfigurationNode> Get(TOwner owner) => get(owner);
 
     public TOwner With(TOwner owner, IReadOnlyList<IConfigurationNode> value) => with(owner, value);
+
+    ValueArray<IConfigurationNode> IParameter<TOwner, ValueArray<IConfigurationNode>>.Get(TOwner owner) => Get(owner).ToValueArray();
+
+    TOwner IParameter<TOwner, ValueArray<IConfigurationNode>>.With(TOwner owner, ValueArray<IConfigurationNode> value) => With(owner, value);
 
     public object? GetValue(IConfigurationNode owner) => get((TOwner)owner);
 

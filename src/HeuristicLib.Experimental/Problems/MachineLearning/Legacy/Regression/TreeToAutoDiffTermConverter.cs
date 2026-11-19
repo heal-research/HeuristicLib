@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using AutoDiff;
 using HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions;
 using ErfSymbol = HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions.Erf;
@@ -31,15 +32,15 @@ public class TreeToAutoDiffTermConverter
     }
 
     public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable,
-                                            out List<DataForVariable>? parameters, out double[]? initialParamValues,
-                                            out CompiledModel? func,
-                                            out CompiledModelGradient? funcGrad) =>
+                                            [NotNullWhen(true)] out List<DataForVariable>? parameters, [NotNullWhen(true)] out double[]? initialParamValues,
+                                            [NotNullWhen(true)] out CompiledModel? func,
+                                            [NotNullWhen(true)] out CompiledModelGradient? funcGrad) =>
         TryConvertToAutoDiff(tree, makeVariableWeightsVariable, [], out parameters, out initialParamValues, out func, out funcGrad);
 
     public static bool TryConvertToAutoDiff(SymbolicExpressionTree tree, bool makeVariableWeightsVariable, IEnumerable<SymbolicExpressionTreeNode> excludedNodes,
-                                            out List<DataForVariable>? parameters, out double[]? initialParamValues,
-                                            out CompiledModel? func,
-                                            out CompiledModelGradient? funcGrad)
+                                            [NotNullWhen(true)] out List<DataForVariable>? parameters, [NotNullWhen(true)] out double[]? initialParamValues,
+                                            [NotNullWhen(true)] out CompiledModel? func,
+                                            [NotNullWhen(true)] out CompiledModelGradient? funcGrad)
     {
         // use a transformator object which holds the state (variable list, parameter list, ...) for recursive transformation of the tree
         var transformator = new TreeToAutoDiffTermConverter(makeVariableWeightsVariable, excludedNodes);

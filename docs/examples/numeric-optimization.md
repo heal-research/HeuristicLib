@@ -35,7 +35,7 @@ var algorithm = GeneticAlgorithm.Create(
 var random = RandomNumberGenerator.Create(seed: 123);
 var generation = 0;
 
-await foreach (var state in algorithm.Stream(problem, random))
+await foreach (var state in algorithm.RunStreaming(problem, random))
 {
     generation++;
     if (generation % 50 != 0) continue;

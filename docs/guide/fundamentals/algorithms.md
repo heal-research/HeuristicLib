@@ -23,7 +23,7 @@ HeuristicLib offers three ways to construct a standard algorithm. They create th
 | ---------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
 | Constructor and object initializer | You need an exact generic type or want every configured member visible as a property | Generic type arguments and every required operator                                 |
 | `Create(...)`                      | You chose the required operators and want their types inferred                       | Required operators, followed by any algorithm setting overrides                    |
-| `For(...)`                         | A problem or search space recommends some or all required operators                   | A problem or search space, followed by any operator or algorithm setting overrides |
+| `For(...)`                         | A problem or search space recommends some or all required operators                  | A problem or search space, followed by any operator or algorithm setting overrides |
 
 All three forms use the algorithm's public defaults class for omitted optional settings. Direct construction and `Create(...)` never choose required variation operators for you. `For(...)` is the only form that asks a problem first, then its search space, for recommendations.
 
@@ -67,10 +67,10 @@ For each required operator, `For(problem, ...)` checks these sources in order:
 
 The current built in recommendations are deliberately small:
 
-| Source | Creator | Crossover | Mutator |
-| --- | --- | --- | --- |
-| `PermutationSearchSpace` | `RandomPermutationCreator` | `EdgeRecombinationCrossover` | `InversionMutator` |
-| `TravelingSalesmanProblem` | none | `OrderCrossover` | none |
+| Source                     | Creator                    | Crossover                    | Mutator            |
+| -------------------------- | -------------------------- | ---------------------------- | ------------------ |
+| `PermutationSearchSpace`   | `RandomPermutationCreator` | `EdgeRecombinationCrossover` | `InversionMutator` |
+| `TravelingSalesmanProblem` | none                       | `OrderCrossover`             | none               |
 
 This means the example uses order crossover from `TravelingSalesmanProblem`, then random creation and inversion mutation from `PermutationSearchSpace`. The problem recommendation wins over the search space recommendation for crossover.
 
@@ -94,13 +94,13 @@ Use `Create(...)` when every required operator is part of the experiment. Option
 Ask for only the final state when intermediate progress is not needed:
 
 ```csharp
-var finalState = await algorithm.CompleteAsync(problem, random);
+var finalState = await algorithm.RunToCompletionAsync(problem, random);
 ```
 
 Stream states for progress, visualization or early inspection:
 
 ```csharp
-await foreach (var state in algorithm.Stream(problem, random))
+await foreach (var state in algorithm.RunStreaming(problem, random))
 {
     Console.WriteLine(state.Population.EvaluatedCandidates.Count);
 }

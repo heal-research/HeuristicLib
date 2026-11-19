@@ -35,7 +35,7 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             Elites = 1
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken);

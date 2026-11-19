@@ -88,6 +88,6 @@ Read [Reproducible randomness](/guide/execution/randomness).
 - Search spaces define candidate validity.
 - Problems own evaluation and objective semantics.
 - Evaluated candidates keep a candidate together with its objective vector.
-- Each call to `Stream` or `CompleteAsync` starts a fresh run.
+- Each call to `RunStreaming` or `RunToCompletionAsync` starts a fresh run.
 - The same configuration and seed are intended to produce the same stochastic sequence.
 - One run is evidence, not a reliable comparison of stochastic algorithms.

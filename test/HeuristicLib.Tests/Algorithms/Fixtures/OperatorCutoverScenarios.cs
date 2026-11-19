@@ -38,7 +38,7 @@ internal static class OperatorCutoverScenarios
             };
         }
         var states = new List<int[][]>();
-        await foreach (var state in algorithm.Stream(problem, RandomNumberGenerator.Create(scenario == "seed42" ? 42 : 7)))
+        await foreach (var state in algorithm.RunStreaming(problem, RandomNumberGenerator.Create(scenario == "seed42" ? 42 : 7)))
         {
             states.Add(state.Population.EvaluatedCandidates.Select(value => new[] { value.Candidate, (int)value.ObjectiveVector[0] }).ToArray());
             if (states.Count == (scenario is "defaults" or "unlimited" ? 4 : 6))
@@ -54,7 +54,7 @@ internal static class OperatorCutoverScenarios
             new PermutationSearchSpace(8), SingleObjective.Minimize);
         var algorithm = GeneticAlgorithm.For(problem);
         var states = new List<int[][]>();
-        await foreach (var state in algorithm.Stream(problem, RandomNumberGenerator.Create(7)))
+        await foreach (var state in algorithm.RunStreaming(problem, RandomNumberGenerator.Create(7)))
         {
             states.Add(state.Population.EvaluatedCandidates.Select(value =>
                 value.Candidate.Append((int)value.ObjectiveVector[0]).ToArray()).ToArray());

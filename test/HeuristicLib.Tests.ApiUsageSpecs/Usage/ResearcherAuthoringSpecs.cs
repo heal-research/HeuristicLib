@@ -25,7 +25,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         }.TerminatedAfterIterations(5);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(1234),
           ct: TestContext.Current.CancellationToken);
@@ -48,7 +48,7 @@ public class ResearcherAuthoringSpecs
 
         var algorithm = innerAlgorithm.TerminatedBy(new FirstEvaluatedStateTerminator());
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(4321),
           ct: TestContext.Current.CancellationToken);
@@ -73,7 +73,7 @@ public class ResearcherAuthoringSpecs
 
         var algorithm = innerAlgorithm.TerminatedBy(CancellationTokenTerminator.For(problem, stopAfterCurrentState.Token));
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(2468),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -97,7 +97,7 @@ public class ResearcherAuthoringSpecs
 
         var algorithm = innerAlgorithm.TerminatedBy(AfterElapsedTimeTerminator.For(problem, TimeSpan.Zero));
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(8642),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -119,7 +119,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(9876),
           ct: TestContext.Current.CancellationToken);

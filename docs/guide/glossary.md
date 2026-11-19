@@ -569,13 +569,13 @@ Use graph rather than tree because the same configuration object may be shared f
 
 See also: Configuration, Execution graph.
 
-### Pointcut
+### Parameter
 
-Status: `Legacy`
+Status: `Provisional`
 
-A former selector of the configurations whose executors received advice. A substitution selects instead: by reference, by the type of a lambda's parameter or by a predicate, such as `node is INamedConfiguration { Name: "exploration" }` for a name.
+A parameter is a declared property of a configuration. Its descriptor supplies the name and instructions for reading its value or creating a configuration with a replacement value. The configuration stores the value.
 
-See also: Named configuration, Substitution group.
+See also: Configuration, Configuration node, Parameter grid.
 
 ### Named configuration
 
@@ -587,37 +587,13 @@ Names are case-sensitive labels and need not be unique. A named wrapper and its 
 
 See also: Configuration node, Substitution group.
 
-### Advice
-
-Status: `Legacy`
-
-A former mechanism that wrapped the executors built for selected configurations from outside the configuration graph. Use a wrapper: a configuration that holds the configuration it wraps as its declared child, placed with `Substitute`. See [Writing wrappers](/guide/extending/writing-wrappers).
-
-See also: Invocation wrapper, Substitution group, Wrapper chain.
-
-### Join point
-
-Status: `Legacy`
-
-The former name for the executor that advice wrapped. A wrapper holds its configuration instead, and wraps its child's executor.
-
-See also: Advice, Executor.
-
-### Aspect
-
-Status: `Legacy`
-
-A former ordered list of pointcut and advice pairs, attached through `AddAspect`. Use a substitution group.
-
-See also: Advice, Pointcut, Substitution group.
-
 ### Run
 
 Status: `Canonical`
 
 A run is an object that owns one logical execution setup.
 
-An `AlgorithmRun` executes one algorithm configuration on a problem. An `ExperimentRun` coordinates the independent algorithm runs materialized by one experiment configuration. Prefer the concrete term when the distinction matters.
+An `AlgorithmRun` executes one algorithm configuration on a problem. An `ExperimentRun` coordinates the independent algorithm runs for the supplied problems and parameter candidates. Prefer the concrete term when the distinction matters.
 
 When a meta-algorithm coordinates child algorithms, the run is created by the algorithm started by the user. Child algorithms and operators participate in that same run unless they are explicitly started as separate runs.
 
@@ -716,14 +692,6 @@ A former mechanism that shared private data by configuration ownership and ances
 `Execution state` is also a legacy name for that former mechanism. Search state remains the public value describing search progress.
 
 See also: Executor, Resource, Search state.
-
-### Child scope policy
-
-Status: `Legacy`
-
-A former mechanism for selecting private state lifetimes during child activation. Cycle now constructs fresh executors for every turn. Sharing a child configuration on the Cycle keeps one executor for it across turns.
-
-See also: Executor, Resource, Resolution scope, Shared configuration.
 
 ### Execution graph
 
@@ -878,11 +846,6 @@ Each `TraceEntry<TValue>` contains an analyzed value and its recorded clock read
 Do not use series for this concept. In HeuristicLib, a series is a named column in tabular data.
 
 `Analyzer.Trace` reads each observation through one function, as in `crossover.Invocations.Trace(observation => observation.Offspring.Count)`. Counting, collecting and single values are plain functions. Ranking functions such as `BestMedianWorst` receive the objective directions they order by, usually the observed invocation's own, as in `observation.ObjectiveVectors.BestMedianWorst(observation.Problem.Objective)`. A best-so-far object keeps its running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. Create that state through the trace's state factory so each run has its own. The first directions it receives fix it, and other directions or another dimensionality throw.
-
-Related terms:
-
-- `Aggregation`: `Legacy`. The former object a trace summarized readings with. Use a function, a ranking function or a best-so-far object.
-- `Measurement`: `Legacy`. The former value strategy a trace read from observations. Use a function of each observation.
 
 See also: Analysis snapshot, Analyzer, Best-so-far analyzer, Moment, Run.
 
@@ -1047,32 +1010,42 @@ Creating a source installs nothing. `RecordingInto(analyzer)` creates its placem
 
 See also: Analyzer, Observation, Observer, Substitution, Trace.
 
+### Parameter grid
+
+Status: `Provisional`
+
+A parameter grid (`ParameterGrid`) is an algorithm prototype and its ordered dimensions. Each combination of dimension values yields a parameter candidate. A grid with no dimensions yields its prototype once.
+
+See also: Algorithm, Experiment, Parameter, Parameter candidate.
+
 ### Experiment
 
 Status: `Provisional`
 
-An experiment is an execution setup that coordinates multiple independent runs.
+An experiment is an ordered list of parameter grids with repetitions and a random stream setting. Creating an experiment run pairs every parameter candidate with each supplied problem and repetition.
 
-An experiment is not an algorithm. It does not produce one continuous stream of search states and does not pass search states from one run to the next. A repeated experiment executes the same algorithm configuration multiple times. A comparative experiment executes different algorithm configurations, parameter settings, problems or problem instances.
+See also: Experiment trial, Parameter candidate, Parameter grid, Problem, Run.
 
-Random assignment policy is an important part of an experiment because it defines how deterministic random forks are assigned to independent runs, especially when stochastic algorithms are repeated or executed concurrently.
+### Parameter candidate
 
-See also: Algorithm, Experiment trial, Problem, Problem instance, Run.
+Status: `Canonical`
+
+A parameter candidate is one algorithm configuration generated from a parameter grid. The experiment numbers parameter candidates in grid order, and equal configurations can have different indexes. A trial exposes the index as `ParameterCandidateIndex` and reports varied parameter descriptors and their values in `Settings`.
+
+See also: Experiment, Experiment trial, Parameter, Parameter grid.
 
 ### Experiment trial
 
 Status: `Canonical`
 
-An experiment trial is one materialized algorithm configuration and algorithm run within an experiment run.
+An experiment trial is one run of a parameter candidate on a problem for a particular repetition. The zero-based `ProblemPosition`, `ParameterCandidateIndex` and `Repetition` identify it within the experiment run. Each trial has its own algorithm run, resolution scope and random generator.
 
-Each trial has a deterministic typed key, its own algorithm run, its own resolution scope and its own random number generator fork. Trials do not pass search states or analyzer state to one another.
-
-See also: Algorithm, Experiment, Run.
+See also: Experiment, Parameter candidate, Problem instance, Run.
 
 ### Trial analyzer
 
 Status: `Canonical`
 
-A trial analyzer is an analysis definition attached to a trial's algorithm configuration. Each trial's algorithm run creates an independent result, read through `trial.Run.Result(definition)`. A definition may be shared across trials while their collectors, clocks and retention progress remain separate.
+A trial analyzer is an analyzer used in a trial's run. An experiment can apply the same analyzer definition to each parameter candidate. Each trial's run owns its own result, read with `trial.Run.Result(definition)`.
 
 See also: Analyzer, Experiment trial, Run result.

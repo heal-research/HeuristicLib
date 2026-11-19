@@ -185,7 +185,7 @@ var algorithm = GeneticAlgorithm.Create(
     maximumGenerations: 8,
     mutationRate: 0.2);
 
-var finalState = await algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(123));
+var finalState = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(123));
 ```
 
 ## Numeric parameter fitting

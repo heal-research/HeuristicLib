@@ -540,9 +540,12 @@ public class SubstitutedAnalysisTests
         (duration is IClock).ShouldBeFalse();
     }
 
-    private static List<string> States(IAlgorithm<RealVector, PopulationState<RealVector>> algorithm, TestFunctionProblem problem) =>
-        [.. Enumerable.Select(algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: Ct),
+    private static List<string> States(IAlgorithm<RealVector, PopulationState<RealVector>> algorithm, TestFunctionProblem problem)
+    {
+        var stream = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: Ct);
+        return [.. Enumerable.Select(stream,
             static state => string.Join(";", state.Population.Select(static member => $"{member.Candidate}|{member.ObjectiveVector}")))];
+    }
 
     private static GeneticAlgorithm<RealVector> RealGa(TestFunctionProblem problem) => new()
     {

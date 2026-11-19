@@ -28,7 +28,7 @@ public class TspScenarios
           elites: 1);
 
         // execute
-        var resGa = ga.Complete(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var resGa = ga.RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // look at results
         var objGa = resGa.Population

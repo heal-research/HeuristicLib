@@ -38,7 +38,7 @@ var algorithm = GeneticAlgorithm.Create(
     maximumGenerations: 500,
     mutationRate: 0.2);
 
-var finalState = await algorithm.CompleteAsync(
+var finalState = await algorithm.RunToCompletionAsync(
     problem,
     RandomNumberGenerator.Create(seed: 123));
 
@@ -62,7 +62,7 @@ Candidate: -0.000003, 0.000010, -0.000004, 0.000008
 
 The Rastrigin function has its global minimum at the zero vector with objective value `0`, so this run finished on the optimum to eight decimal places. It takes well under a second.
 
-`CompleteAsync` creates and completes a run for you. The algorithm owns the search loop and the library constructs its executors automatically. Keep this entry point when changing operators or using your own problem. For progress use `Stream`. For analysis, inspection or pause and resume, retain an [explicit run](/guide/execution/running-algorithms#explicit-runs-for-control-and-analysis).
+`RunToCompletionAsync` creates and completes a run for you. The algorithm owns the search loop and the library constructs its executors automatically. Keep this entry point when changing operators or using your own problem. For progress use `RunStreaming`. For analysis, inspection or pause and resume, retain an [explicit run](/guide/execution/running-algorithms#explicit-runs-for-control-and-analysis).
 
 Seed `123` reproduces exactly these numbers. A heuristic search does not guarantee the optimum on every run: Rastrigin has local minima at every integer coordinate, so some seeds finish at `0.995` or `1.99` instead. Reducing the population or the generation count makes that much more likely.
 
@@ -91,12 +91,12 @@ With both at `0.2`, roughly one child in five is mutated, and in those children 
 
 ## Watch the search progress
 
-`CompleteAsync` returns only the final state. Use `Stream` when you want progress from every generation:
+`RunToCompletionAsync` returns only the final state. Use `RunStreaming` when you want progress from every generation:
 
 ```csharp
 var generation = 0;
 
-await foreach (var state in algorithm.Stream(
+await foreach (var state in algorithm.RunStreaming(
     problem,
     RandomNumberGenerator.Create(seed: 123)))
 {
@@ -120,7 +120,7 @@ Generation 500: 0.00000004
 
 The stream yields one state per generation. This example reports every hundredth so the output stays readable; drop the `continue` to see all 500.
 
-Starting the stream creates a fresh run. Reusing seed `123` reproduces the same stochastic decisions for the same configuration, which is why the last line matches the `CompleteAsync` result above.
+Starting the stream creates a fresh run. Reusing seed `123` reproduces the same stochastic decisions for the same configuration, which is why the last line matches the `RunToCompletionAsync` result above.
 
 ## Use your own objective
 

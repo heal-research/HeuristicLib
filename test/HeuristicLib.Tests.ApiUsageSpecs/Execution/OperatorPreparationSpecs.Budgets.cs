@@ -27,11 +27,11 @@ public sealed partial class OperatorPreparationSpecs
         var constructed = new OperatorCountBudgetAlgorithm<RealVector, SingleSolutionState<RealVector>>(
             algorithm.Counting(algorithm.Mutator, out var calls), calls, 3);
 
-        combined.Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
-        single.Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(3);
-        constructed.Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(3);
+        combined.RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+        single.RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(3);
+        constructed.RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(3);
         Should.Throw<InvalidOperationException>(() => algorithm.LimitedToCount(3, (a, candidates) => a.Substitute(Substitution.Of(a.Reader, node => node.Counted(candidates, OperatorCountMetric.Candidates))))
-            .Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).ToList());
+            .RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).ToList());
     }
 
     [Fact]
@@ -45,9 +45,9 @@ public sealed partial class OperatorPreparationSpecs
         var constructed = new OperatorDurationBudgetAlgorithm<RealVector, SingleSolutionState<RealVector>>(
             algorithm.Timing(algorithm.Mutator, out var time), time, TimeSpan.Zero);
 
-        combined.Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
-        single.Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
-        constructed.Stream(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
+        combined.RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
+        single.RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
+        constructed.RunStreaming(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken).Count().ShouldBe(1);
     }
 
     // One slot per operation, so a wrapper of one operation fits its slot while the other keeps the configuration.

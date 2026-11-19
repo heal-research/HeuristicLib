@@ -283,7 +283,7 @@ public class OperatorAuthoringSpecs
             MaxNeighbors = 3
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
@@ -760,7 +760,7 @@ public class OperatorAuthoringSpecs
             MaxNeighbors = 2
         }.TerminatedAfterIterations(1);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(456),
           ct: TestContext.Current.CancellationToken);

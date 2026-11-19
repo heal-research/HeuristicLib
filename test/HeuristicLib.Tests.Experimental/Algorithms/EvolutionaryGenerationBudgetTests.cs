@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 public class EvolutionaryGenerationBudgetTests
 {
     [Fact]
-    public void EvolutionStrategy_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void EvolutionStrategy_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateEvolutionStrategy(problem) with
@@ -16,7 +16,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -26,7 +26,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void NSGA2_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void NSGA2_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateMultiObjectiveProblem();
         var algorithm = CreateNSGA2(problem) with
@@ -34,7 +34,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -47,7 +47,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void AlpsGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void AlpsGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateAlpsGeneticAlgorithm(problem) with
@@ -55,7 +55,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -66,7 +66,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(problem) with
@@ -74,7 +74,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -90,20 +90,20 @@ public class EvolutionaryGenerationBudgetTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Stream_WithNonpositiveMaximumGenerations_YieldsNoStates(int maximumGenerations)
+    public void RunStreaming_WithNonpositiveMaximumGenerations_YieldsNoStates(int maximumGenerations)
     {
         var singleObjectiveProblem = CreateSingleObjectiveProblem();
         var multiObjectiveProblem = CreateMultiObjectiveProblem();
         var ct = TestContext.Current.CancellationToken;
 
         (CreateEvolutionStrategy(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
         (CreateNSGA2(multiObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(multiObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(multiObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
         (CreateAlpsGeneticAlgorithm(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
         (CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
     }
 
     private static TestFunctionProblem CreateSingleObjectiveProblem()

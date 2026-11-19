@@ -9,7 +9,7 @@ namespace HEAL.HeuristicLib.Inspection;
 /// </remarks>
 public sealed record CounterClock(Counter Counter) : IClock<long>
 {
-    public Counter Counter { get; init; } = Counter ?? throw new ArgumentNullException(nameof(Counter));
+    public Counter Counter { get; init; } = Counter;
 
     public static Parameter<CounterClock, Counter> CounterParameter { get; } =
         new(nameof(Counter), static clock => clock.Counter, static (clock, value) => clock with { Counter = value });

@@ -31,23 +31,23 @@ public class RefinerFailureTests
     }
 
     [Fact]
-    public void InARun_AFailingRefinerPropagatesOutOfComplete()
+    public void InARun_AFailingRefinerPropagatesOutOfRunToCompletion()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingRefiner() };
 
-        Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void InARun_AFailingRefinerPropagatesOutOfTheStream()
+    public void InARun_AFailingRefinerPropagatesOutOfRunStreaming()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingRefiner() };
 
         Should.Throw<InvalidOperationException>(() =>
         {
-            foreach (var _ in algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
+            foreach (var _ in algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
             {
                 // The failure happens while producing the first state.
             }
