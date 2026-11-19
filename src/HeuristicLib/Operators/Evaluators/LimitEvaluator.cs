@@ -4,7 +4,6 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -53,18 +52,16 @@ public sealed record LimitEvaluator<TCandidate>
     {
         var counter = new CountAccumulator();
         var childEvaluator = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter, scope.Problem);
+        return new Executor(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter, TProblem problem)
-        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter, IProblem problem)
+        : EvaluationExecutor<TCandidate>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var remainingEvaluations = maxEvaluations - counter.CurrentCount;
-            var fallback = fallbackObjectiveVector ?? Problem.Objective.Worst;
+            var fallback = fallbackObjectiveVector ?? problem.Objective.Worst;
 
             if (remainingEvaluations <= 0)
             {

@@ -50,8 +50,8 @@ public sealed class SingleResultOperator
         public IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) => [Next()];
         public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) => [Next()];
         public IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random) => [Next()];
-        public IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) => [new(Next(), new ObjectiveVector(0))];
-        public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) => [new(Next(), new ObjectiveVector(0))];
+        public IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, int count, IRandomNumberGenerator random) => [new(Next(), new ObjectiveVector(0))];
+        public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, int count, IRandomNumberGenerator random) => [new(Next(), new ObjectiveVector(0))];
     }
 
 }

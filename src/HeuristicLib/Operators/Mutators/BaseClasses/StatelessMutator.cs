@@ -13,9 +13,9 @@ public abstract record StatelessMutator<TCandidate, TSearchSpace, TProblem> : Mu
 
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessMutator<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : MutationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
+    private sealed class Executor(StatelessMutator<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : MutationExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) => configuration.Mutate(parents, random, SearchSpace, Problem);
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) => configuration.Mutate(parents, random, problem.SearchSpace, problem);
     }
 }
 
@@ -26,9 +26,9 @@ public abstract record StatelessMutator<TCandidate, TSearchSpace> : Mutator<TCan
 
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessMutator<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : MutationExecutor<TCandidate, TSearchSpace>(searchSpace)
+    private sealed class Executor(StatelessMutator<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : MutationExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) => configuration.Mutate(parents, random, SearchSpace);
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) => configuration.Mutate(parents, random, searchSpace);
     }
 }
 

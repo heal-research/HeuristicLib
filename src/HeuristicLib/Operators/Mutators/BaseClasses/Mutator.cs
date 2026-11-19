@@ -27,37 +27,6 @@ public abstract record Mutator<TCandidate, TSearchSpace>
 public abstract record Mutator<TCandidate>
     : Mutator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class MutationExecutor<TCandidate, TSearchSpace, TProblem>
-    : IMutationExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected MutationExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
-}
-
-public abstract class MutationExecutor<TCandidate, TSearchSpace>
-    : IMutationExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    protected TSearchSpace SearchSpace { get; }
-
-    protected MutationExecutor(TSearchSpace searchSpace)
-    {
-        SearchSpace = searchSpace;
-    }
-
-    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
-}
-
 public abstract class MutationExecutor<TCandidate>
     : IMutationExecutor<TCandidate>
 {

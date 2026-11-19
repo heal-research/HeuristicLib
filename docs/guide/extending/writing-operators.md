@@ -65,7 +65,7 @@ The contributor guide covers [operator implementation internals](/contributing/a
 
 Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and reads run results through `scope.Results.Result(configuration)`. A fixed-signature leaf using an explicit executor instead overrides `CreateExecutor` with a typed scope exposing its bound `Problem` and `SearchSpace`.
 
-A wrapper for one operation derives from `WrappingOperator<TOperation, TCandidate>` for that operation and wraps its typed executor. A wrapper for every operation stays generic in its operation and passes a struct `IInvocationWrapper` to the operation's `Wrap`. Place either with `Substitute`. See [Write wrappers](/guide/extending/writing-wrappers) for complete examples.
+A wrapper for one operation derives from `WrappingOperator<TOperation, TCandidate>` for that operation. Its explicit executor derives from the role's executor base and wraps the resolved child. A wrapper for every operation stays generic in its operation and passes a struct `IInvocationWrapper` to the operation's `Wrap`. Place either with `Substitute`. See [Write wrappers](/guide/extending/writing-wrappers) for complete examples.
 
 An operator you write is observed through its operation's `Invocations` source, such as `mutator.Invocations`, exactly like a built-in one. See [Observability and analysis](/guide/execution/observability-and-analysis).
 

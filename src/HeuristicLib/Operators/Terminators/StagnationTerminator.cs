@@ -28,10 +28,10 @@ public sealed record StagnationTerminator<TCandidate>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> CreateExecutor(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> scope) => new Executor(StagnationThreshold, scope.Problem);
+    protected override TerminationExecutor<PopulationState<TCandidate>> CreateExecutor(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>> scope) => new Executor(StagnationThreshold, scope.Problem);
 
-    private sealed class Executor(int threshold, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
-        : TerminationExecutor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, PopulationState<TCandidate>>(problem)
+    private sealed class Executor(int threshold, IProblem problem)
+        : TerminationExecutor<PopulationState<TCandidate>>
     {
         private ObjectiveVector? bestObjectiveVectorSoFar;
         private int stagnationCounter;
@@ -41,11 +41,11 @@ public sealed record StagnationTerminator<TCandidate>
             if (threshold <= 0)
                 return true;
 
-            bestObjectiveVectorSoFar ??= Problem.Objective.Worst;
+            bestObjectiveVectorSoFar ??= problem.Objective.Worst;
 
-            var comparer = Problem.Objective.TotalOrderComparer;
+            var comparer = problem.Objective.TotalOrderComparer;
 
-            var currentBestObjectiveVector = searchState.Population.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
+            var currentBestObjectiveVector = searchState.Population.EvaluatedCandidates.Select(s => s.ObjectiveVector).OrderBy(i => i, comparer).First();
             if (comparer.Compare(currentBestObjectiveVector, bestObjectiveVectorSoFar) < 0)
             {
                 bestObjectiveVectorSoFar = currentBestObjectiveVector;

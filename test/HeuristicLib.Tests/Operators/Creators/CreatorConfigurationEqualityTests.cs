@@ -233,14 +233,14 @@ public class CreatorConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<ICreationExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor(children);
+            ImmutableArray<ICreationExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<ICreationExecutor<int>> childCreators)
-            : ICreationExecutor<int>
+            : CreationExecutor<int>
         {
-            public IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) =>
                 childCreators[0].Create(count, random);
         }
     }

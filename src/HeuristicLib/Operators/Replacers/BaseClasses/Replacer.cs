@@ -28,39 +28,8 @@ public abstract record Replacer<TCandidate, TSearchSpace>
 public abstract record Replacer<TCandidate>
     : Replacer<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class ReplacementExecutor<TCandidate, TSearchSpace, TProblem>
-    : IReplacementExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected ReplacementExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
-}
-
-public abstract class ReplacementExecutor<TCandidate, TSearchSpace>
-    : IReplacementExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    protected TSearchSpace SearchSpace { get; }
-
-    protected ReplacementExecutor(TSearchSpace searchSpace)
-    {
-        SearchSpace = searchSpace;
-    }
-
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
-}
-
 public abstract class ReplacementExecutor<TCandidate>
     : IReplacementExecutor<TCandidate>
 {
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random);
 }

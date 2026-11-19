@@ -33,9 +33,9 @@ public sealed class CacheConcurrencyTests
 
     private sealed record OverlappingEvaluator(Barrier Gate) : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override IEvaluationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) => new Executor(Gate, scope.Problem);
+        protected override IEvaluationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) => new Executor(Gate);
 
-        private sealed class Executor(Barrier gate, TestFunctionProblem problem) : EvaluationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem)
+        private sealed class Executor(Barrier gate) : EvaluationExecutor<RealVector>
         {
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
             {

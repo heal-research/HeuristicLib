@@ -43,7 +43,9 @@ Change one policy at a time when comparing configurations and repeat each config
 
 ## Call an operator directly
 
-Operators can also be useful outside a complete algorithm. Direct calls are helpful in tests and when assembling a custom workflow. Supply the same search space and random source that the run uses, so validity and reproducibility remain explicit.
+Operators can also be useful outside a complete algorithm. Direct calls are helpful in tests and when assembling a custom workflow. Resolve the operator with the problem it should use and pass an explicit random source when calling the executor.
+
+A selection executor takes `Select(population, count, random)`. A replacement executor takes `Replace(previousPopulation, offspringPopulation, count, random)`. Both use the objective of their bound problem. Static selector and replacer helpers that take an objective can be called directly with that objective.
 
 ## Related guides
 

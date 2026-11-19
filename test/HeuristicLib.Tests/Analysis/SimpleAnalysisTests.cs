@@ -614,12 +614,16 @@ public sealed class SimpleAnalysisTests
             new(nameof(Factory), node => node.Factory, (node, value) => node with { Factory = value });
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), SettingParameter, FactoryParameter];
         protected override IEvaluationExecutor<int> CreateExecutor<TSearchState>(
-            ResolutionScope<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, TSearchState> scope) =>
-            new Executor(scope.Resolve(Setting), scope.Resolve(Factory()));
-
-        private sealed class Executor(IEvaluationExecutor<int> setting, IEvaluationExecutor<int> factory) : IEvaluationExecutor<int>
+            ResolutionScope<int, ISearchSpace<int>, IProblem<int, ISearchSpace<int>>, TSearchState> scope)
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
+            var setting = scope.Resolve(Setting);
+            var factory = scope.Resolve(Factory());
+            return new Executor(setting, factory);
+        }
+
+        private sealed class Executor(IEvaluationExecutor<int> setting, IEvaluationExecutor<int> factory) : EvaluationExecutor<int>
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 setting.Evaluate([-100, -200], random);
                 factory.Evaluate([-300], random);
@@ -644,9 +648,9 @@ public sealed class SimpleAnalysisTests
             return new Executor(evaluator);
         }
 
-        private sealed class Executor(IEvaluationExecutor<string> evaluator) : IEvaluationExecutor<int>
+        private sealed class Executor(IEvaluationExecutor<string> evaluator) : EvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 evaluator.Evaluate(["hidden", "work"], random);
                 return [.. candidates.Select(candidate => new ObjectiveVector(candidate))];

@@ -233,14 +233,14 @@ public class CrossoverConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<ICrossoverExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor(children);
+            ImmutableArray<ICrossoverExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<ICrossoverExecutor<int>> childCrossovers)
-            : ICrossoverExecutor<int>
+            : CrossoverExecutor<int>
         {
-            public IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) =>
                 childCrossovers[0].Cross(parents, random);
         }
     }

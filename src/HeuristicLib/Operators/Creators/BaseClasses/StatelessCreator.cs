@@ -13,9 +13,9 @@ public abstract record StatelessCreator<TCandidate, TSearchSpace, TProblem> : Cr
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessCreator<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : CreationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
+    private sealed class Executor(StatelessCreator<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : CreationExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random) => configuration.Create(count, random, SearchSpace, Problem);
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random) => configuration.Create(count, random, problem.SearchSpace, problem);
     }
 }
 
@@ -26,9 +26,9 @@ public abstract record StatelessCreator<TCandidate, TSearchSpace> : Creator<TCan
 
     public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessCreator<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : CreationExecutor<TCandidate, TSearchSpace>(searchSpace)
+    private sealed class Executor(StatelessCreator<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : CreationExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random) => configuration.Create(count, random, SearchSpace);
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random) => configuration.Create(count, random, searchSpace);
     }
 }
 

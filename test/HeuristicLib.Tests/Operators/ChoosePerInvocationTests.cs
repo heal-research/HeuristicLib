@@ -64,7 +64,7 @@ public class ChoosePerInvocationTests
         for (var seed = 0; seed < 64; seed++)
         {
             mutation.Mutate([0], RandomNumberGenerator.Create(seed));
-            selection.Select(population, Problem.Objective, 1, RandomNumberGenerator.Create(seed));
+            selection.Select(population, 1, RandomNumberGenerator.Create(seed));
         }
 
         mutations.ShouldBe(selections);

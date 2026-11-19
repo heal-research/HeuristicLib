@@ -17,7 +17,7 @@ public sealed class Replacement : IOperation<Replacement>
 
     private readonly struct Invocation<TCandidate>(IReplacementExecutor<TCandidate> executor,
         IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation,
-        ObjectiveDirections objective, int count, IRandomNumberGenerator random)
+        int count, IRandomNumberGenerator random)
         : IInvocation<IReadOnlyList<EvaluatedCandidate<TCandidate>>>
     {
         private readonly IReplacementExecutor<TCandidate> executor = executor;
@@ -27,7 +27,7 @@ public sealed class Replacement : IOperation<Replacement>
 
         public IReadOnlyList<EvaluatedCandidate<TCandidate>> Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
             ((IReplacementExecutor<TCandidate>?)executor ?? this.executor)
-                .Replace(previousPopulation, offspringPopulation, objective, count, random ?? this.random);
+                .Replace(previousPopulation, offspringPopulation, count, random ?? this.random);
 
         public int CountCandidateWork(IReadOnlyList<EvaluatedCandidate<TCandidate>> result) => result.Count;
     }
@@ -36,8 +36,8 @@ public sealed class Replacement : IOperation<Replacement>
         : WrappingExecutor<IReplacementExecutor<TCandidate>, TWrapper>(executor, wrapper), IReplacementExecutor<TCandidate>
         where TWrapper : struct, IInvocationWrapper
     {
-        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        public IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random) =>
             Wrapper.Invoke<Invocation<TCandidate>, IReadOnlyList<EvaluatedCandidate<TCandidate>>>(
-                new(Executor, previousPopulation, offspringPopulation, objective, count, random));
+                new(Executor, previousPopulation, offspringPopulation, count, random));
     }
 }

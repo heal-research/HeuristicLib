@@ -142,7 +142,7 @@ public class DynamicEvaluationCacheTests
         var state = Population.From([new DummyGenotype(1).ToEvaluated(new ObjectiveVector(99))]).ToPopulationState();
 
         firstProblem.UpdateOnce();
-        first.Transform(state, null, TestRandoms.NoRandom).Population.Single().ObjectiveVector[0].ShouldBe(1);
+        first.Transform(state, null, TestRandoms.NoRandom).Population.EvaluatedCandidates.Single().ObjectiveVector[0].ShouldBe(1);
         second.Transform(state, null, TestRandoms.NoRandom).ShouldBeSameAs(state);
         firstProblem.Evaluations.ShouldBe(1);
         secondProblem.Evaluations.ShouldBe(0);
@@ -457,7 +457,7 @@ public class DynamicEvaluationCacheTests
             problem.UpdateOnce();
 
         var updated = executor.Transform(state, null, TestRandoms.NoRandom);
-        updated.Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
+        updated.Population.EvaluatedCandidates.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
         executor.Transform(updated, state, TestRandoms.NoRandom).ShouldBeSameAs(updated);
         evaluator.Invocations.ShouldBe(1);
     }
@@ -526,7 +526,7 @@ public class DynamicEvaluationCacheTests
         var result = executor.Transform(state, null, TestRandoms.NoRandom);
         if (updateBeforeFailure)
         {
-            result.Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
+            result.Population.EvaluatedCandidates.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
             calls.ShouldBe(2);
         }
         else
@@ -716,9 +716,9 @@ public class DynamicEvaluationCacheTests
         inner.Transform(state, null, TestRandoms.NoRandom).ShouldBeSameAs(state);
 
         problem.UpdateOnce();
-        inner.Transform(state, null, TestRandoms.NoRandom).Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
+        inner.Transform(state, null, TestRandoms.NoRandom).Population.EvaluatedCandidates.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
         outer.Transform(state, null, TestRandoms.NoRandom).ShouldNotBeSameAs(state);
-        independent.Transform(state, null, TestRandoms.NoRandom).Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
+        independent.Transform(state, null, TestRandoms.NoRandom).Population.EvaluatedCandidates.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1));
         evaluator.Invocations.ShouldBe(3);
         calls.CurrentCount.ShouldBe(1);
         problem.UpdateOnce();
@@ -774,7 +774,7 @@ public class DynamicEvaluationCacheTests
         var result = executor.Transform(state, previousState: null, random);
 
         evaluator.LastRandom.ShouldBeSameAs(random);
-        result.Population.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1.0));
+        result.Population.EvaluatedCandidates.Single().ObjectiveVector.ShouldBe(new ObjectiveVector(1.0));
     }
 
     [Fact]

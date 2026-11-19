@@ -104,9 +104,9 @@ public class RefinerFailureTests
             public int Batches;
         }
 
-        private sealed class Executor(Counter counter, int successfulBatches) : IRefinementExecutor<RealVector>
+        private sealed class Executor(Counter counter, int successfulBatches) : RefinementExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
                 counter.Batches++ < successfulBatches ? candidates : throw new InvalidOperationException("Refinement failed.");
         }
     }

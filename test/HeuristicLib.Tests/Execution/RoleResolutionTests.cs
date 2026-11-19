@@ -264,14 +264,12 @@ public sealed class RoleResolutionTests
         protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor(scope.Problem);
+            return new Executor();
         }
 
         private sealed class Executor
-            : MutationExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+            : MutationExecutor<RealVector>
         {
-            public Executor(TestFunctionProblem problem) : base(problem) { }
-
             private int invocations;
 
             public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
@@ -286,14 +284,12 @@ public sealed class RoleResolutionTests
         protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor(searchSpace: scope.SearchSpace);
+            return new Executor();
         }
 
         private sealed class Executor
-            : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>
+            : MutationExecutor<RealVector>
         {
-            public Executor(BoundedRealVectorSearchSpace searchSpace) : base(searchSpace: searchSpace) { }
-
             private int invocations;
 
             public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
@@ -332,13 +328,16 @@ public sealed class RoleResolutionTests
         public Action<double> Report { get; init; }
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor(scope.Resolve(ChildOperator), Report);
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator, Report);
+        }
 
         private sealed class Executor(IMutationExecutor<RealVector> child, Action<double> report)
-            : IMutationExecutor<RealVector>
+            : MutationExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
                 var result = child.Mutate(parents, random);
                 report(result[0][0]);

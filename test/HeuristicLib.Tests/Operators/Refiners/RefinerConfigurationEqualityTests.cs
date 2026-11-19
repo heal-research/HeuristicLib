@@ -195,14 +195,14 @@ public class RefinerConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<IRefinementExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor(children);
+            ImmutableArray<IRefinementExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<IRefinementExecutor<int>> childRefiners)
-            : IRefinementExecutor<int>
+            : RefinementExecutor<int>
         {
-            public IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
                 childRefiners[0].Refine(candidates, random);
         }
     }

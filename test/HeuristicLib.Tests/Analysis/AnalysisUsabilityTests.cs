@@ -245,9 +245,9 @@ public class AnalysisUsabilityTests
     {
         protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, TestProblem, TRunSearchState> scope) => new Executor();
 
-        private sealed class Executor : IEvaluationExecutor<int>
+        private sealed class Executor : EvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
                 [.. candidates.Select(candidate => new ObjectiveVector(candidate))];
         }
     }

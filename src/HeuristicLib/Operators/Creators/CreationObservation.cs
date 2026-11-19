@@ -22,18 +22,16 @@ public sealed record CreationObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Creation, TCandidate, CreationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Creation, TCandidate> source, Action<CreationObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((ICreationExecutor<TCandidate>)executor, source, record, problem);
+        new Executor((ICreationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<TCandidate> executor,
-        IOperator<Creation, TCandidate> creator, Action<CreationObservation<TCandidate>> observe, TProblem problem)
-        : CreationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ICreationExecutor<TCandidate> executor,
+        IOperator<Creation, TCandidate> creator, Action<CreationObservation<TCandidate>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : CreationExecutor<TCandidate>
     {
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random)
         {
             var candidates = executor.Create(count, random);
-            observe(new CreationObservation<TCandidate>(creator, count, candidates, SearchSpace, Problem));
+            observe(new CreationObservation<TCandidate>(creator, count, candidates, problem.SearchSpace, problem));
             return candidates;
         }
     }

@@ -15,9 +15,9 @@ public abstract record StatelessInterceptor<TCandidate, TSearchSpace, TProblem, 
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> configuration, TProblem problem) : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
+    private sealed class Executor(StatelessInterceptor<TCandidate, TSearchSpace, TProblem, TSearchState> configuration, TProblem problem) : InterceptionExecutor<TSearchState>
     {
-        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => configuration.Transform(currentState, previousState, random, SearchSpace, Problem);
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => configuration.Transform(currentState, previousState, random, problem.SearchSpace, problem);
     }
 }
 
@@ -29,9 +29,9 @@ public abstract record StatelessInterceptor<TCandidate, TSearchSpace, TSearchSta
 
     public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessInterceptor<TCandidate, TSearchSpace, TSearchState> configuration, TSearchSpace searchSpace) : InterceptionExecutor<TCandidate, TSearchSpace, TSearchState>(searchSpace)
+    private sealed class Executor(StatelessInterceptor<TCandidate, TSearchSpace, TSearchState> configuration, TSearchSpace searchSpace) : InterceptionExecutor<TSearchState>
     {
-        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => configuration.Transform(currentState, previousState, random, SearchSpace);
+        public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => configuration.Transform(currentState, previousState, random, searchSpace);
     }
 }
 

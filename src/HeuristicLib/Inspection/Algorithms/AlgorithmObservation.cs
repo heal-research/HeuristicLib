@@ -30,15 +30,13 @@ public sealed record AlgorithmObservation<TCandidate, TSearchState>(
 {
     static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
         IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmObservation<TCandidate, TSearchState>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>(executor, source, record, problem);
+        new Executor(executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(
+    private sealed class Executor(
         IAlgorithmExecutor<TSearchState> childAlgorithm,
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
-        Action<AlgorithmObservation<TCandidate, TSearchState>> observe, TProblem problem)
-        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        Action<AlgorithmObservation<TCandidate, TSearchState>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : WrappingAlgorithmExecutor<TSearchState>(childAlgorithm)
     {
         // The count belongs to the call, as the algorithm's own iteration count does.
         public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
@@ -47,7 +45,7 @@ public sealed record AlgorithmObservation<TCandidate, TSearchState>(
             var previousState = initialState;
             await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(random, initialState, ct))
             {
-                observe(new AlgorithmObservation<TCandidate, TSearchState>(observedAlgorithm, ++iteration, searchState, previousState, Problem.SearchSpace, Problem));
+                observe(new AlgorithmObservation<TCandidate, TSearchState>(observedAlgorithm, ++iteration, searchState, previousState, problem.SearchSpace, problem));
                 previousState = searchState;
                 yield return searchState;
             }

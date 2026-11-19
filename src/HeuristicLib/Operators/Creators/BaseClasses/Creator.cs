@@ -27,37 +27,6 @@ public abstract record Creator<TCandidate, TSearchSpace>
 public abstract record Creator<TCandidate>
     : Creator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class CreationExecutor<TCandidate, TSearchSpace, TProblem>
-    : ICreationExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected CreationExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
-}
-
-public abstract class CreationExecutor<TCandidate, TSearchSpace>
-    : ICreationExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    protected TSearchSpace SearchSpace { get; }
-
-    protected CreationExecutor(TSearchSpace searchSpace)
-    {
-        SearchSpace = searchSpace;
-    }
-
-    public abstract IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random);
-}
-
 public abstract class CreationExecutor<TCandidate>
     : ICreationExecutor<TCandidate>
 {

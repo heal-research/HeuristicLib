@@ -32,58 +32,54 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var algorithm = scope.Resolve(Algorithm);
-        return new AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, MaximumDuration, scope.Results.TimeProvider, scope.Problem);
-    }
-}
-
-public sealed class AlgorithmDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    private readonly IAlgorithmExecutor<TSearchState> algorithm;
-    private readonly TimeSpan maximumDuration;
-    private readonly TimeProvider timeProvider;
-
-    public AlgorithmDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider, TProblem problem)
-        : base(problem)
-    {
-        this.algorithm = algorithm;
-        this.maximumDuration = maximumDuration;
-        this.timeProvider = timeProvider;
+        return new Executor(algorithm, MaximumDuration, scope.Results.TimeProvider);
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    private sealed class Executor
+        : AlgorithmExecutor<TSearchState>
     {
-        var duration = TimeSpan.Zero;
-        await using var enumerator = algorithm
-            .RunStreamingAsync(random, initialState, ct)
-            .GetAsyncEnumerator(ct);
+        private readonly IAlgorithmExecutor<TSearchState> algorithm;
+        private readonly TimeSpan maximumDuration;
+        private readonly TimeProvider timeProvider;
 
-        while (true)
+        public Executor(IAlgorithmExecutor<TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
         {
-            var startTimestamp = timeProvider.GetTimestamp();
-            bool hasNext;
-            try
-            {
-                hasNext = await enumerator.MoveNextAsync();
-            }
-            finally
-            {
-                duration += timeProvider.GetElapsedTime(startTimestamp);
-            }
+            this.algorithm = algorithm;
+            this.maximumDuration = maximumDuration;
+            this.timeProvider = timeProvider;
+        }
 
-            if (!hasNext)
-            {
-                yield break;
-            }
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var duration = TimeSpan.Zero;
+            await using var enumerator = algorithm
+                .RunStreamingAsync(random, initialState, ct)
+                .GetAsyncEnumerator(ct);
 
-            yield return enumerator.Current;
-
-            if (duration >= maximumDuration)
+            while (true)
             {
-                yield break;
+                var startTimestamp = timeProvider.GetTimestamp();
+                bool hasNext;
+                try
+                {
+                    hasNext = await enumerator.MoveNextAsync();
+                }
+                finally
+                {
+                    duration += timeProvider.GetElapsedTime(startTimestamp);
+                }
+
+                if (!hasNext)
+                {
+                    yield break;
+                }
+
+                yield return enumerator.Current;
+
+                if (duration >= maximumDuration)
+                {
+                    yield break;
+                }
             }
         }
     }

@@ -22,18 +22,16 @@ public sealed record MutationObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Mutation, TCandidate> source, Action<MutationObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((IMutationExecutor<TCandidate>)executor, source, record, problem);
+        new Executor((IMutationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IMutationExecutor<TCandidate> executor,
-        IOperator<Mutation, TCandidate> mutator, Action<MutationObservation<TCandidate>> observe, TProblem problem)
-        : MutationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IMutationExecutor<TCandidate> executor,
+        IOperator<Mutation, TCandidate> mutator, Action<MutationObservation<TCandidate>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : MutationExecutor<TCandidate>
     {
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
             var offspring = executor.Mutate(parents, random);
-            observe(new MutationObservation<TCandidate>(mutator, parents, offspring, SearchSpace, Problem));
+            observe(new MutationObservation<TCandidate>(mutator, parents, offspring, problem.SearchSpace, problem));
             return offspring;
         }
     }

@@ -14,28 +14,34 @@ public abstract record StatelessSelector<TCandidate, TSearchSpace, TProblem> : S
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessSelector<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : SelectionExecutor<TCandidate, TSearchSpace, TProblem>(problem)
+    private sealed class Executor(StatelessSelector<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) => configuration.Select(population, objective, count, random, SearchSpace, Problem);
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random) => configuration.Select(population, problem.Objective, count, random, problem.SearchSpace, problem);
     }
 }
 
 public abstract record StatelessSelector<TCandidate, TSearchSpace> : Selector<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    protected sealed override ISelectionExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TRunSearchState> scope) => new Executor(this, scope.SearchSpace);
+    protected sealed override ISelectionExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessSelector<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : SelectionExecutor<TCandidate, TSearchSpace>(searchSpace)
+    private sealed class Executor(StatelessSelector<TCandidate, TSearchSpace> configuration, IProblem<TCandidate, TSearchSpace> problem) : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) => configuration.Select(population, objective, count, random, SearchSpace);
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random) => configuration.Select(population, problem.Objective, count, random, problem.SearchSpace);
     }
 }
 
-public abstract record StatelessSelector<TCandidate> : Selector<TCandidate>, ISelectionExecutor<TCandidate>
+public abstract record StatelessSelector<TCandidate> : Selector<TCandidate>
 {
-    protected sealed override ISelectionExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TRunSearchState> scope) => this;
+    protected sealed override ISelectionExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
+
+    private sealed class Executor(StatelessSelector<TCandidate> configuration, IProblem problem) : SelectionExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random) =>
+            configuration.Select(population, problem.Objective, count, random);
+    }
 }

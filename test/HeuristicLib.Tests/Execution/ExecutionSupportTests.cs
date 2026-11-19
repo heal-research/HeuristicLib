@@ -266,10 +266,10 @@ public class ExecutionSupportTests
             return new Executor(scope.Problem);
         }
 
-        private sealed class Executor(TProblem boundProblem) : EvaluationExecutor<int, RunSpace, TProblem>(boundProblem)
+        private sealed class Executor(TProblem boundProblem) : EvaluationExecutor<int>
         {
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
-                Problem.Evaluate(candidates, random);
+                boundProblem.Evaluate(candidates, random);
         }
     }
 

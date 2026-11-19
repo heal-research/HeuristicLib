@@ -23,19 +23,17 @@ public sealed record TerminationObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Termination, TCandidate> source, Action<TerminationObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem, TSearchState>((ITerminationExecutor<TSearchState>)executor, source, record, problem);
+        new Executor<TSearchState>((ITerminationExecutor<TSearchState>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem, TSearchState>(ITerminationExecutor<TSearchState> executor,
-        IOperator<Termination, TCandidate> terminator, Action<TerminationObservation<TCandidate>> observe, TProblem problem)
-        : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor<TSearchState>(ITerminationExecutor<TSearchState> executor,
+        IOperator<Termination, TCandidate> terminator, Action<TerminationObservation<TCandidate>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : TerminationExecutor<TSearchState>
         where TSearchState : class, ISearchState
     {
         public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random)
         {
             var isTerminal = executor.IsTerminalState(state, random);
-            observe(new TerminationObservation<TCandidate>(terminator, state, isTerminal, SearchSpace, Problem));
+            observe(new TerminationObservation<TCandidate>(terminator, state, isTerminal, problem.SearchSpace, problem));
             return isTerminal;
         }
     }

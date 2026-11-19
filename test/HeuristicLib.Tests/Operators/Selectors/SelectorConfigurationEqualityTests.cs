@@ -198,15 +198,15 @@ public class SelectorConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<ISelectionExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor(children);
+            ImmutableArray<ISelectionExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<ISelectionExecutor<int>> childSelectors)
-            : ISelectionExecutor<int>
+            : SelectionExecutor<int>
         {
-            public IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
-                childSelectors[0].Select(population, objective, count, random);
+            public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, int count, IRandomNumberGenerator random) =>
+                childSelectors[0].Select(population, count, random);
         }
     }
 }

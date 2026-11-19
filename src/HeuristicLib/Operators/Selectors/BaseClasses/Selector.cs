@@ -28,39 +28,8 @@ public abstract record Selector<TCandidate, TSearchSpace>
 public abstract record Selector<TCandidate>
     : Selector<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class SelectionExecutor<TCandidate, TSearchSpace, TProblem>
-    : ISelectionExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected SelectionExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
-}
-
-public abstract class SelectionExecutor<TCandidate, TSearchSpace>
-    : ISelectionExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    protected TSearchSpace SearchSpace { get; }
-
-    protected SelectionExecutor(TSearchSpace searchSpace)
-    {
-        SearchSpace = searchSpace;
-    }
-
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
-}
-
 public abstract class SelectionExecutor<TCandidate>
     : ISelectionExecutor<TCandidate>
 {
-    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
+    public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random);
 }

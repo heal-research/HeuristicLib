@@ -3,7 +3,6 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -47,19 +46,17 @@ public sealed record RepeatingEvaluator<TCandidate>
         if (Repetitions <= 0)
             throw new InvalidOperationException("Repetitions must be positive.");
         var childEvaluator = scope.Resolve(ChildOperator);
-        return new Executor<TRunSearchSpace, TRunProblem>(childEvaluator, Repetitions, Aggregator, Concurrency, scope.Problem);
+        return new Executor(childEvaluator, Repetitions, Aggregator, Concurrency, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency, TProblem problem)
-        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency, IProblem problem)
+        : EvaluationExecutor<TCandidate>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var repetitionResults = BatchExecution.Execute(
                 repetitions,
-                (childEvaluator, candidates, SearchSpace, Problem),
+                (childEvaluator, candidates),
                 static (itemRandom, state) => state.childEvaluator.Evaluate(state.candidates, itemRandom),
                 random,
                 concurrency);
@@ -71,7 +68,7 @@ public sealed record RepeatingEvaluator<TCandidate>
                     for (var repetition = 0; repetition < repetitions; repetition++)
                         objectiveVectors[repetition] = repetitionResults[repetition][candidateIndex];
 
-                    return aggregator.Aggregate(objectiveVectors, Problem.Objective);
+                    return aggregator.Aggregate(objectiveVectors, problem.Objective);
                 })
                 .ToArray();
         }

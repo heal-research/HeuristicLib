@@ -35,18 +35,18 @@ public sealed record IterationUpdatingAlgorithm<TCandidate, TSearchState> : Wrap
         base.Supports(execution) && execution.Problem.IsAssignableTo(typeof(IIterationUpdatable));
 
     protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        new Executor<TSearchSpace, TProblem>(scope.Resolve(ChildAlgorithm), scope.Problem);
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        var childAlgorithm = scope.Resolve(ChildAlgorithm);
+        // Supports admits only problem types that implement IIterationUpdatable.
+        return new Executor(childAlgorithm, (IIterationUpdatable)scope.Problem);
+    }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IAlgorithmExecutor<TSearchState> childAlgorithm, TProblem problem)
-        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IAlgorithmExecutor<TSearchState> childAlgorithm, IIterationUpdatable updates)
+        : WrappingAlgorithmExecutor<TSearchState>(childAlgorithm)
     {
         public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
-            // Supports admitted only problem types that implement it.
-            var updates = (IIterationUpdatable)Problem;
             await foreach (var searchState in ChildAlgorithm.RunStreamingAsync(random, initialState, ct))
             {
                 updates.CompleteIteration();

@@ -70,20 +70,21 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
         new Executor(scope.Resolve(ChildOperator), scope.Problem, BestKnownProvider, ZeroBestKnownPolicy);
 
-    private sealed class Executor : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>
+    private sealed class Executor : EvaluationExecutor<TCandidate>
     {
         private readonly IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider;
         private readonly RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy;
         private readonly IEvaluationExecutor<TCandidate> childEvaluator;
+        private readonly TProblem problem;
         private ObjectiveVector? bestKnown;
         private int bestKnownEpoch = -1;
 
         public Executor(IEvaluationExecutor<TCandidate> childEvaluator, TProblem problem, IBestKnownObjectiveProvider<TCandidate, TSearchSpace, TProblem> bestKnownProvider, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
-            : base(problem)
         {
             this.bestKnownProvider = bestKnownProvider;
             this.zeroBestKnownPolicy = zeroBestKnownPolicy;
             this.childEvaluator = childEvaluator;
+            this.problem = problem;
         }
 
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
@@ -91,10 +92,10 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
             var objectiveVectors = childEvaluator.Evaluate(candidates, random);
             // A deferred batch update is applied inside Evaluate. Read its reference afterwards, while that
             // environment is still current, instead of retaining an event subscription to the problem.
-            if (bestKnownEpoch != Problem.CurrentEpoch)
+            if (bestKnownEpoch != problem.CurrentEpoch)
             {
-                bestKnown = bestKnownProvider.GetBestKnown(Problem);
-                bestKnownEpoch = Problem.CurrentEpoch;
+                bestKnown = bestKnownProvider.GetBestKnown(problem);
+                bestKnownEpoch = problem.CurrentEpoch;
             }
             var currentBestKnown = bestKnown!;
             return objectiveVectors

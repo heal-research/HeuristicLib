@@ -32,9 +32,9 @@ public sealed record MemoizingEvaluator : WrappingOperator<Evaluation, int>
 
     private sealed class Executor(
         IEvaluationExecutor<int> child, EvaluationCache<int> cache)
-        : IEvaluationExecutor<int>
+        : EvaluationExecutor<int>
     {
-        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
         {
             var results = new ObjectiveVector[candidates.Count];
             for (var i = 0; i < candidates.Count; i++)

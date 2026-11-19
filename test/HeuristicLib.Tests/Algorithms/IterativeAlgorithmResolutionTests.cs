@@ -203,46 +203,44 @@ public sealed class IterativeAlgorithmResolutionTests
 
     private sealed record AgnosticAlgorithm(Action Prepare, Action Bind) : IterativeAlgorithm<AgnosticAlgorithm, int, ProbeState>
     {
-        protected override IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IterativeAlgorithmExecutor<ProbeState> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, ProbeState> scope)
         {
             Prepare();
             var interceptor = scope.ResolveOptional(Interceptor);
             Bind();
-            return new CounterExecutor<TSearchSpace, TProblem>(interceptor, scope.Problem);
+            return new CounterExecutor(interceptor);
         }
 
     }
 
     private sealed record BoundAlgorithm(Action Prepare, Action Bind) : IterativeAlgorithm<BoundAlgorithm, int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
     {
-        protected override IterativeAlgorithmExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> CreateExecutor(
+        protected override IterativeAlgorithmExecutor<ProbeState> CreateExecutor(
             ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> scope)
         {
             Prepare();
             var interceptor = scope.ResolveOptional(Interceptor);
             Bind();
-            return new CounterExecutor<DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(interceptor, Problem);
+            return new CounterExecutor(interceptor);
         }
 
     }
 
     private sealed record WideProblemAlgorithm(Action Prepare) : IterativeAlgorithm<WideProblemAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState>
     {
-        protected override IterativeAlgorithmExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> CreateExecutor(
+        protected override IterativeAlgorithmExecutor<ProbeState> CreateExecutor(
             ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, ProbeState> scope)
         {
             var interceptor = scope.ResolveOptional(Interceptor);
             Prepare();
-            return new CounterExecutor<DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(interceptor, Problem);
+            return new CounterExecutor(interceptor);
         }
 
     }
 
-    private sealed class CounterExecutor<TSearchSpace, TProblem>(IInterceptionExecutor<ProbeState>? interceptor, TProblem problem)
-        : IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, ProbeState>(interceptor, problem)
-        where TSearchSpace : class, ISearchSpace<int>
-        where TProblem : class, IProblem<int, TSearchSpace>
+    private sealed class CounterExecutor(IInterceptionExecutor<ProbeState>? interceptor)
+        : IterativeAlgorithmExecutor<ProbeState>(interceptor)
     {
         private int invocations;
 
@@ -258,14 +256,12 @@ public sealed class IterativeAlgorithmResolutionTests
         protected override IInterceptionExecutor<ProbeState> CreateExecutor(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState> scope)
         {
             Prepare();
-            return new Executor(scope.Problem);
+            return new Executor();
         }
 
         private sealed class Executor
-            : InterceptionExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, ProbeState>
+            : InterceptionExecutor<ProbeState>
         {
-            public Executor(FuncProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
-
             private int invocations;
 
             public override ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random) =>

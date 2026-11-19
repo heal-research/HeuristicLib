@@ -114,13 +114,11 @@ public sealed class NamedOperatorTests
     {
 
         protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
-        new Executor(scope.Problem);
+        new Executor();
 
         private sealed class Executor
-            : MutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+            : MutationExecutor<int>
         {
-            public Executor(FuncProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
-
             private int invocations;
 
             public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>

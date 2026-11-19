@@ -175,14 +175,14 @@ public class MutatorConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            System.Collections.Immutable.ImmutableArray<IMutationExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor(children);
+            System.Collections.Immutable.ImmutableArray<IMutationExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<IMutationExecutor<int>> childMutators)
-            : IMutationExecutor<int>
+            : MutationExecutor<int>
         {
-            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
                 childMutators[0].Mutate(parents, random);
         }
     }

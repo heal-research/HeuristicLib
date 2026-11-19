@@ -332,9 +332,9 @@ public sealed class AttachedAndExplicitPlacementTests
     private sealed record FlakyEvaluator(ManualTimeProvider Time) : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
     {
         protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
-            new Executor(Time, scope.Problem);
+            new Executor(Time);
 
-        private sealed class Executor(ManualTimeProvider time, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(problem)
+        private sealed class Executor(ManualTimeProvider time) : EvaluationExecutor<int>
         {
             private int calls;
 

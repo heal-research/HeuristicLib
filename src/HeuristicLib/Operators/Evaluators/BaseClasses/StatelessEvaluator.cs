@@ -14,9 +14,9 @@ public abstract record StatelessEvaluator<TCandidate, TSearchSpace, TProblem> : 
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessEvaluator<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
+    private sealed class Executor(StatelessEvaluator<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : EvaluationExecutor<TCandidate>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Evaluate(candidates, random, SearchSpace, Problem);
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Evaluate(candidates, random, problem.SearchSpace, problem);
     }
 }
 
@@ -27,9 +27,9 @@ public abstract record StatelessEvaluator<TCandidate, TSearchSpace> : Evaluator<
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessEvaluator<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : EvaluationExecutor<TCandidate, TSearchSpace>(searchSpace)
+    private sealed class Executor(StatelessEvaluator<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : EvaluationExecutor<TCandidate>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Evaluate(candidates, random, SearchSpace);
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Evaluate(candidates, random, searchSpace);
     }
 }
 

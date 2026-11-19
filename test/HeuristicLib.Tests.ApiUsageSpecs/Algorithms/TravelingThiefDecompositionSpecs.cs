@@ -80,9 +80,9 @@ public sealed class TravelingThiefDecompositionSpecs
         protected override IAlgorithmExecutor<SingleSolutionState<TCandidate>> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> scope) =>
             new Executor(Candidates.AsImmutableArray(), scope.Problem);
 
-        private sealed class Executor(ImmutableArray<TCandidate> candidates, TProblem problem) : IAlgorithmExecutor<SingleSolutionState<TCandidate>>
+        private sealed class Executor(ImmutableArray<TCandidate> candidates, TProblem problem) : AlgorithmExecutor<SingleSolutionState<TCandidate>>
         {
-            public async IAsyncEnumerable<SingleSolutionState<TCandidate>> RunStreamingAsync(IRandomNumberGenerator random, SingleSolutionState<TCandidate>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<SingleSolutionState<TCandidate>> RunStreamingAsync(IRandomNumberGenerator random, SingleSolutionState<TCandidate>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 ct.ThrowIfCancellationRequested();
                 var evaluated = candidates.Zip(problem.Evaluate(candidates, random), EvaluatedCandidate.From).ToArray();
@@ -111,14 +111,14 @@ public sealed class TravelingThiefDecompositionSpecs
         {
             var tourProblem = new TourProblem();
             var packingProblem = new PackingProblem();
-            return new Executor(tourProblem, packingProblem,
-                scope.For<Permutation, PermutationSearchSpace, TourProblem, SingleSolutionState<Permutation>>(tourProblem).Resolve(Tours),
-                scope.For<BoolVector, BoolVectorSearchSpace, PackingProblem, SingleSolutionState<BoolVector>>(packingProblem).Resolve(Packings));
+            var tours = scope.For<Permutation, PermutationSearchSpace, TourProblem, SingleSolutionState<Permutation>>(tourProblem).Resolve(Tours);
+            var packings = scope.For<BoolVector, BoolVectorSearchSpace, PackingProblem, SingleSolutionState<BoolVector>>(packingProblem).Resolve(Packings);
+            return new Executor(tourProblem, packingProblem, tours, packings);
         }
 
-        private sealed class Executor(TourProblem tourProblem, PackingProblem packingProblem, IAlgorithmExecutor<SingleSolutionState<Permutation>> tours, IAlgorithmExecutor<SingleSolutionState<BoolVector>> packings) : IAlgorithmExecutor<ThiefState>
+        private sealed class Executor(TourProblem tourProblem, PackingProblem packingProblem, IAlgorithmExecutor<SingleSolutionState<Permutation>> tours, IAlgorithmExecutor<SingleSolutionState<BoolVector>> packings) : AlgorithmExecutor<ThiefState>
         {
-            public async IAsyncEnumerable<ThiefState> RunStreamingAsync(IRandomNumberGenerator random, ThiefState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<ThiefState> RunStreamingAsync(IRandomNumberGenerator random, ThiefState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 for (var turn = 0; turn < 3; turn++)
                 {

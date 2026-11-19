@@ -22,7 +22,7 @@ public class SelectorCompositionTests
             EvaluatedCandidate.From(2, new ObjectiveVector(2.0))
         };
 
-        var selected = executor.Select(population, problem.Objective, 2, RandomNumberGenerator.Create(1));
+        var selected = executor.Select(population, 2, RandomNumberGenerator.Create(1));
 
         selected.ShouldBe(population);
         counter.CurrentCount.ShouldBe(1);
@@ -38,7 +38,7 @@ public class SelectorCompositionTests
         var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector, problem);
         var population = CreatePopulation(1, 2, 3, 4);
 
-        var selected = executor.Select(population, problem.Objective, 4, RandomNumberGenerator.Create(1));
+        var selected = executor.Select(population, 4, RandomNumberGenerator.Create(1));
 
         selector.FemaleSelector.ShouldBeSameAs(femaleSelector);
         selector.MaleSelector.ShouldBeSameAs(maleSelector);
@@ -52,7 +52,7 @@ public class SelectorCompositionTests
         var problem = CreateProblem();
         var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector, problem);
 
-        var selected = executor.Select(CreatePopulation(1, 2, 3, 4), problem.Objective, 3, RandomNumberGenerator.Create(1));
+        var selected = executor.Select(CreatePopulation(1, 2, 3, 4), 3, RandomNumberGenerator.Create(1));
 
         selected.Select(candidate => candidate.Candidate).ShouldBe([1, 3, 2]);
     }

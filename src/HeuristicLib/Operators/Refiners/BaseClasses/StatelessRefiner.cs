@@ -13,9 +13,9 @@ public abstract record StatelessRefiner<TCandidate, TSearchSpace, TProblem> : Re
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessRefiner<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : RefinementExecutor<TCandidate, TSearchSpace, TProblem>(problem)
+    private sealed class Executor(StatelessRefiner<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : RefinementExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Refine(candidates, random, SearchSpace, Problem);
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Refine(candidates, random, problem.SearchSpace, problem);
     }
 }
 
@@ -26,9 +26,9 @@ public abstract record StatelessRefiner<TCandidate, TSearchSpace> : Refiner<TCan
 
     public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessRefiner<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : RefinementExecutor<TCandidate, TSearchSpace>(searchSpace)
+    private sealed class Executor(StatelessRefiner<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : RefinementExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Refine(candidates, random, SearchSpace);
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Refine(candidates, random, searchSpace);
     }
 }
 

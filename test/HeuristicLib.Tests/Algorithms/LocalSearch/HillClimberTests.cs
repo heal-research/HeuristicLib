@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -49,27 +51,17 @@ public class HillClimberTests
 
     private static int StateCandidate(SingleSolutionState<int> state) => state.EvaluatedCandidate.Candidate;
 
-    private sealed record ConstantCreator(int Value)
-        : IOperator<Creation, int>,
-        ICreationExecutor<int>
+    private sealed record ConstantCreator(int Value) : StatelessCreator<int>
     {
-        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
-
-        public IReadOnlyList<int> Create(
+        public override IReadOnlyList<int> Create(
             int count,
             IRandomNumberGenerator random) =>
             Enumerable.Repeat(Value, count).ToArray();
     }
 
-    private sealed record OffsetMutator(int Offset)
-        : IOperator<Mutation, int>,
-        IMutationExecutor<int>
+    private sealed record OffsetMutator(int Offset) : StatelessMutator<int>
     {
-        IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => this;
-
-        public IReadOnlyList<int> Mutate(
+        public override IReadOnlyList<int> Mutate(
             IReadOnlyList<int> parents,
             IRandomNumberGenerator random) =>
             parents.Select(parent => parent + Offset).ToArray();

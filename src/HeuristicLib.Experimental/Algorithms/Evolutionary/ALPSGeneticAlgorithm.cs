@@ -9,8 +9,8 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public record AlpsState<TCandidate> : SearchState
 {
-    public required ImmutableArray<Population<TCandidate>> Population { get; init; }
-    public required ImmutableArray<ImmutableArray<int>> Ages { get; init; }
+    public required ValueArray<Population<TCandidate>> Population { get; init; }
+    public required ValueArray<ValueArray<int>> Ages { get; init; }
 }
 
 public record AlpsGeneticAlgorithm<TCandidate>
@@ -74,7 +74,7 @@ public record AlpsGeneticAlgorithm<TCandidate>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IterativeAlgorithmExecutor<AlpsState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> scope)
     {
         var interceptor = scope.ResolveOptional(Interceptor);
@@ -84,11 +84,11 @@ public record AlpsGeneticAlgorithm<TCandidate>
         var mutator = scope.Resolve(Mutator);
         var selector = scope.Resolve(Selector);
         var refiner = scope.ResolveOptional(Refiner);
-        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
+        return new Executor(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
             PopulationSize, Elites, MaximumGenerations, MutationRate, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(
+    private sealed class Executor(
         IInterceptionExecutor<AlpsState<TCandidate>>? interceptor,
         IEvaluationExecutor<TCandidate> evaluator,
         ICreationExecutor<TCandidate> creator,
@@ -99,10 +99,8 @@ public record AlpsGeneticAlgorithm<TCandidate>
         int populationSize,
         int elites,
         int? maximumGenerations,
-        double mutationRate, TProblem problem)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        double mutationRate, IProblem problem)
+        : IterativeAlgorithmExecutor<AlpsState<TCandidate>>(interceptor)
     {
         private readonly WeightedRouter<IMutationExecutor<TCandidate>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
 
@@ -124,13 +122,13 @@ public record AlpsGeneticAlgorithm<TCandidate>
                 return new()
                 {
                     Population = [Population.From(initialPopulation)],
-                    Ages = [Enumerable.Repeat(0, populationSize).ToImmutableArray()]
+                    Ages = [Enumerable.Repeat(0, populationSize).ToValueArray()]
                 };
             }
 
             var offspringCount = populationSize;
-            var oldPopulation = previousState.Population[0].ToArray();
-            var selectedParents = selector.Select(oldPopulation, Problem.Objective, offspringCount * 2, random);
+            var oldPopulation = previousState.Population[0].EvaluatedCandidates.ToArray();
+            var selectedParents = selector.Select(oldPopulation, offspringCount * 2, random);
             var parentPairs = new Parents<TCandidate>[offspringCount];
             var offspringAges = new int[offspringCount];
             var nextAge = previousState.Ages[0].DefaultIfEmpty(0).Max() + 1;
@@ -149,12 +147,12 @@ public record AlpsGeneticAlgorithm<TCandidate>
             }
 
             var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random));
-            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, Problem.Objective, offspringCount, elites);
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, elites);
 
             return new()
             {
                 Population = [Population.From(newPopulation)],
-                Ages = [offspringAges.ToImmutableArray()]
+                Ages = [offspringAges.ToValueArray()]
             };
         }
     }

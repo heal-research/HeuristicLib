@@ -57,7 +57,7 @@ public class AdaptableMutationStrengthTests
         var executor = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm, problem);
 
         executor.RunStreaming(new SequenceRandom(), ct: TestContext.Current.CancellationToken)
-            .Select(state => state.Population.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
+            .Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
         scope.Resolve(adaptation).Factor.ShouldBe(1 / 2.25);
         scope.Results.Result(calls).CurrentCount.ShouldBe(wrapping == "counted" ? 2 : 0);
         gaussian.MutationStrength.ShouldBe(3.0);
@@ -77,7 +77,7 @@ public class AdaptableMutationStrengthTests
         var executor = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm, problem);
 
         executor.RunStreaming(new SequenceRandom(), ct: TestContext.Current.CancellationToken)
-            .Select(state => state.Population.Single().Candidate[0]).ShouldBe([0.0, -1.5, -3.0]);
+            .Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe([0.0, -1.5, -3.0]);
         scope.Resolve(adaptation).Factor.ShouldBe(1.0);
     }
 
@@ -111,7 +111,7 @@ public class AdaptableMutationStrengthTests
             (false, true) => [0.0, -1.5, -3.0, -4.5],
             _ => [0.0, -1.5, -3.0, -4.0]
         };
-        states.Select(state => state.Population.Single().Candidate[0]).ShouldBe(expected);
+        states.Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe(expected);
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public class AdaptableMutationStrengthTests
         var executor = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm, problem);
 
         executor.RunStreaming(new SequenceRandom(0.0, 0.0, 0.0, 0.75, 0.0, 0.0), ct: TestContext.Current.CancellationToken)
-            .Select(state => state.Population.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
+            .Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
         calls.Select(counter => scope.Results.Result(counter).CurrentCount).ShouldBe([1, 1]);
     }
 
@@ -171,7 +171,7 @@ public class AdaptableMutationStrengthTests
             var scope = ResolutionScope.Create();
             var executor = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, FuncProblem<RealVector, BoundedRealVectorSearchSpace>, PopulationState<RealVector>>(algorithm, problem);
             executor.RunStreaming(new SequenceRandom(), ct: TestContext.Current.CancellationToken)
-                .Select(state => state.Population.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
+                .Select(state => state.Population.EvaluatedCandidates.Single().Candidate[0]).ShouldBe([0.0, -1.5, -2.5]);
         }
     }
 

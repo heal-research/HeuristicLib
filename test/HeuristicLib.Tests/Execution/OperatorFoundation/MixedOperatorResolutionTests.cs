@@ -80,12 +80,11 @@ public sealed class MixedOperatorResolutionTests
             return new Executor();
         }
 
-        private sealed class Executor : ILiveValue,
-            ICrossoverExecutor<RealVector>
+        private sealed class Executor : CrossoverExecutor<RealVector>, ILiveValue
         {
             public int Value { get; set; }
 
-            public IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random) =>
                 [new RealVector((double)++Value)];
         }
     }

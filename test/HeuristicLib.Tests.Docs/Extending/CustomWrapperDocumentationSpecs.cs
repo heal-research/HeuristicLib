@@ -30,18 +30,21 @@ public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCan
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        new LoggingExecutor(scope.Resolve(ChildOperator), ChildOperator, Write);
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        var childOperator = scope.Resolve(ChildOperator);
+        return new Executor(childOperator, ChildOperator, Write);
+    }
 
-    private sealed class LoggingExecutor(
+    private sealed class Executor(
         IMutationExecutor<TCandidate> executor,
         IOperator<Mutation, TCandidate> mutator,
         Action<IOperator<Mutation, TCandidate>, int, int> write)
-        : IMutationExecutor<TCandidate>
+        : MutationExecutor<TCandidate>
     {
         private int calls;
 
-        public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
             var offspring = executor.Mutate(parents, random);
             write(mutator, ++calls, offspring.Count);

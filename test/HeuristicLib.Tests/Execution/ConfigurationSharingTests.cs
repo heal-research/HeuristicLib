@@ -221,7 +221,7 @@ public class ConfigurationSharingTests
             return new Executor(Box, scope.Problem);
         }
 
-        private sealed class Executor(Box box, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(problem)
+        private sealed class Executor(Box box, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int>
         {
             private int calls;
 
@@ -229,7 +229,7 @@ public class ConfigurationSharingTests
             {
                 box.Calls++;
                 box.LastPrivateCount = ++calls;
-                return Problem.Evaluate(candidates, random).ToArray();
+                return problem.Evaluate(candidates, random).ToArray();
             }
         }
     }
@@ -286,13 +286,17 @@ public class ConfigurationSharingTests
 
         public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), FirstParameter, SecondParameter];
 
-        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
-            new Executor(scope.Resolve(First), scope.Resolve(Second));
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
+        {
+            var first = scope.Resolve(First);
+            var second = scope.Resolve(Second);
+            return new Executor(first, second);
+        }
 
         private sealed class Executor(IEvaluationExecutor<int> first, IEvaluationExecutor<int> second)
-            : IEvaluationExecutor<int>
+            : EvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 first.Evaluate(candidates, random);
                 return second.Evaluate(candidates, random);

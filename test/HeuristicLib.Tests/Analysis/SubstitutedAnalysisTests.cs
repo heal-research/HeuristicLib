@@ -544,7 +544,7 @@ public class SubstitutedAnalysisTests
     {
         var stream = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: Ct);
         return [.. Enumerable.Select(stream,
-            static state => string.Join(";", state.Population.Select(static member => $"{member.Candidate}|{member.ObjectiveVector}")))];
+            static state => string.Join(";", state.Population.EvaluatedCandidates.Select(static member => $"{member.Candidate}|{member.ObjectiveVector}")))];
     }
 
     private static GeneticAlgorithm<RealVector> RealGa(TestFunctionProblem problem) => new()

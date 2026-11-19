@@ -34,14 +34,14 @@ public sealed record ReevaluationInterceptor<TCandidate, TSearchSpace, TProblem,
         return new Executor(evaluator, scope.Problem);
     }
 
-    private sealed class Executor(IEvaluationExecutor<TCandidate> evaluator, TProblem problem)
-        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
+    private sealed class Executor(IEvaluationExecutor<TCandidate> evaluator, IDynamicProblem<TCandidate, TSearchSpace> problem)
+        : InterceptionExecutor<TSearchState>
     {
         private int consumedEpoch = problem.CurrentEpoch;
 
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
         {
-            var epoch = Problem.CurrentEpoch;
+            var epoch = problem.CurrentEpoch;
             if (Interlocked.Exchange(ref consumedEpoch, epoch) == epoch)
             {
                 return currentState;

@@ -23,18 +23,16 @@ public sealed record EvaluationObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Evaluation, TCandidate, EvaluationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Evaluation, TCandidate> source, Action<EvaluationObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((IEvaluationExecutor<TCandidate>)executor, source, record, problem);
+        new Executor((IEvaluationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEvaluationExecutor<TCandidate> executor,
-        IOperator<Evaluation, TCandidate> evaluator, Action<EvaluationObservation<TCandidate>> observe, TProblem problem)
-        : EvaluationExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<TCandidate> executor,
+        IOperator<Evaluation, TCandidate> evaluator, Action<EvaluationObservation<TCandidate>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : EvaluationExecutor<TCandidate>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var objectiveVectors = executor.Evaluate(candidates, random);
-            observe(new EvaluationObservation<TCandidate>(evaluator, candidates, objectiveVectors, SearchSpace, Problem));
+            observe(new EvaluationObservation<TCandidate>(evaluator, candidates, objectiveVectors, problem.SearchSpace, problem));
             return objectiveVectors;
         }
     }

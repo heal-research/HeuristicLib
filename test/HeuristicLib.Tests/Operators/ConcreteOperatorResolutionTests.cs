@@ -60,10 +60,10 @@ public sealed class ConcreteOperatorResolutionTests
             nameof(ImprovementCheckingRefiner<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
                 .Resolve(counted ? countedCheckingRefiner : checkingRefiner).Refine([10], random).ShouldBe([9]),
             nameof(EliteSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
-                .Resolve(counted ? countedEliteSelector : eliteSelector).Select(population, problem.Objective, 2, random)
+                .Resolve(counted ? countedEliteSelector : eliteSelector).Select(population, 2, random)
                 .Select(candidate => candidate.Candidate).ShouldBe([10, 10]),
             nameof(GenderSpecificSelector<int>) => (scope, counted) => scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
-                .Resolve(counted ? countedGenderSelector : genderSelector).Select(population, problem.Objective, 3, random)
+                .Resolve(counted ? countedGenderSelector : genderSelector).Select(population, 3, random)
                 .Select(candidate => candidate.Candidate).ShouldBe([10, 20, 20]),
             _ => throw new ArgumentOutOfRangeException(nameof(kind))
         };

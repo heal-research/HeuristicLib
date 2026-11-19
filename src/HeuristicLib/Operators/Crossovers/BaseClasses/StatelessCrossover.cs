@@ -13,9 +13,9 @@ public abstract record StatelessCrossover<TCandidate, TSearchSpace, TProblem> : 
 
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessCrossover<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>(problem)
+    private sealed class Executor(StatelessCrossover<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : CrossoverExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) => configuration.Cross(parents, random, SearchSpace, Problem);
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) => configuration.Cross(parents, random, problem.SearchSpace, problem);
     }
 }
 
@@ -26,9 +26,9 @@ public abstract record StatelessCrossover<TCandidate, TSearchSpace> : Crossover<
 
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessCrossover<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : CrossoverExecutor<TCandidate, TSearchSpace>(searchSpace)
+    private sealed class Executor(StatelessCrossover<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : CrossoverExecutor<TCandidate>
     {
-        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) => configuration.Cross(parents, random, SearchSpace);
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) => configuration.Cross(parents, random, searchSpace);
     }
 }
 

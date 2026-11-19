@@ -41,7 +41,7 @@ public class AnalysisSpecs
         var combined = Analyzer.Trace(
             new[] { firstAlgorithm.Iterations, secondAlgorithm.Iterations },
             () => new BestSoFar(),
-            (best, observation) => best.Update(observation.State.Population.Select(candidate => candidate.ObjectiveVector), observation.Problem.Objective));
+            (best, observation) => best.Update(observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector), observation.Problem.Objective));
         var both = firstAlgorithm.Then(secondAlgorithm).Substitute(combined);
 
         var first = both.CreateRun(problem, RandomNumberGenerator.Create(42));
@@ -80,7 +80,7 @@ public class AnalysisSpecs
         var algorithm = CreateAlgorithm(problem);
         var size = algorithm.Iterations.Trace(observation => observation.State.Population.EvaluatedCandidates.Count);
         var quality = algorithm.Iterations.Trace(
-            static observation => observation.State.Population.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective));
+            static observation => observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective));
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(42), [size, quality]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);

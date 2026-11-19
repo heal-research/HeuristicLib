@@ -46,12 +46,12 @@ public record GenderSpecificSelector<TCandidate>
     private sealed class Executor(ISelectionExecutor<TCandidate> femaleSelector, ISelectionExecutor<TCandidate> maleSelector)
         : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
         {
             var pairCount = count / 2;
             var femaleCount = count - pairCount;
-            var females = femaleSelector.Select(population, objective, femaleCount, random);
-            var males = maleSelector.Select(population, objective, pairCount, random);
+            var females = femaleSelector.Select(population, femaleCount, random);
+            var males = maleSelector.Select(population, pairCount, random);
 
             var result = new EvaluatedCandidate<TCandidate>[count];
             for (var i = 0; i < pairCount; i++)

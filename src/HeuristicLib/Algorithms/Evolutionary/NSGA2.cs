@@ -69,7 +69,7 @@ public record NSGA2<TCandidate>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IterativeAlgorithmExecutor<PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
     {
         var interceptor = scope.ResolveOptional(Interceptor);
@@ -80,11 +80,11 @@ public record NSGA2<TCandidate>
         var selector = scope.Resolve(Selector);
         var replacer = scope.Resolve(Replacer);
         var refiner = scope.ResolveOptional(Refiner);
-        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, replacer, refiner,
+        return new Executor(interceptor, evaluator, creator, crossover, mutator, selector, replacer, refiner,
             PopulationSize, MaximumGenerations, MutationRate, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(
+    private sealed class Executor(
         IInterceptionExecutor<PopulationState<TCandidate>>? interceptor,
         IEvaluationExecutor<TCandidate> evaluator,
         ICreationExecutor<TCandidate> creator,
@@ -95,10 +95,8 @@ public record NSGA2<TCandidate>
         IRefinementExecutor<TCandidate>? refiner,
         int populationSize,
         int? maximumGenerations,
-        double mutationRate, TProblem problem)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        double mutationRate, IProblem problem)
+        : IterativeAlgorithmExecutor<PopulationState<TCandidate>>(interceptor)
     {
         private readonly WeightedRouter<IMutationExecutor<TCandidate>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
 
@@ -119,7 +117,7 @@ public record NSGA2<TCandidate>
                 return Population.From(initialPopulation).ToPopulationState();
             }
 
-            var parents = selector.Select(previousState.Population.EvaluatedCandidates, Problem.Objective, populationSize * 2, random).ToParents(Problem.Objective);
+            var parents = selector.Select(previousState.Population.EvaluatedCandidates, populationSize * 2, random).ToParents(problem.Objective);
             var children = crossover.Cross(parents, random);
             var mutants = mutationRouter.Route(children, random, (selected, batch) =>
                 selected is null ? batch : selected.Mutate(batch, random));
@@ -129,7 +127,7 @@ public record NSGA2<TCandidate>
             }
 
             var newPopulation = mutants.ToEvaluated(evaluator.Evaluate(mutants, random));
-            var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation, Problem.Objective, populationSize, random);
+            var nextPopulation = replacer.Replace(previousState.Population.EvaluatedCandidates, newPopulation, populationSize, random);
 
             return Population.From(nextPopulation).ToPopulationState();
         }

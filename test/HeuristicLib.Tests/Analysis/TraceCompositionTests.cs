@@ -176,7 +176,7 @@ public class TraceCompositionTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var iterations = new Counter();
         var quality = algorithm.Iterations.Trace(
-            observation => observation.State.Population.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective),
+            observation => observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective),
             [iterations.Clock]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality, algorithm.Iterations.Counting(iterations)]);
 
@@ -269,7 +269,7 @@ public class TraceCompositionTests
 
         var shortcut = algorithm.Iterations.TracePopulationCandidates();
         var composed = algorithm.Iterations.Trace(
-            static observation => observation.State.Population.BestMedianWorst(observation.Problem.Objective));
+            static observation => observation.State.Population.EvaluatedCandidates.BestMedianWorst(observation.Problem.Objective));
 
         shortcut.ShouldBeAssignableTo<TraceAnalyzer<AlgorithmObservation<RealVector, PopulationState<RealVector>>, BestMedianWorstEntry<RealVector>>>();
         composed.ShouldBeAssignableTo<TraceAnalyzer<AlgorithmObservation<RealVector, PopulationState<RealVector>>, BestMedianWorstEntry<RealVector>>>();
@@ -540,14 +540,17 @@ public class TraceCompositionTests
         public Action<int> Observe { get; init; }
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor(scope.Resolve(ChildOperator), Observe);
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator, Observe);
+        }
 
         private sealed class Executor(
             ICreationExecutor<RealVector> childCreator,
-            Action<int> observe) : ICreationExecutor<RealVector>
+            Action<int> observe) : CreationExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random)
+            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random)
             {
                 var candidates = childCreator.Create(count, random);
                 observe(candidates.Count);
@@ -599,7 +602,7 @@ public class TraceCompositionTests
         public override PopulationState<RealVector> Transform(PopulationState<RealVector> currentState,
                                                               PopulationState<RealVector>? previousState,
                                                               IRandomNumberGenerator random) =>
-            currentState with { Population = Population.From(currentState.Population.Take(KeptCandidates)) };
+            currentState with { Population = Population.From(currentState.Population.EvaluatedCandidates.Take(KeptCandidates)) };
     }
 
     private static TestFunctionProblem CreateProblem() => new(new RastriginFunction(dimension: 4));

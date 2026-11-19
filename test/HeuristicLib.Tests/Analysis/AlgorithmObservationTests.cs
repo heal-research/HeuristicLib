@@ -102,7 +102,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3) with { Interceptor = interceptor };
         var atIterationEnd = algorithm.Iterations.TracePopulationCandidates();
         var atInterceptor = interceptor.Invocations.Trace(
-            static observation => observation.State.Population.BestMedianWorst(observation.Problem.Objective));
+            static observation => observation.State.Population.EvaluatedCandidates.BestMedianWorst(observation.Problem.Objective));
 
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [atIterationEnd, atInterceptor]);
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -154,7 +154,7 @@ public class AlgorithmObservationTests
         var algorithm = CreateAlgorithm(problem, maximumGenerations: 3);
         var iterations = new Counter();
         var quality = algorithm.Iterations.Trace(
-            static observation => observation.State.Population.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective),
+            static observation => observation.State.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector).BestMedianWorst(observation.Problem.Objective),
             [iterations.Clock]);
         var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality, algorithm.Iterations.Counting(iterations)]);
 
@@ -273,6 +273,6 @@ public class AlgorithmObservationTests
         public override PopulationState<RealVector> Transform(PopulationState<RealVector> currentState,
                                                               PopulationState<RealVector>? previousState,
                                                               IRandomNumberGenerator random) =>
-            currentState with { Population = Population.From(currentState.Population.Take(KeptCandidates)) };
+            currentState with { Population = Population.From(currentState.Population.EvaluatedCandidates.Take(KeptCandidates)) };
     }
 }

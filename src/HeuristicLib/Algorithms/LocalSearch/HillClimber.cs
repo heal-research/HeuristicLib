@@ -44,7 +44,7 @@ public record HillClimber<TCandidate>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IterativeAlgorithmExecutor<SingleSolutionState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>> scope)
     {
         var interceptor = scope.ResolveOptional(Interceptor);
@@ -52,10 +52,10 @@ public record HillClimber<TCandidate>
         var creator = scope.Resolve(Creator);
         var mutator = scope.Resolve(Mutator);
         var refiner = scope.ResolveOptional(Refiner);
-        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, mutator, refiner, Direction, MaxNeighbors, BatchSize, scope.Problem);
+        return new Executor(interceptor, evaluator, creator, mutator, refiner, Direction, MaxNeighbors, BatchSize, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(
+    private sealed class Executor(
         IInterceptionExecutor<SingleSolutionState<TCandidate>>? interceptor,
         IEvaluationExecutor<TCandidate> evaluator,
         ICreationExecutor<TCandidate> creator,
@@ -63,10 +63,8 @@ public record HillClimber<TCandidate>
         IRefinementExecutor<TCandidate>? refiner,
         LocalSearchDirection direction,
         int maxNeighbors,
-        int batchSize, TProblem problem)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, SingleSolutionState<TCandidate>>(interceptor, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        int batchSize, IProblem problem)
+        : IterativeAlgorithmExecutor<SingleSolutionState<TCandidate>>(interceptor)
     {
         protected override SingleSolutionState<TCandidate> ExecuteStep(SingleSolutionState<TCandidate>? previousState, IRandomNumberGenerator random) =>
             TryExecuteStep(previousState, random, out var nextState)
@@ -117,9 +115,9 @@ public record HillClimber<TCandidate>
                 }
 
                 var objectiveVectors = evaluator.Evaluate(candidates, random);
-                var bestIndex = BestSelector.Select(objectiveVectors, Problem.Objective, count: 1)[0];
+                var bestIndex = BestSelector.Select(objectiveVectors, problem.Objective, count: 1)[0];
 
-                if (Problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
+                if (problem.Objective.TotalOrderComparer.Compare(objectiveVectors[bestIndex], current.ObjectiveVector) >= 0)
                 {
                     continue;
                 }

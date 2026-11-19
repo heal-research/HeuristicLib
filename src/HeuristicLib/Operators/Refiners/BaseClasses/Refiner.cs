@@ -27,37 +27,6 @@ public abstract record Refiner<TCandidate, TSearchSpace>
 public abstract record Refiner<TCandidate>
     : Refiner<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class RefinementExecutor<TCandidate, TSearchSpace, TProblem>
-    : IRefinementExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected RefinementExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
-}
-
-public abstract class RefinementExecutor<TCandidate, TSearchSpace>
-    : IRefinementExecutor<TCandidate>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    protected TSearchSpace SearchSpace { get; }
-
-    protected RefinementExecutor(TSearchSpace searchSpace)
-    {
-        SearchSpace = searchSpace;
-    }
-
-    public abstract IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
-}
-
 public abstract class RefinementExecutor<TCandidate>
     : IRefinementExecutor<TCandidate>
 {

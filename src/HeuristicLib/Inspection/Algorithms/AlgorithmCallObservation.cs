@@ -47,15 +47,13 @@ public sealed record AlgorithmCallObservation<TCandidate, TSearchState>(
 
     static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
         IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmCallObservation<TCandidate, TSearchState>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>(executor, source, record, problem);
+        new Executor(executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(
+    private sealed class Executor(
         IAlgorithmExecutor<TSearchState> childAlgorithm,
         IAlgorithm<TCandidate, TSearchState> observedAlgorithm,
-        Action<AlgorithmCallObservation<TCandidate, TSearchState>> observe, TProblem problem)
-        : WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(childAlgorithm, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        Action<AlgorithmCallObservation<TCandidate, TSearchState>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : WrappingAlgorithmExecutor<TSearchState>(childAlgorithm)
     {
         public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
@@ -64,7 +62,7 @@ public sealed record AlgorithmCallObservation<TCandidate, TSearchState>(
             var ended = false;
             void Report(AlgorithmCallEvent callEvent) =>
                 observe(new AlgorithmCallObservation<TCandidate, TSearchState>(observedAlgorithm, callEvent, initialState, state, iterations,
-                    Problem.SearchSpace, Problem));
+                    problem.SearchSpace, problem));
             // Every call that starts reports exactly one end.
             void End(AlgorithmCallEvent callEvent)
             {

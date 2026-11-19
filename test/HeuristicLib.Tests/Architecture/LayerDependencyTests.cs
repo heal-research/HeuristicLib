@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using static HEAL.HeuristicLib.Tests.Architecture.SourceCompilation;
 
 namespace HEAL.HeuristicLib.Tests.Architecture;
 
@@ -15,6 +15,24 @@ public sealed class LayerDependencyTests
     {
         var actual = FindViolations();
         actual.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void IterativeAlgorithmBases_RequireAnIterativeExecutorFromTheirHook()
+    {
+        var (compilation, _) = CreateMainCompilation(FindRepositoryRoot());
+        foreach (var arity in new[] { 3, 5 })
+        {
+            var algorithm = compilation.Assembly.GetTypeByMetadataName($"HEAL.HeuristicLib.Algorithms.IterativeAlgorithm`{arity}")!;
+            var hook = algorithm.GetMembers().OfType<IMethodSymbol>()
+                .Single(method => method.IsAbstract && !method.IsImplicitlyDeclared);
+
+            hook.Name.ShouldBe("CreateExecutor");
+            hook.DeclaredAccessibility.ShouldBe(Accessibility.Protected);
+            hook.Parameters.ShouldHaveSingleItem().Type.OriginalDefinition.ToDisplayString()
+                .ShouldBe("HEAL.HeuristicLib.Execution.ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState>");
+            hook.ReturnType.ToDisplayString().ShouldBe("HEAL.HeuristicLib.Algorithms.IterativeAlgorithmExecutor<TSearchState>");
+        }
     }
 
     [Fact]
@@ -120,7 +138,7 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
             "namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int, int>? analyzer; }",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(probe);
@@ -138,7 +156,7 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
             $"namespace HEAL.HeuristicLib.{concept}; internal class LayerProbe {{ private HEAL.HeuristicLib.Analysis.TraceAnalyzer<int, int>? analyzer; }}",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, folder, "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(probe);
@@ -154,7 +172,7 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
             "global using HEAL.HeuristicLib.Analysis; namespace HEAL.HeuristicLib.Operators; internal class LayerProbe { object Empty => new HEAL.HeuristicLib.Execution.RunResults(System.TimeProvider.System); }",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "LayerProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(probe);
@@ -171,12 +189,12 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var hostProbe = CSharpSyntaxTree.ParseText(
             "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private HEAL.HeuristicLib.Algorithms.GeneticAlgorithm<int>? algorithm; object Empty => new RunResults(TimeProvider.System); }",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         var objectiveProbe = CSharpSyntaxTree.ParseText(
             "namespace HEAL.HeuristicLib.Objectives; internal class ObjectiveProbe { private HEAL.HeuristicLib.Encodings.Permutations.Permutation? order; }",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Objectives", "ObjectiveProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(hostProbe, objectiveProbe);
@@ -198,7 +216,7 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
             $"namespace HEAL.HeuristicLib.Execution; internal class HostProbe {{ object Value => {operation}; }}",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(probe);
@@ -214,7 +232,7 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
             "namespace HEAL.HeuristicLib.Execution; internal class HostProbe(RunResults results, IConfigurationNode<IRunResult> analyzer) { object Value => results.Result(analyzer); }",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Operators", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(probe);
@@ -230,7 +248,7 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
             "namespace HEAL.HeuristicLib.Execution; internal class HostProbe { private Substitution? substitution; }",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Execution", "Runs", "HostProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(probe);
@@ -245,12 +263,12 @@ public sealed class LayerDependencyTests
         var (compilation, _) = CreateMainCompilation(repositoryRoot);
         var probe = CSharpSyntaxTree.ParseText(
             "namespace HEAL.HeuristicLib.Random; internal class DomainProbe { private HEAL.HeuristicLib.Operators.IOperator? candidateOperator; private HEAL.HeuristicLib.Execution.ExecutionConcurrency? concurrency; private HEAL.HeuristicLib.Problems.IProblem? problem; }",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Random", "DomainProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         var delegateProbe = CSharpSyntaxTree.ParseText(
             "namespace HEAL.HeuristicLib.Random; internal delegate HEAL.HeuristicLib.Operators.IOperator DomainFactory();",
-            ParseOptions,
+            SourceParseOptions,
             Path.Combine(repositoryRoot, MainRoot, "Random", "DelegateProbe.cs"),
             cancellationToken: TestContext.Current.CancellationToken);
         compilation = compilation.AddSyntaxTrees(probe, delegateProbe);
@@ -273,95 +291,6 @@ public sealed class LayerDependencyTests
         violations.AddRange(experimentalTrees.SelectMany(tree => ScanTree(experimental, tree, repositoryRoot)));
 
         return [.. violations.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
-    }
-
-    private static (CSharpCompilation Compilation, SyntaxTree[] Trees) CreateMainCompilation(string repositoryRoot)
-        => CreateCompilation(repositoryRoot, "HeuristicLib", includeMain: false);
-
-    private static (CSharpCompilation Compilation, SyntaxTree[] Trees) CreateCompilation(
-        string repositoryRoot, string projectFolder, bool includeMain)
-    {
-        var sourceRoot = Path.Combine(repositoryRoot, "src", projectFolder);
-        var trees = Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories)
-            .Where(path => !Path.GetRelativePath(sourceRoot, path).Split(Path.DirectorySeparatorChar)
-                .Any(segment => segment is "obj" or "bin"))
-            .Select(path => CSharpSyntaxTree.ParseText(File.ReadAllText(path), ParseOptions, path))
-            .ToArray();
-
-        var assetsPath = Path.Combine(repositoryRoot, "src", projectFolder, "obj", "project.assets.json");
-        SyntaxTree[] generatedUsings = projectFolder == "HeuristicLib" ? [GlobalUsings, MainOnlyGlobalUsings] : [GlobalUsings];
-        var compilation = CSharpCompilation.Create(projectFolder + "LayerCheck", [.. generatedUsings, .. trees],
-            MetadataReferences(includeMain, assetsPath), new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
-        return (compilation, trees);
-    }
-
-    private static readonly CSharpParseOptions ParseOptions = new(LanguageVersion.Preview);
-
-    private static readonly SyntaxTree GlobalUsings = CSharpSyntaxTree.ParseText(
-        """
-        global using System;
-        global using System.Collections.Generic;
-        global using System.Collections.Immutable;
-        global using System.IO;
-        global using System.Linq;
-        global using System.Net.Http;
-        global using System.Threading;
-        global using System.Threading.Tasks;
-        global using HEAL.HeuristicLib.Collections;
-        """, ParseOptions);
-
-    private static readonly SyntaxTree MainOnlyGlobalUsings = CSharpSyntaxTree.ParseText(
-        "global using static Parlot.Fluent.Parsers;", ParseOptions);
-
-    private static MetadataReference[] MetadataReferences(bool includeMain, string? assetsPath = null)
-    {
-        var platform = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES") ?? string.Empty)
-            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
-            .Where(path => !Path.GetFileName(path).StartsWith("HEAL.HeuristicLib", StringComparison.Ordinal) &&
-                           Path.GetFileName(path) != "System.Linq.AsyncEnumerable.dll");
-        var other = Directory.EnumerateFiles(AppContext.BaseDirectory, "*.dll")
-            .Where(path => !Path.GetFileName(path).StartsWith("HEAL.HeuristicLib", StringComparison.Ordinal));
-        var packages = assetsPath is null ? [] : PackageCompilePaths(assetsPath);
-        var paths = platform.Concat(other).Concat(packages)
-            .GroupBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .ToList();
-        if (includeMain)
-            paths.Add(typeof(IAlgorithm<>).Assembly.Location);
-
-        return [.. paths.Select(path => (MetadataReference)MetadataReference.CreateFromFile(path))];
-    }
-
-    private static string[] PackageCompilePaths(string assetsPath)
-    {
-        using var document = JsonDocument.Parse(File.ReadAllText(assetsPath));
-        var root = document.RootElement;
-        var packageFolders = root.GetProperty("packageFolders").EnumerateObject().Select(folder => folder.Name).ToArray();
-        var libraries = root.GetProperty("libraries");
-        var target = root.GetProperty("targets").EnumerateObject().First().Value;
-        var paths = new List<string>();
-
-        foreach (var dependency in target.EnumerateObject())
-        {
-            if (!libraries.TryGetProperty(dependency.Name, out var library) ||
-                library.GetProperty("type").GetString() != "package" ||
-                !dependency.Value.TryGetProperty("compile", out var compile))
-                continue;
-
-            var packagePath = library.GetProperty("path").GetString()!;
-            foreach (var asset in compile.EnumerateObject())
-            {
-                if (!asset.Name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var path = packageFolders.Select(folder => Path.Combine(folder, packagePath, asset.Name))
-                    .FirstOrDefault(File.Exists);
-                if (path is not null)
-                    paths.Add(path);
-            }
-        }
-
-        return [.. paths];
     }
 
     private static IEnumerable<string> ScanTree(CSharpCompilation compilation, SyntaxTree tree, string repositoryRoot)
@@ -502,16 +431,5 @@ public sealed class LayerDependencyTests
                 .Any(declaration => declaration.Name.ToString() == "HEAL.HeuristicLib.Analysis"))
             return "Hosting";
         return "Other";
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "HEAL.HeuristicLib.slnx")))
-                return directory.FullName;
-        }
-
-        throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 }

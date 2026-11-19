@@ -195,9 +195,9 @@ public sealed class ConcreteAlgorithmResolutionTests
             return new Executor();
         }
 
-        private sealed class Executor : IInterceptionExecutor<TSearchState>
+        private sealed class Executor : InterceptionExecutor<TSearchState>
         {
-            public TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => currentState;
+            public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random) => currentState;
         }
 
     }

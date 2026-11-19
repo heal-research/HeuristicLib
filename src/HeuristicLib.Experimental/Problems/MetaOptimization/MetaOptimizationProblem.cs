@@ -41,6 +41,6 @@ public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearch
     public override ObjectiveVector Evaluate(CompositeGenotype<RealVector, IntegerVector> solution, IRandomNumberGenerator random)
     {
         var algorithm = ResolutionScope.Create().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algBuilder(solution), problem);
-        return algorithm.RunToCompletion(random).Population.MinBy(x => x.ObjectiveVector, Objective.TotalOrderComparer)?.ObjectiveVector ?? Objective.Worst;
+        return algorithm.RunToCompletion(random).Population.EvaluatedCandidates.MinBy(x => x.ObjectiveVector, Objective.TotalOrderComparer)?.ObjectiveVector ?? Objective.Worst;
     }
 }

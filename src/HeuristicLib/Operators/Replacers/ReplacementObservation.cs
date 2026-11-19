@@ -11,13 +11,12 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>One successful replacement call, with the requested count and the survivors it returned.</summary>
 /// <remarks>
 /// The search space and problem are read at the candidate's interfaces, so an observation fits every run over the
-/// candidate.
+/// candidate. Read the bound objective through <c>Problem.Objective</c>.
 /// </remarks>
 public sealed record ReplacementObservation<TCandidate>(
     IOperator<Replacement, TCandidate> Replacer,
     IReadOnlyList<EvaluatedCandidate<TCandidate>> PreviousPopulation,
     IReadOnlyList<EvaluatedCandidate<TCandidate>> OffspringPopulation,
-    ObjectiveDirections Objective,
     int Count,
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Replaced,
     ISearchSpace<TCandidate> SearchSpace,
@@ -26,19 +25,17 @@ public sealed record ReplacementObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Replacement, TCandidate, ReplacementObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Replacement, TCandidate> source, Action<ReplacementObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((IReplacementExecutor<TCandidate>)executor, source, record, problem);
+        new Executor((IReplacementExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IReplacementExecutor<TCandidate> executor,
-        IOperator<Replacement, TCandidate> replacer, Action<ReplacementObservation<TCandidate>> observe, TProblem problem)
-        : ReplacementExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IReplacementExecutor<TCandidate> executor,
+        IOperator<Replacement, TCandidate> replacer, Action<ReplacementObservation<TCandidate>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : ReplacementExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random)
         {
-            var replaced = executor.Replace(previousPopulation, offspringPopulation, objective, count, random);
-            observe(new ReplacementObservation<TCandidate>(replacer, previousPopulation, offspringPopulation, objective, count, replaced,
-                SearchSpace, Problem));
+            var replaced = executor.Replace(previousPopulation, offspringPopulation, count, random);
+            observe(new ReplacementObservation<TCandidate>(replacer, previousPopulation, offspringPopulation, count, replaced,
+                problem.SearchSpace, problem));
             return replaced;
         }
     }

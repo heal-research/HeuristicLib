@@ -316,13 +316,13 @@ public sealed class OperationBindingTests
                 typed.Resolve(Wrap((IOperator<Evaluation, RealVector>)source)).Evaluate(Candidates, random).ShouldBeEmpty();
                 break;
             case 4:
-                typed.Resolve(Wrap((IOperator<Selection, RealVector>)source)).Select(population, Problem.Objective, 3, random).ShouldBeSameAs(AllOperations.Population);
+                typed.Resolve(Wrap((IOperator<Selection, RealVector>)source)).Select(population, 3, random).ShouldBeSameAs(AllOperations.Population);
                 break;
             case 5:
                 typed.Resolve(Wrap((IOperator<Refinement, RealVector>)source)).Refine(Candidates, random).ShouldBeSameAs(AllOperations.Output);
                 break;
             case 6:
-                typed.Resolve(Wrap((IOperator<Replacement, RealVector>)source)).Replace(population, population, Problem.Objective, 3, random).ShouldBeSameAs(AllOperations.Population);
+                typed.Resolve(Wrap((IOperator<Replacement, RealVector>)source)).Replace(population, population, 3, random).ShouldBeSameAs(AllOperations.Population);
                 break;
             case 7:
                 typed.Resolve(Wrap((IOperator<Termination, RealVector>)source)).IsTerminalState(new ProbeState(), random).ShouldBeTrue();
@@ -477,9 +477,9 @@ public sealed class OperationBindingTests
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor<int>();
 
-        private sealed class Executor<TCandidate> : IMutationExecutor<TCandidate>
+        private sealed class Executor<TCandidate> : MutationExecutor<TCandidate>
         {
-            public IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) => parents;
+            public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random) => parents;
         }
     }
 
@@ -533,9 +533,9 @@ public sealed class OperationBindingTests
             public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) { source.Call(random); return Output; }
             // Empty objective output deliberately distinguishes input work from result cardinality.
             public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) { source.Call(random); return []; }
-            public IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) { source.Call(random); return Population; }
+            public IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, int count, IRandomNumberGenerator random) { source.Call(random); return Population; }
             public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) { source.Call(random); return Output; }
-            public IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) { source.Call(random); return Population; }
+            public IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, int count, IRandomNumberGenerator random) { source.Call(random); return Population; }
             public bool IsTerminalState(ISearchState state, IRandomNumberGenerator random) { source.Call(random); return true; }
             public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random) { source.Call(random); return currentState; }
         }

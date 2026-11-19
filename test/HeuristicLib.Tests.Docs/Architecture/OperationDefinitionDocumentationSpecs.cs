@@ -87,20 +87,17 @@ public sealed record EstimationObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Estimation, TCandidate> source, Action<EstimationObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((IEstimationExecutor<TCandidate>)executor, source, record, problem);
+        new Executor((IEstimationExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IEstimationExecutor<TCandidate> executor,
-        IOperator<Estimation, TCandidate> estimator, Action<EstimationObservation<TCandidate>> observe, TProblem problem)
+    private sealed class Executor(IEstimationExecutor<TCandidate> executor,
+        IOperator<Estimation, TCandidate> estimator, Action<EstimationObservation<TCandidate>> observe,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         : IEstimationExecutor<TCandidate>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private readonly TSearchSpace searchSpace = problem.SearchSpace;
-
         public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var estimates = executor.Estimate(candidates, random);
-            observe(new EstimationObservation<TCandidate>(estimator, candidates, estimates, searchSpace, problem));
+            observe(new EstimationObservation<TCandidate>(estimator, candidates, estimates, problem.SearchSpace, problem));
             return estimates;
         }
     }

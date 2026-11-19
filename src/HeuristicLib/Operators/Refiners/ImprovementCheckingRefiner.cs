@@ -3,7 +3,6 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -81,13 +80,11 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
     {
         var refiner = scope.Resolve(Refiner);
         var evaluator = scope.Resolve(Evaluator);
-        return new Executor<TRunSearchSpace, TRunProblem>(refiner, evaluator, Criterion, scope.Problem);
+        return new Executor(refiner, evaluator, Criterion, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(IRefinementExecutor<TCandidate> refiner, IEvaluationExecutor<TCandidate> evaluator, IImprovementCriterion criterion, TProblem problem)
-        : RefinementExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IRefinementExecutor<TCandidate> refiner, IEvaluationExecutor<TCandidate> evaluator, IImprovementCriterion criterion, IProblem problem)
+        : RefinementExecutor<TCandidate>
     {
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
@@ -104,7 +101,7 @@ public sealed record ImprovementCheckingRefiner<TCandidate>
             var accepted = new TCandidate[candidates.Count];
             for (var index = 0; index < accepted.Length; index++)
             {
-                accepted[index] = criterion.IsImprovement(refinedObjectiveVectors[index], originalObjectiveVectors[index], Problem.Objective)
+                accepted[index] = criterion.IsImprovement(refinedObjectiveVectors[index], originalObjectiveVectors[index], problem.Objective)
                     ? refined[index]
                     : candidates[index];
             }

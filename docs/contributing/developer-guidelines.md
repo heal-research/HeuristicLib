@@ -231,9 +231,9 @@ Configurations expose their settings and child configurations. Wrapping and mult
 
 Executors keep resolved children and machinery private or protected. Use nested operator only for descendants at any depth.
 
-### § 4.12 Keep role authoring hierarchies symmetric
+### § 4.12 Keep executor dependencies explicit
 
-Keep configuration and executor authoring hierarchies symmetric. Every full role base has a matching executor base and derived types use that pair. An executor that reads neither the search space nor the problem derives from the candidate-only executor base, such as `MutationExecutor<TCandidate>`, or `AlgorithmExecutor<TSearchState>` for algorithms, instead of carrying run types it does not use. `WrappingOperator` and `MultiOperator` have none. Their hooks resolve current children and construct an executor holding those children, its private fields and explicit runtime dependencies.
+Use the role's executor base at every configuration arity, such as the candidate-only `MutationExecutor<TCandidate>`. Keep the search space, problem and other runtime dependencies the executor reads in its own constructor parameters or fields. The configuration arity determines the contracts available during construction. Executors for wrapping and multi operators also derive from the role's executor base. Only an executor serving several operations of one configuration implements their interfaces directly, because a class has one base. A concrete executor is a `private sealed class Executor` nested in its configuration; only the authoring bases are public executor types. The `WrappingOperator` and `MultiOperator` configuration bases have no executor counterparts of their own. Their hooks resolve current children and pass them to the executor.
 
 ### § 4.13 Give each child slot one public name
 
@@ -266,7 +266,7 @@ Operator scaffolding remains checked in source. Do not add source generators, ID
 
 Algorithms use a configuration paired with an explicitly authored executor. Private data belongs to executor fields and shared executors require explicit `Sharing`. Child operators and interceptors bind per construction. Active iterators retain their children, RNG forks, progress, timers and resources across pause/resume. See [Algorithms](/guide/fundamentals/algorithms).
 
-Iterative algorithms build an `IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` in their protected `CreateExecutor`. Both bases declare that return type, so an iterative algorithm cannot return an executor that skips its interceptor; the bound base derives from the bound `Algorithm` base, which converts the executor to the run's types, and declares `Interceptor` itself. The hook resolves the optional interceptor and other declared children through its scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before calling the hook.
+Iterative algorithms build an `IterativeAlgorithmExecutor<TSearchState>` in their protected `CreateExecutor`. Both configuration bases declare that return type, so an iterative algorithm cannot return an executor that skips its interceptor. The bound iterative base derives from the bound `Algorithm` base and declares its own `Interceptor`. The hook resolves the optional interceptor and other declared children through its scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before calling the hook.
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 
@@ -440,14 +440,13 @@ The ladder is also where the search space and problem type arguments legitimatel
 contract `IOperator<TOperation, TCandidate>`, but an authoring base that reads a search space or a problem still
 names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
 candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
-pair costs the author two type arguments and costs every consumer none. And for a stateless operator the
-configuration **is** the executable part: it has no separate executor to receive those values later, so it
-needs them in scope where it is written. Erasing them from the authoring layer would force stateless operators to
-grow an executor purely to carry types, which is the boilerplate this ladder exists to remove.
+pair costs the author two type arguments and costs every consumer none. And a stateless operator's code lives on
+the configuration, not on an executor of its own, so it needs those values in scope where it is written. Erasing
+them from the authoring layer would force stateless operators to grow an executor purely to carry types, which is the
+boilerplate this ladder exists to remove.
 
 - A reduced configuration base derives from the next fuller configuration base.
-- A reduced executor base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller executor base.
-- A reduced stateless base derives from the reduced configuration base and implements the role executor interface directly.
+- A reduced stateless base derives from the reduced configuration base. At the candidate-only arity it is its own executor, except for selection and replacement, whose base builds a private executor holding the problem to read its objective.
 
 ### § 8.5 Reduce only arities that describe operation inputs
 
@@ -455,7 +454,6 @@ Reduce type arguments consumed by the operator's own code. Do not reduce type ar
 
 | Base                                                    | Reduced arities | Why                                    |
 | ------------------------------------------------------- | :-------------: | -------------------------------------- |
-| `Mutator`, `MutationExecutor`                           |       Yes       | No owned child                         |
 | `StatelessMutator`, `Mutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
 | `WrappingOperator`, `MultiOperator`                     |       No        | Type arguments describe child slots    |
 

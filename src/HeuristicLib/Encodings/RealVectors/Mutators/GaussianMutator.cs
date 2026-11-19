@@ -50,13 +50,13 @@ public record GaussianMutator
         new Executor(MutationRate, MutationStrength, scope.ResolveOptional(MutationStrengthAdaptation), searchSpace: scope.SearchSpace);
 
     private sealed class Executor(double mutationRate, double mutationStrength, IAdaptation? adaptation, BoundedRealVectorSearchSpace searchSpace)
-        : MutationExecutor<RealVector, BoundedRealVectorSearchSpace>(searchSpace: searchSpace)
+        : MutationExecutor<RealVector>
     {
         public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             BatchExecution.Sequential(
                 parents,
-                (SearchSpace, mutationRate, mutationStrength: adaptation?.Apply(mutationStrength) ?? mutationStrength),
-                static (parent, itemRandom, parameters) => GaussianMutator.Mutate(parent, itemRandom, parameters.SearchSpace, parameters.mutationRate, parameters.mutationStrength),
+                (searchSpace, mutationRate, mutationStrength: adaptation?.Apply(mutationStrength) ?? mutationStrength),
+                static (parent, itemRandom, parameters) => GaussianMutator.Mutate(parent, itemRandom, parameters.searchSpace, parameters.mutationRate, parameters.mutationStrength),
                 random);
     }
 

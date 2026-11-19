@@ -79,15 +79,15 @@ public class ReplacerConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            ImmutableArray<IReplacementExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor(children);
+            ImmutableArray<IReplacementExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<IReplacementExecutor<int>> childReplacers)
-            : IReplacementExecutor<int>
+            : ReplacementExecutor<int>
         {
-            public IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
-                childReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random);
+            public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, int count, IRandomNumberGenerator random) =>
+                childReplacers[0].Replace(previousPopulation, offspringPopulation, count, random);
         }
     }
     private sealed record IdentityReplacer : WrappingOperator<Replacement, int>

@@ -65,11 +65,11 @@ public sealed class RoutedOperatorBaselineTests
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
             Save("selection", scope.Resolve(ChoosePerInvocation.Create<Selection, int>([new DrawingSelect(100, log), new DrawingSelect(200, log)], [1.0, 3.0]))
-                .Select(population, problem.Objective, 12, random).Select(x => x.Candidate));
+                .Select(population, 12, random).Select(x => x.Candidate));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
             Save("replacement", scope.Resolve(ChoosePerInvocation.Create<Replacement, int>([new DrawingReplace(100, log), new DrawingReplace(200, log)], [1.0, 3.0]))
-                .Replace(population, population, problem.Objective, 12, random).Select(x => x.Candidate));
+                .Replace(population, population, 12, random).Select(x => x.Candidate));
         }
         return snapshots;
     }

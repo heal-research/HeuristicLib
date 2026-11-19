@@ -36,39 +36,6 @@ public abstract record Interceptor<TCandidate, TSearchState>
     : Interceptor<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState;
 
-public abstract class InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IInterceptionExecutor<TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected InterceptionExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random);
-}
-
-public abstract class InterceptionExecutor<TCandidate, TSearchSpace, TSearchState>
-    : IInterceptionExecutor<TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TSearchState : class, ISearchState
-{
-    protected TSearchSpace SearchSpace { get; }
-
-    protected InterceptionExecutor(TSearchSpace searchSpace)
-    {
-        SearchSpace = searchSpace;
-    }
-
-    public abstract TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random);
-}
-
 public abstract class InterceptionExecutor<TSearchState>
     : IInterceptionExecutor<TSearchState>
     where TSearchState : class, ISearchState

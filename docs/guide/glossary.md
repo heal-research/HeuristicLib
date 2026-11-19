@@ -553,7 +553,7 @@ Configuration is accepted shorthand for configuration node when the context is c
 
 Algorithms and consumer-defined roles build the same way. An algorithm's `CreateExecutor<TSearchSpace, TProblem>(scope)` receives a scope typed to the run and its search state; an algorithm bound to a search space and problem overrides a `CreateExecutor` typed to them instead. A consumer-defined role implements `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope scope)`. The hook is runtime machinery, not a configuration value strategy.
 
-Iterative algorithms return an `IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` from that hook. The algorithm author resolves the optional interceptor and other declared children through the scope and passes them to the iterative executor constructor.
+Iterative algorithms return an `IterativeAlgorithmExecutor<TSearchState>` from that hook. The algorithm author resolves the optional interceptor and other declared children through the scope and passes them to the iterative executor constructor.
 
 The term does not imply a common child-enumeration API or a universal operation on all nodes.
 
@@ -631,7 +631,7 @@ Status: `Canonical`
 
 An executor is the executing kind of execution node: a runtime object that performs one or more operations of an algorithm or operator. It exposes callable methods such as `Mutate`, `Evaluate` or `RunStreamingAsync`. It holds resolved children, private fields and any explicitly shared resources. Private data lives with its executor.
 
-Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Use explicit `Sharing` to keep an executor across child scopes. A context-free stateless configuration can also serve as its own executor; other stateless helpers retain the binding in a small executor.
+Algorithms and other executors call its operation methods. One executor can receive many invocations and can support several operations. Each construction has independent private fields. Use explicit `Sharing` to keep an executor across child scopes. A context-free stateless configuration can also serve as its own executor. Stateless selectors and replacers use a separate executor even at candidate-only arity, because it reads the bound problem's objective at each invocation.
 
 The common interface is `IExecutor : IExecutionNode`. Operation-specific interfaces include `IMutationExecutor` and `IEvaluationExecutor`; algorithms use `IAlgorithmExecutor`. The term does not give the object scheduling, threading, disposal or run-lifecycle responsibilities.
 

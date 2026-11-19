@@ -34,11 +34,11 @@ public sealed record RoundRobinMutator<TCandidate> : MultiOperator<Mutation, TCa
 
     private sealed class Executor(
         ImmutableArray<IMutationExecutor<TCandidate>> children)
-        : IMutationExecutor<TCandidate>
+        : MutationExecutor<TCandidate>
     {
         private int nextChild;
 
-        public IReadOnlyList<TCandidate> Mutate(
+        public override IReadOnlyList<TCandidate> Mutate(
             IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
             var offspring = children[nextChild].Mutate(parents, random);

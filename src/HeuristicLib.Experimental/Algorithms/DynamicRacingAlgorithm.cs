@@ -136,7 +136,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
     /// <see cref="DynamicProblem{TSelf, TCandidate, TSearchSpace}"/>, so it names the search space and problem it is
     /// written for and the base reconciles them with the run's.
     /// </remarks>
-    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    protected override IterativeAlgorithmExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var interceptor = scope.ResolveOptional(Interceptor);
         var creator = scope.Resolve<MetaOptimizationGenotype, MetaOptimizationSearchSpace, MetaOptimizationProblem>(Creator, EmptyMetaOptProblem);
@@ -162,7 +162,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         int modelObservationInterval,
         Func<ObjectiveVector, double> objectiveValueSelector,
         TProblem problem)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(interceptor, problem)
+        : IterativeAlgorithmExecutor<TSearchState>(interceptor)
     {
         private readonly Dictionary<string, HallOfFameEntry> hallOfFame = [];
         private MetaOptimizationGenotype? incumbent;
@@ -188,23 +188,23 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
                     entries.Add(CreateEntry(challenger, entries[0].Algorithm, previousState, random));
                 }
 
-                var epoch = Problem.CurrentEpoch;
-                while (Problem.CurrentEpoch == epoch)
+                var epoch = problem.CurrentEpoch;
+                while (problem.CurrentEpoch == epoch)
                 {
                     var lowest = entries.MinBy(x => x.UsedCount);
-                    _ = lowest!.MakeMove(Problem, random, CancellationToken.None);
+                    _ = lowest!.MakeMove(problem, random, CancellationToken.None);
                     if (CanTerminateRace(entries))
                         break;
                 }
 
-                var winner = SelectWinner(entries, Problem.Objective);
+                var winner = SelectWinner(entries, problem.Objective);
                 incumbent = entries[winner].Candidate;
                 incumbentAlgorithm = entries[winner].Algorithm;
                 completedRaces++;
                 completedEpochs++;
                 RecordSuccess(incumbent);
 
-                nextState = stateMerger.Merge(entries.Select(x => x.LastState!).ToArray(), Problem.Objective);
+                nextState = stateMerger.Merge(entries.Select(x => x.LastState!).ToArray(), problem.Objective);
             }
             catch (Exception exception)
             {
@@ -237,9 +237,9 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private TSearchState ExecuteBurnInStep(TSearchState? previousState, IRandomNumberGenerator random)
         {
             using var entry = CreateEntry(incumbent!, incumbentAlgorithm, previousState, random);
-            var epoch = Problem.CurrentEpoch;
-            while (Problem.CurrentEpoch == epoch)
-                _ = entry.MakeMove(Problem, random, CancellationToken.None);
+            var epoch = problem.CurrentEpoch;
+            while (problem.CurrentEpoch == epoch)
+                _ = entry.MakeMove(problem, random, CancellationToken.None);
 
             incumbentAlgorithm = entry.Algorithm;
             completedEpochs++;
@@ -277,14 +277,14 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
 
             // Early termination projects a contender forward to the end of the epoch, so it needs a schedule that
             // measures epochs in the same evaluations the projection is made in.
-            if (Problem.EpochSchedule is not EvaluationCountSchedule { EvaluationsPerEpoch: var predictionHorizon })
+            if (problem.EpochSchedule is not EvaluationCountSchedule { EvaluationsPerEpoch: var predictionHorizon })
                 return false;
 
-            var bestIndex = SelectWinner(entries, Problem.Objective);
+            var bestIndex = SelectWinner(entries, problem.Objective);
             var best = entries[bestIndex];
             var requiredEvaluationCount = predictionHorizon * earlyTerminationStrength;
             return entries.Where((_, index) => index != bestIndex)
-                .All(contender => CanTerminateContender(best, contender, requiredEvaluationCount, predictionHorizon, Problem.Objective));
+                .All(contender => CanTerminateContender(best, contender, requiredEvaluationCount, predictionHorizon, problem.Objective));
         }
 
         private bool CanTerminateContender(Entry best, Entry contender, double requiredEvaluationCount, double predictionHorizon, ObjectiveDirections objective)
@@ -314,7 +314,7 @@ public record DynamicRacingAlgorithm<TCandidate, TSearchSpace, TProblem, TSearch
         private Entry CreateEntry(MetaOptimizationGenotype candidate, TAlgorithm? sourceAlgorithm, TSearchState? initialState, IRandomNumberGenerator random)
         {
             var algorithm = algorithmBuilder(candidate, sourceAlgorithm);
-            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, Problem, random, initialState, CancellationToken.None, scope, modelObservationInterval, objectiveValueSelector);
+            return new Entry(algorithm, evaluatorSelector(algorithm), candidate, problem, random, initialState, CancellationToken.None, scope, modelObservationInterval, objectiveValueSelector);
         }
 
         private MetaOptimizationGenotype CreateChallenger(MetaOptimizationGenotype currentIncumbent, IRandomNumberGenerator random) =>

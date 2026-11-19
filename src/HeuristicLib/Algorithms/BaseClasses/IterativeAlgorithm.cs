@@ -9,7 +9,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Algorithms;
 
 /// <remarks>
-/// An iterative algorithm builds an <see cref="IterativeAlgorithmExecutor{TCandidate, TSearchSpace, TProblem, TSearchState}"/>
+/// An iterative algorithm builds an <see cref="IterativeAlgorithmExecutor{TSearchState}"/>
 /// in its <c>CreateExecutor</c> hook and passes it the resolved <see cref="Interceptor"/>; the executor base applies it
 /// after every step. The hook's return type requires that executor, so no iterative algorithm skips its interceptor.
 /// </remarks>
@@ -28,7 +28,7 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
-    protected abstract override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+    protected abstract override IterativeAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
@@ -38,8 +38,8 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 /// <see cref="IterativeAlgorithm{TSelf, TCandidate, TSearchState}"/>.
 /// <para>
 /// A run this algorithm was not written for is reported when the execution graph is built. The bound algorithm base
-/// converts the executor to the run's types, so this base declares the interceptor itself rather than deriving from
-/// the agnostic iterative base.
+/// checks the run's types and supplies the typed scope to the hook. This base derives from that bound base and
+/// declares its own interceptor.
 /// </para>
 /// </remarks>
 public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
@@ -64,23 +64,13 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProb
     /// pair receive the same executor. Validate the configuration first and look up run results through the scope.
     /// Keep private mutable data in executor fields; explicit sharing retains the executor across child scopes.
     /// </remarks>
-    protected abstract override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
+    protected abstract override IterativeAlgorithmExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
-public abstract class IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public abstract class IterativeAlgorithmExecutor<TSearchState>(IInterceptionExecutor<TSearchState>? interceptor)
+    : AlgorithmExecutor<TSearchState>
     where TSearchState : class, ISearchState
 {
-    private readonly IInterceptionExecutor<TSearchState>? interceptor;
-
-    protected IterativeAlgorithmExecutor(IInterceptionExecutor<TSearchState>? interceptor, TProblem problem)
-        : base(problem)
-    {
-        this.interceptor = interceptor;
-    }
-
     protected abstract TSearchState ExecuteStep(TSearchState? previousState, IRandomNumberGenerator random);
 
     protected virtual bool TryExecuteStep(TSearchState? previousState, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)

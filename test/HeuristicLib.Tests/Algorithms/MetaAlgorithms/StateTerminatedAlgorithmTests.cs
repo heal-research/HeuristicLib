@@ -203,14 +203,12 @@ public class StateTerminatedAlgorithmTests
     private sealed record DrawingIterativeAlgorithm(List<double> Draws)
         : IterativeAlgorithm<DrawingIterativeAlgorithm, int, PopulationState<int>>
     {
-        protected override IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        protected override IterativeAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
             ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
-            new Executor<TSearchSpace, TProblem>(Draws, scope.Problem);
+            new Executor(Draws);
 
-        private sealed class Executor<TSearchSpace, TProblem>(List<double> draws, TProblem problem)
-            : IterativeAlgorithmExecutor<int, TSearchSpace, TProblem, PopulationState<int>>(null, problem)
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(List<double> draws)
+            : IterativeAlgorithmExecutor<PopulationState<int>>(null)
         {
             protected override PopulationState<int> ExecuteStep(PopulationState<int>? previousState, IRandomNumberGenerator random)
             {
@@ -265,16 +263,12 @@ public class StateTerminatedAlgorithmTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
             Events.Add("terminator");
-            return new Executor<TSearchSpace, TProblem, TSearchState>(scope.Problem);
+            return new Executor<TSearchState>();
         }
 
-        private sealed class Executor<TSearchSpace, TProblem, TSearchState> : TerminationExecutor<int, TSearchSpace, TProblem, TSearchState>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor<TSearchState> : TerminationExecutor<TSearchState>
             where TSearchState : class, ISearchState
         {
-            public Executor(TProblem problem) : base(problem) { }
-
             public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => false;
         }
     }

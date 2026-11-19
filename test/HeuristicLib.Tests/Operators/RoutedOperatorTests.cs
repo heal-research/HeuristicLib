@@ -118,11 +118,10 @@ public class RoutedOperatorTests
         var selector = ChoosePerInvocation.Create(
             [new FirstCandidatesSelector(), new LastCandidatesSelector()],
             [1.0, 1.0]);
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var population = CreateEvaluatedCandidates(1, 2, 3);
         var executor = ResolutionScope.Create().ResolveSelector(selector);
 
-        var selected = executor.Select(population, problem.Objective, 2, new SequenceRandomNumberGenerator(0.8));
+        var selected = executor.Select(population, 2, new SequenceRandomNumberGenerator(0.8));
 
         selected.Select(candidate => candidate.Candidate).ShouldBe([2, 3]);
     }
@@ -133,10 +132,9 @@ public class RoutedOperatorTests
         var replacer = ChoosePerInvocation.Create(
             [new PreviousCandidatesReplacer(), new OffspringCandidatesReplacer()],
             [1.0, 1.0]);
-        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var executor = ResolutionScope.Create().ResolveReplacer(replacer);
 
-        var replaced = executor.Replace(CreateEvaluatedCandidates(1, 2), CreateEvaluatedCandidates(3, 4), problem.Objective, 2, new SequenceRandomNumberGenerator(0.8));
+        var replaced = executor.Replace(CreateEvaluatedCandidates(1, 2), CreateEvaluatedCandidates(3, 4), 2, new SequenceRandomNumberGenerator(0.8));
 
         replaced.Select(candidate => candidate.Candidate).ShouldBe([3, 4]);
     }
@@ -785,11 +783,11 @@ public class RoutedOperatorTests
             return new Executor();
         }
 
-        private sealed class Executor : IMutationExecutor<int>
+        private sealed class Executor : MutationExecutor<int>
         {
             private int invocations;
 
-            public IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
             {
                 var calls = ++invocations;
                 return parents.Select(parent => parent + calls).ToArray();
@@ -810,11 +808,11 @@ public class RoutedOperatorTests
             new Executor(Callback, scope.Problem);
 
         private sealed class Executor(MutationCallback callback, IProblem<int, DummySearchSpace<int>> problem)
-            : IMutationExecutor<int>
+            : MutationExecutor<int>
         {
             private readonly DummySearchSpace<int> searchSpace = problem.SearchSpace;
 
-            public IReadOnlyList<int> Mutate(
+            public override IReadOnlyList<int> Mutate(
                 IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
                 callback(parents, random, searchSpace, problem);
         }

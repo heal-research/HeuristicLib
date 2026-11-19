@@ -15,9 +15,9 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TProblem, T
 
     public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    private sealed class Executor(StatelessTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> configuration, TProblem problem) : TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
+    private sealed class Executor(StatelessTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> configuration, TProblem problem) : TerminationExecutor<TSearchState>
     {
-        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => configuration.IsTerminalState(state, random, SearchSpace, Problem);
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => configuration.IsTerminalState(state, random, problem.SearchSpace, problem);
     }
 }
 
@@ -29,9 +29,9 @@ public abstract record StatelessTerminator<TCandidate, TSearchSpace, TSearchStat
 
     public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    private sealed class Executor(StatelessTerminator<TCandidate, TSearchSpace, TSearchState> configuration, TSearchSpace searchSpace) : TerminationExecutor<TCandidate, TSearchSpace, TSearchState>(searchSpace)
+    private sealed class Executor(StatelessTerminator<TCandidate, TSearchSpace, TSearchState> configuration, TSearchSpace searchSpace) : TerminationExecutor<TSearchState>
     {
-        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => configuration.IsTerminalState(state, random, SearchSpace);
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => configuration.IsTerminalState(state, random, searchSpace);
     }
 }
 

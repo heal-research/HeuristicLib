@@ -116,7 +116,7 @@ public class AccumulatingAnalyzerTests
         });
         var generations = algorithm.Iterations.Observing(observation =>
         {
-            graph.SetAsNewGeneration(observation.State.Population.OrderBy(candidate => candidate.ObjectiveVector,
+            graph.SetAsNewGeneration(observation.State.Population.EvaluatedCandidates.OrderBy(candidate => candidate.ObjectiveVector,
                 observation.Problem.Objective.RequireTotalOrder()).Select(candidate => candidate.Candidate));
             var row = graph.AverageDescendantRanksOfPreviousGeneration();
             if (!row.IsEmpty)
@@ -188,9 +188,9 @@ public class AccumulatingAnalyzerTests
     {
         protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SketchSearchSpace, SketchProblem, TRunSearchState> scope) => new Executor();
 
-        private sealed class Executor : IEvaluationExecutor<int>
+        private sealed class Executor : EvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
                 [.. candidates.Select(candidate => new ObjectiveVector(candidate, 10 - candidate))];
         }
     }

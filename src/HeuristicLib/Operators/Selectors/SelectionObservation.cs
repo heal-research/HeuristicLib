@@ -11,12 +11,11 @@ namespace HEAL.HeuristicLib.Operators;
 /// <summary>One successful selection call, with the requested count and the candidates it selected.</summary>
 /// <remarks>
 /// The search space and problem are read at the candidate's interfaces, so an observation fits every run over the
-/// candidate.
+/// candidate. Read the bound objective through <c>Problem.Objective</c>.
 /// </remarks>
 public sealed record SelectionObservation<TCandidate>(
     IOperator<Selection, TCandidate> Selector,
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Population,
-    ObjectiveDirections Objective,
     int Count,
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Selected,
     ISearchSpace<TCandidate> SearchSpace,
@@ -25,18 +24,16 @@ public sealed record SelectionObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Selection, TCandidate> source, Action<SelectionObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((ISelectionExecutor<TCandidate>)executor, source, record, problem);
+        new Executor((ISelectionExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(ISelectionExecutor<TCandidate> executor,
-        IOperator<Selection, TCandidate> selector, Action<SelectionObservation<TCandidate>> observe, TProblem problem)
-        : SelectionExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ISelectionExecutor<TCandidate> executor,
+        IOperator<Selection, TCandidate> selector, Action<SelectionObservation<TCandidate>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
         {
-            var selected = executor.Select(population, objective, count, random);
-            observe(new SelectionObservation<TCandidate>(selector, population, objective, count, selected, SearchSpace, Problem));
+            var selected = executor.Select(population, count, random);
+            observe(new SelectionObservation<TCandidate>(selector, population, count, selected, problem.SearchSpace, problem));
             return selected;
         }
     }

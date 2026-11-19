@@ -69,7 +69,7 @@ public record EvolutionStrategy<TCandidate>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IterativeAlgorithmExecutor<PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
     {
         var interceptor = scope.ResolveOptional(Interceptor);
@@ -80,11 +80,11 @@ public record EvolutionStrategy<TCandidate>
         var selector = scope.Resolve(Selector);
         var crossover = scope.ResolveOptional(Crossover);
         var refiner = scope.ResolveOptional(Refiner);
-        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, mutator, adaptation, selector, crossover, refiner,
+        return new Executor(interceptor, evaluator, creator, mutator, adaptation, selector, crossover, refiner,
             PopulationSize, NumberOfChildren, Strategy, MaximumGenerations, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(
+    private sealed class Executor(
         IInterceptionExecutor<PopulationState<TCandidate>>? interceptor,
         IEvaluationExecutor<TCandidate> evaluator,
         ICreationExecutor<TCandidate> creator,
@@ -96,10 +96,8 @@ public record EvolutionStrategy<TCandidate>
         int populationSize,
         int numberOfChildren,
         EvolutionStrategyType strategy,
-        int? maximumGenerations, TProblem problem)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        int? maximumGenerations, IProblem problem)
+        : IterativeAlgorithmExecutor<PopulationState<TCandidate>>(interceptor)
     {
         protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState) =>
             yieldedStateCount >= maximumGenerations;
@@ -123,14 +121,14 @@ public record EvolutionStrategy<TCandidate>
 
             if (crossover is null)
             {
-                var parentSolutions = selector.Select(previousState.Population.EvaluatedCandidates, Problem.Objective, numberOfChildren, random);
+                var parentSolutions = selector.Select(previousState.Population.EvaluatedCandidates, numberOfChildren, random);
                 parents = parentSolutions.Select(x => x.Candidate).ToArray();
                 parentQualities = parentSolutions.Select(x => x.ObjectiveVector).ToArray();
             }
             else
             {
-                var parentSolutions = selector.Select(previousState.Population.EvaluatedCandidates, Problem.Objective, numberOfChildren * 2, random);
-                parents = crossover.Cross(parentSolutions.ToParents(Problem.Objective), random);
+                var parentSolutions = selector.Select(previousState.Population.EvaluatedCandidates, numberOfChildren * 2, random);
+                parents = crossover.Cross(parentSolutions.ToParents(problem.Objective), random);
                 parentQualities = parentSolutions.Where((_, i) => i % 2 == 0).Select(x => x.ObjectiveVector).ToArray();
             }
 
@@ -149,7 +147,7 @@ public record EvolutionStrategy<TCandidate>
                 // children than parents.
                 var comparisons = parentQualities.Zip(evaluatedChildren).ToArray();
                 var successes = comparisons.Count(
-                    pair => pair.Second.ObjectiveVector.CompareTo(pair.First, Problem.Objective) == DominanceRelation.Dominates);
+                    pair => pair.Second.ObjectiveVector.CompareTo(pair.First, problem.Objective) == DominanceRelation.Dominates);
                 var successRate = comparisons.Length == 0 ? 0.0 : successes / (double)comparisons.Length;
                 adaptation.Factor *= successRate switch
                 {
@@ -162,8 +160,8 @@ public record EvolutionStrategy<TCandidate>
             var population = Population.From(evaluatedChildren);
             var newPopulation = strategy switch
             {
-                EvolutionStrategyType.Comma => ElitismReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, Problem.Objective, numberOfChildren, 0),
-                EvolutionStrategyType.Plus => PlusSelectionReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, Problem.Objective, numberOfChildren),
+                EvolutionStrategyType.Comma => ElitismReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren, 0),
+                EvolutionStrategyType.Plus => PlusSelectionReplacer.Replace(previousState.Population.EvaluatedCandidates, population.EvaluatedCandidates, problem.Objective, numberOfChildren),
                 _ => throw new InvalidOperationException($"Unknown strategy {strategy}")
             };
 

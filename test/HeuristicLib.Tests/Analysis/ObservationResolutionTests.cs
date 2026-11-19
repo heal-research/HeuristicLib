@@ -185,14 +185,13 @@ public class ObservationResolutionTests
                 observation.Selector.ShouldBeSameAs(source);
                 observation.Selected.ShouldBeSameAs(selected);
                 observation.Population.ShouldBeSameAs(population);
-                observation.Objective.ShouldBe(problem.Objective);
                 observation.Count.ShouldBe(1);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
             (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
-            executor => executor.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(1))
+            executor => executor.Select(population, 1, RandomNumberGenerator.Create(1))
                 .ShouldBeSameAs(selected));
     }
 
@@ -234,14 +233,13 @@ public class ObservationResolutionTests
                 observation.Replaced.ShouldBeSameAs(replaced);
                 observation.PreviousPopulation.ShouldBeSameAs(previous);
                 observation.OffspringPopulation.ShouldBeSameAs(offspring);
-                observation.Objective.ShouldBe(problem.Objective);
                 observation.Count.ShouldBe(1);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
             }),
             (scope, observed) => scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, problem),
-            executor => executor.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1))
+            executor => executor.Replace(previous, offspring, 1, RandomNumberGenerator.Create(1))
                 .ShouldBeSameAs(replaced));
     }
 

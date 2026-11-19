@@ -77,11 +77,11 @@ public sealed record DynamicCachingEvaluator<TCandidate, TKey>
         IEvaluationExecutor<TCandidate> childEvaluator,
         IDynamicProblem<TCandidate, ISearchSpace<TCandidate>> problem,
         ICacheKeySelector<TCandidate, TKey> keySelector,
-        DynamicEvaluationCache<TKey> cache) : EvaluationExecutor<TCandidate, ISearchSpace<TCandidate>, IDynamicProblem<TCandidate, ISearchSpace<TCandidate>>>(problem)
+        DynamicEvaluationCache<TKey> cache) : EvaluationExecutor<TCandidate>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            return cache.Evaluate(candidates, keySelector, Problem,
+            return cache.Evaluate(candidates, keySelector, problem,
                 missing => childEvaluator.Evaluate(missing, random));
         }
     }

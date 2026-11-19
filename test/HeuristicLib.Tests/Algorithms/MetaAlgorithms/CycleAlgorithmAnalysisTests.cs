@@ -36,13 +36,11 @@ public class CycleAlgorithmAnalysisTests
     {
 
         protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
-        new Executor(scope.Problem);
+        new Executor();
 
         private sealed class Executor
-            : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+            : EvaluationExecutor<int>
         {
-            public Executor(IProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
-
             private int value;
 
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)

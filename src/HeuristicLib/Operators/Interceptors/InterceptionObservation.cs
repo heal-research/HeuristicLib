@@ -28,18 +28,16 @@ public sealed record InterceptionObservation<TCandidate, TSearchState>(
 {
     static IExecutor IInvocationObservation<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem, TRunSearchState>(
         IExecutor executor, IOperator<Interception<TSearchState>, TCandidate> source, Action<InterceptionObservation<TCandidate, TSearchState>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((IInterceptionExecutor<TSearchState>)executor, source, record, problem);
+        new Executor((IInterceptionExecutor<TSearchState>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IInterceptionExecutor<TSearchState> executor,
-        IOperator<Interception<TSearchState>, TCandidate> interceptor, Action<InterceptionObservation<TCandidate, TSearchState>> observe, TProblem problem)
-        : InterceptionExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IInterceptionExecutor<TSearchState> executor,
+        IOperator<Interception<TSearchState>, TCandidate> interceptor, Action<InterceptionObservation<TCandidate, TSearchState>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : InterceptionExecutor<TSearchState>
     {
         public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random)
         {
             var state = executor.Transform(currentState, previousState, random);
-            observe(new InterceptionObservation<TCandidate, TSearchState>(interceptor, currentState, previousState, state, SearchSpace, Problem));
+            observe(new InterceptionObservation<TCandidate, TSearchState>(interceptor, currentState, previousState, state, problem.SearchSpace, problem));
             return state;
         }
     }

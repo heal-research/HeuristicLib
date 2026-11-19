@@ -91,14 +91,14 @@ public class EvaluatorConfigurationEqualityTests
         protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
-            return new Executor(children);
+            System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<IEvaluationExecutor<int>> childEvaluators)
-            : IEvaluationExecutor<int>
+            : EvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
                 childEvaluators[0].Evaluate(candidates, random);
         }
     }

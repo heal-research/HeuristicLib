@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 using HEAL.HeuristicLib.Random;
@@ -44,13 +45,16 @@ public sealed record CountingMutation : Mutator<RealVector>
 public sealed record ContextualMutation(IOperator<Mutation, RealVector> ChildOperator)
     : Mutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
 {
-    protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
-        new Executor(scope.Resolve(ChildOperator));
+    protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
+    {
+        var childOperator = scope.Resolve(ChildOperator);
+        return new Executor(childOperator);
+    }
 
     private sealed class Executor(IMutationExecutor<RealVector> child)
-        : IMutationExecutor<RealVector>
+        : HEAL.HeuristicLib.Operators.Mutators.MutationExecutor<RealVector>
     {
-        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
+        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             child.Mutate(parents, random);
     }
 }
@@ -118,9 +122,9 @@ public sealed record IdentityInterceptor(ProbeLog Log) : IOperator<Interception<
         return new Executor();
     }
 
-    private sealed class Executor : IInterceptionExecutor<ProbeState>
+    private sealed class Executor : InterceptionExecutor<ProbeState>
     {
-        public ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random) => currentState;
+        public override ProbeState Transform(ProbeState currentState, ProbeState? previousState, IRandomNumberGenerator random) => currentState;
     }
 
 }
@@ -131,9 +135,9 @@ public sealed record NodeTokenMutation(ProbeLog Log) : Mutator<RealVector>
     protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, TRunSearchState> scope) =>
         new Executor(++Log.Constructions);
 
-    private sealed class Executor(int token) : IMutationExecutor<RealVector>
+    private sealed class Executor(int token) : HEAL.HeuristicLib.Operators.Mutators.MutationExecutor<RealVector>
     {
-        public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
+        public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
             parents.Select(_ => new RealVector((double)token)).ToArray();
     }
 }

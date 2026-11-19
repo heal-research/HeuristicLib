@@ -81,24 +81,6 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
     protected abstract IAlgorithmExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
-public abstract class AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IAlgorithmExecutor<TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected AlgorithmExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
-}
-
 public abstract class AlgorithmExecutor<TSearchState> : IAlgorithmExecutor<TSearchState>
     where TSearchState : class, ISearchState
 {

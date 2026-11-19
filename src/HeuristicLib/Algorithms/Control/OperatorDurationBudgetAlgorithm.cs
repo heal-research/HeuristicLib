@@ -55,37 +55,34 @@ public sealed record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
     {
         scope.Share(Duration);
         var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, scope.Problem);
-        return new OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, scope.Resolve(Duration), MaximumDuration, scope.Problem);
-    }
-}
-
-public sealed class OperatorDurationBudgetAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    private readonly IAlgorithmExecutor<TSearchState> algorithm;
-    private readonly DurationAccumulator duration;
-    private readonly TimeSpan maximumDuration;
-
-    public OperatorDurationBudgetAlgorithmExecutor(IAlgorithmExecutor<TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration, TProblem problem)
-        : base(problem)
-    {
-        this.algorithm = algorithm;
-        this.duration = duration;
-        this.maximumDuration = maximumDuration;
+        var duration = scope.Resolve(Duration);
+        return new Executor(algorithm, duration, MaximumDuration);
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    private sealed class Executor
+        : AlgorithmExecutor<TSearchState>
     {
-        await foreach (var state in algorithm.RunStreamingAsync(random, initialState, ct))
+        private readonly IAlgorithmExecutor<TSearchState> algorithm;
+        private readonly DurationAccumulator duration;
+        private readonly TimeSpan maximumDuration;
+
+        public Executor(IAlgorithmExecutor<TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
         {
-            yield return state;
+            this.algorithm = algorithm;
+            this.duration = duration;
+            this.maximumDuration = maximumDuration;
+        }
 
-            if (duration.CurrentDuration >= maximumDuration)
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            await foreach (var state in algorithm.RunStreamingAsync(random, initialState, ct))
             {
-                yield break;
+                yield return state;
+
+                if (duration.CurrentDuration >= maximumDuration)
+                {
+                    yield break;
+                }
             }
         }
     }

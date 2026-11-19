@@ -308,9 +308,9 @@ public class AlgorithmRefinementTests
             public int Candidates;
         }
 
-        private sealed class Executor(Counter counter) : IRefinementExecutor<RealVector>
+        private sealed class Executor(Counter counter) : RefinementExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
             {
                 counter.Batches++;
                 counter.Candidates += candidates.Count;

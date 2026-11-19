@@ -29,16 +29,6 @@ public abstract record WrappingAlgorithm<TCandidate, TSearchState>(IAlgorithm<TC
         where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 }
 
-public abstract class WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    IAlgorithmExecutor<TSearchState> childAlgorithm, TProblem problem)
-    : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    protected IAlgorithmExecutor<TSearchState> ChildAlgorithm { get; } = childAlgorithm;
-}
-
 public abstract class WrappingAlgorithmExecutor<TSearchState>(IAlgorithmExecutor<TSearchState> childAlgorithm)
     : AlgorithmExecutor<TSearchState>
     where TSearchState : class, ISearchState

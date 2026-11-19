@@ -29,7 +29,7 @@ public class AlgorithmInterfaceCapabilitySpecs
             RandomNumberGenerator.Create(seed: 42),
             ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.Count().ShouldBe(20);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(20);
     }
 
     /// <summary>

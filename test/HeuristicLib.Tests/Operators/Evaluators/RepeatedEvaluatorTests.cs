@@ -47,17 +47,15 @@ public class RepeatedEvaluatorTests
         protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
         new Executor(scope.Problem);
 
-        private sealed class Executor
-            : EvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(FuncProblem<int, DummySearchSpace<int>> problem)
+            : EvaluationExecutor<int>
         {
-            public Executor(FuncProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
-
             private int invocations;
 
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 var calls = Interlocked.Increment(ref invocations);
-                return candidates.Select(_ => Problem.Evaluate(calls, random)).ToArray();
+                return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
             }
         }
     }

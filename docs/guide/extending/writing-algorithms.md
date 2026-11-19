@@ -11,67 +11,15 @@ An algorithm has two parts:
 
 Each call to `RunStreaming` or `RunToCompletionAsync` starts an independent root execution. Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes construct their own executors unless an ancestor explicitly shares a configuration through `Sharing`.
 
-For custom streaming control flow, derive the executor from `AlgorithmExecutor<TSearchState>` when it reads neither the search space nor the problem. Use `AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` when it needs those bound contracts. Its protected get-only `Problem` and `SearchSpace` properties retain the constructor context for derived executors. A wrapper can use the corresponding `WrappingAlgorithmExecutor<TSearchState>` or problem-bound `WrappingAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>` to retain its resolved `ChildAlgorithm`.
+For custom streaming control flow, derive the executor from `AlgorithmExecutor<TSearchState>`. Keep the search space or problem in the executor constructor when it reads that contract. A wrapper can use `WrappingAlgorithmExecutor<TSearchState>` to retain its resolved `ChildAlgorithm`.
 
 ## Implement an iterative algorithm
 
 Derive from `IterativeAlgorithm` when one previous state produces one next state. This example creates and evaluates one candidate per step:
 
-```csharp
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/AlgorithmAuthoringDocumentationSpecs.cs#iterative-algorithm-imports{csharp}
 
-public sealed record SingleCreateAlgorithm
-    : IterativeAlgorithm<SingleCreateAlgorithm, RealVector, SingleSolutionState<RealVector>>
-{
-    public required IOperator<Creation, RealVector> Creator { get; init; }
-
-    public IOperator<Evaluation, RealVector> Evaluator { get; init; } = new ProblemEvaluator<RealVector>();
-
-    public static Parameter<SingleCreateAlgorithm, IOperator<Creation, RealVector>> CreatorParameter { get; } =
-        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
-
-    public static Parameter<SingleCreateAlgorithm, IOperator<Evaluation, RealVector>> EvaluatorParameter { get; } =
-        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
-
-    public new static IReadOnlyList<IParameter> Parameters { get; } = [CreatorParameter, EvaluatorParameter];
-
-    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
-
-    protected override IterativeAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> CreateExecutor<TSearchSpace, TProblem>(
-        ResolutionScope<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>> scope)
-    {
-        var interceptor = scope.ResolveOptional(Interceptor);
-        var creator = scope.Resolve(Creator);
-        var evaluator = scope.Resolve(Evaluator);
-        return new Executor<TSearchSpace, TProblem>(interceptor, creator, evaluator, scope.Problem);
-    }
-
-    private sealed class Executor<TSearchSpace, TProblem>(
-        IInterceptionExecutor<SingleSolutionState<RealVector>>? interceptor,
-        ICreationExecutor<RealVector> creator,
-        IEvaluationExecutor<RealVector> evaluator, TProblem problem)
-        : IterativeAlgorithmExecutor<RealVector, TSearchSpace, TProblem, SingleSolutionState<RealVector>>(interceptor, problem)
-        where TSearchSpace : class, ISearchSpace<RealVector>
-        where TProblem : class, IProblem<RealVector, TSearchSpace>
-    {
-        protected override SingleSolutionState<RealVector> ExecuteStep(
-            SingleSolutionState<RealVector>? previousState,
-            IRandomNumberGenerator random)
-        {
-            var candidate = creator.Create(1, random)[0];
-            var objective = evaluator.Evaluate([candidate], random)[0];
-
-            return SingleSolutionState.From(candidate, objective);
-        }
-    }
-}
-```
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/AlgorithmAuthoringDocumentationSpecs.cs#iterative-algorithm-type{csharp}
 
 ### Why the configuration declares its properties
 
@@ -83,7 +31,7 @@ Pre-flight validation and substitution reach a child only through its declared p
 
 Operator slots, including terminators, name their operation and candidate. An interceptor slot also names the search state its operation returns, as the inherited `IOperator<Interception<SingleSolutionState<RealVector>>, RealVector>? Interceptor` does. `IOperator<Creation, RealVector>` accepts any creator written for real vectors, including one written against `BoundedRealVectorSearchSpace`, because the run supplies the space when the executor is created.
 
-The run's search space and problem arrive as method type arguments on `CreateExecutor`, together with a scope typed to them whose `Problem` property supplies the object. The nested executor class is generic in them and carries the matching constraints. Configurations omit the run types from operator slots.
+The run's search space and problem arrive as method type arguments on `CreateExecutor`, together with a scope typed to them whose `Problem` property supplies the object. The nested executor only needs the resolved operators and interceptor. Configurations omit the run types from operator slots.
 
 Resolution calls this protected hook for every build. The hook returns `IterativeAlgorithmExecutor`, so the compiler requires an executor that applies the interceptor. Resolve the optional `Interceptor` alongside the other configured children and pass it to the executor constructor. The executor base applies it in the iteration loop, before checking terminal state and yielding; its result becomes the next iteration's previous state. `ExecuteStep`, the interceptor and the protected `IsTerminalState` hook receive the same per-iteration random number generator, so an algorithm that owns a terminator passes that generator on.
 
@@ -101,7 +49,7 @@ public sealed record MatrixAwareAlgorithm
         SingleSolutionState<Permutation>>
 ```
 
-Its protected `CreateExecutor` takes no method type arguments and receives a scope typed to the declared contracts, so its executor class can be nongeneric. The hook returns `IterativeAlgorithmExecutor<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SingleSolutionState<Permutation>>`. Operator slots still omit the run types. The base rejects a run whose search space or problem does not convert to the declared contracts before it calls the hook. Choose this base when the algorithm reads those contracts itself.
+Its protected `CreateExecutor` takes no method type arguments and receives a scope typed to the declared contracts. Pass the typed problem to the executor if it reads the distance matrix. The hook returns `IterativeAlgorithmExecutor<SingleSolutionState<Permutation>>`. Operator slots still omit the run types. The base rejects a run whose search space or problem does not convert to the declared contracts before it calls the hook. Choose this base when the algorithm reads those contracts itself.
 
 Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm does not stop itself.
 

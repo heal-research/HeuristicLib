@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators.Mutators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
 
 namespace HEAL.HeuristicLib.Tests.ExecutionInfrastructure;
@@ -86,6 +87,39 @@ public sealed class TypedResolutionScopeTests
         scope.TryResolve(selector, out var triedSelection, out var selectionReason).ShouldBeTrue();
         triedSelection.ShouldBeSameAs(selection);
         selectionReason.ShouldBeNull();
+    }
+
+    [Fact]
+    public void ASelectorUsesTheObjectiveOfItsBoundProblem()
+    {
+        var scope = ResolutionScope.Create()
+            .For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>>(Problem);
+        var problemWithAnotherObjective = new ProblemWithObjective(Problem, SingleObjective.Maximize);
+        var selector = new BestSelector<RealVector>();
+
+        var alternative = scope
+            .For<RealVector, BoundedRealVectorSearchSpace, ProblemWithObjective, SingleSolutionState<RealVector>>(problemWithAnotherObjective)
+            .Resolve(selector);
+        var original = scope.Resolve(selector);
+
+        var lower = EvaluatedCandidate.From(new RealVector(1.0), new ObjectiveVector(1.0));
+        var higher = EvaluatedCandidate.From(new RealVector(2.0), new ObjectiveVector(4.0));
+        IReadOnlyList<EvaluatedCandidate<RealVector>> population = [lower, higher];
+        var random = RandomNumberGenerator.Create(1);
+
+        alternative.Select(population, 1, random).ShouldBe([higher]);
+        original.Select(population, 1, random).ShouldBe([lower]);
+    }
+
+    private sealed class ProblemWithObjective(
+        IProblem<RealVector, BoundedRealVectorSearchSpace> problem, ObjectiveDirections objective)
+        : IProblem<RealVector, BoundedRealVectorSearchSpace>
+    {
+        public BoundedRealVectorSearchSpace SearchSpace => problem.SearchSpace;
+        public ObjectiveDirections Objective { get; } = objective;
+
+        public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
+            problem.Evaluate(candidates, random);
     }
 
     private sealed record SingleSolutionMutator : StatelessMutator<RealVector>

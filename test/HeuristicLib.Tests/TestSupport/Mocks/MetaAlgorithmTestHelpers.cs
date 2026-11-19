@@ -31,12 +31,10 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
         return new Executor(scope.Problem);
     }
 
-    private sealed class Executor : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed class Executor(IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int>
     {
-        public Executor(IProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
-
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
-            Problem.Evaluate(candidates, random).ToArray();
+            problem.Evaluate(candidates, random).ToArray();
     }
 
 }

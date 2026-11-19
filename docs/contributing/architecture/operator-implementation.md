@@ -29,7 +29,7 @@ A single-item base owns its batch operation and seals it. A subclass that replac
 
 ## Choose an arity
 
-Each role base is available at three arities. Reduced arities exist so an author who needs neither the problem nor the search space does not have to name them.
+Each role configuration base is available at three ordinary arities. Reduced arities exist so an author who needs neither the problem nor the search space does not have to name them. Every ordinary arity of a role uses the same executor base.
 
 Interceptor and Terminator retain `TSearchState` in these three ordinary arities because their operations transform or inspect a produced search state. Like every other operation, both receive the call's random number generator after their primary inputs at each ordinary arity. Terminator additionally provides `Terminator<TCandidate>`, the non-generic `TerminationExecutor` and matching stateless bases for termination conditions that inspect none of the operation inputs, such as elapsed time, cancellation and external operator budgets. Interceptor cannot remove `TSearchState` because it returns that type.
 
@@ -57,7 +57,9 @@ Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to al
 
 ## Stateless operators
 
-A stateless operator configuration also implements its operation logic. Its configuration values and referenced collections must remain unchanged during execution.
+A stateless operator configuration implements its operation logic. Its configuration values and referenced collections must remain unchanged during execution.
+
+A stateless operation receives everything it reads as arguments: the search space and problem at the arities that name them and, for selection and replacement, the objective at every arity. The base's executor reads them from its bound problem on each call and passes them on, so the bound problem stays their only source. An explicit executor instead holds what it reads, as [explicit executors](#explicit-executors) describes.
 
 ```csharp
 private sealed record FirstValueEvaluator
@@ -84,7 +86,9 @@ The [tested composition and cache examples](/guide/extending/operator-compositio
 
 ## Explicit executors
 
-Derive an explicit executor from its role's executor base, such as `EvaluationExecutor<TCandidate>`. Use the search-space variant when it retains only a search space, or the search-space and problem variant when it retains a problem, passing that context to the base constructor. These variants expose protected get-only `SearchSpace` and `Problem` properties; use them in operation methods instead of retaining duplicate context fields or capturing a primary constructor parameter. Name a type's sole nested executor `Executor`.
+Derive an explicit executor from its role's executor base, such as `EvaluationExecutor<TCandidate>`. Use that base at every configuration arity and for explicit wrapping and multi executors. Pass the search space or problem the executor reads to its constructor. Type the parameter to the contract the executor uses and retain it as a primary-constructor parameter or field. Name a type's sole nested executor `Executor`.
+
+Selection and replacement executors that rank candidates read `problem.Objective` from their bound problem. To bind an operator to another fixed objective, construct a problem with that objective once in `CreateExecutor` and resolve the operator through `scope.For<TCandidate, TSearchSpace, TProblemWithObjective, TSearchState>(problemWithThatObjective)`. All operators resolved through that view use the same problem. See [execution resolution](/contributing/architecture/execution-resolution) for declaring a child's binding when its problem type differs from the parent's.
 
 The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected typed `CreateExecutor` runs for every build and exposes the problem on its scope. It resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; private data belongs to executor fields and `Sharing` retains selected executors across child scopes.
 
@@ -99,8 +103,11 @@ private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inne
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IEvaluationExecutor<RealVector> CreateExecutor<TSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TSearchState> scope) =>
-        new Executor(scope.Resolve(Inner));
+    protected override IEvaluationExecutor<RealVector> CreateExecutor<TSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TSearchState> scope)
+    {
+        var inner = scope.Resolve(Inner);
+        return new Executor(inner);
+    }
 
     private sealed class Executor(IEvaluationExecutor<RealVector> inner)
         : EvaluationExecutor<RealVector>
@@ -153,10 +160,10 @@ public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var selectorForRemaining = scope.Resolve(SelectorForRemaining);
-        return new Executor<TSearchSpace, TProblem>(selectorForRemaining, Elites);
+        return new Executor(selectorForRemaining, Elites, scope.Problem);
     }
 
-    // The selection executor takes elites first and requests only the remaining places from its child.
+    // Executor derives from SelectionExecutor<TCandidate> and reads the bound problem's objective when ranking elites.
 }
 ```
 
@@ -200,7 +207,7 @@ An operation is observable once it declares two parts beside the operation, as e
 
 ## Scaffolding roles and cross-cutting concerns
 
-Coding agents are useful optional aids for the repetitive parts of operator authoring. Adding a concrete operator to an existing role is usually small work, because deriving from an existing authoring base is most of it. A new operator role is not: it brings a whole family with it, including configuration and executor arity ladders, stateless bases, applicable single-item bases, wrapping and multi topologies, construction companions, tests and API usage specs. A new cross-cutting concern brings one role-specific adapter for every applicable role. That expansion is mechanical enough for an agent to draft and large enough to make agent assistance worthwhile.
+Coding agents are useful optional aids for the repetitive parts of operator authoring. Adding a concrete operator to an existing role is usually small work, because deriving from an existing authoring base is most of it. A new operator role is not: it brings a whole family with it, including a configuration arity ladder and an executor base, stateless bases, applicable single-item bases, wrapping and multi topologies, construction companions, tests and API usage specs. A new cross-cutting concern brings one role-specific adapter for every applicable role. That expansion is mechanical enough for an agent to draft and large enough to make agent assistance worthwhile.
 
 Agent-produced code is normal contributor-owned source. Inspect and refactor it normally, review every public member as a deliberate API addition, and validate it with the compiler, analyzers, focused behavior tests and API usage specs. Point the agent at the current contracts and guidelines in addition to the closest accepted role family: all nine current roles follow the accepted topology, but their operation inputs, applicability and lifecycle semantics still differ.
 

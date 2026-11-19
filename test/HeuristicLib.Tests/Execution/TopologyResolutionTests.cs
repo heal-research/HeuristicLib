@@ -285,17 +285,17 @@ public sealed class TopologyResolutionTests
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             prepare();
-            var child = scope.Resolve(ChildOperator);
+            var childOperator = scope.Resolve(ChildOperator);
             bind();
-            return new Executor(child);
+            return new Executor(childOperator);
         }
 
         private sealed class Executor(IMutationExecutor<RealVector> child)
-            : IMutationExecutor<RealVector>
+            : MutationExecutor<RealVector>
         {
             private int invocations;
 
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
                 var result = child.Mutate(parents, random);
                 return [RealVector.Repeat(result[0][0] + 100 * ++invocations, 1)];
@@ -319,17 +319,17 @@ public sealed class TopologyResolutionTests
             ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
             prepare();
-            ImmutableArray<IMutationExecutor<RealVector>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            ImmutableArray<IMutationExecutor<RealVector>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
             bind();
-            return new Executor(children);
+            return new Executor(childOperators);
         }
 
         private sealed class Executor(ImmutableArray<IMutationExecutor<RealVector>> children)
-            : IMutationExecutor<RealVector>
+            : MutationExecutor<RealVector>
         {
             private int invocations;
 
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
                 var result = parents;
                 foreach (var child in children)
@@ -352,13 +352,16 @@ public sealed class TopologyResolutionTests
         public Action<double> Report { get; init; }
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor(scope.Resolve(ChildOperator), Report);
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator, Report);
+        }
 
         private sealed class Executor(IMutationExecutor<RealVector> child, Action<double> report)
-            : IMutationExecutor<RealVector>
+            : MutationExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
                 var result = child.Mutate(parents, random);
                 report(result[0][0]);

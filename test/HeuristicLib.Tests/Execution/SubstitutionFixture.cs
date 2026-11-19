@@ -57,7 +57,7 @@ internal static class SubstitutionFixture
             return new Executor(Box, FailFirstCall, scope.Problem);
         }
 
-        private sealed class Executor(Recording box, bool failFirstCall, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(problem)
+        private sealed class Executor(Recording box, bool failFirstCall, IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int>
         {
             private bool failed = !failFirstCall;
 
@@ -69,7 +69,7 @@ internal static class SubstitutionFixture
                     failed = true;
                     throw new RetryableOperationException("The first call fails.");
                 }
-                return Problem.Evaluate(candidates, random).ToArray();
+                return problem.Evaluate(candidates, random).ToArray();
             }
         }
     }

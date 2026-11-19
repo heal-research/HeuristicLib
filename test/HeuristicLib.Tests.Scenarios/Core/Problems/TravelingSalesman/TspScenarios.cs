@@ -31,7 +31,7 @@ public class TspScenarios
         var resGa = ga.RunToCompletion(prob, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // look at results
-        var objGa = resGa.Population
+        var objGa = resGa.Population.EvaluatedCandidates
                          .OrderBy(x => x.ObjectiveVector[0])
                          .First();
 

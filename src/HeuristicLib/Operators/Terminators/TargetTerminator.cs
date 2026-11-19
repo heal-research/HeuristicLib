@@ -35,6 +35,6 @@ public static class TargetTerminator
 
     public static bool IsTerminalState<TCandidate>(PopulationState<TCandidate> state, IProblem<TCandidate, ISearchSpace<TCandidate>> problem, ObjectiveVector target)
     {
-        return state.Population.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
+        return state.Population.EvaluatedCandidates.Any(x => !target.Dominates(x.ObjectiveVector, problem.Objective));
     }
 }

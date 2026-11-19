@@ -61,7 +61,7 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
 
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-    protected override IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+    protected override IterativeAlgorithmExecutor<PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
     {
         var interceptor = scope.ResolveOptional(Interceptor);
@@ -71,11 +71,11 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
         var mutator = scope.Resolve(Mutator);
         var selector = scope.Resolve(Selector);
         var refiner = scope.ResolveOptional(Refiner);
-        return new Executor<TSearchSpace, TProblem>(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
+        return new Executor(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
             PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness, scope.Problem);
     }
 
-    private sealed class Executor<TSearchSpace, TProblem>(
+    private sealed class Executor(
         IInterceptionExecutor<PopulationState<TCandidate>>? interceptor,
         IEvaluationExecutor<TCandidate> evaluator,
         ICreationExecutor<TCandidate> creator,
@@ -87,10 +87,8 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
         int elites,
         int maxEffort,
         int? maximumGenerations,
-        double strictness, TProblem problem)
-        : IterativeAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor, problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        double strictness, IProblem problem)
+        : IterativeAlgorithmExecutor<PopulationState<TCandidate>>(interceptor)
     {
         protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
@@ -124,8 +122,8 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
             }
             else
             {
-                var selected = selector.Select(oldPopulation, Problem.Objective, maxEffort * 2, random);
-                var population = crossover.Cross(selected.ToParents(Problem.Objective), random);
+                var selected = selector.Select(oldPopulation, maxEffort * 2, random);
+                var population = crossover.Cross(selected.ToParents(problem.Objective), random);
                 population = mutator.Mutate(population, random);
                 if (refiner is not null)
                 {
@@ -133,12 +131,12 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
                 }
 
                 newPop = population.ToEvaluated(evaluator.Evaluate(population, random)).Zip(selected.ToEvaluatedCandidatesPairs())
-                    .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, Problem.Objective, strictness), Problem.Objective))
+                    .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, problem.Objective, strictness), problem.Objective))
                     .Select(pair => pair.Item1).ToArray();
             }
 
             var targetPopulationSize = elites + newPop.Count;
-            var newPopulation = ElitismReplacer.Replace(oldPopulation, newPop, Problem.Objective, targetPopulationSize, elites);
+            var newPopulation = ElitismReplacer.Replace(oldPopulation, newPop, problem.Objective, targetPopulationSize, elites);
 
             return Population.From(newPopulation).ToPopulationState();
         }

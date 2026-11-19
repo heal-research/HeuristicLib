@@ -32,7 +32,7 @@ public static class RemoveDuplicatesInterceptor
     public static TSearchState Transform<TCandidate, TSearchState>(TSearchState currentState, TSearchState? previousState, IEqualityComparer<TCandidate> comparer)
         where TSearchState : PopulationState<TCandidate>
     {
-        var newSolutions = currentState.Population.DistinctBy(s => s.Candidate, comparer).ToImmutableArray();
+        var newSolutions = currentState.Population.EvaluatedCandidates.DistinctBy(s => s.Candidate, comparer).ToImmutableArray();
         return currentState with
         {
             Population = Population.From(newSolutions)

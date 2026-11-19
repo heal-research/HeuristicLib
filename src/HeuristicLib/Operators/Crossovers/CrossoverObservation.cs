@@ -22,18 +22,16 @@ public sealed record CrossoverObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
         IExecutor executor, IOperator<Crossover, TCandidate> source, Action<CrossoverObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((ICrossoverExecutor<TCandidate>)executor, source, record, problem);
+        new Executor((ICrossoverExecutor<TCandidate>)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(ICrossoverExecutor<TCandidate> executor,
-        IOperator<Crossover, TCandidate> crossover, Action<CrossoverObservation<TCandidate>> observe, TProblem problem)
-        : CrossoverExecutor<TCandidate, TSearchSpace, TProblem>(problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(ICrossoverExecutor<TCandidate> executor,
+        IOperator<Crossover, TCandidate> crossover, Action<CrossoverObservation<TCandidate>> observe, IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+        : CrossoverExecutor<TCandidate>
     {
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random)
         {
             var offspring = executor.Cross(parents, random);
-            observe(new CrossoverObservation<TCandidate>(crossover, parents, offspring, SearchSpace, Problem));
+            observe(new CrossoverObservation<TCandidate>(crossover, parents, offspring, problem.SearchSpace, problem));
             return offspring;
         }
     }

@@ -441,10 +441,9 @@ public class OperatorInspectionTests
         counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveSelector(counted);
-        var problem = CreateProblem();
 
-        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1));
-        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2));
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), 1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
@@ -457,10 +456,9 @@ public class OperatorInspectionTests
         var counted = selector.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveSelector(counted);
-        var problem = CreateProblem();
 
-        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1));
-        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2));
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), 1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
@@ -472,10 +470,9 @@ public class OperatorInspectionTests
         var source = new ThrowingSelector();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveSelector(source.Counted(counter));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1)));
+            executor.Select(CreateEvaluatedCandidates([1]), 1, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
@@ -488,10 +485,9 @@ public class OperatorInspectionTests
         var selector = new FirstCandidatesSelector();
         var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveSelector(selector.Timed(duration));
-        var problem = CreateProblem();
 
-        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1));
-        executor.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2));
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), 1, RandomNumberGenerator.Create(2));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
@@ -504,10 +500,9 @@ public class OperatorInspectionTests
         var selector = new ThrowingSelector();
         var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveSelector(selector.Timed(duration));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() =>
-            executor.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1)));
+            executor.Select(CreateEvaluatedCandidates([1]), 1, RandomNumberGenerator.Create(1)));
 
         scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
@@ -522,18 +517,15 @@ public class OperatorInspectionTests
         counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveReplacer(counted);
-        var problem = CreateProblem();
 
         executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
-            problem.Objective,
             2,
             RandomNumberGenerator.Create(1));
         executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
-            problem.Objective,
             1,
             RandomNumberGenerator.Create(2));
 
@@ -548,18 +540,15 @@ public class OperatorInspectionTests
         var counted = replacer.Counted(counter, OperatorCountMetric.Candidates);
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveReplacer(counted);
-        var problem = CreateProblem();
 
         executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
-            problem.Objective,
             2,
             RandomNumberGenerator.Create(1));
         executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
-            problem.Objective,
             1,
             RandomNumberGenerator.Create(2));
 
@@ -573,12 +562,10 @@ public class OperatorInspectionTests
         var source = new ThrowingReplacer();
         var scope = ResolutionScope.Create();
         var executor = scope.ResolveReplacer(source.Counted(counter));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => executor.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
-            problem.Objective,
             1,
             RandomNumberGenerator.Create(1)));
 
@@ -593,18 +580,15 @@ public class OperatorInspectionTests
         var replacer = new FirstReplacementCandidatesReplacer();
         var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveReplacer(replacer.Timed(duration));
-        var problem = CreateProblem();
 
         executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
-            problem.Objective,
             2,
             RandomNumberGenerator.Create(1));
         executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
-            problem.Objective,
             1,
             RandomNumberGenerator.Create(2));
 
@@ -619,12 +603,10 @@ public class OperatorInspectionTests
         var source = new ThrowingReplacer();
         var scope = ResolutionScope.Create(timeProvider);
         var executor = scope.ResolveReplacer(source.Timed(duration));
-        var problem = CreateProblem();
 
         Should.Throw<InvalidOperationException>(() => executor.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
-            problem.Objective,
             1,
             RandomNumberGenerator.Create(1)));
 
@@ -820,11 +802,11 @@ public class OperatorInspectionTests
             new Executor(callback, scope.Problem);
 
         private sealed class Executor(MutateCallback callback, FuncProblem<int, DummySearchSpace<int>> problem)
-            : IMutationExecutor<int>
+            : MutationExecutor<int>
         {
             private readonly DummySearchSpace<int> searchSpace = problem.SearchSpace;
 
-            public IReadOnlyList<int> Mutate(
+            public override IReadOnlyList<int> Mutate(
                 IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
                 callback(parents, random, searchSpace, problem);
         }
@@ -970,14 +952,12 @@ public class OperatorInspectionTests
         protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor(scope.Problem);
+            return new Executor();
         }
 
         private sealed class Executor
-            : MutationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+            : MutationExecutor<int>
         {
-            public Executor(FuncProblem<int, DummySearchSpace<int>> problem) : base(problem) { }
-
             private int invocations;
 
             public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)

@@ -7,10 +7,11 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
+/// <summary>Executes replacement using the objective of the problem bound during resolution.</summary>
 public interface IReplacementExecutor<TCandidate> : IOperatorExecutor
 {
     IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(
-      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
+      IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random);
 }
 
 public static class ReplacementOperationResolutionExtensions

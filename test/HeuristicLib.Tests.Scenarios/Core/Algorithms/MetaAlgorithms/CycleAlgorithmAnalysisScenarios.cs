@@ -94,11 +94,11 @@ public class CycleAlgorithmAnalysisScenarios
     {
         protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
-            return new Executor(new CountAccumulator(), scope.Problem);
+            return new Executor(new CountAccumulator());
         }
 
-        private sealed class Executor(CountAccumulator counter, IProblem<int, DummySearchSpace<int>> problem)
-            : EvaluationExecutor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(problem)
+        private sealed class Executor(CountAccumulator counter)
+            : EvaluationExecutor<int>
         {
             public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
                 candidates.Select(_ =>

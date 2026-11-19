@@ -178,11 +178,11 @@ public sealed class EvaluationResolutionTests
         protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
             Prepare();
-            return new Executor(this, scope.Problem);
+            return new Executor(this);
         }
 
-        private sealed class Executor(CountingEvaluator evaluator, FuncProblem<int, DummySearchSpace<int>> problem)
-            : EvaluationExecutor<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem)
+        private sealed class Executor(CountingEvaluator evaluator)
+            : EvaluationExecutor<int>
         {
             private int invocations;
 
@@ -207,13 +207,16 @@ public sealed class EvaluationResolutionTests
         public Action<IReadOnlyList<int>> Report { get; init; }
 
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
-            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor(scope.Resolve(ChildOperator), Report);
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator, Report);
+        }
 
         private sealed class Executor(IEvaluationExecutor<int> child, Action<IReadOnlyList<int>> report)
-            : IEvaluationExecutor<int>
+            : EvaluationExecutor<int>
         {
-            public IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
             {
                 var result = child.Evaluate(candidates, random);
                 report(candidates);

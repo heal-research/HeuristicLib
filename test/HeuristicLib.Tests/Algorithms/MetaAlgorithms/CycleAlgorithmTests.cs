@@ -222,13 +222,11 @@ public class CycleAlgorithmTests
     {
 
         protected override IInterceptionExecutor<PopulationState<RealVector>> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>> scope) =>
-        new Executor(scope.Problem);
+        new Executor();
 
         private sealed class Executor
-            : InterceptionExecutor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+            : InterceptionExecutor<PopulationState<RealVector>>
         {
-            public Executor(TestFunctionProblem problem) : base(problem) { }
-
             private int yieldedStateCount;
 
             public override PopulationState<RealVector> Transform(PopulationState<RealVector> currentState, PopulationState<RealVector>? previousState, IRandomNumberGenerator random)

@@ -31,7 +31,40 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start before wrapped algorithm construction.
         var terminator = scope.Resolve(Terminator);
         var algorithm = scope.Resolve(Algorithm);
-        return new StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, terminator, scope.Problem);
+        return new Executor(algorithm, terminator);
+    }
+
+    private sealed class Executor : AlgorithmExecutor<TSearchState>
+    {
+        private IAlgorithmExecutor<TSearchState> Algorithm { get; }
+        private ITerminationExecutor<TSearchState> Terminator { get; }
+
+        // Iterative algorithms fork the run's generator by iteration index. A key no iteration reaches keeps the terminator
+        // from receiving the stream of an inner iteration.
+        private const ulong TerminationForkKey = ulong.MaxValue;
+
+        public Executor(IAlgorithmExecutor<TSearchState> algorithm, ITerminationExecutor<TSearchState> terminator)
+        {
+            Algorithm = algorithm;
+            Terminator = terminator;
+        }
+
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var terminationRandom = random.Fork(TerminationForkKey);
+            var yieldedStateCount = 0;
+            await foreach (var state in Algorithm.RunStreamingAsync(random, initialState, ct))
+            {
+                yield return state;
+
+                if (Terminator.IsTerminalState(state, terminationRandom.Fork(yieldedStateCount)))
+                {
+                    yield break;
+                }
+
+                yieldedStateCount++;
+            }
+        }
     }
 }
 
@@ -44,43 +77,6 @@ public static class StateTerminatedAlgorithm
             Algorithm = algorithm,
             Terminator = terminator
         };
-}
-
-public class StateTerminatedAlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    protected IAlgorithmExecutor<TSearchState> Algorithm { get; }
-    protected ITerminationExecutor<TSearchState> Terminator { get; }
-
-    // Iterative algorithms fork the run's generator by iteration index. A key no iteration reaches keeps the terminator
-    // from receiving the stream of an inner iteration.
-    private const ulong TerminationForkKey = ulong.MaxValue;
-
-    public StateTerminatedAlgorithmExecutor(IAlgorithmExecutor<TSearchState> algorithm, ITerminationExecutor<TSearchState> terminator, TProblem problem)
-        : base(problem)
-    {
-        Algorithm = algorithm;
-        Terminator = terminator;
-    }
-
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        var terminationRandom = random.Fork(TerminationForkKey);
-        var yieldedStateCount = 0;
-        await foreach (var state in Algorithm.RunStreamingAsync(random, initialState, ct))
-        {
-            yield return state;
-
-            if (Terminator.IsTerminalState(state, terminationRandom.Fork(yieldedStateCount)))
-            {
-                yield break;
-            }
-
-            yieldedStateCount++;
-        }
-    }
 }
 
 public static class StateTerminatedAlgorithmExtensions

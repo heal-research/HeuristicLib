@@ -7,9 +7,10 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
+/// <summary>Executes selection using the objective of the problem bound during resolution.</summary>
 public interface ISelectionExecutor<TCandidate> : IOperatorExecutor
 {
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
+    IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random);
 }
 
 public static class SelectionOperationResolutionExtensions

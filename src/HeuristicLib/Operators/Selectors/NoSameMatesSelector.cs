@@ -35,7 +35,7 @@ public record NoSameMatesSelector<TCandidate>
     private sealed class Executor(ISelectionExecutor<TCandidate> childSelector, int maxAttempts)
         : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
         {
             var selectedParents = 0;
             var poolCount = 0;
@@ -44,7 +44,7 @@ public record NoSameMatesSelector<TCandidate>
             var parentsPool = new EvaluatedCandidate<TCandidate>[count];
             for (var attempts = 1; attempts <= maxAttempts && selectedParents < count; attempts++)
             {
-                var parents = childSelector.Select(population, objective, count, random);
+                var parents = childSelector.Select(population, count, random);
                 for (int indexParent1 = 0, indexParent2 = 1; indexParent1 < parents.Count - 1 && selectedParents < count - 1; indexParent1 += 2, indexParent2 += 2)
                 {
                     var qualityParent1 = parents[indexParent1].ObjectiveVector;

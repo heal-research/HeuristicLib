@@ -84,7 +84,7 @@ public sealed class GenealogyAnalyzer<TCandidate, TSearchState> : Analyzer<Genea
 
     private Action<AlgorithmObservation<TCandidate, TSearchState>> RecordGenerations(GenealogyGraph<TCandidate> graph) => observation =>
     {
-        var ordered = observation.State.Population.OrderBy(x => x.ObjectiveVector,
+        var ordered = observation.State.Population.EvaluatedCandidates.OrderBy(x => x.ObjectiveVector,
             observation.Problem.Objective.RequireTotalOrder(ObjectiveComparer));
         graph.SetAsNewGeneration(ordered.Select(x => x.Candidate), saveSpace);
     };

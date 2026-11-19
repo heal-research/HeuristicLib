@@ -35,7 +35,7 @@ public class DynamicTSPTests
             ct: TestContext.Current.CancellationToken);
 
         //look at results
-        var objGa = resGa.Population
+        var objGa = resGa.Population.EvaluatedCandidates
                          .OrderBy(x => x.ObjectiveVector[0])
                          .First();
 

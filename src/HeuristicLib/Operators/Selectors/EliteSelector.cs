@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Operators;
@@ -47,20 +48,20 @@ public record EliteSelector<TCandidate>
         ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         var selectorForRemaining = scope.Resolve(SelectorForRemaining);
-        return new Executor(selectorForRemaining, Elites);
+        return new Executor(selectorForRemaining, Elites, scope.Problem);
     }
 
-    private sealed class Executor(ISelectionExecutor<TCandidate> selectorForRemaining, int elites)
+    private sealed class Executor(ISelectionExecutor<TCandidate> selectorForRemaining, int elites, IProblem problem)
         : SelectionExecutor<TCandidate>
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
         {
-            var selectedElites = BestSelector.Select(population, objective, Math.Min(elites, count));
+            var selectedElites = BestSelector.Select(population, problem.Objective, Math.Min(elites, count));
             var remainingCount = count - selectedElites.Count;
             if (remainingCount <= 0)
                 return selectedElites;
 
-            var selectedRemaining = selectorForRemaining.Select(population, objective, remainingCount, random);
+            var selectedRemaining = selectorForRemaining.Select(population, remainingCount, random);
 
             return selectedElites.Concat(selectedRemaining).ToArray();
         }

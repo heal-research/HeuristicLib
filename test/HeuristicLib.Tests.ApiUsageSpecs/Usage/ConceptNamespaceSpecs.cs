@@ -62,6 +62,6 @@ public sealed class ConceptNamespaceSpecs
         var result = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.Count.ShouldBe(8);
-        result.Population.All(candidate => candidate.ObjectiveVector.Count == 2).ShouldBeTrue();
+        result.Population.EvaluatedCandidates.All(candidate => candidate.ObjectiveVector.Count == 2).ShouldBeTrue();
     }
 }

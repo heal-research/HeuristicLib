@@ -33,39 +33,6 @@ public abstract record Terminator<TCandidate, TSearchState>
 public abstract record Terminator<TCandidate>
     : Terminator<TCandidate, ISearchState>;
 
-public abstract class TerminationExecutor<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : ITerminationExecutor<TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    protected TProblem Problem { get; }
-    protected TSearchSpace SearchSpace { get; }
-
-    protected TerminationExecutor(TProblem problem)
-    {
-        Problem = problem;
-        SearchSpace = problem.SearchSpace;
-    }
-
-    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random);
-}
-
-public abstract class TerminationExecutor<TCandidate, TSearchSpace, TSearchState>
-    : ITerminationExecutor<TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TSearchState : class, ISearchState
-{
-    protected TSearchSpace SearchSpace { get; }
-
-    protected TerminationExecutor(TSearchSpace searchSpace)
-    {
-        SearchSpace = searchSpace;
-    }
-
-    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random);
-}
-
 public abstract class TerminationExecutor<TSearchState>
     : ITerminationExecutor<TSearchState>
     where TSearchState : class, ISearchState

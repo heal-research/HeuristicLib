@@ -56,10 +56,10 @@ public class CompositeBindingTests
     private sealed record LeafLadderTransformedCreator(IOperator<Creation, RealVector> Source) : Creator<RealVector>
     {
         protected override ICreationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, TRunSearchState> scope) =>
-            new Executor(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source, scope.Problem), scope.Problem);
+            new Executor(scope.Resolve<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(Source, scope.Problem));
 
-        private sealed class Executor(ICreationExecutor<RealVector> source, IProblem<RealVector, ISearchSpace<RealVector>> problem)
-            : CreationExecutor<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>>(problem)
+        private sealed class Executor(ICreationExecutor<RealVector> source)
+            : CreationExecutor<RealVector>
         {
             public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random) =>
                 source.Create(count, random);
@@ -71,12 +71,10 @@ public class CompositeBindingTests
     {
         protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
             ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope) =>
-            new Executor<TRunSearchSpace, TRunProblem>(scope.Resolve(Source), scope.Problem);
+            new Executor(scope.Resolve(Source));
 
-        private sealed class Executor<TSearchSpace, TProblem>(ICreationExecutor<RealVector> source, TProblem problem)
-            : CreationExecutor<RealVector, TSearchSpace, TProblem>(problem)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor(ICreationExecutor<RealVector> source)
+            : CreationExecutor<RealVector>
         {
             public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random) =>
                 source.Create(count, random);
