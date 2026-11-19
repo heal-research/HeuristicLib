@@ -160,7 +160,13 @@ public class DynamicTestFunctionProblem : DynamicProblem<DynamicTestFunctionProb
         return Multiply(p, rot);
     }
 
-    public record State(double[] Shift, double[,] Rotation, double[] InputScaling, double OutputScaling);
+    public sealed class State(double[] Shift, double[,] Rotation, double[] InputScaling, double OutputScaling)
+    {
+        public double[] Shift { get; init; } = Shift;
+        public double[,] Rotation { get; init; } = Rotation;
+        public double[] InputScaling { get; init; } = InputScaling;
+        public double OutputScaling { get; init; } = OutputScaling;
+    }
 
     public record DeviationSigmas(
         double ShiftStrength,

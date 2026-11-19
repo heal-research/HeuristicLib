@@ -26,5 +26,5 @@ public interface IOperatorContract<TCandidate>
     /// candidate of its representation. A requirement is satisfied when the search space states an invariant that
     /// implies it.
     /// </summary>
-    IReadOnlyList<ICandidateInvariant<TCandidate>> Requires => [];
+    ValueArray<ICandidateInvariant<TCandidate>> Requires => [];
 }

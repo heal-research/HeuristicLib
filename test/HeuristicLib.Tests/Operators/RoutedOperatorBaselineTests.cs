@@ -48,62 +48,62 @@ public sealed class RoutedOperatorBaselineTests
             var random = RandomNumberGenerator.Create(seed);
             void Save(string role, IEnumerable<int> values) => snapshots.Add(role + seed,
                 string.Join(",", values) + ";next=" + random.NextInt() + ";calls=" + string.Join("/", log));
-            Save("creation", scope.Resolve(ChoosePerItem.Create([new Creator(100, log), new Creator(200, log)], [1.0, 3.0]))
+            Save("creation", scope.Resolve(ChoosePerItem.Create([new Creator(100, log.Add), new Creator(200, log.Add)], [1.0, 3.0]))
                 .Create(12, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("crossover", scope.Resolve(ChoosePerItem.Create([new DrawingCross(100, log), new DrawingCross(200, log)], [1.0, 3.0]))
+            Save("crossover", scope.Resolve(ChoosePerItem.Create([new DrawingCross(100, log.Add), new DrawingCross(200, log.Add)], [1.0, 3.0]))
                 .Cross(parents, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("mutation", scope.Resolve(ChoosePerItem.Create([new DrawingMutate(100, log), new DrawingMutate(200, log)], [1.0, 3.0]))
+            Save("mutation", scope.Resolve(ChoosePerItem.Create([new DrawingMutate(100, log.Add), new DrawingMutate(200, log.Add)], [1.0, 3.0]))
                 .Mutate(inputs, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("refinement", scope.Resolve(ChoosePerItem.Create([new DrawingRefine(100, log), new DrawingRefine(200, log)], [1.0, 3.0]))
+            Save("refinement", scope.Resolve(ChoosePerItem.Create([new DrawingRefine(100, log.Add), new DrawingRefine(200, log.Add)], [1.0, 3.0]))
                 .Refine(inputs, random));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("selection", scope.Resolve(ChoosePerInvocation.Create<Selection, int>([new DrawingSelect(100, log), new DrawingSelect(200, log)], [1.0, 3.0]))
+            Save("selection", scope.Resolve(ChoosePerInvocation.Create<Selection, int>([new DrawingSelect(100, log.Add), new DrawingSelect(200, log.Add)], [1.0, 3.0]))
                 .Select(population, 12, random).Select(x => x.Candidate));
             random = RandomNumberGenerator.Create(seed);
             log.Clear();
-            Save("replacement", scope.Resolve(ChoosePerInvocation.Create<Replacement, int>([new DrawingReplace(100, log), new DrawingReplace(200, log)], [1.0, 3.0]))
+            Save("replacement", scope.Resolve(ChoosePerInvocation.Create<Replacement, int>([new DrawingReplace(100, log.Add), new DrawingReplace(200, log.Add)], [1.0, 3.0]))
                 .Replace(population, population, 12, random).Select(x => x.Candidate));
         }
         return snapshots;
     }
 
-    private static int[] Apply(IEnumerable<int> values, int offset, List<string> log, IRandomNumberGenerator random)
+    private static int[] Apply(IEnumerable<int> values, int offset, Action<string> log, IRandomNumberGenerator random)
     {
         var batch = values.ToArray();
-        log.Add(offset + ":" + string.Join(",", batch));
+        log(offset + ":" + string.Join(",", batch));
         return batch.Select(x => x + offset + (random.NextInt() % 1000)).ToArray();
     }
 
     private sealed class Space : ISearchSpace<int> { public bool Contains(int candidate) => true; }
-    private sealed record Creator(int Offset, List<string> Log) : StatelessCreator<int>
+    private sealed record Creator(int Offset, Action<string> Log) : StatelessCreator<int>
     {
         public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) => Apply(Enumerable.Range(0, count), Offset, Log, random);
     }
-    private sealed record DrawingCross(int Offset, List<string> Log) : StatelessCrossover<int>
+    private sealed record DrawingCross(int Offset, Action<string> Log) : StatelessCrossover<int>
     {
         public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) => Apply(parents.Select(x => x.Parent1), Offset, Log, random);
     }
-    private sealed record DrawingMutate(int Offset, List<string> Log) : StatelessMutator<int>
+    private sealed record DrawingMutate(int Offset, Action<string> Log) : StatelessMutator<int>
     {
         public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) => Apply(parents, Offset, Log, random);
     }
-    private sealed record DrawingRefine(int Offset, List<string> Log) : StatelessRefiner<int>
+    private sealed record DrawingRefine(int Offset, Action<string> Log) : StatelessRefiner<int>
     {
         public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random) => Apply(candidates, Offset, Log, random);
     }
-    private sealed record DrawingSelect(int Offset, List<string> Log) : StatelessSelector<int>
+    private sealed record DrawingSelect(int Offset, Action<string> Log) : StatelessSelector<int>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
             Apply(population.Take(count).Select(x => x.Candidate), Offset, Log, random).Select(x => new EvaluatedCandidate<int>(x, new ObjectiveVector(x))).ToArray();
     }
-    private sealed record DrawingReplace(int Offset, List<string> Log) : StatelessReplacer<int>
+    private sealed record DrawingReplace(int Offset, Action<string> Log) : StatelessReplacer<int>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
             Apply(offspringPopulation.Take(count).Select(x => x.Candidate), Offset, Log, random).Select(x => new EvaluatedCandidate<int>(x, new ObjectiveVector(x))).ToArray();

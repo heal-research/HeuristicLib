@@ -152,7 +152,7 @@ public static class ScoringResolutionExtensions
 }
 
 // The external operation's source, which is what its counters come from, declared like a built-in operation's.
-public sealed record ScoringObservation<TCandidate>(IReadOnlyList<TCandidate> Candidates, IReadOnlyList<double> Scores)
+public sealed record ScoringObservation<TCandidate>(ValueArray<TCandidate> Candidates, ValueArray<double> Scores)
     : IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>
 {
     static IExecutor IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
@@ -165,7 +165,7 @@ public sealed record ScoringObservation<TCandidate>(IReadOnlyList<TCandidate> Ca
         public IReadOnlyList<double> Score(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var scores = executor.Score(candidates, random);
-            observe(new ScoringObservation<TCandidate>(candidates, scores));
+            observe(new ScoringObservation<TCandidate>(candidates.ToValueArray(), scores.ToValueArray()));
             return scores;
         }
     }

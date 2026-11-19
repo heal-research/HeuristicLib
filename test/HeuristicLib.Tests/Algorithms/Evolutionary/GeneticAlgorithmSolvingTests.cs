@@ -145,7 +145,8 @@ public class GeneticAlgorithmSolvingTests
     public void RunStreaming_WithInternalTerminator_IncludesTriggeringState()
     {
         var problem = CreateProblem();
-        var terminator = new RecordingPopulationTerminator(2);
+        var checkedStates = new List<PopulationState<RealVector>>();
+        var terminator = new RecordingPopulationTerminator(checkedStates.Add, () => checkedStates.Count >= 2);
         var algorithm = CreateUnwrappedAlgorithm(problem) with
         {
             Terminator = terminator
@@ -157,8 +158,8 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
-        terminator.CheckedStates.Count.ShouldBe(2);
-        terminator.CheckedStates.ShouldBe(results);
+        checkedStates.Count.ShouldBe(2);
+        checkedStates.ShouldBe(results);
     }
 
     [Fact]
@@ -172,7 +173,8 @@ public class GeneticAlgorithmSolvingTests
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).Single();
-        var terminator = new RecordingPopulationTerminator(1);
+        var checkedStates = new List<PopulationState<RealVector>>();
+        var terminator = new RecordingPopulationTerminator(checkedStates.Add, () => checkedStates.Count >= 1);
         var algorithm = CreateUnwrappedAlgorithm(problem) with
         {
             Terminator = terminator
@@ -185,16 +187,17 @@ public class GeneticAlgorithmSolvingTests
           TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(1);
-        terminator.CheckedStates.Count.ShouldBe(1);
-        ReferenceEquals(terminator.CheckedStates.Single(), initialState).ShouldBeFalse();
-        terminator.CheckedStates.Single().ShouldBe(results.Single());
+        checkedStates.Count.ShouldBe(1);
+        ReferenceEquals(checkedStates.Single(), initialState).ShouldBeFalse();
+        checkedStates.Single().ShouldBe(results.Single());
     }
 
     [Fact]
     public void RunStreaming_MaximumGenerationsAndInternalTerminator_ComposeWithStopIfAnySemantics()
     {
         var problem = CreateProblem();
-        var terminator = new RecordingPopulationTerminator(2);
+        var checkedStates = new List<PopulationState<RealVector>>();
+        var terminator = new RecordingPopulationTerminator(checkedStates.Add, () => checkedStates.Count >= 2);
         var algorithm = CreateUnwrappedAlgorithm(problem) with
         {
             MaximumGenerations = 10,
@@ -207,14 +210,15 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(2);
-        terminator.CheckedStates.Count.ShouldBe(2);
+        checkedStates.Count.ShouldBe(2);
     }
 
     [Fact]
     public void RunStreaming_WithInternalTerminator_InvokesTerminatorOncePerProducedState()
     {
         var problem = CreateProblem();
-        var terminator = new RecordingPopulationTerminator(3);
+        var checkedStates = new List<PopulationState<RealVector>>();
+        var terminator = new RecordingPopulationTerminator(checkedStates.Add, () => checkedStates.Count >= 3);
         var algorithm = CreateUnwrappedAlgorithm(problem) with
         {
             Terminator = terminator
@@ -226,7 +230,7 @@ public class GeneticAlgorithmSolvingTests
           ct: TestContext.Current.CancellationToken).ToList();
 
         results.Count.ShouldBe(3);
-        terminator.CheckedStates.ShouldBe(results);
+        checkedStates.ShouldBe(results);
     }
 
     [Fact]
@@ -278,19 +282,17 @@ public class GeneticAlgorithmSolvingTests
         };
     }
 
-    private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
+    private sealed record RecordingPopulationTerminator(Action<PopulationState<RealVector>> RecordState, Func<bool> ShouldStop)
         : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
-        public List<PopulationState<RealVector>> CheckedStates { get; } = [];
-
         public override bool IsTerminalState(
             PopulationState<RealVector> state,
             IRandomNumberGenerator random,
             BoundedRealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
         {
-            CheckedStates.Add(state);
-            return CheckedStates.Count >= StopOnCheckedStateCount;
+            RecordState(state);
+            return ShouldStop();
         }
     }
 }

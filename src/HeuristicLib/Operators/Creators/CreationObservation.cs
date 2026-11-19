@@ -15,7 +15,7 @@ namespace HEAL.HeuristicLib.Operators;
 public sealed record CreationObservation<TCandidate>(
     IOperator<Creation, TCandidate> Creator,
     int Count,
-    IReadOnlyList<TCandidate> Candidates,
+    ValueArray<TCandidate> Candidates,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Creation, TCandidate, CreationObservation<TCandidate>>
@@ -31,7 +31,7 @@ public sealed record CreationObservation<TCandidate>(
         public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random)
         {
             var candidates = executor.Create(count, random);
-            observe(new CreationObservation<TCandidate>(creator, count, candidates, problem.SearchSpace, problem));
+            observe(new CreationObservation<TCandidate>(creator, count, candidates.ToValueArray(), problem.SearchSpace, problem));
             return candidates;
         }
     }

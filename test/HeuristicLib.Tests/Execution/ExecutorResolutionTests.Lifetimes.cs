@@ -49,7 +49,7 @@ public partial class ExecutorResolutionTests
     public void LongLivedWrapper_DoesNotRetainDiscardedExecutorData()
     {
         var weak = new List<WeakReference>();
-        IConfigurationNode<ICounterExecutor> source = new CollectingCounter(weak);
+        IConfigurationNode<ICounterExecutor> source = new CollectingCounter(weak.Add);
         IConfigurationNode<ICounterExecutor> observed = new CounterWrapper(source, _ => { });
         var root = ResolutionScope.Create();
         CreateFreshBindings(root, observed, weak);
@@ -119,7 +119,7 @@ public partial class ExecutorResolutionTests
     private static (FrameExecutor Binding, List<WeakReference> References) CreateDeferredBinding(ResolutionScope root, List<int> observed)
     {
         var references = new List<WeakReference>();
-        IConfigurationNode<ICounterExecutor> source = new CollectingCounter(references);
+        IConfigurationNode<ICounterExecutor> source = new CollectingCounter(references.Add);
         IConfigurationNode<ICounterExecutor> observedSource = new CounterWrapper(source, observed.Add);
         var child = root.CreateChildScope();
         var binding = child.Resolve(new FrameConfiguration(observedSource));
@@ -150,13 +150,13 @@ public partial class ExecutorResolutionTests
     }
 
     // Records private executor data weakly to test its lifetime.
-    private sealed record CollectingCounter(List<WeakReference> Weak) : IConfigurationNode<ICounterExecutor>
+    private sealed record CollectingCounter(Action<WeakReference> CollectReference) : IConfigurationNode<ICounterExecutor>
     {
 
         public ICounterExecutor CreateExecutionNode(ResolutionScope scope)
         {
             var count = new Count();
-            Weak.Add(new WeakReference(count));
+            CollectReference(new WeakReference(count));
             return new Counter(count);
         }
     }

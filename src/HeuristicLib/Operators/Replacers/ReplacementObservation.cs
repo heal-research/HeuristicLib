@@ -15,10 +15,10 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public sealed record ReplacementObservation<TCandidate>(
     IOperator<Replacement, TCandidate> Replacer,
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> PreviousPopulation,
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> OffspringPopulation,
+    ValueArray<EvaluatedCandidate<TCandidate>> PreviousPopulation,
+    ValueArray<EvaluatedCandidate<TCandidate>> OffspringPopulation,
     int Count,
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> Replaced,
+    ValueArray<EvaluatedCandidate<TCandidate>> Replaced,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Replacement, TCandidate, ReplacementObservation<TCandidate>>
@@ -34,7 +34,7 @@ public sealed record ReplacementObservation<TCandidate>(
         public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random)
         {
             var replaced = executor.Replace(previousPopulation, offspringPopulation, count, random);
-            observe(new ReplacementObservation<TCandidate>(replacer, previousPopulation, offspringPopulation, count, replaced,
+            observe(new ReplacementObservation<TCandidate>(replacer, previousPopulation.ToValueArray(), offspringPopulation.ToValueArray(), count, replaced.ToValueArray(),
                 problem.SearchSpace, problem));
             return replaced;
         }

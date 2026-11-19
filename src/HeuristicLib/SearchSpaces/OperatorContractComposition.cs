@@ -46,7 +46,7 @@ public static class OperatorContractComposition
     /// Collects the input requirements of <paramref name="children"/>, without duplicates. Any child may be handed the
     /// composition's input, so the composition requires everything they do.
     /// </summary>
-    public static IReadOnlyList<ICandidateInvariant<TCandidate>> Requires<TCandidate>(IEnumerable<IOperator> children)
+    public static ValueArray<ICandidateInvariant<TCandidate>> Requires<TCandidate>(IEnumerable<IOperator> children)
     {
         var required = new List<ICandidateInvariant<TCandidate>>();
         foreach (var child in children)
@@ -60,6 +60,6 @@ public static class OperatorContractComposition
             }
         }
 
-        return required;
+        return required.ToValueArray();
     }
 }

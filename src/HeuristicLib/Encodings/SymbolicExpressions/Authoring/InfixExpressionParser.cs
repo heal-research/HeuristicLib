@@ -95,7 +95,7 @@ public static class InfixExpressionParser
         var arguments = Separated(comma, expression);
         var function = name
             .And(openParenthesis.SkipAnd(arguments).AndSkip(closeParenthesis))
-            .Then<SyntaxNode>(static value => new FunctionSyntax(value.Item1.Value, value.Item1.WasQuoted, value.Item2.ToImmutableArray()));
+            .Then<SyntaxNode>(static value => new FunctionSyntax(value.Item1.Value, value.Item1.WasQuoted, value.Item2.ToValueArray()));
         var group = Between(openParenthesis, expression, closeParenthesis);
         var variable = name.Then<SyntaxNode>(static value => new IdentifierSyntax(value.Value, value.WasQuoted));
         var primary = function.Or(number).Or(group).Or(variable);
@@ -265,7 +265,7 @@ public static class InfixExpressionParser
 
     private static ExpressionDraft BindExplicitConstant(FunctionSyntax function, bool evolvable)
     {
-        if (function.Arguments.Length != 1 || !TryGetSignedNumber(function.Arguments[0], out var value))
+        if (function.Arguments.Count != 1 || !TryGetSignedNumber(function.Arguments[0], out var value))
             throw new InvalidOperationException($"Function '{function.Name}' requires one numeric literal argument.");
 
         return evolvable ? Constant(value) : FixedConstant(value);
@@ -340,7 +340,7 @@ public static class InfixExpressionParser
     private sealed record IdentifierSyntax(string Name, bool WasQuoted) : SyntaxNode;
     private sealed record UnarySyntax(SyntaxNode Operand) : SyntaxNode;
     private sealed record BinarySyntax(BinaryOperator Operator, SyntaxNode Left, SyntaxNode Right) : SyntaxNode;
-    private sealed record FunctionSyntax(string Name, bool WasQuoted, ImmutableArray<SyntaxNode> Arguments) : SyntaxNode;
+    private sealed record FunctionSyntax(string Name, bool WasQuoted, ValueArray<SyntaxNode> Arguments) : SyntaxNode;
 
     private enum BinaryOperator
     {

@@ -117,7 +117,7 @@ public sealed record BinaryExpressionNode : OperationExpressionNode
 
 public sealed record NaryExpressionNode : OperationExpressionNode
 {
-    public NaryExpressionNode(OperationSymbol symbol, params IEnumerable<ExpressionNode> children)
+    public NaryExpressionNode(OperationSymbol symbol, params IReadOnlyList<ExpressionNode> children)
         : this(symbol, children.ToImmutableArray())
     {
     }

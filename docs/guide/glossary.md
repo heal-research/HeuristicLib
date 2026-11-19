@@ -978,7 +978,7 @@ An observation is a read-only capture at a defined algorithm or operator boundar
 
 An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run.
 
-Each operation defines the record of one successful invocation, such as `CrossoverObservation<TCandidate>` with `Parents` and `Offspring`; an algorithm's record is `AlgorithmObservation<TCandidate, TSearchState>`. A record holds the call's inputs and outputs in their original types, plus the executor's bound search space and problem. A record of a call without them holds none. An observation of a configuration of your own may be any value, such as the temperature a cooling schedule returned.
+Each operation defines the record of one successful invocation, such as `CrossoverObservation<TCandidate>` with `Parents` and `Offspring`; an algorithm's record is `AlgorithmObservation<TCandidate, TSearchState>`. A record holds the call's inputs and outputs, with each batch snapshotted as a `ValueArray<T>`, plus the executor's bound search space and problem. A record of a call without them holds none. An observation of a configuration of your own may be any value, such as the temperature a cooling schedule returned.
 
 Related terms:
 

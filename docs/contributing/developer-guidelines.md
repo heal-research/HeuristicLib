@@ -313,7 +313,11 @@ Choose collection types by meaning and ownership.
 | Collection held by an executor                         | `ImmutableArray<T>`                                   |
 | Lazy or sequence oriented API                          | `IEnumerable<T>`                                      |
 
-A record never holds or declares an `IEnumerable`, generic or not, because a sequence has no value semantics and would break what a record promises. `ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on executors, where structural equality is unnecessary.
+A record never implements `IEnumerable`, generic or not: a record is a value, not a sequence.
+
+A record has value semantics, so what it holds has value semantics too, and its declared type says so. A sequence in a record's stored state or in any of its instance properties, positional, stored or computed, is typed as a concrete type with ordered structural equality: `ValueArray<T>`, or a domain vector such as `RealVector`, `IntegerVector`, `BoolVector`, `Permutation` or `ObjectiveVector`. It is never typed as an interface such as `IEnumerable<double>` or `IReadOnlyList<T>`, whose equality is unknown. Method parameters, method returns and static members follow the general collection guidance. A record may keep private lookup caches derived from its value members when it defines its equality over those value members only, and it does not hand those caches out mutably.
+
+This member rule covers every public or protected record and every record whose equality, hashing or serialization is used. A private or internal record that nothing compares, hashes or serializes and that only carries values as a named tuple is exempt. Executors keep `ImmutableArray<T>`.
 
 ### § 5.5 Construct value arrays without accidental nesting
 

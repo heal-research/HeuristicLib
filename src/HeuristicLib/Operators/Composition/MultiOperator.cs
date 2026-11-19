@@ -23,5 +23,5 @@ public abstract record MultiOperator<TOperation, TCandidate> : Operator<TOperati
 
     public virtual bool? Ensures(ICandidateInvariant<TCandidate> invariant) => OperatorContractComposition.Ensures(ChildOperators, invariant);
 
-    public virtual IReadOnlyList<ICandidateInvariant<TCandidate>> Requires => OperatorContractComposition.Requires<TCandidate>(ChildOperators);
+    public virtual ValueArray<ICandidateInvariant<TCandidate>> Requires => OperatorContractComposition.Requires<TCandidate>(ChildOperators);
 }

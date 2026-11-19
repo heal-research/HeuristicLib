@@ -199,7 +199,7 @@ Resolution extensions cast the resolved executor to the operation's interface. C
 
 ### Make the operation observable
 
-An operation is observable once it declares two parts beside the operation, as each built-in operation does: an observation record, which implements `IInvocationObservation<TOperation, TCandidate, TSelf>` to make an executor report it, and an `Invocations` source. The record carries the call's inputs and outputs together with the search space and problem its executor was bound to, so a trace can rank by that problem's objective:
+An operation is observable once it declares two parts beside the operation, as each built-in operation does: an observation record, which implements `IInvocationObservation<TOperation, TCandidate, TSelf>` to make an executor report it, and an `Invocations` source. The record carries the call's inputs and outputs, with each batch snapshotted as a `ValueArray<T>`, together with the search space and problem its executor was bound to, so a trace can rank by that problem's objective:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
 

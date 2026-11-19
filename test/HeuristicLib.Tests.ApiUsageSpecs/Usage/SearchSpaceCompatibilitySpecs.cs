@@ -43,7 +43,7 @@ internal sealed record FlipOneBitMutator : SingleCandidateMutator<BoolVector>, I
 /// </remarks>
 internal sealed record SwapSecondTrueMutator : SingleCandidateMutator<BoolVector>, IOperatorContract<BoolVector>
 {
-    public IReadOnlyList<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
+    public ValueArray<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
 
     public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
     {

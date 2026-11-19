@@ -27,8 +27,8 @@ public sealed class DeferredAlgorithmResolutionTests
         var executor = Resolve(ResolutionScope.Create(), Cycle(algorithm, reset));
         var forks = new List<string>();
 
-        var first = await Run(executor, new RecordingRandom("first", forks));
-        var second = await Run(executor, new RecordingRandom("second", forks));
+        var first = await Run(executor, new RecordingRandom("first", forks.Add));
+        var second = await Run(executor, new RecordingRandom("second", forks.Add));
 
         first.Select(state => state.Value).ShouldBe([1, 2, 3, 4]);
         second.Select(state => state.Value).ShouldBe([1, 2, 3, 4]);
@@ -202,8 +202,8 @@ public sealed class DeferredAlgorithmResolutionTests
         var root = ResolutionScope.Create();
         var executor = Resolve(root, pipeline);
         var forks = new List<string>();
-        var first = await Run(executor, new RecordingRandom("first", forks));
-        var second = await Run(executor, new RecordingRandom("second", forks));
+        var first = await Run(executor, new RecordingRandom("first", forks.Add));
+        var second = await Run(executor, new RecordingRandom("second", forks.Add));
         first.Select(state => state.Value).ShouldBe([1, 2]);
         first.Select(state => state.Call).ShouldBe([1, 1]);
         second.Select(state => state.Call).ShouldBe([1, 1]);
@@ -553,15 +553,15 @@ public sealed class DeferredAlgorithmResolutionTests
         }
     }
 
-    private sealed record RecordingRandom(string Path, List<string> Forks) : IRandomNumberGenerator
+    private sealed record RecordingRandom(string Path, Action<string> RecordFork) : IRandomNumberGenerator
     {
         public double NextDouble() => throw new InvalidOperationException("No random draws are expected.");
         public int NextInt() => throw new InvalidOperationException("No random draws are expected.");
         public IRandomNumberGenerator Fork(ulong forkKey)
         {
             var childPath = $"{Path}/{forkKey}";
-            Forks.Add(childPath);
-            return new RecordingRandom(childPath, Forks);
+            RecordFork(childPath);
+            return new RecordingRandom(childPath, RecordFork);
         }
     }
 }

@@ -93,7 +93,7 @@ public class ExtendedSymbolicRegressionProblem(
             40,
             20,
             operations,
-            data.Inputs.Columns.Select(column => column.Name),
+            data.Inputs.Columns.Select(column => column.Name).ToArray(),
             [constant]);
         var innerProblem = new SymbolicRegressionProblem(
             data,

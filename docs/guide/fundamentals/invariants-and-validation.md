@@ -62,12 +62,12 @@ public record FixedCardinalityBoolVectorSearchSpace : SearchSpace<BoolVector>
 {
     // ... constructor, Length and Cardinality properties, and Contains override omitted.
 
-    public override IReadOnlyList<ICandidateInvariant<BoolVector>> Invariants =>
+    public override ValueArray<ICandidateInvariant<BoolVector>> Invariants =>
         [new BoolVectorLength(Length), new BoolVectorCardinality(Cardinality)];
 }
 ```
 
-An empty list — the default — means the space requires nothing, so every operator over that candidate representation is compatible with it. This is why adopting invariants is a per-space decision and why configurations written before the system existed still validate unchanged.
+The default `ValueArray<T>` is empty. A space that declares no invariants gives an operator no output invariant to answer for, so the output check passes for every operator over its candidate representation. An operator that requires an invariant is still rejected there, because nothing the space declares entails it. This is why adopting invariants is a per-space decision and why configurations written before the system existed still validate unchanged.
 
 ### An operator states its side of the deal
 
@@ -105,7 +105,7 @@ So **declaring is opt-in, per invariant**. An operator that implements nothing, 
 The other half is `Requires`, the invariants an operator needs of the candidates handed to it:
 
 ```csharp
-public IReadOnlyList<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
+public ValueArray<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
 ```
 
 An operator that swaps the second set element cannot be handed a candidate with fewer than two, so it is usable over a fixed cardinality space and not over an unconstrained one. That is the mirror image of the flip mutator, and it is why neither check substitutes for the other: accepting more input makes an operator more widely usable, and so does ensuring more about its output.
@@ -246,7 +246,7 @@ foreach (var diagnostic in report.Diagnostics)
 
 `algorithm.ValidateAndThrow(problem)` is the same check as a guard clause. `SearchConfigurationValidation.Validate(configuration, searchSpace)` checks any configuration — a single operator, a composition — against a space directly, without a problem.
 
-`SearchConfigurationValidation`, `ValidationReport` and `ValidationDiagnostic` are in the `HEAL.HeuristicLib.Execution` namespace.
+`SearchConfigurationValidation`, `ValidationReport` and `ValidationDiagnostic` are in the `HEAL.HeuristicLib.Execution` namespace. The report exposes its diagnostics as a `ValueArray<ValidationDiagnostic>`.
 
 Every form reports **every** failure it finds rather than stopping at the first, so one pass tells you everything to fix.
 

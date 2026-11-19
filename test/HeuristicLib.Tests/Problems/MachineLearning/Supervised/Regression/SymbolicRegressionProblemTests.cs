@@ -283,7 +283,7 @@ public sealed class SymbolicRegressionProblemTests
             maximumLength: 31,
             maximumDepth: 6,
             operations: Symbols.MinimalOperations,
-            variables: variables ?? ["x0", "x1"],
+            variables: variables?.ToArray() ?? ["x0", "x1"],
             constants: [new FixedConstantSymbol(2.0)]);
 
     private static RegressionData CreateLinearRegressionData() =>

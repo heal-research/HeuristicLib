@@ -390,7 +390,7 @@ public class DynamicAnalysisTests
             throw new NotSupportedException();
     }
 
-    private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
+    private sealed record BatchEvaluationAlgorithm(ValueArray<ValueArray<int>> Batches)
         : Algorithm<BatchEvaluationAlgorithm, int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
     {
         public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator();
@@ -406,7 +406,7 @@ public class DynamicAnalysisTests
 
         private sealed class Executor(
             IEvaluationExecutor<int> evaluator,
-            IReadOnlyList<IReadOnlyList<int>> batches)
+            ValueArray<ValueArray<int>> batches)
             : AlgorithmExecutor<PopulationState<int>>
         {
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(

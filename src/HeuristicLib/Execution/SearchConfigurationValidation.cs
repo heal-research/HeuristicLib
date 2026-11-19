@@ -16,11 +16,11 @@ public sealed record ValidationDiagnostic(string Path, string Message)
 /// Everything a validation pass found. An empty report means the configuration is usable over the search space it was
 /// checked against.
 /// </summary>
-public sealed record ValidationReport(ImmutableArray<ValidationDiagnostic> Diagnostics)
+public sealed record ValidationReport(ValueArray<ValidationDiagnostic> Diagnostics)
 {
     public static ValidationReport Valid { get; } = new([]);
 
-    public bool IsValid => Diagnostics.Length == 0;
+    public bool IsValid => Diagnostics.Count == 0;
 
     /// <summary>
     /// Throws when the configuration is not usable, listing every problem rather than only the first.

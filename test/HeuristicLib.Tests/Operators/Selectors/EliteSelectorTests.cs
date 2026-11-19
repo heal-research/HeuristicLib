@@ -10,21 +10,23 @@ public class EliteSelectorTests
     [Fact]
     public void Select_TakesElitesFirstThenAsksChildForRemainingPlaces()
     {
-        var recording = new RecordingSelector();
+        var requestedCounts = new List<int>();
+        var recording = new RecordingSelector(requestedCounts.Add);
         var selected = Select(recording, elites: 1, count: 3);
 
         selected.Select(candidate => candidate.Candidate).ShouldBe(["best", "worst", "worst"]);
-        recording.RequestedCounts.ShouldBe([2]);
+        requestedCounts.ShouldBe([2]);
     }
 
     [Fact]
     public void Select_WhenElitesFillRequestedCount_DoesNotInvokeChildSelector()
     {
-        var recording = new RecordingSelector();
+        var requestedCounts = new List<int>();
+        var recording = new RecordingSelector(requestedCounts.Add);
         var selected = Select(recording, elites: 3, count: 3);
 
         selected.Count.ShouldBe(3);
-        recording.RequestedCounts.ShouldBeEmpty();
+        requestedCounts.ShouldBeEmpty();
     }
 
     /// <summary>
@@ -34,21 +36,23 @@ public class EliteSelectorTests
     [Fact]
     public void Select_WhenElitesExceedRequestedCount_ReturnsExactlyRequestedCountWithoutInvokingChildSelector()
     {
-        var recording = new RecordingSelector();
+        var requestedCounts = new List<int>();
+        var recording = new RecordingSelector(requestedCounts.Add);
         var selected = Select(recording, elites: 10, count: 2);
 
         selected.Count.ShouldBe(2);
-        recording.RequestedCounts.ShouldBeEmpty();
+        requestedCounts.ShouldBeEmpty();
     }
 
     [Fact]
     public void Select_WithNonpositiveElites_AsksChildForTheCompleteSelection()
     {
-        var recording = new RecordingSelector();
+        var requestedCounts = new List<int>();
+        var recording = new RecordingSelector(requestedCounts.Add);
         var selected = Select(recording, elites: 0, count: 3);
 
         selected.Count.ShouldBe(3);
-        recording.RequestedCounts.ShouldBe([3]);
+        requestedCounts.ShouldBe([3]);
     }
 
     private static IReadOnlyList<EvaluatedCandidate<string>> Select(RecordingSelector childSelector, int elites, int count)
@@ -71,13 +75,11 @@ public class EliteSelectorTests
     /// Records every requested count so the tests can assert that the child is asked only for the places that
     /// actually remain, and is not called at all when none do.
     /// </summary>
-    private sealed record RecordingSelector : StatelessSelector<string>
+    private sealed record RecordingSelector(Action<int> RecordRequestedCount) : StatelessSelector<string>
     {
-        public List<int> RequestedCounts { get; } = [];
-
         public override IReadOnlyList<EvaluatedCandidate<string>> Select(IReadOnlyList<EvaluatedCandidate<string>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
-            RequestedCounts.Add(count);
+            RecordRequestedCount(count);
             return [.. Enumerable.Repeat(population[^1], count)];
         }
     }

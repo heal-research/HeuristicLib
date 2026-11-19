@@ -14,8 +14,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public sealed record MutationObservation<TCandidate>(
     IOperator<Mutation, TCandidate> Mutator,
-    IReadOnlyList<TCandidate> Parents,
-    IReadOnlyList<TCandidate> Offspring,
+    ValueArray<TCandidate> Parents,
+    ValueArray<TCandidate> Offspring,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>
@@ -31,7 +31,7 @@ public sealed record MutationObservation<TCandidate>(
         public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
             var offspring = executor.Mutate(parents, random);
-            observe(new MutationObservation<TCandidate>(mutator, parents, offspring, problem.SearchSpace, problem));
+            observe(new MutationObservation<TCandidate>(mutator, parents.ToValueArray(), offspring.ToValueArray(), problem.SearchSpace, problem));
             return offspring;
         }
     }

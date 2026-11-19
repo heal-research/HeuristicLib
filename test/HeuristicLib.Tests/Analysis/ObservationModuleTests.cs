@@ -26,7 +26,7 @@ public class ObservationModuleTests
         var observation = observations.ShouldHaveSingleItem();
         observation.Mutator.ShouldBeSameAs(mutator);
         observation.Parents.ShouldBe([1, 2]);
-        observation.Offspring.ShouldBeSameAs(offspring);
+        observation.Offspring.ShouldBe(offspring.ToValueArray());
         observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
         observation.Problem.ShouldBeSameAs(problem);
     }

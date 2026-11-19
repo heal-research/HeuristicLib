@@ -292,10 +292,10 @@ public class ExecutionSupportTests
         public IReadOnlyList<IParameter> GetParameters() => [ChildParameter];
     }
 
-    private sealed record Naming(IReadOnlyList<IConfigurationNode> Targets) : IConfigurationNode
+    private sealed record Naming(ValueArray<IConfigurationNode> Targets) : IConfigurationNode
     {
         public static ReferenceListParameter<Naming> TargetsParameter { get; } =
-            new(nameof(Targets), static naming => naming.Targets, static (naming, value) => naming with { Targets = value });
+            new(nameof(Targets), static naming => naming.Targets, static (naming, value) => naming with { Targets = value.ToValueArray() });
 
         public IReadOnlyList<IParameter> GetParameters() => [TargetsParameter];
     }

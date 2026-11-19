@@ -18,13 +18,13 @@ public class ChoosePerInvocationTests
     [Fact]
     public void SnapshotsChildrenAndWeightsWithStructuralEquality()
     {
-        var first = new IndexMutator(0, []);
-        var second = new IndexMutator(1, []);
+        var first = new IndexMutator(0, _ => { });
+        var second = new IndexMutator(1, _ => { });
         List<IOperator<Mutation, int>> children = [first, second];
         List<double> weights = [1.0, 2.0];
 
         var choice = ChoosePerInvocation.Create(children, weights);
-        children.Add(new IndexMutator(2, []));
+        children.Add(new IndexMutator(2, _ => { }));
         weights.Add(3.0);
 
         choice.ChildOperators.ShouldBe([first, second]);
@@ -37,7 +37,7 @@ public class ChoosePerInvocationTests
     [Fact]
     public void ResolutionRejectsMissingChildrenAndMismatchedWeights()
     {
-        var child = new IndexMutator(0, []);
+        var child = new IndexMutator(0, _ => { });
         var scope = CreateScope();
 
         Should.Throw<InvalidOperationException>(() => scope.Resolve(ChoosePerInvocation.Create<Mutation, int>()));
@@ -54,9 +54,9 @@ public class ChoosePerInvocationTests
         var mutations = new List<(int Index, double NextDraw)>();
         var selections = new List<(int Index, double NextDraw)>();
         var choice = ChoosePerInvocation.Create(
-            Enumerable.Range(0, 3).Select(index => (IOperator<Mutation, int>)new IndexMutator(index, mutations)).ToArray(), weights);
+            Enumerable.Range(0, 3).Select(index => (IOperator<Mutation, int>)new IndexMutator(index, mutations.Add)).ToArray(), weights);
         var selector = ChoosePerInvocation.Create(
-            Enumerable.Range(0, 3).Select(index => (IOperator<Selection, int>)new IndexSelector(index, selections)).ToArray(), weights);
+            Enumerable.Range(0, 3).Select(index => (IOperator<Selection, int>)new IndexSelector(index, selections.Add)).ToArray(), weights);
         var mutation = CreateScope().Resolve(choice);
         var selection = CreateScope().Resolve(selector);
         IReadOnlyList<EvaluatedCandidate<int>> population = [EvaluatedCandidate.From(0, new ObjectiveVector(0.0))];
@@ -80,7 +80,7 @@ public class ChoosePerInvocationTests
     {
         var calls = new List<(int Index, double NextDraw)>();
         var choice = ChoosePerInvocation.Create(
-            Enumerable.Range(0, weights.Length).Select(index => (IOperator<Mutation, int>)new IndexMutator(index, calls)).ToArray(), weights);
+            Enumerable.Range(0, weights.Length).Select(index => (IOperator<Mutation, int>)new IndexMutator(index, calls.Add)).ToArray(), weights);
         var executor = CreateScope().Resolve(choice);
         var random = RandomNumberGenerator.Create(5);
 
@@ -94,7 +94,7 @@ public class ChoosePerInvocationTests
     public void TheChosenChildReceivesTheCallsArgumentsAndRandom()
     {
         var observed = new List<(IReadOnlyList<int> Parents, IRandomNumberGenerator Random, DummySearchSpace<int> SearchSpace, FuncProblem<int, DummySearchSpace<int>> Problem)>();
-        var executor = CreateScope().Resolve(ChoosePerInvocation.Create([new IndexMutator(0, []), new ObservingMutator(observed)], [0.0, 1.0]));
+        var executor = CreateScope().Resolve(ChoosePerInvocation.Create([new IndexMutator(0, _ => { }), new ObservingMutator(observed.Add)], [0.0, 1.0]));
         IReadOnlyList<int> parents = [1, 2];
         var random = RandomNumberGenerator.Create(3);
 
@@ -119,8 +119,8 @@ public class ChoosePerInvocationTests
     [Fact]
     public void CountersCountTheChoiceOncePerCallAndOnlyTheChosenChild()
     {
-        var first = new IndexMutator(0, []);
-        var second = new IndexMutator(1, []);
+        var first = new IndexMutator(0, _ => { });
+        var second = new IndexMutator(1, _ => { });
         var choice = ChoosePerInvocation.Create([first, second], [1.0, 0.0]);
         Counter firstCalls = new(), secondCalls = new(), choiceCalls = new(), choiceCandidates = new();
         var counted = choice
@@ -144,7 +144,7 @@ public class ChoosePerInvocationTests
     [Fact]
     public void EachConstructionResolvesItsChildrenInTheRequestingContext()
     {
-        var child = new IndexMutator(0, []);
+        var child = new IndexMutator(0, _ => { });
         var choice = ChoosePerInvocation.Create(child);
         var root = ResolutionScope.Create();
         var plain = root.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(Problem).Resolve(choice);
@@ -171,30 +171,30 @@ public class ChoosePerInvocationTests
     private static ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateScope() =>
         ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(Problem);
 
-    private sealed record IndexMutator(int Index, List<(int Index, double NextDraw)> Invocations) : StatelessMutator<int>
+    private sealed record IndexMutator(int Index, Action<(int Index, double NextDraw)> RecordInvocation) : StatelessMutator<int>
     {
         public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
         {
-            Invocations.Add((Index, random.NextDouble()));
+            RecordInvocation((Index, random.NextDouble()));
             return parents.Select(_ => Index).ToArray();
         }
     }
 
-    private sealed record IndexSelector(int Index, List<(int Index, double NextDraw)> Invocations) : StatelessSelector<int>
+    private sealed record IndexSelector(int Index, Action<(int Index, double NextDraw)> RecordInvocation) : StatelessSelector<int>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
-            Invocations.Add((Index, random.NextDouble()));
+            RecordInvocation((Index, random.NextDouble()));
             return population.Take(count).ToArray();
         }
     }
 
-    private sealed record ObservingMutator(List<(IReadOnlyList<int> Parents, IRandomNumberGenerator Random, DummySearchSpace<int> SearchSpace, FuncProblem<int, DummySearchSpace<int>> Problem)> Invocations)
+    private sealed record ObservingMutator(Action<(IReadOnlyList<int> Parents, IRandomNumberGenerator Random, DummySearchSpace<int> SearchSpace, FuncProblem<int, DummySearchSpace<int>> Problem)> RecordInvocation)
         : StatelessMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
         public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
         {
-            Invocations.Add((parents, random, searchSpace, problem));
+            RecordInvocation((parents, random, searchSpace, problem));
             return parents;
         }
     }

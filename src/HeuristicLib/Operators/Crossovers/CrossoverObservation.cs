@@ -14,8 +14,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public sealed record CrossoverObservation<TCandidate>(
     IOperator<Crossover, TCandidate> Crossover,
-    IReadOnlyList<Parents<TCandidate>> Parents,
-    IReadOnlyList<TCandidate> Offspring,
+    ValueArray<Parents<TCandidate>> Parents,
+    ValueArray<TCandidate> Offspring,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>
@@ -31,7 +31,7 @@ public sealed record CrossoverObservation<TCandidate>(
         public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random)
         {
             var offspring = executor.Cross(parents, random);
-            observe(new CrossoverObservation<TCandidate>(crossover, parents, offspring, problem.SearchSpace, problem));
+            observe(new CrossoverObservation<TCandidate>(crossover, parents.ToValueArray(), offspring.ToValueArray(), problem.SearchSpace, problem));
             return offspring;
         }
     }

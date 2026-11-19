@@ -14,8 +14,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public sealed record RefinementObservation<TCandidate>(
     IOperator<Refinement, TCandidate> Refiner,
-    IReadOnlyList<TCandidate> Candidates,
-    IReadOnlyList<TCandidate> Refined,
+    ValueArray<TCandidate> Candidates,
+    ValueArray<TCandidate> Refined,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>
@@ -31,7 +31,7 @@ public sealed record RefinementObservation<TCandidate>(
         public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var refined = executor.Refine(candidates, random);
-            observe(new RefinementObservation<TCandidate>(refiner, candidates, refined, problem.SearchSpace, problem));
+            observe(new RefinementObservation<TCandidate>(refiner, candidates.ToValueArray(), refined.ToValueArray(), problem.SearchSpace, problem));
             return refined;
         }
     }

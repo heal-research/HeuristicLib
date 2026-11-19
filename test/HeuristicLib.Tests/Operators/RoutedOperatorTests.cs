@@ -540,7 +540,7 @@ public class RoutedOperatorTests
     public void PipelineInterceptor_PassesSameRandomAndOriginalPreviousStateToEveryStage()
     {
         var observations = new List<(TestAlgorithmState? PreviousState, IRandomNumberGenerator Random)>();
-        var interceptor = new RecordingStateInterceptor(observations).Then(new RecordingStateInterceptor(observations));
+        var interceptor = new RecordingStateInterceptor(observations.Add).Then(new RecordingStateInterceptor(observations.Add));
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var previousState = new TestAlgorithmState { Value = 0 };
         var random = RandomNumberGenerator.Create(1);
@@ -711,12 +711,12 @@ public class RoutedOperatorTests
             currentState with { Value = currentState.Value + Offset };
     }
 
-    private sealed record RecordingStateInterceptor(List<(TestAlgorithmState? PreviousState, IRandomNumberGenerator Random)> Observations)
+    private sealed record RecordingStateInterceptor(Action<(TestAlgorithmState? PreviousState, IRandomNumberGenerator Random)> RecordObservation)
         : StatelessInterceptor<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TestAlgorithmState>
     {
         public override TestAlgorithmState Transform(TestAlgorithmState currentState, TestAlgorithmState? previousState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
-            Observations.Add((previousState, random));
+            RecordObservation((previousState, random));
             return currentState;
         }
     }

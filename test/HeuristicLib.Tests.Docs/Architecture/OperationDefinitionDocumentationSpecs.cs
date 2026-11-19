@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Collections;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
@@ -79,8 +80,8 @@ public static class EstimationResolutionExtensions
 #region operation-observation
 public sealed record EstimationObservation<TCandidate>(
     IOperator<Estimation, TCandidate> Estimator,
-    IReadOnlyList<TCandidate> Candidates,
-    IReadOnlyList<double> Estimates,
+    ValueArray<TCandidate> Candidates,
+    ValueArray<double> Estimates,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>
@@ -97,7 +98,7 @@ public sealed record EstimationObservation<TCandidate>(
         public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var estimates = executor.Estimate(candidates, random);
-            observe(new EstimationObservation<TCandidate>(estimator, candidates, estimates, problem.SearchSpace, problem));
+            observe(new EstimationObservation<TCandidate>(estimator, candidates.ToValueArray(), estimates.ToValueArray(), problem.SearchSpace, problem));
             return estimates;
         }
     }

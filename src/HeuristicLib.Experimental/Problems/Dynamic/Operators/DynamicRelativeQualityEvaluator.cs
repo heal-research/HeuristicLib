@@ -36,7 +36,7 @@ public sealed record DynamicRelativeQualityEvaluator<TCandidate, TSearchSpace, T
 {
     public IOperator<Evaluation, TCandidate> ChildOperator { get; init; }
 
-    public IReadOnlyList<ICandidateInvariant<TCandidate>> Requires => OperatorContractComposition.Requires<TCandidate>([ChildOperator]);
+    public ValueArray<ICandidateInvariant<TCandidate>> Requires => OperatorContractComposition.Requires<TCandidate>([ChildOperator]);
 
     /// <summary>
     /// Gets the provider that supplies the best-known objective vector for the current epoch.

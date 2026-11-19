@@ -2,7 +2,7 @@ using HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public sealed record TravelingSalesmanExactSolution(ImmutableArray<int> Tour, double Quality);
+public sealed record TravelingSalesmanExactSolution(ValueArray<int> Tour, double Quality);
 
 public interface ITravelingSalesmanExactSolver
 {

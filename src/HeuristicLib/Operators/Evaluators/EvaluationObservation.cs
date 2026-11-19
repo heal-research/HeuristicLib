@@ -15,8 +15,8 @@ namespace HEAL.HeuristicLib.Operators;
 /// </remarks>
 public sealed record EvaluationObservation<TCandidate>(
     IOperator<Evaluation, TCandidate> Evaluator,
-    IReadOnlyList<TCandidate> Candidates,
-    IReadOnlyList<ObjectiveVector> ObjectiveVectors,
+    ValueArray<TCandidate> Candidates,
+    ValueArray<ObjectiveVector> ObjectiveVectors,
     ISearchSpace<TCandidate> SearchSpace,
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Evaluation, TCandidate, EvaluationObservation<TCandidate>>
@@ -32,7 +32,7 @@ public sealed record EvaluationObservation<TCandidate>(
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var objectiveVectors = executor.Evaluate(candidates, random);
-            observe(new EvaluationObservation<TCandidate>(evaluator, candidates, objectiveVectors, problem.SearchSpace, problem));
+            observe(new EvaluationObservation<TCandidate>(evaluator, candidates.ToValueArray(), objectiveVectors.ToValueArray(), problem.SearchSpace, problem));
             return objectiveVectors;
         }
     }

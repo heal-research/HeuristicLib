@@ -92,7 +92,7 @@ public class TravelingSalesmanProblemTests
         var solution = solver.Solve(data, [0, 1, 2, 3], TestContext.Current.CancellationToken);
 
         solution.Quality.ShouldBe(4.0, 1e-10);
-        solution.Tour.Length.ShouldBe(4);
+        solution.Tour.Count.ShouldBe(4);
         CanonicalizeCycle(solution.Tour).ShouldBe(CanonicalizeCycle([0, 1, 2, 3]));
     }
 

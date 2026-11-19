@@ -58,7 +58,7 @@ public class ProblemGeneration
             parameters.TreeLength,
             parameters.TreeDepth,
             operations,
-            data.Inputs.Columns.Select(column => column.Name),
+            data.Inputs.Columns.Select(column => column.Name).ToArray(),
             [constant]);
 
         return new SymbolicRegressionProblem(

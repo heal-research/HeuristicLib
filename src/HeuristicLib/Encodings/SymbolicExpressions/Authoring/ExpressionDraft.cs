@@ -108,7 +108,7 @@ public abstract record ExpressionDraft
     internal sealed record EvolvableConstantDraft(double Value, EvolvableConstantSymbol? Symbol) : ExpressionDraft;
     internal sealed record UnaryDraft(OperationSymbol Symbol, ExpressionDraft Child) : ExpressionDraft;
     internal sealed record BinaryDraft(OperationSymbol Symbol, ExpressionDraft Left, ExpressionDraft Right) : ExpressionDraft;
-    internal sealed record OperationDraft(OperationSymbol Symbol, ImmutableArray<ExpressionDraft> Children) : ExpressionDraft;
+    internal sealed record OperationDraft(OperationSymbol Symbol, ValueArray<ExpressionDraft> Children) : ExpressionDraft;
 
     public static ExpressionDraft Variable(string name, VariableSymbol? variableSymbol = null)
     {
@@ -128,7 +128,7 @@ public abstract record ExpressionDraft
         if (children.Length != symbol.Arity)
             throw new ArgumentException($"Symbol '{symbol.Name}' requires {symbol.Arity} children but received {children.Length}.", nameof(children));
 
-        return new OperationDraft(symbol, children.ToImmutableArray());
+        return new OperationDraft(symbol, children.ToValueArray());
     }
 
     public static ExpressionDraft Add(ExpressionDraft left, ExpressionDraft right) => new BinaryDraft(Symbols.Addition, left, right);

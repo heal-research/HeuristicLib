@@ -65,15 +65,15 @@ public class ObservationResolutionTests
     public void MutatorObservation_PreservesSourceAndResult()
     {
         var events = new List<string>();
-        IOperator<Mutation, int> source = new RecordingMutator(events);
+        IOperator<Mutation, int> source = new RecordingMutator(events.Add);
         IReadOnlyList<int> parents = [1, 2];
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
             {
                 observation.Mutator.ShouldBeSameAs(source);
-                observation.Parents.ShouldBeSameAs(parents);
-                observation.Offspring.ShouldBeSameAs(parents);
+                observation.Parents.ShouldBe(parents.ToValueArray());
+                observation.Offspring.ShouldBe(parents.ToValueArray());
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
@@ -87,15 +87,15 @@ public class ObservationResolutionTests
     {
         var events = new List<string>();
         IReadOnlyList<int> offspring = [3];
-        IOperator<Crossover, int> source = new RecordingCrossover(events, offspring);
+        IOperator<Crossover, int> source = new RecordingCrossover(events.Add, () => offspring);
         IReadOnlyList<Parents<int>> parents = [new(1, 2)];
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
             {
                 observation.Crossover.ShouldBeSameAs(source);
-                observation.Parents.ShouldBeSameAs(parents);
-                observation.Offspring.ShouldBeSameAs(offspring);
+                observation.Parents.ShouldBe(parents.ToValueArray());
+                observation.Offspring.ShouldBe(offspring.ToValueArray());
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
@@ -109,15 +109,15 @@ public class ObservationResolutionTests
     {
         var events = new List<string>();
         IReadOnlyList<ObjectiveVector> objectiveVectors = [new(3.0)];
-        IOperator<Evaluation, int> source = new RecordingEvaluator(events, objectiveVectors);
+        IOperator<Evaluation, int> source = new RecordingEvaluator(events.Add, () => objectiveVectors);
         IReadOnlyList<int> candidates = [3];
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
             {
                 observation.Evaluator.ShouldBeSameAs(source);
-                observation.Candidates.ShouldBeSameAs(candidates);
-                observation.ObjectiveVectors.ShouldBeSameAs(objectiveVectors);
+                observation.Candidates.ShouldBe(candidates.ToValueArray());
+                observation.ObjectiveVectors.ShouldBe(objectiveVectors.ToValueArray());
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
@@ -131,7 +131,7 @@ public class ObservationResolutionTests
     {
         var events = new List<string>();
         var transformed = CreateState(3);
-        IOperator<Interception<PopulationState<int>>, int> source = new RecordingInterceptor(events, transformed);
+        IOperator<Interception<PopulationState<int>>, int> source = new RecordingInterceptor(events.Add, transformed);
         var current = CreateState(2);
         var previous = CreateState(1);
         var problem = CreateProblem();
@@ -155,13 +155,13 @@ public class ObservationResolutionTests
     {
         var events = new List<string>();
         IReadOnlyList<int> created = [4, 5];
-        IOperator<Creation, int> source = new RecordingCreator(events, created);
+        IOperator<Creation, int> source = new RecordingCreator(events.Add, () => created);
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
             {
                 observation.Creator.ShouldBeSameAs(source);
-                observation.Candidates.ShouldBeSameAs(created);
+                observation.Candidates.ShouldBe(created.ToValueArray());
                 observation.Count.ShouldBe(2);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
@@ -172,19 +172,40 @@ public class ObservationResolutionTests
     }
 
     [Fact]
+    public void CreatorObservation_KeepsTheBatchWhenTheCreatorReusesItsList()
+    {
+        var batch = new List<int> { 0 };
+        IOperator<Creation, int> creator = new BatchCreator(count =>
+        {
+            batch[0] = count;
+            return batch;
+        });
+        var observations = new List<CreationObservation<int>>();
+        var observed = creator.Substitute(creator.Invocations.Observing(observations.Add));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(observed, CreateProblem());
+        var random = RandomNumberGenerator.Create(1);
+
+        executor.Create(1, random).ShouldBeSameAs(batch);
+        executor.Create(2, random).ShouldBeSameAs(batch);
+
+        observations[0].Candidates.ShouldBe([1]);
+        observations[1].Candidates.ShouldBe([2]);
+    }
+
+    [Fact]
     public void SelectorObservation_PreservesSourceAndResult()
     {
         var events = new List<string>();
         IReadOnlyList<EvaluatedCandidate<int>> population = [EvaluatedCandidate.From(1, 1), EvaluatedCandidate.From(2, 2)];
         IReadOnlyList<EvaluatedCandidate<int>> selected = [population[1]];
-        IOperator<Selection, int> source = new RecordingSelector(events, selected);
+        IOperator<Selection, int> source = new RecordingSelector(events.Add, () => selected);
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
             {
                 observation.Selector.ShouldBeSameAs(source);
-                observation.Selected.ShouldBeSameAs(selected);
-                observation.Population.ShouldBeSameAs(population);
+                observation.Selected.ShouldBe(selected.ToValueArray());
+                observation.Population.ShouldBe(population.ToValueArray());
                 observation.Count.ShouldBe(1);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
@@ -201,14 +222,14 @@ public class ObservationResolutionTests
         var events = new List<string>();
         IReadOnlyList<int> candidates = [1, 2];
         IReadOnlyList<int> refined = [3, 4];
-        IOperator<Refinement, int> source = new RecordingRefiner(events, refined);
+        IOperator<Refinement, int> source = new RecordingRefiner(events.Add, () => refined);
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
             {
                 observation.Refiner.ShouldBeSameAs(source);
-                observation.Refined.ShouldBeSameAs(refined);
-                observation.Candidates.ShouldBeSameAs(candidates);
+                observation.Refined.ShouldBe(refined.ToValueArray());
+                observation.Candidates.ShouldBe(candidates.ToValueArray());
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
                 observe();
@@ -223,16 +244,16 @@ public class ObservationResolutionTests
         var events = new List<string>();
         IReadOnlyList<EvaluatedCandidate<int>> previous = [EvaluatedCandidate.From(1, 1)];
         IReadOnlyList<EvaluatedCandidate<int>> offspring = [EvaluatedCandidate.From(2, 2)];
-        IReadOnlyList<EvaluatedCandidate<int>> replaced = [offspring[0]];
-        IOperator<Replacement, int> source = new RecordingReplacer(events, replaced);
+        IReadOnlyList<EvaluatedCandidate<int>> replaced = [EvaluatedCandidate.From(3, 3)];
+        IOperator<Replacement, int> source = new RecordingReplacer(events.Add, () => replaced);
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
             {
                 observation.Replacer.ShouldBeSameAs(source);
-                observation.Replaced.ShouldBeSameAs(replaced);
-                observation.PreviousPopulation.ShouldBeSameAs(previous);
-                observation.OffspringPopulation.ShouldBeSameAs(offspring);
+                observation.Replaced.ShouldBe(replaced.ToValueArray());
+                observation.PreviousPopulation.ShouldBe(previous.ToValueArray());
+                observation.OffspringPopulation.ShouldBe(offspring.ToValueArray());
                 observation.Count.ShouldBe(1);
                 observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
                 observation.Problem.ShouldBeSameAs(problem);
@@ -247,7 +268,7 @@ public class ObservationResolutionTests
     public void TerminatorObservation_PreservesStateAndDecision()
     {
         var events = new List<string>();
-        IOperator<Termination, int> source = new RecordingTerminator(events);
+        IOperator<Termination, int> source = new RecordingTerminator(events.Add);
         var state = CreateState(1);
         var problem = CreateProblem();
         AssertObservation(events, source,
@@ -271,7 +292,7 @@ public class ObservationResolutionTests
     public void ExternalOperationObservation_PreservesSourceAndResult()
     {
         var events = new List<string>();
-        IOperator<Checksum, int> source = new RecordingChecksum(events, 17);
+        IOperator<Checksum, int> source = new RecordingChecksum(events.Add, 17);
         var problem = CreateProblem();
         AssertObservation(events, source,
             observe => source.Invocations.Observing(observation =>
@@ -303,16 +324,16 @@ public class ObservationResolutionTests
 
     private static PopulationState<int> CreateState(int candidate) => Population.From([EvaluatedCandidate.From(candidate, candidate)]).ToPopulationState();
 
-    private sealed record RecordingTerminator(List<string> Events) : StatelessTerminator<int, PopulationState<int>>
+    private sealed record RecordingTerminator(Action<string> RecordEvent) : StatelessTerminator<int, PopulationState<int>>
     {
         public override bool IsTerminalState(PopulationState<int> state, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
+            RecordEvent("operation");
             return true;
         }
     }
 
-    private sealed record RecordingChecksum(List<string> Events, int Value) : IOperator<Checksum, int>
+    private sealed record RecordingChecksum(Action<string> RecordEvent, int Value) : IOperator<Checksum, int>
     {
         IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(
             ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => new Executor(this);
@@ -321,84 +342,89 @@ public class ObservationResolutionTests
         {
             public int Read(IRandomNumberGenerator random)
             {
-                source.Events.Add("operation");
+                source.RecordEvent("operation");
                 return source.Value;
             }
         }
     }
 
-    private sealed record RecordingMutator(List<string> Events) : StatelessMutator<int>
+    private sealed record RecordingMutator(Action<string> RecordEvent) : StatelessMutator<int>
     {
         public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
+            RecordEvent("operation");
             return parents;
         }
     }
 
-    private sealed record RecordingCrossover(List<string> Events, IReadOnlyList<int> Offspring) : StatelessCrossover<int>
+    private sealed record RecordingCrossover(Action<string> RecordEvent, Func<IReadOnlyList<int>> Offspring) : StatelessCrossover<int>
     {
         public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
-            return Offspring;
+            RecordEvent("operation");
+            return Offspring();
         }
     }
 
-    private sealed record RecordingEvaluator(List<string> Events, IReadOnlyList<ObjectiveVector> ObjectiveVectors)
+    private sealed record RecordingEvaluator(Action<string> RecordEvent, Func<IReadOnlyList<ObjectiveVector>> ObjectiveVectors)
         : StatelessEvaluator<int>
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
-            return ObjectiveVectors;
+            RecordEvent("operation");
+            return ObjectiveVectors();
         }
     }
 
-    private sealed record RecordingInterceptor(List<string> Events, PopulationState<int> Transformed) : StatelessInterceptor<int, PopulationState<int>>
+    private sealed record RecordingInterceptor(Action<string> RecordEvent, PopulationState<int> Transformed) : StatelessInterceptor<int, PopulationState<int>>
     {
         public override PopulationState<int> Transform(PopulationState<int> currentState, PopulationState<int>? previousState, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
+            RecordEvent("operation");
             return Transformed;
         }
     }
 
-    private sealed record RecordingCreator(List<string> Events, IReadOnlyList<int> Created) : StatelessCreator<int>
+    private sealed record BatchCreator(Func<int, IReadOnlyList<int>> CreateBatch) : StatelessCreator<int>
+    {
+        public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random) => CreateBatch(count);
+    }
+
+    private sealed record RecordingCreator(Action<string> RecordEvent, Func<IReadOnlyList<int>> Created) : StatelessCreator<int>
     {
         public override IReadOnlyList<int> Create(int count, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
-            return Created;
+            RecordEvent("operation");
+            return Created();
         }
     }
 
-    private sealed record RecordingSelector(List<string> Events, IReadOnlyList<EvaluatedCandidate<int>> Selected) : StatelessSelector<int>
+    private sealed record RecordingSelector(Action<string> RecordEvent, Func<IReadOnlyList<EvaluatedCandidate<int>>> Selected) : StatelessSelector<int>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Select(IReadOnlyList<EvaluatedCandidate<int>> population,
             ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
-            return Selected;
+            RecordEvent("operation");
+            return Selected();
         }
     }
 
-    private sealed record RecordingRefiner(List<string> Events, IReadOnlyList<int> Refined) : StatelessRefiner<int>
+    private sealed record RecordingRefiner(Action<string> RecordEvent, Func<IReadOnlyList<int>> Refined) : StatelessRefiner<int>
     {
         public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
-            return Refined;
+            RecordEvent("operation");
+            return Refined();
         }
     }
 
-    private sealed record RecordingReplacer(List<string> Events, IReadOnlyList<EvaluatedCandidate<int>> Replaced) : StatelessReplacer<int>
+    private sealed record RecordingReplacer(Action<string> RecordEvent, Func<IReadOnlyList<EvaluatedCandidate<int>>> Replaced) : StatelessReplacer<int>
     {
         public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation,
             IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
         {
-            Events.Add("operation");
-            return Replaced;
+            RecordEvent("operation");
+            return Replaced();
         }
     }
 

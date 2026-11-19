@@ -63,7 +63,7 @@ public sealed class LevenbergMarquardtTests
         failure.ShouldBeNull();
         result.ShouldNotBeNull();
         var outputs = new double[input.Length];
-        execution.Evaluate(result.Parameters, outputs);
+        execution.Evaluate(result.Parameters.AsSpan(), outputs);
         var expectedMeanSquaredError = outputs.Zip(targets, static (output, target) => (output - target) * (output - target)).Average();
         result.MeanSquaredError.ShouldBe(expectedMeanSquaredError, 1e-14);
         result.MeanSquaredError.ShouldBeGreaterThan(0.0);
@@ -124,7 +124,7 @@ public sealed class LevenbergMarquardtTests
         input.AsSpan().Fill(double.NaN);
 
         result.ShouldNotBeNull();
-        result.Parameters.ShouldNotBeSameAs(initialParameters);
+        result.Parameters.AsSpan().Overlaps(initialParameters).ShouldBeFalse();
         result.Parameters[0].ShouldBe(1.0, 1e-8);
         result.Parameters[1].ShouldBe(2.0, 1e-8);
         result.MeanSquaredError.ShouldBe(0.0, 1e-12);

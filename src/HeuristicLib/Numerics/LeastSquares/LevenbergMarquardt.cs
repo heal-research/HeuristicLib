@@ -46,7 +46,7 @@ internal static class LevenbergMarquardt
             var objective = ObjectiveFunction.NonlinearModel(EvaluateModel, EvaluateJacobian, unusedIndependentVariables, targetVector);
             var minimizer = new LevenbergMarquardtMinimizer(maximumIterations: maximumIterations);
             var minimum = minimizer.FindMinimum(objective, new DenseVector(initialParameters.ToArray()));
-            result = new LevenbergMarquardtResult(minimum.MinimizingPoint.ToArray(), minimum.ModelInfoAtMinimum.Value / rowCount);
+            result = new LevenbergMarquardtResult(ValueArray.FromOwnedArray(minimum.MinimizingPoint.ToArray()), minimum.ModelInfoAtMinimum.Value / rowCount);
             failure = null;
             return true;
         }
@@ -77,6 +77,6 @@ internal static class LevenbergMarquardt
     }
 }
 
-internal sealed record LevenbergMarquardtResult(double[] Parameters, double MeanSquaredError);
+internal sealed record LevenbergMarquardtResult(ValueArray<double> Parameters, double MeanSquaredError);
 
 internal sealed record LevenbergMarquardtFailure(string Message);
