@@ -4,13 +4,13 @@ A search space describes valid candidates. Algorithms use it as a shared contrac
 
 ## Built-in spaces
 
-| Candidate       | Search space               | Good fit                                         |
-| --------------- | -------------------------- | ------------------------------------------------ |
-| `RealVector`    | `BoundedRealVectorSearchSpace`    | Continuous parameters and numerical optimization |
-| `IntegerVector` | `IntegerVectorSearchSpace` | Counts, choices and bounded discrete parameters  |
-| `BoolVector`    | `BoolVectorSearchSpace`    | Feature selection and yes or no decisions        |
-| `BoolVector`    | `FixedCardinalityBoolVectorSearchSpace` | Selection of exactly _k_ items out of _n_ |
-| `Permutation`   | `PermutationSearchSpace`   | Orders, tours and assignments without duplicates |
+| Candidate       | Search space                            | Good fit                                         |
+| --------------- | --------------------------------------- | ------------------------------------------------ |
+| `RealVector`    | `BoundedRealVectorSearchSpace`          | Continuous parameters and numerical optimization |
+| `IntegerVector` | `IntegerVectorSearchSpace`              | Counts, choices and bounded discrete parameters  |
+| `BoolVector`    | `BoolVectorSearchSpace`                 | Feature selection and yes or no decisions        |
+| `BoolVector`    | `FixedCardinalityBoolVectorSearchSpace` | Selection of exactly _k_ items out of _n_        |
+| `Permutation`   | `PermutationSearchSpace`                | Orders, tours and assignments without duplicates |
 
 Choose a representation that makes invalid candidates difficult to express. A permutation is a better model for a tour than an integer vector that needs a duplicate removal rule.
 
@@ -72,6 +72,6 @@ Before adding a custom representation, ask whether a built-in vector plus a deco
 
 ## Next steps
 
-- [Define evaluation and objective direction](/guide/fundamentals/problems)
+- [Objectives and candidates](/guide/fundamentals/objectives) continues the Fundamentals path with objective direction and evaluated candidates.
 - [Choose compatible operators](/guide/fundamentals/operators)
-- [Understand evaluated candidates](/guide/fundamentals/objectives)
+- [Define evaluation and objective direction](/guide/fundamentals/problems)

@@ -12,7 +12,7 @@ public class EvaluatorConfigurationEqualityTests
     {
         var child = new OffsetEvaluator(1);
 
-        new IdentityEvaluator(child).ChildEvaluator.ShouldBeSameAs(child);
+        new IdentityEvaluator(child).ChildOperator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -20,12 +20,12 @@ public class EvaluatorConfigurationEqualityTests
     {
         var first = new OffsetEvaluator(1);
         var second = new OffsetEvaluator(2);
-        var children = new List<IEvaluator<int>> { first, second };
+        var children = new List<IOperator<Evaluation, int>> { first, second };
         var evaluator = new FirstOfEvaluator(children);
 
         children.Clear();
 
-        evaluator.ChildEvaluators.ShouldBe([first, second]);
+        evaluator.ChildOperators.ShouldBe([first, second]);
     }
 
     [Fact]
@@ -81,33 +81,35 @@ public class EvaluatorConfigurationEqualityTests
     }
 
     private sealed record FirstOfEvaluator
-        : MultiEvaluator<int>
+        : MultiOperator<Evaluation, int>
     {
-        public FirstOfEvaluator(IReadOnlyList<IEvaluator<int>> childEvaluators)
+        public FirstOfEvaluator(IReadOnlyList<IOperator<Evaluation, int>> childEvaluators)
             : base(childEvaluators)
         {
         }
 
-        protected override CompositeExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childEvaluators => new Execution<TRunSearchSpace, TRunProblem>(childEvaluators);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<int, TSearchSpace, TProblem>> childEvaluators)
-            : MultiEvaluatorExecution<int, TSearchSpace, TProblem>(childEvaluators)
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
+            System.Collections.Immutable.ImmutableArray<IEvaluationExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IEvaluationExecutor<int>> childEvaluators)
+            : EvaluationExecutor<int>
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+                childEvaluators[0].Evaluate(candidates, random);
         }
     }
-    private sealed record IdentityEvaluator : WrappingEvaluator<int>
+    private sealed record IdentityEvaluator : WrappingOperator<Evaluation, int>
     {
-        public IdentityEvaluator(IEvaluator<int> child) : base(child)
+        public IdentityEvaluator(IOperator<Evaluation, int> child) : base(child)
         {
         }
 
-        protected override WrapperExecutionFactory<IEvaluatorExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            child => child;
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
 }

@@ -24,12 +24,12 @@ public class AlgorithmInterfaceCapabilitySpecs
         IAlgorithm<Permutation, PopulationState<Permutation>> algorithm =
             GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
             problem,
             RandomNumberGenerator.Create(seed: 42),
             ct: TestContext.Current.CancellationToken);
 
-        finalState.Population.Count().ShouldBe(20);
+        finalState.Population.EvaluatedCandidates.Count.ShouldBe(20);
     }
 
     /// <summary>
@@ -64,7 +64,7 @@ public class AlgorithmInterfaceCapabilitySpecs
             GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
         var resolved = ResolutionScope.Create()
-            .Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(algorithm);
+            .Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(algorithm, problem);
 
         resolved.ShouldNotBeNull();
     }

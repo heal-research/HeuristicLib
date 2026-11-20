@@ -8,25 +8,61 @@ namespace HEAL.HeuristicLib.Execution;
 public abstract class AlgorithmRun
 {
     private readonly Lock sync = new();
-    // Together these collections form an insertion-ordered set using reference identity.
-    private readonly List<Aspect> aspects = [];
-    private readonly HashSet<Aspect> aspectSet = new(ReferenceEqualityComparer.Instance);
-    private ResolutionScope? scope;
+    private readonly ResolutionScope scope;
+    private readonly IConfigurationNode configuration;
 
-    public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Preparing;
+    public RunLifecycleState LifecycleState { get; private set; } = RunLifecycleState.Ready;
 
-    protected AlgorithmRun()
+    protected AlgorithmRun(ResolutionScope scope, IConfigurationNode configuration)
     {
+        this.scope = scope;
+        this.configuration = configuration;
     }
 
-    protected void Add(Aspect aspect)
+    /// <summary>Returns this run's result of the configuration, such as the accumulator of a counter.</summary>
+    /// <remarks>
+    /// Creates the root scope's result on first lookup. It can be read before, during and after execution, also after
+    /// a failure; the result type defines whether live reads are safe. Analyzer results span every Cycle turn.
+    /// </remarks>
+    /// <param name="configuration">The result-producing configuration, identified by reference.</param>
+    /// <exception cref="InvalidOperationException">
+    /// The configuration holds substitutions that place it, and the run's
+    /// algorithm provably does not hold it, so it would read empty; or result construction recursively requests itself.
+    /// A reachable declared delegate prevents proving absence, so the placement check permits it.
+    /// </exception>
+    public TResult Result<TResult>(IConfigurationNode<TResult> configuration) where TResult : class, IRunResult
     {
-        lock (sync)
+        RequireHeld(configuration);
+        return scope.RunResult(configuration);
+    }
+
+    internal void RequireHeld(IConfigurationNode node)
+    {
+        if (node is ISubstitution substitution && substitution.Expand().Count > 0 && !MayHold(configuration, node))
+            throw new InvalidOperationException($"This run's algorithm does not hold the {ExecutionSignature.Name(node.GetType())}, so its result would stay empty. " +
+                "Place it with algorithm.CreateRun(problem, random, [substitution]), or with Substitute for a configuration you keep, " +
+                "and check that the configuration holds what it observes, such as an evaluator of its candidate type.");
+    }
+
+    // Whether a declared parameter reachable from the root holds the value, or a delegate could have placed it unseen.
+    private static bool MayHold(IConfigurationNode root, object value)
+    {
+        var seen = new HashSet<IConfigurationNode>(ReferenceEqualityComparer.Instance);
+        var pending = new Stack<IConfigurationNode>([root]);
+        while (pending.TryPop(out var node))
         {
-            EnsurePreparing();
-            if (aspectSet.Add(aspect))
-                aspects.Add(aspect);
+            if (!seen.Add(node))
+                continue;
+            foreach (var parameter in node.GetParameters())
+            {
+                var held = parameter.GetValue(node);
+                if (ReferenceEquals(held, value) || held is Delegate)
+                    return true;
+                foreach (var child in parameter.GetChildren(node))
+                    pending.Push(child);
+            }
         }
+        return false;
     }
 
     protected ResolutionScope? BeginExecutionSegment()
@@ -37,17 +73,10 @@ public abstract class AlgorithmRun
                 return null;
             if (LifecycleState == RunLifecycleState.Running)
                 throw new InvalidOperationException("This run already has an active execution stream.");
-            if (LifecycleState is not (RunLifecycleState.Preparing or RunLifecycleState.Paused))
+            if (LifecycleState is not (RunLifecycleState.Ready or RunLifecycleState.Paused))
                 throw new InvalidOperationException($"A run cannot continue while its lifecycle state is {LifecycleState}.");
 
-            if (LifecycleState == RunLifecycleState.Paused)
-            {
-                LifecycleState = RunLifecycleState.Running;
-                return scope!;
-            }
-
             LifecycleState = RunLifecycleState.Running;
-            scope = ResolutionScope.Create(aspects);
             return scope;
         }
     }
@@ -75,14 +104,6 @@ public abstract class AlgorithmRun
                 LifecycleState = next;
         }
     }
-
-    private void EnsurePreparing()
-    {
-        if (LifecycleState != RunLifecycleState.Preparing)
-        {
-            throw new InvalidOperationException($"A run only accepts configuration and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {LifecycleState}.");
-        }
-    }
 }
 
 public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmRun
@@ -97,21 +118,27 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     public IRandomNumberGenerator Random { get; }
 
+    /// <summary>Creates a ready run without placing substitutions or validating configuration contracts.</summary>
+    /// <remarks>The executor graph is resolved on first start. Use <c>algorithm.CreateRun(...)</c> for validation and substitution placement.</remarks>
     public AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random)
+        : this(algorithm, problem, random, TimeProvider.System)
+    {
+    }
+
+    internal AlgorithmRun(IAlgorithm<TCandidate, TSearchState> algorithm, TProblem problem, IRandomNumberGenerator random,
+        TimeProvider timeProvider)
+        : base(ResolutionScope.Create(timeProvider), algorithm)
     {
         Algorithm = algorithm;
         Problem = problem;
         Random = random;
     }
 
-    /// <summary>Adds an aspect while preparing, preserving order and deduplicating by reference.</summary>
-    /// <remarks>The run only collects aspects; resolution weaves them in when the run starts.</remarks>
-    public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> AddAspect(Aspect aspect)
-    {
-        Add(aspect);
-        return this;
-    }
-
+    /// <summary>Starts or resumes the retained execution with a single-consumer stream.</summary>
+    /// <param name="initialState">An optional starting state, permitted only before execution first starts.</param>
+    /// <param name="cancellationToken">Cancels this stream at root yield boundaries, pausing the run for later resumption.</param>
+    /// <remarks>Stopping consumption pauses the run. Completion and failure are terminal; results remain readable.</remarks>
+    /// <exception cref="InvalidOperationException">A stream is active, the run is canceled or failed, or a resumed run receives an initial state.</exception>
     public ExecutionStream<TSearchState> Stream(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
         CreateStream(initialState, cancellationToken, cancellationTerminatesRun: false);
 
@@ -130,9 +157,9 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         {
             if (execution is null)
             {
-                var algorithmExecution = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm);
+                var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, Problem);
                 var executionCancellation = cancellationTerminatesRun ? cancellationToken : CancellationToken.None;
-                execution = algorithmExecution.RunStreamingAsync(Problem, Random, initialState, executionCancellation)
+                execution = algorithmExecutor.RunStreamingAsync(Random, initialState, executionCancellation)
                                              .GetAsyncEnumerator(executionCancellation);
             }
             else if (initialState is not null)
@@ -141,7 +168,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                 throw new InvalidOperationException("An initial state can only be supplied when a run starts.");
             }
 
-            return new(Track(cancellationToken, cancellationTerminatesRun), cancellationToken);
+            return new(Track(execution, scope.Results, cancellationToken, cancellationTerminatesRun), cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -155,9 +182,12 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         }
     }
 
+    /// <summary>Consumes a new execution stream to its last state, resuming a paused run if necessary.</summary>
+    /// <remarks>Cancellation pauses the run as for <see cref="Stream"/>. An execution yielding no state has no last state.</remarks>
     public async Task<TSearchState> CompleteAsync(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
         await Stream(initialState, cancellationToken).LastAsync(cancellationToken);
 
+    /// <summary>Blocks while <see cref="CompleteAsync"/> consumes execution to its last state.</summary>
     public TSearchState Complete(TSearchState? initialState = null, CancellationToken cancellationToken = default) =>
         CompleteAsync(initialState, cancellationToken).GetAwaiter().GetResult();
 
@@ -171,6 +201,8 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
     }
 
     private async IAsyncEnumerable<TSearchState> Track(
+        IAsyncEnumerator<TSearchState> iterator,
+        RunResults results,
         CancellationToken streamCancellation,
         bool cancellationTerminatesRun,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken enumerationCancellation = default)
@@ -187,7 +219,15 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                 try
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    hasNext = await execution!.MoveNextAsync();
+                    results.EnterCall();
+                    try
+                    {
+                        hasNext = await iterator.MoveNextAsync();
+                    }
+                    finally
+                    {
+                        results.ExitCall();
+                    }
                 }
                 catch (OperationCanceledException)
                 {
@@ -206,11 +246,10 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                 if (!hasNext)
                 {
                     ended = true;
-                    var completedExecution = execution;
                     execution = null;
                     try
                     {
-                        await completedExecution.DisposeAsync();
+                        await iterator.DisposeAsync();
                     }
                     catch
                     {
@@ -221,7 +260,7 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                     yield break;
                 }
 
-                yield return execution.Current;
+                yield return iterator.Current;
             }
         }
         finally

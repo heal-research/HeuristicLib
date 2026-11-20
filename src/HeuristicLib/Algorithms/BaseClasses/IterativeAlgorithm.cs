@@ -8,23 +8,28 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+/// <remarks>
+/// An iterative algorithm builds an <see cref="IterativeAlgorithmExecutor{TSearchState}"/>
+/// in its <c>CreateExecutor</c> hook and passes it the resolved <see cref="Interceptor"/>; the executor base applies it
+/// after every step. The hook's return type requires that executor, so no iterative algorithm skips its interceptor.
+/// </remarks>
 public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
-    : Algorithm<TSelf, TCandidate, TSearchState>, IIterativeAlgorithm<TCandidate>
+    : Algorithm<TSelf, TCandidate, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchState>
     where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public IInterceptor<TCandidate>? Interceptor { get; init; }
+    public IOperator<Interception<TSearchState>, TCandidate>? Interceptor { get; init; }
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Interceptor);
+    public static Parameter<IterativeAlgorithm<TSelf, TCandidate, TSearchState>, IOperator<Interception<TSearchState>, TCandidate>?> InterceptorParameter { get; } =
+        new(nameof(Interceptor), static algorithm => algorithm.Interceptor, static (algorithm, value) => algorithm with { Interceptor = value });
 
-    /// <summary>Prepares persistent execution data and returns the contextual execution factory.</summary>
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() => CreateIterationFactory<TRunSearchSpace, TRunProblem>();
+    public static IReadOnlyList<IParameter> Parameters { get; } = [InterceptorParameter];
 
-    /// <summary>Prepares persistent execution data and returns a factory accepting the construction scope.</summary>
-    /// <remarks>Allocate shared state here; resolve the optional interceptor and other children and construct nodes in the returned factory.</remarks>
-    protected abstract ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
+    protected abstract override IterativeAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
 /// <remarks>
@@ -32,94 +37,78 @@ public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchState>
 /// arguments on every mention of the configuration. An algorithm that just hands them to its operators belongs on
 /// <see cref="IterativeAlgorithm{TSelf, TCandidate, TSearchState}"/>.
 /// <para>
-/// A run this algorithm was not written for is reported when the execution graph is built.
+/// A run this algorithm was not written for is reported when the execution graph is built. The bound algorithm base
+/// checks the run's types and supplies the typed scope to the hook. This base derives from that bound base and
+/// declares its own interceptor.
 /// </para>
 /// </remarks>
 public abstract record IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IterativeAlgorithm<TSelf, TCandidate, TSearchState>
+    : Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>, IIterativeAlgorithm<TCandidate, TSearchState>
     where TSelf : IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    /// <summary>Prepares persistent execution data and returns a factory accepting the construction scope.</summary>
-    /// <remarks>Allocate shared state here; resolve the optional interceptor and other children and construct nodes in the returned factory.</remarks>
-    protected abstract ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateIterationFactory();
+    public IOperator<Interception<TSearchState>, TCandidate>? Interceptor { get; init; }
 
-    /// <summary>Prepares persistent execution data and returns the contextual execution factory.</summary>
-    public ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory() => CreateIterationFactory();
+    public static Parameter<IterativeAlgorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSearchState>, IOperator<Interception<TSearchState>, TCandidate>?> InterceptorParameter { get; } =
+        new(nameof(Interceptor), static algorithm => algorithm.Interceptor, static (algorithm, value) => algorithm with { Interceptor = value });
 
-    public override bool Fits(ExecutionSignature execution) =>
-        base.Fits(execution)
-        && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
-        && execution.Problem.IsAssignableTo(typeof(TProblem));
+    public static IReadOnlyList<IParameter> Parameters { get; } = [InterceptorParameter];
 
-    public sealed override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
-        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutionFactory();
-    }
-
-    protected sealed override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-        throw new NotSupportedException("A bound algorithm prepares its factory through its own preparation method.");
+    /// <summary>Builds this algorithm's executor for the types it is written for, resolving the interceptor and other children through the scope.</summary>
+    /// <remarks>
+    /// Resolution calls this once per configuration and problem in a scope, on the first request; later requests for that
+    /// pair receive the same executor. Validate the configuration first and look up run results through the scope.
+    /// Keep private mutable data in executor fields; explicit sharing retains the executor across child scopes.
+    /// </remarks>
+    protected abstract override IterativeAlgorithmExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
-public abstract class IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public abstract class IterativeAlgorithmExecutor<TSearchState>(IInterceptionExecutor<TSearchState>? interceptor)
+    : AlgorithmExecutor<TSearchState>
     where TSearchState : class, ISearchState
 {
-    private readonly IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor;
+    protected abstract TSearchState ExecuteStep(TSearchState? previousState, IRandomNumberGenerator random);
 
-    protected IterativeAlgorithmExecution(IInterceptorExecution<TCandidate, TSearchSpace, TProblem, TSearchState>? interceptor)
+    protected virtual bool TryExecuteStep(TSearchState? previousState, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
     {
-        this.interceptor = interceptor;
-    }
-
-    protected abstract TSearchState ExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random);
-
-    protected virtual bool TryExecuteStep(TSearchState? previousState, TProblem problem, IRandomNumberGenerator random, [NotNullWhen(true)] out TSearchState? nextState)
-    {
-        nextState = ExecuteStep(previousState, problem, random);
+        nextState = ExecuteStep(previousState, random);
         return true;
     }
 
-    protected virtual bool HasCompleted(int yieldedStateCount, TSearchState? previousState, TProblem problem) => false;
+    protected virtual bool HasCompleted(int yieldedStateCount, TSearchState? previousState) => false;
 
-    protected virtual bool IsTerminalState(TSearchState state, int yieldedStateCount, TSearchState? previousState, TProblem problem) => false;
+    /// <summary>Decides whether the run stops after yielding the state just produced.</summary>
+    /// <remarks><paramref name="random"/> is the iteration's generator, which the step and the interceptor also received.</remarks>
+    protected virtual bool IsTerminalState(TSearchState state, int yieldedStateCount, TSearchState? previousState, IRandomNumberGenerator random) => false;
 
-    public sealed override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    public sealed override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
     {
         var previousState = initialState;
 
         foreach (var yieldedStateCount in Enumerable.InfiniteSequence(0, 1))
         {
-            if (HasCompleted(yieldedStateCount, previousState, problem))
+            if (HasCompleted(yieldedStateCount, previousState))
             {
                 yield break;
             }
 
             ct.ThrowIfCancellationRequested();
             var iterationRandom = random.Fork(yieldedStateCount);
-            if (!TryExecuteStep(previousState, problem, iterationRandom, out var newState))
+            if (!TryExecuteStep(previousState, iterationRandom, out var newState))
             {
                 yield break;
             }
 
             if (interceptor is not null)
             {
-                newState = interceptor.Transform(newState, previousState, iterationRandom, problem.SearchSpace, problem);
+                newState = interceptor.Transform(newState, previousState, iterationRandom);
             }
 
-            var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, problem);
+            var isTerminalState = IsTerminalState(newState, yieldedStateCount + 1, previousState, iterationRandom);
             yield return newState;
 
             if (isTerminalState)

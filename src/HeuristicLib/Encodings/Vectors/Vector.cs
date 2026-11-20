@@ -62,7 +62,7 @@ public abstract class Vector
 
 public abstract class Vector<T> : Vector, IReadOnlyList<T>
 {
-    protected readonly ImmutableArray<T> Elements;
+    protected ImmutableArray<T> Elements { get; }
 
     protected Vector(params ImmutableArray<T> elements)
     {

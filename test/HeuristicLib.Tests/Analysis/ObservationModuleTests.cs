@@ -7,58 +7,59 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
 /// <summary>
-/// Covers the observation modules at the reduced arity: a role configuration names only its candidate, so the
-/// observation names the search space and problem it reads, and a run is checked against them when it resolves.
+/// Covers the observation sources: each operation's observation reads the search space and problem
+/// at the candidate's interfaces, so it fits every run over the candidate.
 /// </summary>
 public class ObservationModuleTests
 {
     [Fact]
     public void AMutatorObservation_CapturesTheCallWithTheRunsSearchSpaceAndProblem()
     {
-        var mutator = new AddOneMutator();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
         var problem = CreateProblem();
-        var observations = new List<MutatorObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>>();
-        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, observations.Add));
+        var observations = new List<MutationObservation<int>>();
+        var scope = ResolutionScope.Create();
 
-        var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator)
-            .Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var offspring = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.Substitute(mutator.Invocations.Observing(observations.Add)), problem)
+            .Mutate([1, 2], RandomNumberGenerator.Create(1));
 
         var observation = observations.ShouldHaveSingleItem();
         observation.Mutator.ShouldBeSameAs(mutator);
         observation.Parents.ShouldBe([1, 2]);
-        observation.Offspring.ShouldBeSameAs(offspring);
+        observation.Offspring.ShouldBe(offspring.ToValueArray());
         observation.SearchSpace.ShouldBeSameAs(problem.SearchSpace);
         observation.Problem.ShouldBeSameAs(problem);
     }
 
     /// <summary>
-    /// An observation written for a narrower problem than the run supplies cannot read the run's problem as its own,
-    /// so resolving it fails with the mismatch every authoring base reports.
+    /// Observing an operator written for a narrower problem than the run supplies leaves the operator's own check in
+    /// place, so resolving it fails with the mismatch every authoring base reports.
     /// </summary>
     [Fact]
     public void AnObservationWrittenForANarrowerProblem_IsReportedWhenTheGraphIsResolved()
     {
-        IMutator<int> mutator = new AddOneMutator();
-        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
+        IOperator<Mutation, int> mutator = new AddOneMutator();
+        var observed = mutator.Substitute(mutator.Invocations.Observing(_ => { }));
+        var scope = ResolutionScope.Create();
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
+            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(observed, CreateProblem()));
 
         exception.Message.ShouldContain("cannot run over");
     }
 
     /// <summary>
-    /// A mismatch names generic types with their type arguments rather than by metadata name, so the wrapper and the
-    /// types it was written for can be told apart.
+    /// A mismatch names generic types with their type arguments rather than by metadata name, so the run's types and the
+    /// types the operator was written for can be told apart.
     /// </summary>
     [Fact]
     public void AMismatch_NamesGenericTypesWithTheirTypeArguments()
     {
-        IMutator<int> mutator = new AddOneMutator();
-        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, _ => { }));
+        IOperator<Mutation, int> mutator = new AddOneMutator();
+        var scope = ResolutionScope.Create();
 
         var exception = Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
+            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator, CreateProblem()));
 
         exception.Message.ShouldNotContain("`");
         exception.Message.ShouldContain("FuncProblem<Int32, DummySearchSpace<Int32>>");
@@ -66,42 +67,44 @@ public class ObservationModuleTests
     }
 
     /// <summary>
-    /// An observation reports the configuration it was declared for, even when a configuration wrapper such as a
-    /// budget wraps it more tightly, and the two wrappers both act.
+    /// An observation reports the configuration it wraps, which is a budget's counting wrapper when the budget wraps the
+    /// evaluator more tightly, and the two wrappers both act.
     /// </summary>
     [Fact]
-    public void AnEvaluatorObservation_ReportsTheObservedEvaluatorAndComposesWithABudget()
+    public void AnEvaluatorObservation_ReportsTheConfigurationItWrapsAndComposesWithABudget()
     {
-        IEvaluator<int> evaluator = new ProblemEvaluator<int>();
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
         var problem = CreateProblem();
-        var counter = new CountAccumulator();
-        var observed = new List<IEvaluator<int>>();
-        var root = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, observation => observed.Add(observation.Evaluator)));
-        var budget = root.CreateChildScope(Aspect.CountCalls(evaluator, counter));
+        var observed = new List<IOperator<Evaluation, int>>();
+        var analyzed = evaluator.Substitute(evaluator.Invocations.Observing(observation => observed.Add(observation.Evaluator)));
+        var budgeted = analyzed.Counting(evaluator, out var calls);
+        var root = ResolutionScope.Create();
+        var budget = root.CreateChildScope();
 
-        budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
-            .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        budget.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(budgeted, problem)
+            .Evaluate([3], RandomNumberGenerator.Create(1));
 
-        counter.CurrentCount.ShouldBe(1);
-        observed.ShouldHaveSingleItem().ShouldBeSameAs(evaluator);
+        root.Results.Result(calls).CurrentCount.ShouldBe(1);
+        observed.ShouldHaveSingleItem().ShouldBe(evaluator.Counted(calls));
     }
 
     [Fact]
-    public async Task AnAlgorithmObservation_NumbersIterationsAndCarriesTheStateItFollowed()
+    public async Task AnAlgorithmObservation_NumbersIterationsPerCallAndCarriesTheStateItFollowed()
     {
-        var algorithm = new AdditiveStepAlgorithm(2);
+        IAlgorithm<int, PopulationState<int>> algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
-        var observations = new List<AlgorithmObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>>();
-        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, observations.Add));
-        var execution = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        var observations = new List<AlgorithmObservation<int, PopulationState<int>>>();
+        var scope = ResolutionScope.Create();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
+            algorithm.Substitute(algorithm.Iterations.Observing(observations.Add)), problem);
 
         var states = new List<PopulationState<int>>();
-        await foreach (var state in execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
+        await foreach (var state in executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken))
             states.Add(state);
-        await foreach (var state in execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
+        await foreach (var state in executor.RunStreamingAsync(RandomNumberGenerator.Create(2), states[^1], TestContext.Current.CancellationToken))
             states.Add(state);
 
-        observations.Select(observation => observation.Iteration).ShouldBe([1L, 2L]);
+        observations.Select(observation => observation.Iteration).ShouldBe([1L, 1L]);
         observations[0].PreviousState.ShouldBeNull();
         observations[1].PreviousState.ShouldBeSameAs(states[0]);
         observations.Select(observation => observation.State).ShouldBe(states);
@@ -109,79 +112,59 @@ public class ObservationModuleTests
     }
 
     /// <summary>
-    /// An implicitly typed lambda cannot name the search space and problem, so it binds to the overload typed at the
-    /// interfaces, which fits a run over any search space and problem for the candidate.
+    /// The interceptor names its search state, so its observation reads the states it transforms at that type.
     /// </summary>
     [Fact]
-    public void AnImplicitlyTypedLambda_ObservesWithoutNamingTheSearchSpaceOrProblem()
+    public void AnInterceptorObservation_ReadsTheStatesAtTheInterceptorsSearchState()
     {
-        IMutator<int> mutator = new AddOneMutator();
-        var problem = CreateProblem();
-        var offspring = new List<int>();
-        var scope = ResolutionScope.Create(Aspect.Observe(mutator, observation => offspring.AddRange(observation.Offspring)));
-
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator)
-            .Mutate([1, 2], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-
-        offspring.ShouldBe([2, 3]);
-    }
-
-    /// <summary>
-    /// The interceptor carries no search state, so the overload typed at the interfaces reads the states it transforms
-    /// as <see cref="ISearchState"/>.
-    /// </summary>
-    [Fact]
-    public void AnInterceptorObservation_WithoutNamedTypes_ReadsTheStatesAsSearchStates()
-    {
-        IInterceptor<int> interceptor = new IdentityInterceptor<int, PopulationState<int>>();
+        IOperator<Interception<PopulationState<int>>, int> interceptor = new IdentityInterceptor<int, PopulationState<int>>();
         var problem = CreateProblem();
         var state = Population.From([EvaluatedCandidate.From(4, 4)]).ToPopulationState();
-        var observed = new List<ISearchState>();
-        var scope = ResolutionScope.Create(Aspect.Observe(interceptor, observation => observed.Add(observation.State)));
+        var observed = new List<PopulationState<int>>();
+        var scope = ResolutionScope.Create();
 
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(interceptor)
-            .Transform(state, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(
+                interceptor.Substitute(interceptor.Invocations.Observing(observation => observed.Add(observation.State))), problem)
+            .Transform(state, null, RandomNumberGenerator.Create(1));
 
         observed.ShouldHaveSingleItem().ShouldBeSameAs(state);
     }
 
     /// <summary>
-    /// Naming the types at the call lets a method group typed at those types be passed, and the observation still
-    /// checks the run against them.
+    /// A method group with one overload per observation binds to each source, because the source fixes the observation.
     /// </summary>
     [Fact]
-    public void AnObservation_AcceptsMethodGroupsTypedAtTheObservedTypes()
+    public void AnObservation_AcceptsMethodGroups()
     {
-        IEvaluator<int> evaluator = new ProblemEvaluator<int>();
-        IMutator<int> mutator = new AddOneMutator();
-        var algorithm = new AdditiveStepAlgorithm(2);
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        IOperator<Mutation, int> mutator = new AddOneMutator();
+        IAlgorithm<int, PopulationState<int>> algorithm = new AdditiveStepAlgorithm(2);
         var problem = CreateProblem();
-        var recorder = new BoundRecorder();
-        var scope = ResolutionScope.Create(Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, recorder.Record),
-            Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, recorder.Record),
-            Aspect.Observe<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, recorder.Record));
+        var recorder = new Recorder();
+        var scope = ResolutionScope.Create();
+        var evaluations = evaluator.Invocations.Observing(recorder.Record);
+        var mutations = mutator.Invocations.Observing(recorder.Record);
+        _ = algorithm.Iterations.Observing(recorder.Record);
 
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator)
-            .Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator)
-            .Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator.Substitute(evaluations), problem)
+            .Evaluate([3], RandomNumberGenerator.Create(1));
+        scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator.Substitute(mutations), problem)
+            .Mutate([1], RandomNumberGenerator.Create(1));
 
         recorder.Problems.ShouldBe([problem, problem]);
-        Should.Throw<InvalidOperationException>(() =>
-            scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(mutator));
     }
 
-    private sealed class BoundRecorder
+    private sealed class Recorder
     {
-        public List<FuncProblem<int, DummySearchSpace<int>>> Problems { get; } = [];
+        public List<IProblem> Problems { get; } = [];
 
-        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> observation) =>
+        public void Record(EvaluationObservation<int> observation) =>
             Problems.Add(observation.Problem);
 
-        public void Record(MutatorObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> observation) =>
+        public void Record(MutationObservation<int> observation) =>
             Problems.Add(observation.Problem);
 
-        public void Record(AlgorithmObservation<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>> observation) =>
+        public void Record(AlgorithmObservation<int, PopulationState<int>> observation) =>
             Problems.Add(observation.Problem);
     }
 

@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
-using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -21,6 +19,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     Problem<TSelf, TCandidate, TSearchSpace>,
     IDynamicProblem<TCandidate, TSearchSpace>,
     IUpdateRequestable,
+    IIterationUpdatable,
     IDisposable
     where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
@@ -45,7 +44,9 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// <summary>
     /// The environment version currently in effect, which is the number of updates that have been applied.
     /// </summary>
-    public int CurrentEpoch { get; private set; }
+    private int currentEpoch;
+
+    public int CurrentEpoch => Volatile.Read(ref currentEpoch);
 
     protected IRandomNumberGenerator EnvironmentRandom { get; }
 
@@ -80,7 +81,10 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
         {
             return Evaluate(candidate, random, ReportEvaluation());
         }
-        finally { rwLock.ExitReadLock(); }
+        finally
+        {
+            rwLock.ExitReadLock();
+        }
     }
 
     /// <summary>
@@ -115,18 +119,7 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
     /// </summary>
     protected abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, int epoch);
 
-    /// <summary>
-    /// Creates the module that applies deferred updates at an algorithm's iteration boundary. Pass it to run creation.
-    /// </summary>
-    /// <remarks>
-    /// Only <see cref="UpdatePolicy.AfterEachIteration"/> needs this, because an iteration belongs to an algorithm
-    /// rather than to the problem. Every other policy needs nothing installed.
-    /// </remarks>
-    public Aspect CreateIterationUpdateAspect<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
-        where TSearchState : class, ISearchState =>
-        Aspect.Observe<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>(algorithm, _ => CompleteIteration());
-
-    internal void CompleteIteration()
+    void IIterationUpdatable.CompleteIteration()
     {
         if (updatePolicy == UpdatePolicy.AfterEachIteration)
         {
@@ -167,7 +160,14 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
         }
     }
 
-    void IUpdateRequestable.RequestUpdate() => RequestUpdate();
+    void IUpdateRequestable.RequestUpdate(int expectedEpoch)
+    {
+        lock (epochLock)
+        {
+            if (CurrentEpoch == expectedEpoch)
+                RequestUpdate();
+        }
+    }
 
 
     /// <summary>
@@ -190,11 +190,14 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
                 {
                     Update();
                     pendingUpdates--;
-                    CurrentEpoch++;
+                    Interlocked.Increment(ref currentEpoch);
                 }
             }
         }
-        finally { rwLock.ExitWriteLock(); }
+        finally
+        {
+            rwLock.ExitWriteLock();
+        }
     }
 
     /// <summary>
@@ -234,5 +237,18 @@ public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
 /// </remarks>
 internal interface IUpdateRequestable
 {
-    void RequestUpdate();
+    void RequestUpdate(int expectedEpoch);
+}
+
+/// <summary>
+/// Lets <see cref="IterationUpdatingAlgorithm{TCandidate, TSearchState}"/> end an iteration on the dynamic problem of the
+/// call it wraps, which it knows only by the run's problem type.
+/// </summary>
+/// <remarks>
+/// Internal, because an iteration ends when the algorithm yields a state, not when a caller says so.
+/// </remarks>
+internal interface IIterationUpdatable
+{
+    /// <summary>Applies the pending updates if the update policy waits for the end of an iteration.</summary>
+    void CompleteIteration();
 }

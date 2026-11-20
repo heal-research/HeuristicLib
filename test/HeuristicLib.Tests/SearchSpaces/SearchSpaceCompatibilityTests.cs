@@ -14,7 +14,7 @@ public class SearchSpaceCompatibilityTests
     /// Answers <see langword="true"/> for the named kinds, <see langword="false"/> for anything the search space
     /// states that is not among them, and <see langword="null"/> when <paramref name="opinionated"/> is false.
     /// </summary>
-    private sealed record Declared(Type[] Ensured, IReadOnlyList<ICandidateInvariant<BoolVector>> Requires, bool opinionated = true) : IOperator, IOperatorContract<BoolVector>
+    private sealed record Declared(ValueArray<Type> Ensured, ValueArray<ICandidateInvariant<BoolVector>> Requires, bool opinionated = true) : IOperator, IOperatorContract<BoolVector>
     {
         public bool? Ensures(ICandidateInvariant<BoolVector> invariant) =>
             !opinionated ? null : Ensured.Contains(invariant.GetType());

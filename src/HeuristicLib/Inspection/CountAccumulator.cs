@@ -1,12 +1,16 @@
+using HEAL.HeuristicLib.Execution;
+
 namespace HEAL.HeuristicLib.Inspection;
 
-public sealed class CountAccumulator
+/// <summary>A mutable count with atomic reads and additions, initially zero.</summary>
+public sealed class CountAccumulator : IRunResult
 {
-    private int currentCount;
+    private long currentCount;
 
-    public int CurrentCount => currentCount;
+    public long CurrentCount => Interlocked.Read(ref currentCount);
 
-    public void IncrementBy(int by)
+    /// <summary>Atomically adds the signed amount, without overflow checking.</summary>
+    public void IncrementBy(long by)
     {
         Interlocked.Add(ref currentCount, by);
     }

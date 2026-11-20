@@ -7,16 +7,37 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.APIs.RoarNet;
 
+public interface IRoarNetProblem<TG> : Problem
+{
+    IRoarNetNeighborhood<TG> ConstructionNeighbourhood();
+    IRoarNetNeighborhood<TG> DestructionNeighbourhood();
+    IRoarNetNeighborhood<TG> LocalNeighbourhood();
+
+    IRoarNetSolution<TG> EmptySolution();
+    IRoarNetSolution<TG> RandomSolution();
+    IRoarNetSolution<TG>? HeuristicSolution();
+    double? LowerBound(TG genotype);
+    double? Objective(TG genotype);
+}
+
+public interface IRoarNetOperationsProblem<TG, out TS, out TP> : IRoarNetProblem<TG>
+    where TS : class, ISearchSpace<TG>
+    where TP : class, IProblem<TG, TS>
+{
+    TP Problem { get; }
+    TS SearchSpace { get; }
+}
+
 public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     TP Problem,
-    IEvaluatorExecution<TG, TS, TP> Evaluator,
-    IEvaluatorExecution<TG, TS, TP> BoundsEvaluator,
+    IEvaluationExecutor<TG> Evaluator,
+    IEvaluationExecutor<TG> BoundsEvaluator,
     INeighborhood<TG, TM1> ConstructionNeighborhood,
     INeighborhood<TG, TM2> DestructionNeighborhood,
     INeighborhood<TG, TM3> LocalNeighborhood,
-    ICreatorExecution<TG, TS, TP> EmptyCreator,
-    ICreatorExecution<TG, TS, TP> RandomCreator,
-    ICreatorExecution<TG, TS, TP> HeuristicCreator,
+    ICreationExecutor<TG> EmptyCreator,
+    ICreationExecutor<TG> RandomCreator,
+    ICreationExecutor<TG> HeuristicCreator,
     IRandomNumberGenerator Rng,
     ResolutionScope Registry) : IRoarNetOperationsProblem<TG, TS, TP>
     where TS : class, ISearchSpace<TG>
@@ -24,25 +45,25 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
 {
     public RoarNetProblem(
         TP Problem,
-        IEvaluator<TG> Evaluator,
-        IEvaluator<TG> BoundsEvaluator,
+        IOperator<Evaluation, TG> Evaluator,
+        IOperator<Evaluation, TG> BoundsEvaluator,
         INeighborhood<TG, TM1> ConstructionNeighborhood,
         INeighborhood<TG, TM2> DestructionNeighborhood,
         INeighborhood<TG, TM3> LocalNeighborhood,
-        ICreator<TG> EmptyCreator,
-        ICreator<TG> RandomCreator,
-        ICreator<TG> HeuristicCreator,
+        IOperator<Creation, TG> EmptyCreator,
+        IOperator<Creation, TG> RandomCreator,
+        IOperator<Creation, TG> HeuristicCreator,
         IRandomNumberGenerator Rng,
         ResolutionScope Registry) : this(
         Problem,
-        Registry.Resolve<TG, TS, TP>(Evaluator),
-        Registry.Resolve<TG, TS, TP>(BoundsEvaluator),
+        Registry.Resolve<TG, TS, TP>(Evaluator, Problem),
+        Registry.Resolve<TG, TS, TP>(BoundsEvaluator, Problem),
         ConstructionNeighborhood,
         DestructionNeighborhood,
         LocalNeighborhood,
-        Registry.Resolve<TG, TS, TP>(EmptyCreator),
-        Registry.Resolve<TG, TS, TP>(RandomCreator),
-        Registry.Resolve<TG, TS, TP>(HeuristicCreator),
+        Registry.Resolve<TG, TS, TP>(EmptyCreator, Problem),
+        Registry.Resolve<TG, TS, TP>(RandomCreator, Problem),
+        Registry.Resolve<TG, TS, TP>(HeuristicCreator, Problem),
         Rng,
         Registry
     )
@@ -54,9 +75,9 @@ public record RoarNetProblem<TG, TS, TP, TM1, TM2, TM3>(
     public IRoarNetNeighborhood<TG> ConstructionNeighbourhood() => new RoarNetNeighborhood<TG, TS, TP, TM1>(ConstructionNeighborhood, this, Registry, Rng);
     public IRoarNetNeighborhood<TG> DestructionNeighbourhood() => new RoarNetNeighborhood<TG, TS, TP, TM2>(DestructionNeighborhood, this, Registry, Rng);
     public IRoarNetNeighborhood<TG> LocalNeighbourhood() => new RoarNetNeighborhood<TG, TS, TP, TM3>(LocalNeighborhood, this, Registry, Rng);
-    public IRoarNetSolution<TG> EmptySolution() => new RoarNetSolution<TG>(EmptyCreator.Create(1, Rng, SearchSpace, Problem)[0], this);
-    public IRoarNetSolution<TG> RandomSolution() => new RoarNetSolution<TG>(RandomCreator.Create(1, Rng, SearchSpace, Problem)[0], this);
-    public IRoarNetSolution<TG> HeuristicSolution() => new RoarNetSolution<TG>(HeuristicCreator.Create(1, Rng, SearchSpace, Problem)[0], this);
-    public double? LowerBound(TG genotype) => BoundsEvaluator.Evaluate([genotype], Rng, SearchSpace, Problem)[0][0];
-    public double? Objective(TG genotype) => Evaluator.Evaluate([genotype], Rng, SearchSpace, Problem)[0][0];
+    public IRoarNetSolution<TG> EmptySolution() => new RoarNetSolution<TG>(EmptyCreator.Create(1, Rng)[0], this);
+    public IRoarNetSolution<TG> RandomSolution() => new RoarNetSolution<TG>(RandomCreator.Create(1, Rng)[0], this);
+    public IRoarNetSolution<TG> HeuristicSolution() => new RoarNetSolution<TG>(HeuristicCreator.Create(1, Rng)[0], this);
+    public double? LowerBound(TG genotype) => BoundsEvaluator.Evaluate([genotype], Rng)[0][0];
+    public double? Objective(TG genotype) => Evaluator.Evaluate([genotype], Rng)[0][0];
 }

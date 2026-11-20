@@ -6,27 +6,29 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record PipelineMutator<TCandidate> : MultiMutator<TCandidate>
+public sealed record PipelineMutator<TCandidate> : MultiOperator<Mutation, TCandidate>
 {
-    public PipelineMutator(IReadOnlyList<IMutator<TCandidate>> childMutators)
+    public PipelineMutator(IReadOnlyList<IOperator<Mutation, TCandidate>> childMutators)
         : base(childMutators)
     {
     }
 
-    protected override CompositeExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-        childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators);
-
-    private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> childMutators)
-        : MultiMutatorExecution<TCandidate, TSearchSpace, TProblem>(childMutators)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        ImmutableArray<IMutationExecutor<TCandidate>> childMutators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor(childMutators);
+    }
+
+    private sealed class Executor(ImmutableArray<IMutationExecutor<TCandidate>> childMutators)
+        : MutationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random)
         {
             var current = parents;
-            foreach (var mutator in ChildMutators)
+            foreach (var mutator in childMutators)
             {
-                current = mutator.Mutate(current, random, searchSpace, problem);
+                current = mutator.Mutate(current, random);
             }
 
             return current;
@@ -36,14 +38,14 @@ public sealed record PipelineMutator<TCandidate> : MultiMutator<TCandidate>
 
 public static class PipelineMutator
 {
-    public static PipelineMutator<TCandidate> Create<TCandidate>(params IReadOnlyList<IMutator<TCandidate>> childMutators) => new(childMutators);
+    public static PipelineMutator<TCandidate> Create<TCandidate>(params IReadOnlyList<IOperator<Mutation, TCandidate>> childMutators) => new(childMutators);
 }
 
 public static class PipelineMutatorExtensions
 {
-    extension<TCandidate>(IMutator<TCandidate> mutator)
+    extension<TCandidate>(IOperator<Mutation, TCandidate> mutator)
     {
-        public PipelineMutator<TCandidate> Then(params IReadOnlyList<IMutator<TCandidate>> followingMutators) =>
+        public PipelineMutator<TCandidate> Then(params IReadOnlyList<IOperator<Mutation, TCandidate>> followingMutators) =>
             PipelineMutator.Create([mutator, .. followingMutators]);
     }
 }

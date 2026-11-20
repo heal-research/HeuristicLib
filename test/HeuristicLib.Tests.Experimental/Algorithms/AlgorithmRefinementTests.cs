@@ -23,9 +23,9 @@ public class AlgorithmRefinementTests
         var problem = CreateProblem();
 
         var withoutRefiner = CreateAlgorithm(problem)
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
         var withIdentityRefiner = (CreateAlgorithm(problem) with { Refiner = NoChangeRefiner<RealVector>.Instance })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         withIdentityRefiner.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector)
             .ShouldBe(withoutRefiner.Population.EvaluatedCandidates.Select(candidate => candidate.ObjectiveVector));
@@ -38,7 +38,7 @@ public class AlgorithmRefinementTests
         var refiner = new CountingRefiner();
 
         (CreateAlgorithm(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // One batch for the initial population and one for each later generation's offspring.
         refiner.BatchCount.ShouldBe(Generations);
@@ -51,7 +51,7 @@ public class AlgorithmRefinementTests
         var refiner = new CountingRefiner();
 
         (CreateAlgorithm(problem) with { Refiner = refiner, Elites = 2 })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // The initial population, then one offspring per later generation: the algorithm selects twice the population
         // size in parents and pairs them, so each generation produces exactly PopulationSize offspring. Two elites per
@@ -65,7 +65,7 @@ public class AlgorithmRefinementTests
         var problem = CreateProblem();
 
         var result = (CreateAlgorithm(problem) with { Refiner = new OriginShiftRefiner(), MaximumGenerations = 1 })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         // The refiner moves every candidate to the origin, where the sphere function is exactly zero.
         foreach (var candidate in result.Population.EvaluatedCandidates)
@@ -81,7 +81,7 @@ public class AlgorithmRefinementTests
         var problem = CreateProblem();
 
         var result = (CreateAlgorithm(problem) with { Refiner = new DropLastRefiner() })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.Count.ShouldBe(PopulationSize - 1);
     }
@@ -93,7 +93,7 @@ public class AlgorithmRefinementTests
         var refiner = new CountingRefiner();
 
         (CreateHillClimber(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         refiner.BatchCount.ShouldBeGreaterThan(1);
         refiner.RefinedCount.ShouldBeGreaterThan(1);
@@ -111,7 +111,7 @@ public class AlgorithmRefinementTests
             MaximumGenerations = 1
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         foreach (var candidate in result.Population.EvaluatedCandidates)
         {
@@ -140,7 +140,7 @@ public class AlgorithmRefinementTests
             Selector = RandomSelector.For(problem),
             MaximumGenerations = Generations,
             Refiner = strategyRefiner
-        }.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        }.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         new NSGA2<RealVector>
         {
@@ -152,7 +152,7 @@ public class AlgorithmRefinementTests
             Replacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true),
             MaximumGenerations = Generations,
             Refiner = nsga2Refiner
-        }.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        }.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         strategyRefiner.BatchCount.ShouldBe(Generations);
         nsga2Refiner.BatchCount.ShouldBe(Generations);
@@ -165,7 +165,7 @@ public class AlgorithmRefinementTests
         var refiner = new CountingRefiner();
 
         (CreateAlps(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         refiner.BatchCount.ShouldBe(Generations);
     }
@@ -178,7 +178,7 @@ public class AlgorithmRefinementTests
         var refiner = new CountingRefiner();
 
         (CreateAlps(problem) with { Refiner = refiner, Elites = 2 })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         refiner.RefinedCount.ShouldBe(PopulationSize * Generations);
     }
@@ -191,7 +191,7 @@ public class AlgorithmRefinementTests
         var refiner = new CountingRefiner();
 
         (CreateEvolutionStrategy(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         refiner.RefinedCount.ShouldBe(PopulationSize + (Children * (Generations - 1)));
     }
@@ -217,7 +217,7 @@ public class AlgorithmRefinementTests
         };
 
         var populationSizes = new List<int>();
-        foreach (var state in algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
+        foreach (var state in algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
         {
             populationSizes.Add(state.Population.EvaluatedCandidates.Count);
         }
@@ -244,20 +244,20 @@ public class AlgorithmRefinementTests
         }
     }
 
-    private static IEnumerable<(string Name, Func<IRefiner<RealVector>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
+    private static IEnumerable<(string Name, Func<IOperator<Refinement, RealVector>?, IReadOnlyList<ObjectiveVector>> Run)> AllAlgorithms(TestFunctionProblem problem)
     {
         yield return ("genetic algorithm", refiner => ObjectiveVectorsOf((CreateAlgorithm(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
         yield return ("hill climber", refiner => ObjectiveVectorsOf((CreateHillClimber(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
         yield return ("evolution strategy", refiner => ObjectiveVectorsOf((CreateEvolutionStrategy(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
         yield return ("nsga2", refiner => ObjectiveVectorsOf((CreateNsga2(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
         yield return ("alps", refiner => ObjectiveVectorsOf((CreateAlps(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population.Single()));
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population.Single()));
         yield return ("open ended", refiner => ObjectiveVectorsOf((CreateOpenEnded(problem) with { Refiner = refiner })
-            .Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
+            .RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Population));
     }
 
     private static IReadOnlyList<ObjectiveVector> ObjectiveVectorsOf(Population<RealVector> population) =>
@@ -299,8 +299,8 @@ public class AlgorithmRefinementTests
         public int BatchCount => counter.Batches;
         public int RefinedCount => counter.Candidates;
 
-        public override ExecutionFactory<IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
-            _ => new Execution(counter);
+        protected override IRefinementExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+            new Executor(counter);
 
         private sealed class Counter
         {
@@ -308,9 +308,9 @@ public class AlgorithmRefinementTests
             public int Candidates;
         }
 
-        private sealed class Execution(Counter counter) : IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Executor(Counter counter) : RefinementExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
             {
                 counter.Batches++;
                 counter.Candidates += candidates.Count;

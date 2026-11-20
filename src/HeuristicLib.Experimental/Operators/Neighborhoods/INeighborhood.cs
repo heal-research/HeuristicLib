@@ -1,7 +1,3 @@
-using HEAL.HeuristicLib.Operators.MoveAppliers;
-using HEAL.HeuristicLib.Operators.MoveCreators;
-using HEAL.HeuristicLib.Operators.MoveEvaluators;
-
 namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 #region neighborhoods
 /// <summary>
@@ -13,8 +9,8 @@ namespace HEAL.HeuristicLib.Operators.Neighborhoods;
 /// </remarks>
 public interface INeighborhood<TCandidate, TMove>
 {
-    IMoveCreator<TCandidate, TMove> MoveCreator { get; }
-    IMoveApplier<TCandidate, TMove> MoveApplier { get; }
-    IMoveEvaluator<TCandidate, TMove> MoveEvaluator { get; }
+    IOperator<MoveCreation<TMove>, TCandidate> MoveCreator { get; }
+    IOperator<MoveApplication<TMove>, TCandidate> MoveApplier { get; }
+    IOperator<MoveEvaluation<TMove>, TCandidate> MoveEvaluator { get; }
 }
 #endregion

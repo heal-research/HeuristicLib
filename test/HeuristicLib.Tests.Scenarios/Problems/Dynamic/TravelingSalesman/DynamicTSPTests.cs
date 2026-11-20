@@ -31,11 +31,11 @@ public class DynamicTSPTests
         //prob.AttachTo(ga);
 
         //execute
-        var resGa = (ga with { MaximumGenerations = 1000 }).Complete(prob, RandomNumberGenerator.Create(42),
+        var resGa = (ga with { MaximumGenerations = 1000 }).RunToCompletion(prob, RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken);
 
         //look at results
-        var objGa = resGa.Population
+        var objGa = resGa.Population.EvaluatedCandidates
                          .OrderBy(x => x.ObjectiveVector[0])
                          .First();
 

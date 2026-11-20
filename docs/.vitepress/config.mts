@@ -39,6 +39,7 @@ export default defineConfig({
                         { text: "Objectives and candidates", link: "/guide/fundamentals/objectives" },
                         { text: "Operators", link: "/guide/fundamentals/operators" },
                         { text: "Algorithms", link: "/guide/fundamentals/algorithms" },
+                        { text: "Configurations", link: "/guide/fundamentals/configurations" },
                         { text: "Invariants and validation", link: "/guide/fundamentals/invariants-and-validation" },
                     ],
                 },
@@ -48,11 +49,11 @@ export default defineConfig({
                         { text: "Running algorithms", link: "/guide/execution/running-algorithms" },
                         { text: "Search states", link: "/guide/execution/search-states" },
                         { text: "Randomness", link: "/guide/execution/randomness" },
-                        { text: "Experiments", link: "/guide/execution/experiments" },
                         {
                             text: "Observability and analysis",
                             link: "/guide/execution/observability-and-analysis",
                         },
+                        { text: "Experiments", link: "/guide/execution/experiments" },
                     ],
                 },
                 {
@@ -71,9 +72,9 @@ export default defineConfig({
                     text: "Extending HeuristicLib",
                     collapsed: true,
                     items: [
-                        { text: "Compose operators", link: "/guide/extending/operator-composition" },
                         { text: "Write an operator", link: "/guide/extending/writing-operators" },
-                        { text: "Write custom advice", link: "/guide/extending/writing-advice" },
+                        { text: "Compose operators", link: "/guide/extending/operator-composition" },
+                        { text: "Write wrappers", link: "/guide/extending/writing-wrappers" },
                         { text: "Write an algorithm", link: "/guide/extending/writing-algorithms" },
                         { text: "Write a meta-algorithm", link: "/guide/extending/writing-meta-algorithms" },
                     ],
@@ -127,7 +128,6 @@ export default defineConfig({
                     text: "Architecture",
                     items: [
                         { text: "Layering", link: "/contributing/architecture/layering" },
-                        { text: "Analyzers", link: "/contributing/architecture/analyzers" },
                         {
                             text: "Execution nodes",
                             link: "/contributing/architecture/execution-nodes",
@@ -140,6 +140,7 @@ export default defineConfig({
                             text: "Operator implementation",
                             link: "/contributing/architecture/operator-implementation",
                         },
+                        { text: "Analyzers", link: "/contributing/architecture/analyzers" },
                     ],
                 },
             ],

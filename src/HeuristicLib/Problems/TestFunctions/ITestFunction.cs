@@ -11,3 +11,15 @@ public interface ITestFunction
     ObjectiveDirection Objective { get; }
     double Evaluate(RealVector solution);
 }
+
+public static class TestFunctionExtensions
+{
+    extension(ITestFunction inner)
+    {
+        public ITestFunction Shifted(RealVector shiftVector) => new ShiftedTestFunction(shiftVector, inner);
+
+        public ITestFunction Rotated(double[,] rotationMatrix) => new RotatedTestFunction(rotationMatrix, inner);
+
+        public ITestFunction Scaled(double[] inputScaling, double outputScaling) => new ScaledTestFunction(inputScaling, outputScaling, inner);
+    }
+}

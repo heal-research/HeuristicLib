@@ -47,3 +47,8 @@ Treat the pair as one result. If a candidate changes, it must be evaluated again
 For a single objective run, report at least the best candidate, objective value, seed and algorithm configuration. For a multiobjective run, report the nondominated set and keep every objective label and unit visible.
 
 Repeated experiments should summarize distributions across runs. A median and spread are more informative than the best value from one lucky seed.
+
+## Next steps
+
+- [Operators](/guide/fundamentals/operators) continues the Fundamentals path with the roles that produce and change candidates.
+- [Experiments](/guide/execution/experiments) summarizes repeated runs.

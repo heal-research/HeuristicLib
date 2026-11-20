@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 
@@ -14,6 +15,13 @@ public sealed record ProbabilisticTreeCreator
     /// from the search-space length range.
     /// </summary>
     public IDistribution<int>? RequestedLengthDistribution { get; init; }
+
+    public static Parameter<ProbabilisticTreeCreator, IDistribution<int>?> RequestedLengthDistributionParameter { get; } =
+        new(nameof(RequestedLengthDistribution), static creator => creator.RequestedLengthDistribution, static (creator, value) => creator with { RequestedLengthDistribution = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [RequestedLengthDistributionParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     /// <summary>
     /// Creates a tree whose requested length is sampled from <see cref="RequestedLengthDistribution"/>.

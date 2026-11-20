@@ -1,9 +1,10 @@
-using System.Reflection;
+using Microsoft.CodeAnalysis;
+using static HEAL.HeuristicLib.Tests.Architecture.SourceCompilation;
 
 namespace HEAL.HeuristicLib.Tests.Architecture;
 
 /// <summary>
-/// The configuration layer names only the candidate, and the execution layer names everything.
+/// The configuration layer names only the candidate, and executors name only their invocation inputs and outputs.
 /// </summary>
 /// <remarks>
 /// This split is what the arity reduction bought, and nothing else in the suite fails if it is lost: a role that
@@ -14,98 +15,100 @@ namespace HEAL.HeuristicLib.Tests.Architecture;
 /// </remarks>
 public sealed class RoleContractArityTests
 {
-    private static readonly Assembly Main = typeof(IOperator).Assembly;
+    private const string OperatorsNamespace = "HEAL.HeuristicLib.Operators";
 
-    private static readonly IReadOnlyList<Type> Roles = RolesDerivedFrom(typeof(IOperator));
-    private static readonly IReadOnlyList<Type> RoleExecutions = RolesDerivedFrom(typeof(IOperatorExecution));
+    private static readonly IAssemblySymbol Main = CreateMainCompilation(FindRepositoryRoot()).Compilation.Assembly;
 
-    public static TheoryData<Type> ConfigurationContracts => [.. Roles];
-    public static TheoryData<Type> ExecutionContracts => [.. RoleExecutions];
+    private static readonly INamedTypeSymbol[] PublicTypes = [.. PublicTypesIn(Main.GlobalNamespace)];
 
-    public static TheoryData<Type> TopologyBases => [.. Roles.SelectMany(role => Main.GetExportedTypes()
-        .Where(type => type.Name == "Wrapping" + role.Name[1..] || type.Name == "Multi" + role.Name[1..]))];
+    private static readonly INamedTypeSymbol[] RoleExecutions = RolesDerivedFrom(Contract($"{OperatorsNamespace}.IOperatorExecutor"));
+
+    public static TheoryData<string> ExecutionContracts => [.. RoleExecutions.Select(type => type.ToDisplayString())];
 
     [Fact]
-    public void EveryRole_DeclaresBothHalves()
+    public void EveryRole_SharesTheConfigurationContractAndDeclaresItsExecution()
     {
-        Roles.Count.ShouldBe(9);
-        RoleExecutions.Count.ShouldBe(Roles.Count);
+        INamedTypeSymbol[] expected = [Contract($"{OperatorsNamespace}.IOperator`1"), Contract($"{OperatorsNamespace}.IOperator`2")];
+        RolesDerivedFrom(Contract($"{OperatorsNamespace}.IOperator"))
+            .SequenceEqual(expected, SymbolEqualityComparer.Default).ShouldBeTrue();
+        RoleExecutions.Length.ShouldBe(9);
     }
 
-    [Theory]
-    [MemberData(nameof(ConfigurationContracts))]
-    public void AConfiguredRole_NamesOnlyTheCandidate(Type role) =>
-        role.GetGenericArguments().Select(argument => argument.Name).ShouldBe(["TCandidate"]);
-
-    [Theory]
-    [MemberData(nameof(ConfigurationContracts))]
-    public void AConfiguredRole_PreparesItsTypedFactoryWithoutAScope(Type role)
+    [Fact]
+    public void TheSharedConsumingContractNamesOperationThenCandidateAndBuildsInOneHook()
     {
-        var factory = role.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.Name == "CreateExecutionFactory");
+        var contract = Contract($"{OperatorsNamespace}.IOperator`2");
+        contract.TypeParameters.Select(argument => argument.Name).ShouldBe(["TOperation", "TCandidate"]);
+        contract.AllInterfaces.Contains(Contract($"{OperatorsNamespace}.IOperator"), SymbolEqualityComparer.Default).ShouldBeTrue();
+        PublicMethods(contract).ShouldNotContain(method => method.Name == "CreateExecutor");
 
-        factory.GetParameters().ShouldBeEmpty();
-        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
-        factory.ReturnType.GetGenericArguments().Single().GetInterfaces().ShouldContain(typeof(IOperatorExecution));
-        role.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
+        var hook = PublicMethods(Contract($"{OperatorsNamespace}.IOperator`1"))
+            .Where(method => method.Name == "CreateExecutor").ShouldHaveSingleItem();
+        hook.TypeParameters.Select(argument => argument.Name).ShouldBe(["TSearchSpace", "TProblem", "TSearchState"]);
+        SymbolEqualityComparer.Default.Equals(hook.Parameters.ShouldHaveSingleItem().Type.OriginalDefinition,
+            Contract("HEAL.HeuristicLib.Execution.ResolutionScope`4")).ShouldBeTrue();
+        SymbolEqualityComparer.Default.Equals(hook.ReturnType, Contract("HEAL.HeuristicLib.Execution.IExecutor")).ShouldBeTrue();
+        PublicMethods(contract).ShouldNotContain(method => method.Name == "Prepare");
     }
 
-    [Theory]
-    [MemberData(nameof(TopologyBases))]
-    public void ATopologyBase_PreparesBeforeReceivingItsResolvedChildren(Type topology)
+    [Fact]
+    public void PublicOperationParametersComeFirstInTypesAndMethods()
     {
-        var factory = topology.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.Name == "CreateExecutionFactory");
-        var wrapper = topology.Name.StartsWith("Wrapping", StringComparison.Ordinal);
-        var hook = topology.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.IsAbstract && method.Name == (wrapper ? "CreateWrapperFactory" : "CreateCompositeFactory"));
-
-        factory.GetParameters().ShouldBeEmpty();
-        factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
-        hook.IsFamily.ShouldBeTrue();
-        hook.GetParameters().ShouldBeEmpty();
-        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(wrapper ? typeof(WrapperExecutionFactory<>) : typeof(CompositeExecutionFactory<>));
-        var execution = hook.ReturnType.GetGenericArguments()[^1];
-        execution.GetGenericTypeDefinition().ShouldBe(factory.ReturnType.GetGenericArguments().Single().GetGenericTypeDefinition());
-        var constructor = hook.ReturnType.GetMethod("Invoke")!;
-        constructor.ReturnType.ShouldBe(execution);
-        constructor.GetParameters().Single().ParameterType.ShouldBe(wrapper ? execution : typeof(ImmutableArray<>).MakeGenericType(execution));
-        topology.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
-    }
-
-    [Theory]
-    [InlineData(typeof(IterativeAlgorithm<,,>))]
-    [InlineData(typeof(IterativeAlgorithm<,,,,>))]
-    public void AnIterativeBase_UsesTheCommonFactoryAndRequiresAnIterativeExecution(Type algorithm)
-    {
-        var factories = algorithm.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(method => method.Name == "CreateExecutionFactory").ToArray();
-        factories.ShouldNotBeEmpty();
-        foreach (var factory in factories)
+        var operationContract = Contract($"{OperatorsNamespace}.IOperation`1");
+        var signatures = PublicTypes.Select(type => (Name: type.ToDisplayString(), Parameters: TypeParameters(type)))
+            .Concat(PublicTypes.SelectMany(PublicMethods)
+                .SelectMany(method => DeclaredParameterLists(method)
+                    .Select(parameters => (Name: method.ToDisplayString(), Parameters: parameters))));
+        foreach (var (name, parameters) in signatures)
         {
-            factory.GetParameters().ShouldBeEmpty();
-            factory.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
+            var operation = Array.FindIndex(parameters, parameter =>
+                parameter.ConstraintTypes.Any(constraint => SymbolEqualityComparer.Default.Equals(constraint.OriginalDefinition, operationContract)));
+            if (operation >= 0)
+                operation.ShouldBe(0, name);
         }
-        var hook = algorithm.GetMethods(BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Single(method => method.IsAbstract);
-        hook.Name.ShouldBe("CreateIterationFactory");
-        hook.IsFamily.ShouldBeTrue();
-        hook.GetParameters().ShouldBeEmpty();
-        hook.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(ExecutionFactory<>));
-        var constructor = hook.ReturnType.GetMethod("Invoke")!;
-        constructor.ReturnType.GetGenericTypeDefinition().ShouldBe(typeof(IterativeAlgorithmExecution<,,,>));
-        constructor.GetParameters().Select(parameter => parameter.ParameterType).ShouldBe([typeof(ResolutionScope)]);
-        algorithm.GetMethods().ShouldNotContain(method => method.Name == "CreateExecutionInstance");
     }
+
+    private static IEnumerable<IMethodSymbol> PublicMethods(INamedTypeSymbol type) =>
+        type.GetMembers().OfType<IMethodSymbol>()
+            .Where(method => method.DeclaredAccessibility == Accessibility.Public &&
+                             method.MethodKind is not (MethodKind.Constructor or MethodKind.StaticConstructor));
+
+    private static ITypeParameterSymbol[] TypeParameters(INamedTypeSymbol type) =>
+        type.ContainingType is { } containingType
+            ? [.. TypeParameters(containingType), .. type.TypeParameters]
+            : [.. type.TypeParameters];
+
+    /// <summary>
+    /// An extension method lists the type parameters of its receiver before its own, as an extension block declares
+    /// them, so each of the two lists must lead with its operation.
+    /// </summary>
+    private static IEnumerable<ITypeParameterSymbol[]> DeclaredParameterLists(IMethodSymbol method)
+    {
+        var parameters = method.TypeParameters;
+        if (!method.IsExtensionMethod)
+            return [[.. parameters]];
+
+        var receiver = method.Parameters[0].Type;
+        return [[.. parameters.Where(parameter => Mentions(receiver, parameter))], [.. parameters.Where(parameter => !Mentions(receiver, parameter))]];
+    }
+
+    private static bool Mentions(ITypeSymbol type, ITypeParameterSymbol parameter) =>
+        SymbolEqualityComparer.Default.Equals(type, parameter) || type switch
+        {
+            IArrayTypeSymbol array => Mentions(array.ElementType, parameter),
+            IPointerTypeSymbol pointer => Mentions(pointer.PointedAtType, parameter),
+            INamedTypeSymbol named => named.TypeArguments.Any(argument => Mentions(argument, parameter)) ||
+                                      (named.ContainingType is { } containingType && Mentions(containingType, parameter)),
+            _ => false
+        };
 
     [Theory]
     [MemberData(nameof(ExecutionContracts))]
-    public void ItsExecution_StillNamesTheSearchSpaceAndProblem(Type executionContract)
+    public void ItsExecution_OmitsTheBoundSearchSpaceAndProblem(string displayName)
     {
-        var named = executionContract.GetGenericArguments().Select(argument => argument.Name).ToArray();
-
-        named.Take(3).ShouldBe(["TCandidate", "TSearchSpace", "TProblem"]);
-        named.Skip(3).ShouldBeSubsetOf(["TSearchState"]);
+        var executionContract = RoleExecutions.Single(type => type.ToDisplayString() == displayName);
+        TypeParameters(executionContract).Select(argument => argument.Name).ShouldHaveSingleItem()
+            .ShouldBeOneOf("TCandidate", "TSearchState");
     }
 
     /// <summary>
@@ -115,18 +118,38 @@ public sealed class RoleContractArityTests
     [Fact]
     public void TheAlgorithmContract_NamesTheCandidateAndWhatItReturns()
     {
-        var forms = Main.GetExportedTypes()
-            .Where(type => type.IsInterface && type.Name.StartsWith("IAlgorithm`", StringComparison.Ordinal))
-            .Select(type => type.GetGenericArguments().Select(argument => argument.Name).ToArray())
+        var forms = PublicTypes
+            .Where(type => type.TypeKind == TypeKind.Interface && type.MetadataName.StartsWith("IAlgorithm`", StringComparison.Ordinal))
+            .Select(type => TypeParameters(type).Select(argument => argument.Name).ToArray())
             .OrderBy(named => named.Length)
             .ToArray();
 
         forms.ShouldBe([["TCandidate"], ["TCandidate", "TSearchState"]]);
     }
 
-    private static IReadOnlyList<Type> RolesDerivedFrom(Type half) =>
-        [.. Main.GetExportedTypes()
-            .Where(type => type.IsInterface && type.IsGenericTypeDefinition &&
-                           type.Namespace == typeof(IOperator).Namespace && type.GetInterfaces().Contains(half))
-            .OrderBy(type => type.Name, StringComparer.Ordinal)];
+    private static INamedTypeSymbol[] RolesDerivedFrom(INamedTypeSymbol half) =>
+        [.. PublicTypes
+            .Where(type => type.TypeKind == TypeKind.Interface && type.IsGenericType &&
+                           SymbolEqualityComparer.Default.Equals(type.ContainingNamespace, half.ContainingNamespace) &&
+                           type.AllInterfaces.Contains(half, SymbolEqualityComparer.Default))
+            .OrderBy(type => type.MetadataName, StringComparer.Ordinal)];
+
+    private static IEnumerable<INamedTypeSymbol> PublicTypesIn(INamespaceOrTypeSymbol container)
+    {
+        foreach (var type in container.GetTypeMembers().Where(type => type.DeclaredAccessibility == Accessibility.Public))
+        {
+            yield return type;
+            foreach (var nested in PublicTypesIn(type))
+                yield return nested;
+        }
+
+        if (container is INamespaceSymbol ns)
+        {
+            foreach (var type in ns.GetNamespaceMembers().SelectMany(PublicTypesIn))
+                yield return type;
+        }
+    }
+
+    private static INamedTypeSymbol Contract(string metadataName) =>
+        Main.GetTypeByMetadataName(metadataName).ShouldNotBeNull();
 }

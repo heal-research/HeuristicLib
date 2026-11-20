@@ -8,71 +8,123 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>
-    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState, TOperator>, TCandidate, TSearchState>
+/// <summary>Stops its algorithm once a duration reaches a maximum, checked after each produced state. Uses the run's time provider.</summary>
+/// <remarks>
+/// The duration restarts each time this budget is built, such as in each Cycle turn, because the budget shares it in its
+/// own scope. The wrappers measuring into it live in <see cref="Algorithm"/>, where <c>LimitedToDuration</c> places them.
+/// They add the time of every call, including failed, nested and concurrent calls, so the duration is a sum of call times
+/// rather than wall clock time. A copy that replaces <see cref="Algorithm"/> loses those wrappers, and the budget then
+/// never stops.
+/// </remarks>
+public sealed record OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>
+    : Algorithm<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TOperator : class, IOperator
 {
-    public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
-    public required TOperator ObservedOperator { get; init; }
+    public OperatorDurationBudgetAlgorithm(IAlgorithm<TCandidate, TSearchState> algorithm, Duration duration, TimeSpan maximumDuration)
+    {
+        Algorithm = algorithm;
+        Duration = duration;
+        MaximumDuration = maximumDuration;
+    }
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, ObservedOperator);
+    public IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
 
-    /// <summary>
-    /// Gets the strategy creating advice that measures the observed operator's duration into the supplied accumulator.
-    /// </summary>
-    /// <remarks>
-    /// The advice applies only inside this budget's algorithm, so enclosing budgets and observations compose. If the
-    /// algorithm does not reference the observed operator, nothing is measured and the budget never stops.
-    /// </remarks>
-    public required IOperatorDurationMeasuring<TOperator> DurationMeasuring { get; init; }
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+    public Duration Duration { get; init; }
 
     /// <summary>
-    /// Gets the measured-operator duration budget. The expected value is positive.
+    /// Gets the measured duration budget. The expected value is positive.
     /// </summary>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static budget => budget.Algorithm, static (budget, value) => budget with { Algorithm = value });
+
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, Duration> DurationParameter { get; } =
+        new(nameof(Duration), static budget => budget.Duration, static (budget, value) => budget with { Duration = value });
+
+    public static Parameter<OperatorDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
+        new(nameof(MaximumDuration), static budget => budget.MaximumDuration, static (budget, value) => budget with { MaximumDuration = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, DurationParameter, MaximumDurationParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var duration = new DurationAccumulator();
-        var measuring = Aspect.Create(Pointcut.Reference(ObservedOperator), DurationMeasuring.CreateAdvice(duration, TimeProvider));
-        return scope =>
+        scope.Share(Duration);
+        var algorithm = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, scope.Problem);
+        var duration = scope.Resolve(Duration);
+        return new Executor(algorithm, duration, MaximumDuration);
+    }
+
+    private sealed class Executor
+        : AlgorithmExecutor<TSearchState>
+    {
+        private readonly IAlgorithmExecutor<TSearchState> algorithm;
+        private readonly DurationAccumulator duration;
+        private readonly TimeSpan maximumDuration;
+
+        public Executor(IAlgorithmExecutor<TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
         {
-            var childScope = scope.With(measuring);
-            return new OperatorDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(childScope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), duration, MaximumDuration);
-        };
+            this.algorithm = algorithm;
+            this.duration = duration;
+            this.maximumDuration = maximumDuration;
+        }
+
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            await foreach (var state in algorithm.RunStreamingAsync(random, initialState, ct))
+            {
+                yield return state;
+
+                if (duration.CurrentDuration >= maximumDuration)
+                {
+                    yield break;
+                }
+            }
+        }
     }
 }
 
-public sealed class OperatorDurationBudgetAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
+public static class OperatorDurationBudgetExtensions
 {
-    private readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
-    private readonly DurationAccumulator duration;
-    private readonly TimeSpan maximumDuration;
-
-    public OperatorDurationBudgetAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, DurationAccumulator duration, TimeSpan maximumDuration)
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+        where TSearchState : class, ISearchState
     {
-        this.algorithm = algorithm;
-        this.duration = duration;
-        this.maximumDuration = maximumDuration;
+        /// <summary>Stops the algorithm once the operator's calls, including failed ones, have taken the given time. Uses the run's time provider.</summary>
+        /// <remarks>
+        /// The operator is matched by reference, and it is an error when the algorithm does not hold it. The operation is
+        /// inferred from the operator; for an operator implementing several operations, pass it through a variable of the
+        /// operation's operator type.
+        /// </remarks>
+        /// <param name="observedOperator">The operator whose calls are measured.</param>
+        /// <param name="maximumDuration">The time after which the budget stops, checked after each produced state.</param>
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration<TOperation>(
+            IOperator<TOperation, TCandidate> observedOperator, TimeSpan maximumDuration)
+            where TOperation : IOperation<TOperation> =>
+            new(algorithm.Timing(observedOperator, out var duration), duration, maximumDuration);
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    extension<TAlgorithm>(TAlgorithm algorithm) where TAlgorithm : class, IConfigurationNode
     {
-        await foreach (var state in algorithm.RunStreamingAsync(problem, random, initialState, ct))
+        /// <summary>
+        /// Stops the algorithm once the time that <paramref name="placement"/> measures reaches the given duration, such as
+        /// <c>ga.LimitedToDuration(TimeSpan.FromSeconds(10), (g, time) => g.Substitute(g.Mutator.Invocations.Timing(time), g.Crossover.Invocations.Timing(time)))</c>.
+        /// </summary>
+        /// <remarks>
+        /// The run's time provider measures each call. The placement runs during this call and is not stored. Timing a target twice adds every call twice. The duration
+        /// restarts with the budget and stays inside it; a placement that ignores it leaves a budget that never stops.
+        /// </remarks>
+        /// <param name="maximumDuration">The time after which the budget stops, checked after each produced state.</param>
+        /// <param name="placement">Places the timing wrappers on the algorithm it receives, which is this one, and returns the algorithm to limit.</param>
+        public OperatorDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration<TCandidate, TSearchState>(TimeSpan maximumDuration,
+            Func<TAlgorithm, Duration, IAlgorithm<TCandidate, TSearchState>> placement)
+            where TSearchState : class, ISearchState
         {
-            yield return state;
-
-            if (duration.CurrentDuration >= maximumDuration)
-            {
-                yield break;
-            }
+            var duration = new Duration();
+            return new(placement(algorithm, duration), duration, maximumDuration);
         }
     }
 }

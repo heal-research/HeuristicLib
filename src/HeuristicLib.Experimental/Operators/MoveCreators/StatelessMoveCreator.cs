@@ -5,32 +5,18 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveCreators;
 
-/// <remarks>
-/// A move creator that carries no mutable execution data is its own execution node, so it needs no separate instance
-/// type. The type arguments are still the search space and problem it is written for, and a run it was not written
-/// for is reported when the execution graph is built.
-/// </remarks>
+/// <summary>A stateless move operator whose executor retains its bound problem.</summary>
 public abstract record StatelessMoveCreator<TCandidate, TSearchSpace, TProblem, TMove>
-    : IMoveCreator<TCandidate, TMove>, IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveCreationExecutor<TCandidate, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public virtual ExecutionFactory<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory() => _ => this;
+    protected sealed override IMoveCreationExecutor<TCandidate, TMove> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveCreator<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    private sealed class Executor(StatelessMoveCreator<TCandidate, TSearchSpace, TProblem, TMove> configuration, TProblem problem) : IMoveCreationExecutor<TCandidate, TMove>
     {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
+        public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random) => configuration.Moves(candidate, random, problem.SearchSpace, problem);
     }
 }

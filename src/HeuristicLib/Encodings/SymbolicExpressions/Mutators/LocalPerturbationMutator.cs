@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 
@@ -51,6 +52,13 @@ public sealed record LocalPerturbationMutator
 {
     /// <summary>Gets the policy that selects which eligible points are perturbed.</summary>
     public LocalPerturbationTargetSelection TargetSelection { get; init; } = LocalPerturbationTargets.One;
+
+    public static Parameter<LocalPerturbationMutator, LocalPerturbationTargetSelection> TargetSelectionParameter { get; } =
+        new(nameof(TargetSelection), static mutator => mutator.TargetSelection, static (mutator, value) => mutator with { TargetSelection = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [TargetSelectionParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public LocalPerturbationMutator()
     {

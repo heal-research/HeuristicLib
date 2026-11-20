@@ -24,46 +24,53 @@ public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpa
 {
     public int ExecutionCount { get; private set; }
 
-    public override ExecutionFactory<IEvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> CreateExecutionFactory()
+    // Counts private data construction for each executor.
+    protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
     {
         ExecutionCount++;
-        var execution = new Execution();
-        return _ => execution;
+        return new Executor(scope.Problem);
     }
 
-    private sealed class Execution : EvaluatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed class Executor(IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
             problem.Evaluate(candidates, random).ToArray();
     }
+
 }
 
-public sealed record CountingExecutionAlgorithm(int Increment, IEvaluator<int> Evaluator)
+public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluation, int> Evaluator)
     : Algorithm<CountingExecutionAlgorithm, int, PopulationState<int>>
 {
     public int ExecutionCount { get; private set; }
 
-    public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    public static Parameter<CountingExecutionAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
+
+    // Counts private data construction for each executor.
+    protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
     {
         ExecutionCount++;
-        return scope => new Execution<TRunSearchSpace, TRunProblem>(Increment, scope.Resolve<int, TRunSearchSpace, TRunProblem>(Evaluator));
+        return new Executor(Increment, scope.Resolve(Evaluator));
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(int increment, IEvaluatorExecution<int, TSearchSpace, TProblem> evaluator)
-        : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
-        where TSearchSpace : class, ISearchSpace<int>
-        where TProblem : class, IProblem<int, TSearchSpace>
+    private sealed class Executor(int increment, IEvaluationExecutor<int> evaluator)
+        : AlgorithmExecutor<PopulationState<int>>
     {
-        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
 
             var current = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
             var next = current + increment;
-            var objectiveVector = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
+            var objectiveVector = evaluator.Evaluate([next], random).Single();
 
             yield return Population.From([next.ToEvaluated(objectiveVector)]).ToPopulationState();
             await Task.CompletedTask;
         }
     }
+
 }

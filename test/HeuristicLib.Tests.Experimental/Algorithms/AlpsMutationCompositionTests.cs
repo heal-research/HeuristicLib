@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Evaluators;
@@ -45,11 +46,17 @@ public sealed class AlpsMutationCompositionTests
     public async Task BroadMutatorSelection_SeesOnlyTheConfiguredSource_AndCountsOnlyRoutedOffspring()
     {
         var algorithm = CreateAlgorithm(0.5) with { MaximumGenerations = 2 };
-        var offered = new List<IMutator<int>>();
-        var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.Create(new OfferedMutators(offered), new CountingMutatorAdvice<int>(count, OperatorCountMetric.Candidates)));
+        var offered = new List<IOperator<Mutation, int>>();
+        var counter = new Counter();
+        var counted = algorithm.Substitute(Substitution.Of<IOperator<Mutation, int>>(mutator =>
+        {
+            offered.Add(mutator);
+            return true;
+        }, mutator => mutator.Counted(counter, OperatorCountMetric.Candidates)));
+        var scope = ResolutionScope.Create();
+        var count = scope.Results.Result(counter);
 
-        var states = await States(scope, algorithm);
+        var states = await States(scope, counted);
         offered.ShouldBe([algorithm.Mutator]);
         var mutated = states[1].Population.Single().EvaluatedCandidates.Count(candidate => candidate.Candidate == 99);
         mutated.ShouldBeInRange(1, 15);
@@ -70,21 +77,12 @@ public sealed class AlpsMutationCompositionTests
         var algorithm = CreateAlgorithm(rate);
         if (noChange)
             algorithm = algorithm with { Mutator = NoChangeMutator<int>.Instance };
-        var count = new CountAccumulator();
-        var scope = ResolutionScope.Create(Aspect.CountCandidates(algorithm.Mutator, count));
+        var candidates = new Counter();
+        var scope = ResolutionScope.Create();
 
-        await States(scope, algorithm);
+        await States(scope, algorithm.Substitute(algorithm.Mutator.Invocations.CountingCandidates(candidates)));
 
-        count.CurrentCount.ShouldBe(0);
-    }
-
-    private sealed class OfferedMutators(List<IMutator<int>> offered) : Pointcut<IMutator<int>>
-    {
-        public override bool Matches(IMutator<int> configuration)
-        {
-            offered.Add(configuration);
-            return true;
-        }
+        scope.Results.Result(candidates).CurrentCount.ShouldBe(0);
     }
 
     private static AlpsGeneticAlgorithm<int> CreateAlgorithm(double rate) => new()
@@ -99,9 +97,9 @@ public sealed class AlpsMutationCompositionTests
         MutationRate = rate
     };
 
-    private static ValueTask<AlpsState<int>[]> States(ResolutionScope scope, AlpsGeneticAlgorithm<int> algorithm) =>
-        scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, AlpsState<int>>(algorithm)
-            .RunStreamingAsync(Problem, RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
+    private static ValueTask<AlpsState<int>[]> States(ResolutionScope scope, IAlgorithm<int, AlpsState<int>> algorithm) =>
+        scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, AlpsState<int>>(algorithm, Problem)
+            .RunStreamingAsync(RandomNumberGenerator.Create(7), ct: TestContext.Current.CancellationToken)
             .ToArrayAsync(TestContext.Current.CancellationToken);
 
     private sealed record ConstantCreator : SingleCandidateCreator<int>

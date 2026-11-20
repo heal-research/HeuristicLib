@@ -9,24 +9,22 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public record AlpsState<TCandidate> : SearchState
 {
-    public required ImmutableArray<Population<TCandidate>> Population { get; init; }
-    public required ImmutableArray<ImmutableArray<int>> Ages { get; init; }
+    public required ValueArray<Population<TCandidate>> Population { get; init; }
+    public required ValueArray<ValueArray<int>> Ages { get; init; }
 }
 
 public record AlpsGeneticAlgorithm<TCandidate>
     : IterativeAlgorithm<AlpsGeneticAlgorithm<TCandidate>, TCandidate, AlpsState<TCandidate>>
 {
     public required int PopulationSize { get; init; }
-    public required ICreator<TCandidate> Creator { get; init; }
-    public required ICrossover<TCandidate> Crossover { get; init; }
-    public required IMutator<TCandidate> Mutator { get; init; }
-    public required ISelector<TCandidate> Selector { get; init; }
-    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
+    public required IOperator<Creation, TCandidate> Creator { get; init; }
+    public required IOperator<Crossover, TCandidate> Crossover { get; init; }
+    public required IOperator<Mutation, TCandidate> Mutator { get; init; }
+    public required IOperator<Selection, TCandidate> Selector { get; init; }
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
     public int Elites { get; init; }
-    public IRefiner<TCandidate>? Refiner { get; init; }
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Selector, Evaluator, Refiner);
-
+    public IOperator<Refinement, TCandidate>? Refiner { get; init; }
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
@@ -42,58 +40,95 @@ public record AlpsGeneticAlgorithm<TCandidate>
     /// </remarks>
     public double MutationRate { get; init; } = 0.1;
 
-    protected override ExecutionFactory<IterativeAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>> CreateIterationFactory<TRunSearchSpace, TRunProblem>() =>
-        scope =>
-        {
-            var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, AlpsState<TCandidate>>();
-            return new Execution<TRunSearchSpace, TRunProblem>(typed.ResolveOptional(Interceptor), typed.Resolve(Evaluator), typed.Resolve(Creator), typed.Resolve(Crossover),
-                typed.Resolve(Mutator), typed.Resolve(Selector), typed.ResolveOptional(Refiner), PopulationSize, Elites, MaximumGenerations, MutationRate);
-        };
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, int> PopulationSizeParameter { get; } =
+        new(nameof(PopulationSize), static algorithm => algorithm.PopulationSize, static (algorithm, value) => algorithm with { PopulationSize = value });
 
-    private sealed class Execution<TSearchSpace, TProblem>(
-        IInterceptorExecution<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>? interceptor,
-        IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorExecution<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverExecution<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutatorExecution<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectorExecution<TCandidate, TSearchSpace, TProblem> selector,
-        IRefinerExecution<TCandidate, TSearchSpace, TProblem>? refiner,
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, IOperator<Creation, TCandidate>> CreatorParameter { get; } =
+        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, IOperator<Crossover, TCandidate>> CrossoverParameter { get; } =
+        new(nameof(Crossover), static algorithm => algorithm.Crossover, static (algorithm, value) => algorithm with { Crossover = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, IOperator<Mutation, TCandidate>> MutatorParameter { get; } =
+        new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, IOperator<Selection, TCandidate>> SelectorParameter { get; } =
+        new(nameof(Selector), static algorithm => algorithm.Selector, static (algorithm, value) => algorithm with { Selector = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, int> ElitesParameter { get; } =
+        new(nameof(Elites), static algorithm => algorithm.Elites, static (algorithm, value) => algorithm with { Elites = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, IOperator<Refinement, TCandidate>?> RefinerParameter { get; } =
+        new(nameof(Refiner), static algorithm => algorithm.Refiner, static (algorithm, value) => algorithm with { Refiner = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, int?> MaximumGenerationsParameter { get; } =
+        new(nameof(MaximumGenerations), static algorithm => algorithm.MaximumGenerations, static (algorithm, value) => algorithm with { MaximumGenerations = value });
+
+    public static Parameter<AlpsGeneticAlgorithm<TCandidate>, double> MutationRateParameter { get; } =
+        new(nameof(MutationRate), static algorithm => algorithm.MutationRate, static (algorithm, value) => algorithm with { MutationRate = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [PopulationSizeParameter, CreatorParameter, CrossoverParameter, MutatorParameter, SelectorParameter, EvaluatorParameter, ElitesParameter, RefinerParameter, MaximumGenerationsParameter, MutationRateParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IterativeAlgorithmExecutor<AlpsState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>> scope)
+    {
+        var interceptor = scope.ResolveOptional(Interceptor);
+        var evaluator = scope.Resolve(Evaluator);
+        var creator = scope.Resolve(Creator);
+        var crossover = scope.Resolve(Crossover);
+        var mutator = scope.Resolve(Mutator);
+        var selector = scope.Resolve(Selector);
+        var refiner = scope.ResolveOptional(Refiner);
+        return new Executor(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
+            PopulationSize, Elites, MaximumGenerations, MutationRate, scope.Problem);
+    }
+
+    private sealed class Executor(
+        IInterceptionExecutor<AlpsState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate> evaluator,
+        ICreationExecutor<TCandidate> creator,
+        ICrossoverExecutor<TCandidate> crossover,
+        IMutationExecutor<TCandidate> mutator,
+        ISelectionExecutor<TCandidate> selector,
+        IRefinementExecutor<TCandidate>? refiner,
         int populationSize,
         int elites,
         int? maximumGenerations,
-        double mutationRate)
-        : IterativeAlgorithmExecution<TCandidate, TSearchSpace, TProblem, AlpsState<TCandidate>>(interceptor)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        double mutationRate, IProblem problem)
+        : IterativeAlgorithmExecutor<AlpsState<TCandidate>>(interceptor)
     {
-        private readonly WeightedRouter<IMutatorExecution<TCandidate, TSearchSpace, TProblem>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
+        private readonly WeightedRouter<IMutationExecutor<TCandidate>?> mutationRouter = WeightedRouter.AtRate(mutator, mutationRate);
 
-        protected override bool HasCompleted(int yieldedStateCount, AlpsState<TCandidate>? previousState, TProblem problem) =>
+        protected override bool HasCompleted(int yieldedStateCount, AlpsState<TCandidate>? previousState) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
-        protected override AlpsState<TCandidate> ExecuteStep(AlpsState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        protected override AlpsState<TCandidate> ExecuteStep(AlpsState<TCandidate>? previousState, IRandomNumberGenerator random)
         {
-            var searchSpace = problem.SearchSpace;
 
             if (previousState is null)
             {
-                var initialLayerPopulation = creator.Create(populationSize, random, searchSpace, problem);
+                var initialLayerPopulation = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialLayerPopulation = refiner.Refine(initialLayerPopulation, random, searchSpace, problem);
+                    initialLayerPopulation = refiner.Refine(initialLayerPopulation, random);
                 }
 
-                var initialPopulation = initialLayerPopulation.ToEvaluated(evaluator.Evaluate(initialLayerPopulation, random, searchSpace, problem));
+                var initialPopulation = initialLayerPopulation.ToEvaluated(evaluator.Evaluate(initialLayerPopulation, random));
                 return new()
                 {
                     Population = [Population.From(initialPopulation)],
-                    Ages = [Enumerable.Repeat(0, populationSize).ToImmutableArray()]
+                    Ages = [Enumerable.Repeat(0, populationSize).ToValueArray()]
                 };
             }
 
             var offspringCount = populationSize;
-            var oldPopulation = previousState.Population[0].ToArray();
-            var selectedParents = selector.Select(oldPopulation, problem.Objective, offspringCount * 2, random, searchSpace, problem);
+            var oldPopulation = previousState.Population[0].EvaluatedCandidates.ToArray();
+            var selectedParents = selector.Select(oldPopulation, offspringCount * 2, random);
             var parentPairs = new Parents<TCandidate>[offspringCount];
             var offspringAges = new int[offspringCount];
             var nextAge = previousState.Ages[0].DefaultIfEmpty(0).Max() + 1;
@@ -103,21 +138,21 @@ public record AlpsGeneticAlgorithm<TCandidate>
                 offspringAges[i] = nextAge;
             }
 
-            var offspring = crossover.Cross(parentPairs, random, searchSpace, problem);
+            var offspring = crossover.Cross(parentPairs, random);
             offspring = mutationRouter.Route(offspring, random, (selected, batch) =>
-                selected is null ? batch : selected.Mutate(batch, random, searchSpace, problem));
+                selected is null ? batch : selected.Mutate(batch, random));
             if (refiner is not null)
             {
-                offspring = refiner.Refine(offspring, random, searchSpace, problem);
+                offspring = refiner.Refine(offspring, random);
             }
 
-            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random, searchSpace, problem));
+            var offspringPopulation = offspring.ToEvaluated(evaluator.Evaluate(offspring, random));
             var newPopulation = ElitismReplacer.Replace(oldPopulation, offspringPopulation, problem.Objective, offspringCount, elites);
 
             return new()
             {
                 Population = [Population.From(newPopulation)],
-                Ages = [offspringAges.ToImmutableArray()]
+                Ages = [offspringAges.ToValueArray()]
             };
         }
     }

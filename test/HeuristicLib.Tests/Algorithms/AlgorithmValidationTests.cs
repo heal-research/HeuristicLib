@@ -55,7 +55,7 @@ public class AlgorithmValidationTests
             new BoundedRealVectorSearchSpace(3, -5.0, 5.0), SingleObjective.Minimize);
 
     private static GeneticAlgorithm<RealVector>
-        CreateAlgorithm(ICrossover<RealVector> crossover) =>
+        CreateAlgorithm(IOperator<Crossover, RealVector> crossover) =>
         new()
         {
             Creator = new UniformDistributedCreator(),

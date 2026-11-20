@@ -1,5 +1,9 @@
+using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.MetaOptimization;
 using HEAL.HeuristicLib.Random;
@@ -27,81 +31,93 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
     public readonly NoProblem<T2, TS2> NoProblem2 = new(SearchSpace2);
     public bool Contains(CompositeGenotype<T1, T2> candidate) => SearchSpace.Contains(candidate.Part1) && SearchSpace2.Contains(candidate.Part2);
 
-    public Creator CombineCreators(ICreator<T1> operator1, ICreator<T2> operator2) => new(operator1, operator2);
-    public Mutator CombineMutator(IMutator<T1> operator1, IMutator<T2> operator2) => new(operator1, operator2);
-    public Crossover CombineCrossover(ICrossover<T1> operator1, ICrossover<T2> operator2) => new(operator1, operator2);
+    public Creator CombineCreators(IOperator<Creation, T1> operator1, IOperator<Creation, T2> operator2) => new(operator1, operator2);
+    public Mutator CombineMutator(IOperator<Mutation, T1> operator1, IOperator<Mutation, T2> operator2) => new(operator1, operator2);
+    public Crossover CombineCrossover(IOperator<HEAL.HeuristicLib.Operators.Crossover, T1> operator1, IOperator<HEAL.HeuristicLib.Operators.Crossover, T2> operator2) => new(operator1, operator2);
 
-    public sealed class CreatorExecutionPair(ICreatorExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, ICreatorExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2)
+    public sealed class CreationExecutorPair(ICreationExecutor<T1> operatorExecutor1, ICreationExecutor<T2> operatorExecutor2)
     {
-        public ICreatorExecution<T1, TS1, IProblem<T1, TS1>> OperatorExecution1 { get; } = operatorExecution1;
-        public ICreatorExecution<T2, TS2, IProblem<T2, TS2>> OperatorExecution2 { get; } = operatorExecution2;
+        public ICreationExecutor<T1> OperatorExecution1 { get; } = operatorExecutor1;
+        public ICreationExecutor<T2> OperatorExecution2 { get; } = operatorExecutor2;
     }
 
-    public record Creator(ICreator<T1> Operator1, ICreator<T2> Operator2)
-        : ICreator<CompositeGenotype<T1, T2>>
+    public record Creator(IOperator<Creation, T1> Operator1, IOperator<Creation, T2> Operator2)
+        : Operator<Creation, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, ICreationExecutor<CompositeGenotype<T1, T2>>>
     {
-        public ExecutionFactory<ICreatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
-            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace> => scope =>
-        {
-            var execution = new Execution(
-                scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
-                scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
-
-            if (execution is not ICreatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> typed)
+        public static Parameter<Creator, IOperator<Creation, T1>> Operator1Parameter { get; } =
+            new(nameof(Operator1), static creator => creator.Operator1, static (creator, value) => creator with { Operator1 = value })
             {
-                throw new InvalidOperationException(
-                    $"{GetType().Name} is written for {typeof(CompositeSearchSpace<T1, TS1, T2, TS2>).Name} and cannot run over {typeof(TSearchSpace).Name}.");
-            }
+                ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
+            };
 
-            return typed;
-        };
-
-        private sealed class Execution(ICreatorExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, ICreatorExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2)
-            : ICreatorExecution<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
-        {
-            public IReadOnlyList<CompositeGenotype<T1, T2>> Create(int count, IRandomNumberGenerator random, CompositeSearchSpace<T1, TS1, T2, TS2> searchSpace, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>> problem)
+        public static Parameter<Creator, IOperator<Creation, T2>> Operator2Parameter { get; } =
+            new(nameof(Operator2), static creator => creator.Operator2, static (creator, value) => creator with { Operator2 = value })
             {
-                var parts1 = operatorExecution1.Create(count, random, searchSpace.SearchSpace, searchSpace.NoProblem1);
-                var parts2 = operatorExecution2.Create(count, random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                ChildExecution = static _ => ExecutionSignature.For<TS2, IProblem<T2, TS2>, ISearchState>()
+            };
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [Operator1Parameter, Operator2Parameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+        protected override ICreationExecutor<CompositeGenotype<T1, T2>> CreateExecutor<TRunSearchState>(ResolutionScope<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, TRunSearchState> scope)
+        {
+            var creator1 = scope.For<T1, TS1, IProblem<T1, TS1>>(scope.SearchSpace.NoProblem1).Resolve(Operator1);
+            var creator2 = scope.For<T2, TS2, IProblem<T2, TS2>>(scope.SearchSpace.NoProblem2).Resolve(Operator2);
+            return new Executor(creator1, creator2);
+        }
+
+        private sealed class Executor(ICreationExecutor<T1> operatorExecutor1, ICreationExecutor<T2> operatorExecutor2)
+            : CreationExecutor<CompositeGenotype<T1, T2>>
+        {
+            public override IReadOnlyList<CompositeGenotype<T1, T2>> Create(int count, IRandomNumberGenerator random)
+            {
+                var parts1 = operatorExecutor1.Create(count, random);
+                var parts2 = operatorExecutor2.Create(count, random);
                 return parts1.Zip(parts2, (a, b) => new CompositeGenotype<T1, T2>(a, b)).ToList();
             }
         }
     }
 
-    public sealed class CrossoverExecutionPair(ICrossoverExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, ICrossoverExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2)
+    public sealed class CrossoverExecutionPair(ICrossoverExecutor<T1> operatorExecutor1, ICrossoverExecutor<T2> operatorExecutor2)
     {
-        public ICrossoverExecution<T1, TS1, IProblem<T1, TS1>> OperatorExecution1 { get; } = operatorExecution1;
-        public ICrossoverExecution<T2, TS2, IProblem<T2, TS2>> OperatorExecution2 { get; } = operatorExecution2;
+        public ICrossoverExecutor<T1> OperatorExecution1 { get; } = operatorExecutor1;
+        public ICrossoverExecutor<T2> OperatorExecution2 { get; } = operatorExecutor2;
     }
 
-    public record Crossover(ICrossover<T1> Operator1, ICrossover<T2> Operator2)
-        : ICrossover<CompositeGenotype<T1, T2>>
+    public record Crossover(IOperator<HEAL.HeuristicLib.Operators.Crossover, T1> Operator1, IOperator<HEAL.HeuristicLib.Operators.Crossover, T2> Operator2)
+        : Operator<HEAL.HeuristicLib.Operators.Crossover, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, ICrossoverExecutor<CompositeGenotype<T1, T2>>>
     {
-        public ExecutionFactory<ICrossoverExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
-            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace> => scope =>
-        {
-            var execution = new Execution(
-                scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
-                scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2));
-
-            if (execution is not ICrossoverExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> typed)
+        public static Parameter<Crossover, IOperator<HEAL.HeuristicLib.Operators.Crossover, T1>> Operator1Parameter { get; } =
+            new(nameof(Operator1), static crossover => crossover.Operator1, static (crossover, value) => crossover with { Operator1 = value })
             {
-                throw new InvalidOperationException(
-                    $"{GetType().Name} is written for {typeof(CompositeSearchSpace<T1, TS1, T2, TS2>).Name} and cannot run over {typeof(TSearchSpace).Name}.");
-            }
+                ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
+            };
 
-            return typed;
-        };
-
-        private sealed class Execution(ICrossoverExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, ICrossoverExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2)
-            : ICrossoverExecution<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
-        {
-            public IReadOnlyList<CompositeGenotype<T1, T2>> Cross(IReadOnlyList<Parents<CompositeGenotype<T1, T2>>> parents, IRandomNumberGenerator random, CompositeSearchSpace<T1, TS1, T2, TS2> searchSpace, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>> problem)
+        public static Parameter<Crossover, IOperator<HEAL.HeuristicLib.Operators.Crossover, T2>> Operator2Parameter { get; } =
+            new(nameof(Operator2), static crossover => crossover.Operator2, static (crossover, value) => crossover with { Operator2 = value })
             {
-                var res1 = operatorExecution1.Cross(parents.Select(Selector1).ToArray(), random, searchSpace.SearchSpace, searchSpace.NoProblem1);
-                var res2 = operatorExecution2.Cross(parents.Select(Selector2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                ChildExecution = static _ => ExecutionSignature.For<TS2, IProblem<T2, TS2>, ISearchState>()
+            };
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [Operator1Parameter, Operator2Parameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+        protected override ICrossoverExecutor<CompositeGenotype<T1, T2>> CreateExecutor<TRunSearchState>(ResolutionScope<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, TRunSearchState> scope)
+        {
+            var crossover1 = scope.For<T1, TS1, IProblem<T1, TS1>>(scope.SearchSpace.NoProblem1).Resolve(Operator1);
+            var crossover2 = scope.For<T2, TS2, IProblem<T2, TS2>>(scope.SearchSpace.NoProblem2).Resolve(Operator2);
+            return new Executor(crossover1, crossover2);
+        }
+
+        private sealed class Executor(ICrossoverExecutor<T1> operatorExecutor1, ICrossoverExecutor<T2> operatorExecutor2)
+            : CrossoverExecutor<CompositeGenotype<T1, T2>>
+        {
+            public override IReadOnlyList<CompositeGenotype<T1, T2>> Cross(IReadOnlyList<Parents<CompositeGenotype<T1, T2>>> parents, IRandomNumberGenerator random)
+            {
+                var res1 = operatorExecutor1.Cross(parents.Select(Selector1).ToArray(), random);
+                var res2 = operatorExecutor2.Cross(parents.Select(Selector2).ToArray(), random);
                 return res1.Zip(res2, ((a, b) => new CompositeGenotype<T1, T2>(a, b))).ToArray();
 
                 static Parents<T2> Selector2(Parents<CompositeGenotype<T1, T2>> x) => Parents.From(x.Parent1.Part2, x.Parent2.Part2);
@@ -110,44 +126,52 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
         }
     }
 
-    public sealed class MutatorExecutionPair(IMutatorExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, IMutatorExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2)
+    public sealed class MutationExecutorPair(IMutationExecutor<T1> operatorExecutor1, IMutationExecutor<T2> operatorExecutor2)
     {
-        public IMutatorExecution<T1, TS1, IProblem<T1, TS1>> OperatorExecution1 { get; } = operatorExecution1;
-        public IMutatorExecution<T2, TS2, IProblem<T2, TS2>> OperatorExecution2 { get; } = operatorExecution2;
+        public IMutationExecutor<T1> OperatorExecution1 { get; } = operatorExecutor1;
+        public IMutationExecutor<T2> OperatorExecution2 { get; } = operatorExecutor2;
     }
 
-    public record Mutator(IMutator<T1> Operator1, IMutator<T2> Operator2)
-        : IMutator<CompositeGenotype<T1, T2>>
+    public record Mutator(IOperator<Mutation, T1> Operator1, IOperator<Mutation, T2> Operator2)
+        : Operator<Mutation, CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, IMutationExecutor<CompositeGenotype<T1, T2>>>
     {
         public bool All { get; init; } = true;
 
-        public ExecutionFactory<IMutatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<CompositeGenotype<T1, T2>>
-            where TProblem : class, IProblem<CompositeGenotype<T1, T2>, TSearchSpace> => scope =>
-        {
-            var execution = new Execution(
-                scope.Resolve<T1, TS1, IProblem<T1, TS1>>(Operator1),
-                scope.Resolve<T2, TS2, IProblem<T2, TS2>>(Operator2),
-                All);
-
-            if (execution is not IMutatorExecution<CompositeGenotype<T1, T2>, TSearchSpace, TProblem> typed)
+        public static Parameter<Mutator, IOperator<Mutation, T1>> Operator1Parameter { get; } =
+            new(nameof(Operator1), static mutator => mutator.Operator1, static (mutator, value) => mutator with { Operator1 = value })
             {
-                throw new InvalidOperationException(
-                    $"{GetType().Name} is written for {typeof(CompositeSearchSpace<T1, TS1, T2, TS2>).Name} and cannot run over {typeof(TSearchSpace).Name}.");
-            }
+                ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
+            };
 
-            return typed;
-        };
+        public static Parameter<Mutator, IOperator<Mutation, T2>> Operator2Parameter { get; } =
+            new(nameof(Operator2), static mutator => mutator.Operator2, static (mutator, value) => mutator with { Operator2 = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<TS2, IProblem<T2, TS2>, ISearchState>()
+            };
 
-        private sealed class Execution(IMutatorExecution<T1, TS1, IProblem<T1, TS1>> operatorExecution1, IMutatorExecution<T2, TS2, IProblem<T2, TS2>> operatorExecution2, bool all)
-            : IMutatorExecution<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>>
+        public static Parameter<Mutator, bool> AllParameter { get; } =
+            new(nameof(All), static mutator => mutator.All, static (mutator, value) => mutator with { All = value });
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [Operator1Parameter, Operator2Parameter, AllParameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+        protected override IMutationExecutor<CompositeGenotype<T1, T2>> CreateExecutor<TRunSearchState>(ResolutionScope<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>>, TRunSearchState> scope)
         {
-            public IReadOnlyList<CompositeGenotype<T1, T2>> Mutate(IReadOnlyList<CompositeGenotype<T1, T2>> parents, IRandomNumberGenerator random, CompositeSearchSpace<T1, TS1, T2, TS2> searchSpace, IProblem<CompositeGenotype<T1, T2>, CompositeSearchSpace<T1, TS1, T2, TS2>> problem)
+            var mutator1 = scope.For<T1, TS1, IProblem<T1, TS1>>(scope.SearchSpace.NoProblem1).Resolve(Operator1);
+            var mutator2 = scope.For<T2, TS2, IProblem<T2, TS2>>(scope.SearchSpace.NoProblem2).Resolve(Operator2);
+            return new Executor(mutator1, mutator2, All);
+        }
+
+        private sealed class Executor(IMutationExecutor<T1> operatorExecutor1, IMutationExecutor<T2> operatorExecutor2, bool all)
+            : MutationExecutor<CompositeGenotype<T1, T2>>
+        {
+            public override IReadOnlyList<CompositeGenotype<T1, T2>> Mutate(IReadOnlyList<CompositeGenotype<T1, T2>> parents, IRandomNumberGenerator random)
             {
                 if (all)
                 {
-                    var res1 = operatorExecution1.Mutate(parents.Select(x => x.Part1).ToArray(), random, searchSpace.SearchSpace, searchSpace.NoProblem1);
-                    var res2 = operatorExecution2.Mutate(parents.Select(x => x.Part2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                    var res1 = operatorExecutor1.Mutate(parents.Select(x => x.Part1).ToArray(), random);
+                    var res2 = operatorExecutor2.Mutate(parents.Select(x => x.Part2).ToArray(), random);
                     return res1.Zip(res2, ((a, b) => new CompositeGenotype<T1, T2>(a, b))).ToArray();
                 }
 
@@ -155,14 +179,14 @@ public record CompositeSearchSpace<T1, TS1, T2, TS2>(TS1 SearchSpace, TS2 Search
                 var result = parents.ToArray();
 
                 var p1 = parents.Select((p, i) => (p, i)).Where(t => assignments[t.i] == 0).Select(t => t.i).ToArray();
-                var mutants1 = operatorExecution1.Mutate(p1.Select(t => parents[t].Part1).ToArray(), random, searchSpace.SearchSpace, searchSpace.NoProblem1);
+                var mutants1 = operatorExecutor1.Mutate(p1.Select(t => parents[t].Part1).ToArray(), random);
                 foreach (var (i, p) in p1.Zip(mutants1))
                 {
                     result[i] = result[i] with { Part1 = p };
                 }
 
                 var p2 = parents.Select((p, i) => (p, i)).Where(t => assignments[t.i] == 1).Select(t => t.i).ToArray();
-                var mutants2 = operatorExecution2.Mutate(p2.Select(t => parents[t].Part2).ToArray(), random, searchSpace.SearchSpace2, searchSpace.NoProblem2);
+                var mutants2 = operatorExecutor2.Mutate(p2.Select(t => parents[t].Part2).ToArray(), random);
                 foreach (var (i, p) in p2.Zip(mutants2))
                 {
                     result[i] = result[i] with { Part2 = p };

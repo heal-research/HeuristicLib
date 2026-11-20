@@ -89,7 +89,7 @@ public static class ExpressionInterpreter
     /// <summary>
     /// Applies one operation, taking its behavior from the operation catalog.
     /// </summary>
-    private static void Apply(ref EvaluationStack stack, Operation operation, ref readonly OperationInfo info)
+    private static void Apply(ref EvaluationStack stack, Operation operation, ref readonly NumericOperationInfo info)
     {
         if (info.Arity == 1)
         {
@@ -194,7 +194,7 @@ public static class ExpressionInterpreter
 
         // Which operations need scratch is declared with the operation rather than listed here, so sizing the
         // workspace and using it cannot disagree.
-        internal void ApplyOperation(ref readonly OperationInfo info)
+        internal void ApplyOperation(ref readonly NumericOperationInfo info)
         {
             var resultIsVector = false;
             for (var i = 0; i < info.Arity; i++)

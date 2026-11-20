@@ -1,87 +1,45 @@
 # Experiments
 
-Stochastic algorithms should be judged across trials. HeuristicLib experiments turn repetitions and parameter grids into typed configurations with deterministic trial keys.
+A parameter grid (`ParameterGrid`) defines variations of an algorithm prototype. Each combination of dimension values produces an algorithm configuration called a **parameter candidate**. Create an experiment from one or more grids to run their parameter candidates on the supplied problems. The experiment controls repetitions and random stream sharing. Each trial owns an independent algorithm run.
 
 ## Repeat a configuration
 
-```csharp
-using HEAL.HeuristicLib.Experiments;
+Import `HEAL.HeuristicLib.Experiments` for the experiment extensions.
 
-var experiment = algorithm.Repeat(20);
-var results = await experiment.CompleteAsync(
-    problem,
-    RandomNumberGenerator.Create(seed: 999));
-```
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-repeat{csharp}
 
-`results` is an `ImmutableArray` of `(Trial, State)` pairs. Each trial carries its key, the exact algorithm configuration it ran, and the random fork path that produced it; the state is that run's final state. Repetitions use independent runs derived from the experiment's random source.
+`RunToCompletion` and `RunToCompletionAsync` return an `ImmutableArray` of `(Trial, State)` pairs, with the final state from each run. Each trial exposes the problem instance and its zero-based `ProblemPosition`, `ParameterCandidateIndex` and `Repetition`. For a single repeated configuration on one problem, only `Repetition` varies. Record the seed, problem order, experiment settings and trial positions to reproduce a trial.
 
-Summarize the distribution rather than quoting one run:
+Summarize the distribution across repetitions.
 
-```csharp
-double BestOf(PopulationState<RealVector> state) =>
-    state.Population.EvaluatedCandidates
-        .MinBy(candidate => candidate.ObjectiveVector, problem.Objective.TotalOrderComparer)!
-        .ObjectiveVector[0];
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-summary{csharp}
 
-var qualities = results.Select(result => BestOf(result.State)).Order().ToArray();
+For example, a 100-generation genetic algorithm on the Rastrigin function can produce a distribution like this.
 
-Console.WriteLine($"trials:  {qualities.Length}");
-Console.WriteLine($"best:    {qualities[0]:F4}");
-Console.WriteLine($"median:  {qualities[qualities.Length / 2]:F4}");
-Console.WriteLine($"worst:   {qualities[^1]:F4}");
-Console.WriteLine($"reached below 0.01: {qualities.Count(quality => quality < 0.01)} of {qualities.Length}");
-```
-
-For a 100 generation genetic algorithm on the Rastrigin function:
-
-```
+```text
 trials:  20
 best:    0.0000
 median:  0.0009
 worst:   2.6617
 ```
 
-The spread is the finding. The best trial reaches the optimum and the worst is still at `2.66`, so quoting either number alone would misdescribe this configuration. Retain the seed and trial key so an unusual run can be reproduced exactly.
+The spread is the finding. The best trial reaches the optimum to the displayed precision and the worst is still at `2.66`, so quoting either number alone would misdescribe this configuration. Retain the seed and trial positions so you can reproduce an unusual run.
 
 ## Explore a parameter grid
 
-```csharp
-var grid = algorithm
-    .AsGrid()
-    .VaryBy(
-        [50, 100, 200],
-        (configuration, populationSize) => configuration with { PopulationSize = populationSize })
-    .VaryBy(
-        [0.1, 0.3],
-        (configuration, mutationRate) => configuration with { MutationRate = mutationRate })
-    .Repeat(5);
+Start with `AsParameterGrid()` and add dimensions with `VaryBy`. Pass a typed parameter descriptor to vary a declared property with compile-time type checking. Pass a name such as `"MutationRate"` to resolve a top-level parameter on the prototype, including inherited parameters. The name must identify exactly one parameter, and the values must fit its type without numeric or other conversions. Pass a typed lambda to configure several related settings together. Every form requires at least one value and throws `ArgumentException` for an empty value list.
 
-var gridResults = await grid.CompleteAsync(
-    problem,
-    RandomNumberGenerator.Create(seed: 999));
-```
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-grid{csharp}
 
-Each `VaryBy` takes the values to try and a function that applies one value to a configuration. Because algorithms are records, `with` produces a modified copy and the original is untouched. Three population sizes times two mutation rates times five repetitions is 30 trials.
+The last dimension varies fastest. Dimensions are applied in the order they were added, so the lambda can derive the elite count from the population size chosen earlier. Here three populations, two mutation rates and five repetitions produce 30 trials. `trial.Settings` holds descriptor and value pairs in declaration order for the descriptor and name dimensions. Each descriptor appears once at its first declaration and reads its value from the resulting algorithm configuration. Lambda dimensions contribute no labels.
 
-Group by the configuration rather than by a formatted name. `Trial.Algorithm` is the exact configuration that ran, so the parameter values stay typed:
+Group by typed settings and compare the distribution within each group. `BestOf` reads the best quality in a final population as in the repetition example.
 
-```csharp
-Console.WriteLine("population  mutation   median      best");
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-grid-summary{csharp}
 
-foreach (var group in gridResults
-    .GroupBy(result => (result.Trial.Algorithm.PopulationSize, result.Trial.Algorithm.MutationRate))
-    .OrderBy(group => group.Key.PopulationSize)
-    .ThenBy(group => group.Key.MutationRate))
-{
-    var values = group.Select(result => BestOf(result.State)).Order().ToArray();
+An illustrative comparison on Rastrigin can look like this.
 
-    Console.WriteLine(
-        $"{group.Key.PopulationSize,10}{group.Key.MutationRate,10:F1}" +
-        $"{values[values.Length / 2],9:F4}{values[0],10:F4}");
-}
-```
-
-```
+```text
 population  mutation   median      best
         50       0.1   1.0024    0.0000
         50       0.3   1.9899    1.9899
@@ -91,59 +49,58 @@ population  mutation   median      best
        200       0.3   0.0000    0.0000
 ```
 
-Read the median column, not the best column. A population of 50 with a mutation rate of `0.3` never escapes `1.99`, while the same rate at population 200 solves the problem every time. The two settings interact: a high mutation rate needs a population large enough to hold onto good candidates while exploring, and judging either parameter on its own would have missed that.
+Read the median column, not the best column, to judge typical performance. The best column describes a single trial. At mutation rate `0.3`, even the best trial with a population of 50 stays near `1.99`, while the median with a population of 200 reaches the displayed optimum. The two settings interact. A high mutation rate needs a population large enough to hold onto good candidates while exploring, and judging either parameter on its own would miss that.
+
+## Combine grids
+
+A grid with no dimensions yields its prototype as its only parameter candidate. `Experiment.Create(grid)` sets up one repetition per parameter candidate and problem by default. To combine grids and set the repetition count, use `Experiment.Create([gridA, gridB], repetitions: 5)`. The experiment numbers parameter candidates continuously across the supplied grids. `Experiment.Create` requires at least one grid.
+
+For configurations generated by a script, give each configuration its own grid with `Experiment.Create([.. configurations.Select(configuration => configuration.AsParameterGrid())])`. Equal parameter candidates at different indexes still produce separate trials. Grouping by parameter values pools those trials.
+
+To inspect a grid, read its `Prototype` and `Dimensions`. Each dimension pairs a parameter with its values in declaration order, and a lambda dimension reports a null parameter. A parameter varied twice appears as two dimensions, while `trial.Settings` lists it once. An experiment lists its grids in supplied order through `Grids`.
+
+## Compare problems and control random streams
+
+Pass a problem list to `CreateRun`, for example `experiment.CreateRun([rastrigin10, rastrigin20], random, [best])`. For different problem types with the same candidate and search space, hold the problems as an `IReadOnlyList<IProblem<TCandidate, TSearchSpace>>`. Trials are ordered by problem, parameter candidate and repetition. `run.Trials.GroupBy(trial => (trial.ProblemPosition, trial.ParameterCandidateIndex))` groups repetitions for each parameter candidate and problem.
+
+By default, all parameter candidates start from the same random stream for a given problem and repetition. Each trial still receives a separate generator, so its draws cannot advance another trial's generator. Choose independent starting streams with `experiment with { ShareRandomStreamsAcrossParameterCandidates = false }`. In that mode the fork also includes the parameter candidate index. With the same seed and settings, sequential and concurrent execution assign the same streams to the same trial positions.
 
 ## Control concurrency
 
-Create an explicit run when you want to process trials as they finish:
+Create an explicit run when you want to process trials as they finish. Import `HEAL.HeuristicLib.Execution` for `ExecutionConcurrency`.
 
-```csharp
-using HEAL.HeuristicLib.Execution;
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-concurrency{csharp}
 
-var run = experiment.CreateRun(problem, RandomNumberGenerator.Create(seed: 789));
-var tasks = run.StartTrials(ExecutionConcurrency.Concurrent(4));
-
-await foreach (var completedTask in Task.WhenEach(tasks))
-{
-    var (trial, state) = await completedTask;
-    Console.WriteLine($"Finished {trial.Key}");
-}
-```
-
-Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
+`ExecutionConcurrency` states how much independent work may overlap, such as the trials of an experiment or the candidates of an operator batch. `Sequential()` finishes each item in input order before it starts the next. `Concurrent()` allows all items to overlap, and `Concurrent(max)` caps how many are active at once without guaranteeing any order. None of them reserves or creates dedicated threads; they only limit overlap, and the runtime decides which threads run the work. Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
 
 ## Run lifecycle
 
-An experiment run accepts attachments while `Preparing` and starts once. Do not start one of its trial runs directly before starting the experiment; the experiment rejects that mixed ownership.
+An experiment run is returned in `Ready` with one independent algorithm run per trial and starts once. Start the experiment to schedule all trials. Starting a trial run directly prevents scheduling through the experiment.
 
-An experiment moves from `Running` to `Completed`, `Failed` or `Canceled`. Disposing its stream before completion stops scheduling, cancels active work and leaves the experiment `Stopped`. These states are terminal: create a new experiment run to execute again. Unlike an individual algorithm run, an experiment does not pause and resume.
+`CreateRun` decodes the parameter candidates and applies the supplied substitutions once per parameter candidate. It validates the resulting configurations on each problem and checks that each trial's run can hold the supplied analyzers. A decoding failure throws `InvalidOperationException` with the parameter candidate index. A substitution, validation or analysis check failure identifies the problem, parameter candidate and repetition in `ExperimentTrialException`. When several trials share the failed operation, the exception identifies the first affected trial. Pass `validate: false` to `CreateRun`, `RunStreaming`, `RunTrials`, `RunToCompletionAsync` or `RunToCompletion` to skip configuration validation. Executors are constructed when execution starts. During execution, a failed trial leaves the other trials available to finish.
+
+An experiment moves from `Running` to `Completed`, `Failed` or `Canceled`. Disposing its stream before completion stops scheduling, cancels active work and leaves the experiment `Stopped`. These states are terminal. Create a new experiment run to execute again. Pause and resume apply to individual algorithm runs.
 
 ## Design a useful comparison
 
 1. Choose a budget that reflects comparable work.
 2. Define the seed schedule before looking at results.
 3. Repeat every configuration on the same problem instances.
-4. Keep all outcomes, not only successful or best runs.
+4. Keep all outcomes, including unsuccessful runs and runs with ordinary results.
 5. Summarize effect size and spread alongside a central value.
 
 Parameter search can overfit benchmark instances. Keep separate instances for final evaluation when conclusions will guide a real deployment.
 
 ## Add analysis
 
-Analyzers can collect progress during each trial rather than only final states. Continue with [Observability and analysis](/guide/execution/observability-and-analysis).
+The analyzers of [Observability and analysis](/guide/execution/observability-and-analysis) work in an experiment. Pass them in the substitutions list of `experiment.CreateRun(problem, random, [analyzer])`. They apply after variation, so a default-selecting analyzer observes whichever evaluator each parameter candidate configures. `trial.Algorithm` is the configuration produced by the grid, `trial.Run.Algorithm` adds the substitutions, and `trial.Run.Result(analyzer)` reads the trial's own result.
 
-A trial analyzer factory receives the concrete trial algorithm. Create any clocks inside the factory so they belong to that trial:
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-analyzed-grid{csharp}
 
-```csharp
-var quality = AspectFactory.Create(
-    (GeneticAlgorithm<RealVector> trial) =>
-        trial.TracePopulationQuality(clocks: [Clock.FromEvaluations(trial.Evaluator)]));
-var run = algorithm.Repeat(2).CreateRun(problem, random)
-    .AddAspectPerTrial(quality);
-await run.CompleteAsync();
-var analyses = run.GetAspectPerTrial(quality);
-```
+The update count reports how many best-so-far values the analyzer recorded in a trial. Use the recorded objective values to compare solution quality across trials.
 
-`GetAspectPerTrial` returns `TrialAspect` entries in trial order. Each has a typed `Trial` and an `Aspect` property; here `Aspect` has the concrete analyzer type created by the factory. Reuse the factory across experiments and create fresh analyzers and clocks for each trial when results should be independent. Returning a shared analyzer or clock intentionally combines its history or counts.
+Grid variation creates new configurations, so a source named on the prototype matches only a parameter candidate that retains its target. A source named on the prototype root, such as `algorithm.Iterations`, matches the original in `algorithm.Repeat(n)`. A source named on the prototype or on a child the grid replaces fails placement when its target is absent. Use default selections on grids or name a child shared by the parameter candidates.
 
-Use `AspectFactory.Create` for any per-trial aspect, including analyzers. Add factories with `AddAspectPerTrial`; their aspects follow that order in each trial. Adding the same factory twice is rejected.
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-experiment-setup{csharp}
+
+Analysis already attached to a configuration remains available when a parameter candidate keeps the observing wrapper.

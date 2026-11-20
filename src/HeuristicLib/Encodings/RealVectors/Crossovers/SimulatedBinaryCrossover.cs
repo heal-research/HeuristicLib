@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Random;
@@ -15,6 +16,13 @@ public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, Bo
     /// value degenerates the spread factor. The result is not restricted to the search space bounds in either case.
     /// </remarks>
     public double Contiguity { get; init; } = 2;
+
+    public static Parameter<SimulatedBinaryCrossover, double> ContiguityParameter { get; } =
+        new(nameof(Contiguity), static crossover => crossover.Contiguity, static (crossover, value) => crossover with { Contiguity = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [ContiguityParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
 
@@ -206,6 +214,22 @@ public record SelfAdaptiveSimulatedBinaryCrossover : SingleCandidateCrossover<Re
     /// Used as a threshold: at most zero, and <c>NaN</c>, never swaps, while at least one always swaps.
     /// </remarks>
     public double ProbBin { get; init; } = 0.5;
+
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> ProbVarParameter { get; } =
+        new(nameof(ProbVar), static crossover => crossover.ProbVar, static (crossover, value) => crossover with { ProbVar = value });
+
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> EtaParameter { get; } =
+        new(nameof(Eta), static crossover => crossover.Eta, static (crossover, value) => crossover with { Eta = value });
+
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> ProbExchParameter { get; } =
+        new(nameof(ProbExch), static crossover => crossover.ProbExch, static (crossover, value) => crossover with { ProbExch = value });
+
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> ProbBinParameter { get; } =
+        new(nameof(ProbBin), static crossover => crossover.ProbBin, static (crossover, value) => crossover with { ProbBin = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [ProbVarParameter, EtaParameter, ProbExchParameter, ProbBinParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public (RealVector child1, RealVector child2) Do(RealVector p1, RealVector p2, BoundedRealVectorSearchSpace searchSpace, IRandomNumberGenerator rng, double? eta = null, double? probVar = null, double? probBin = null)
     {

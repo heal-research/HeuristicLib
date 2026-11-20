@@ -1,6 +1,4 @@
-using HEAL.HeuristicLib.Operators.MoveAppliers;
-using HEAL.HeuristicLib.Operators.MoveCreators;
-using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.Partial;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -12,10 +10,10 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
 {
     public record TreeSearchContext(
         TP Problem,
-        IMoveCreatorExecution<T, TS, TP, TM> Creator,
-        IMoveApplierExecution<T, TS, TP, TM> Applier,
-        IMoveEvaluatorExecution<T, TS, TP, TM> Evaluator,
-        IMoveEvaluatorExecution<T, TS, TP, TM> BoundEvaluator);
+        IMoveCreationExecutor<T, TM> Creator,
+        IMoveApplicationExecutor<T, TM> Applier,
+        IMoveEvaluationExecutor<T, TM> Evaluator,
+        IMoveEvaluationExecutor<T, TM> BoundEvaluator);
 
 
     protected GenotypeAwareTreeSearchState(TreeSearchContext context)
@@ -31,10 +29,10 @@ public abstract class GenotypeAwareTreeSearchState<T, TS, TP, TM> : TreeSearchSt
     protected TreeSearchContext Context { get; }
 
     protected TP Problem => Context.Problem;
-    protected IMoveCreatorExecution<T, TS, TP, TM> Creator => Context.Creator;
-    protected IMoveApplierExecution<T, TS, TP, TM> Applier => Context.Applier;
-    protected IMoveEvaluatorExecution<T, TS, TP, TM> Evaluator => Context.Evaluator;
-    protected IMoveEvaluatorExecution<T, TS, TP, TM> BoundsEvaluator => Context.BoundEvaluator;
+    protected IMoveCreationExecutor<T, TM> Creator => Context.Creator;
+    protected IMoveApplicationExecutor<T, TM> Applier => Context.Applier;
+    protected IMoveEvaluationExecutor<T, TM> Evaluator => Context.Evaluator;
+    protected IMoveEvaluationExecutor<T, TM> BoundsEvaluator => Context.BoundEvaluator;
 
     protected abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Copy();
     protected abstract override GenotypeAwareTreeSearchState<T, TS, TP, TM> Branch(TM move);

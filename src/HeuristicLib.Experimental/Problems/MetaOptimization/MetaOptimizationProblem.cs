@@ -36,11 +36,11 @@ public class MetaOptimizationProblem<TCandidate, TSearchSpace, TProblem, TSearch
 
     /// <remarks>
     /// The builder hands back an <see cref="IAlgorithm{TCandidate}"/>, which says nothing about the state a run
-    /// yields, so the algorithm is resolved explicitly and its execution node run.
+    /// yields, so the algorithm is resolved explicitly and its executor run.
     /// </remarks>
     public override ObjectiveVector Evaluate(CompositeGenotype<RealVector, IntegerVector> solution, IRandomNumberGenerator random)
     {
-        var algorithm = ResolutionScope.Create().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algBuilder(solution));
-        return algorithm.Complete(problem, random).Population.MinBy(x => x.ObjectiveVector, Objective.TotalOrderComparer)?.ObjectiveVector ?? Objective.Worst;
+        var algorithm = ResolutionScope.Create().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algBuilder(solution), problem);
+        return algorithm.RunToCompletion(random).Population.EvaluatedCandidates.MinBy(x => x.ObjectiveVector, Objective.TotalOrderComparer)?.ObjectiveVector ?? Objective.Worst;
     }
 }

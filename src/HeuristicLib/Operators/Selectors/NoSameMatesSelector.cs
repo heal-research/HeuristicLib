@@ -8,9 +8,9 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public record NoSameMatesSelector<TCandidate>
-    : WrappingSelector<TCandidate>
+    : WrappingOperator<Selection, TCandidate>
 {
-    public NoSameMatesSelector(ISelector<TCandidate> childSelector, int maxAttempts)
+    public NoSameMatesSelector(IOperator<Selection, TCandidate> childSelector, int maxAttempts)
         : base(childSelector)
     {
         MaxAttempts = maxAttempts;
@@ -18,15 +18,24 @@ public record NoSameMatesSelector<TCandidate>
 
     public int MaxAttempts { get; init; }
 
-    protected override WrapperExecutionFactory<ISelectorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-        childSelector => new Execution<TRunSearchSpace, TRunProblem>(childSelector, MaxAttempts);
+    public static Parameter<NoSameMatesSelector<TCandidate>, int> MaxAttemptsParameter { get; } =
+        new(nameof(MaxAttempts), static selector => selector.MaxAttempts, static (selector, value) => selector with { MaxAttempts = value });
 
-    private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<TCandidate, TSearchSpace, TProblem> childSelector, int maxAttempts)
-        : WrappingSelectorExecution<TCandidate, TSearchSpace, TProblem>(childSelector)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MaxAttemptsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        var childSelector = scope.Resolve(ChildOperator);
+        return new Executor(childSelector, MaxAttempts);
+    }
+
+    private sealed class Executor(ISelectionExecutor<TCandidate> childSelector, int maxAttempts)
+        : SelectionExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
         {
             var selectedParents = 0;
             var poolCount = 0;
@@ -35,7 +44,7 @@ public record NoSameMatesSelector<TCandidate>
             var parentsPool = new EvaluatedCandidate<TCandidate>[count];
             for (var attempts = 1; attempts <= maxAttempts && selectedParents < count; attempts++)
             {
-                var parents = ChildSelector.Select(population, objective, count, random, searchSpace, problem);
+                var parents = childSelector.Select(population, count, random);
                 for (int indexParent1 = 0, indexParent2 = 1; indexParent1 < parents.Count - 1 && selectedParents < count - 1; indexParent1 += 2, indexParent2 += 2)
                 {
                     var qualityParent1 = parents[indexParent1].ObjectiveVector;
@@ -66,12 +75,12 @@ public record NoSameMatesSelector<TCandidate>
 
 public static class NoSameMatesSelector
 {
-    public static NoSameMatesSelector<TCandidate> Create<TCandidate>(ISelector<TCandidate> selector, int maximumAttempts) => new(selector, maximumAttempts);
+    public static NoSameMatesSelector<TCandidate> Create<TCandidate>(IOperator<Selection, TCandidate> selector, int maximumAttempts) => new(selector, maximumAttempts);
 }
 
 public static class NoSameMatesSelectorExtensions
 {
-    extension<TCandidate>(ISelector<TCandidate> selector)
+    extension<TCandidate>(IOperator<Selection, TCandidate> selector)
     {
         public NoSameMatesSelector<TCandidate> AvoidSameMates(int maximumAttempts) => NoSameMatesSelector.Create(selector, maximumAttempts);
     }

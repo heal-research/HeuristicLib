@@ -43,12 +43,12 @@ internal static class OperationCatalog
         Unary<TanhDefinition>()
     ];
 
-    private static readonly OperationInfo[] InfoByOperation = BuildInfo();
+    private static readonly NumericOperationInfo[] InfoByOperation = BuildInfo();
     private static readonly UnaryOperationKernels[] UnaryByOperation = Build(declaration => declaration.Unary);
     private static readonly BinaryOperationKernels[] BinaryByOperation = Build(declaration => declaration.Binary);
-    private static readonly OperationInfo[] AllInfo = [.. Declarations.Select(declaration => declaration.Info)];
+    private static readonly NumericOperationInfo[] AllInfo = [.. Declarations.Select(declaration => declaration.Info)];
 
-    public static ReadOnlySpan<OperationInfo> All => AllInfo;
+    public static ReadOnlySpan<NumericOperationInfo> All => AllInfo;
 
     /// <remarks>
     /// <see cref="Operation.Invalid"/> is rejected first. It is zero, and so is an unfilled slot, so comparing the
@@ -64,7 +64,7 @@ internal static class OperationCatalog
     }
 
     /// <exception cref="ArgumentException"><paramref name="operation"/> is not declared.</exception>
-    public static ref readonly OperationInfo GetInfo(Operation operation)
+    public static ref readonly NumericOperationInfo GetInfo(Operation operation)
     {
         if (!IsDeclared(operation))
             throw new ArgumentException($"Operation {operation} is not a declared operation.", nameof(operation));
@@ -72,7 +72,7 @@ internal static class OperationCatalog
         return ref InfoByOperation[(int)operation];
     }
 
-    public static bool TryGetInfo(Operation operation, out OperationInfo info)
+    public static bool TryGetInfo(Operation operation, out NumericOperationInfo info)
     {
         if (!IsDeclared(operation))
         {
@@ -126,24 +126,24 @@ internal static class OperationCatalog
     // constraint on each overload already fixes it and a declared arity could contradict the interface.
     private static Declaration Terminal<TOperation>()
         where TOperation : ITerminalOperationDefinition =>
-        new(new OperationInfo(TOperation.Operation, TOperation.Name, Arity: 0, TOperation.PayloadKind,
+        new(new NumericOperationInfo(TOperation.Operation, TOperation.Name, Arity: 0, TOperation.PayloadKind,
             TOperation.IsDifferentiable, ScratchSpanCount: 0, AdjointScratchSpanCount: 0, OperationNotation.Function), Unary: null, Binary: null);
 
     private static Declaration Unary<TOperation>()
         where TOperation : IUnaryOperationDefinition =>
-        new(new OperationInfo(TOperation.Operation, TOperation.Name, Arity: 1, PayloadKind.None,
+        new(new NumericOperationInfo(TOperation.Operation, TOperation.Name, Arity: 1, PayloadKind.None,
                 TOperation.IsDifferentiable, TOperation.ScratchSpanCount, TOperation.AdjointScratchSpanCount, TOperation.Notation),
             new UnaryOperationKernels(TOperation.Apply, TOperation.Apply, TOperation.Adjoint), Binary: null);
 
     private static Declaration Binary<TOperation>()
         where TOperation : IBinaryOperationDefinition =>
-        new(new OperationInfo(TOperation.Operation, TOperation.Name, Arity: 2, PayloadKind.None,
+        new(new NumericOperationInfo(TOperation.Operation, TOperation.Name, Arity: 2, PayloadKind.None,
                 TOperation.IsDifferentiable, TOperation.ScratchSpanCount, TOperation.AdjointScratchSpanCount, TOperation.Notation), Unary: null,
             new BinaryOperationKernels(TOperation.Apply, TOperation.Apply, TOperation.Apply, TOperation.Apply, TOperation.Adjoint));
 
-    private static OperationInfo[] BuildInfo()
+    private static NumericOperationInfo[] BuildInfo()
     {
-        var lookup = new OperationInfo[HighestOperationValue() + 1];
+        var lookup = new NumericOperationInfo[HighestOperationValue() + 1];
         foreach (var declaration in Declarations)
         {
             if (lookup[(int)declaration.Info.Operation].Operation != Operation.Invalid)
@@ -180,7 +180,7 @@ internal static class OperationCatalog
 
     // Only the declaration list mixes arities, and it is private. What a caller receives never does.
     private readonly record struct Declaration(
-        OperationInfo Info,
+        NumericOperationInfo Info,
         UnaryOperationKernels? Unary,
         BinaryOperationKernels? Binary);
 }

@@ -3,6 +3,7 @@ using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
@@ -52,12 +53,12 @@ public class OperatorRecommendationSpecs
         var problem = new TravelingSalesmanProblem();
 
         var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
-        var qualityAnalyzer = algorithm.TracePopulationCandidates();
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42)).AddAspect(qualityAnalyzer);
+        var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [qualityAnalyzer]);
 
         await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-        qualityAnalyzer.SampleCount.ShouldBe(5);
+        run.Result(qualityAnalyzer).SampleCount.ShouldBe(5);
     }
 
     /// <summary>
@@ -102,8 +103,8 @@ public class OperatorRecommendationSpecs
         var assignment = new QuadraticAssignmentProblem(
             new QuadraticAssignmentProblemData(SymmetricMatrix(), SymmetricMatrix()));
 
-        algorithm.Complete(tour, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
-        algorithm.Complete(assignment, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
+        algorithm.RunToCompletion(tour, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
+        algorithm.RunToCompletion(assignment, RandomNumberGenerator.Create(seed: 1), ct: TestContext.Current.CancellationToken).ShouldNotBeNull();
     }
 
     [Fact]
@@ -164,7 +165,7 @@ public class OperatorRecommendationSpecs
         var searchSpace = new PermutationSearchSpace(5);
         var resolution = new OperatorRecommendationResolution(problem: null, searchSpace);
 
-        var recommendation = resolution.GetOrRecommend<ICreator<Permutation>>("creator", supplied: null);
+        var recommendation = resolution.GetOrRecommend<IOperator<Creation, Permutation>>("creator", supplied: null);
         resolution.ThrowIfIncomplete("ConsumerAlgorithm");
 
         recommendation.ShouldBeOfType<RandomPermutationCreator>();
@@ -275,26 +276,26 @@ public class OperatorRecommendationSpecs
         : RealVectorProblem<RecommendedRealVectorProblem>(
             SingleObjective.Minimize,
             new BoundedRealVectorSearchSpace(dimension, minimum: -1.0, maximum: 1.0)),
-          IRecommends<ICreator<RealVector>>,
-          IRecommends<ICrossover<RealVector>>,
-          IRecommends<IMutator<RealVector>>
+          IRecommends<IOperator<Creation, RealVector>>,
+          IRecommends<IOperator<Crossover, RealVector>>,
+          IRecommends<IOperator<Mutation, RealVector>>
     {
         public bool TryCreateRecommendedOperator(
-            [NotNullWhen(true)] out ICreator<RealVector>? recommendation)
+            [NotNullWhen(true)] out IOperator<Creation, RealVector>? recommendation)
         {
             recommendation = new UniformDistributedCreator(SearchSpace);
             return true;
         }
 
         public bool TryCreateRecommendedOperator(
-            [NotNullWhen(true)] out ICrossover<RealVector>? recommendation)
+            [NotNullWhen(true)] out IOperator<Crossover, RealVector>? recommendation)
         {
             recommendation = new SinglePointCrossover();
             return true;
         }
 
         public bool TryCreateRecommendedOperator(
-            [NotNullWhen(true)] out IMutator<RealVector>? recommendation)
+            [NotNullWhen(true)] out IOperator<Mutation, RealVector>? recommendation)
         {
             recommendation = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
             return true;

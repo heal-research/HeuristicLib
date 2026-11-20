@@ -43,7 +43,7 @@ public sealed class ConceptNamespaceSpecs
         var problem = new TravelingSalesmanProblem();
         var algorithm = GeneticAlgorithm.For(problem, populationSize: 8, maximumGenerations: 1);
 
-        var result = await algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.Count.ShouldBe(8);
     }
@@ -59,9 +59,9 @@ public sealed class ConceptNamespaceSpecs
             populationSize: 8,
             maximumGenerations: 1);
 
-        var result = await algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.Count.ShouldBe(8);
-        result.Population.All(candidate => candidate.ObjectiveVector.Count == 2).ShouldBeTrue();
+        result.Population.EvaluatedCandidates.All(candidate => candidate.ObjectiveVector.Count == 2).ShouldBeTrue();
     }
 }

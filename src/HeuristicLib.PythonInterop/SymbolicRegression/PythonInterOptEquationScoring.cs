@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
@@ -20,10 +21,20 @@ public class PythonInterOptEquationScoring(
     : SingleSolutionProblem<PythonInterOptEquationScoring, ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
-        : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
+        : Refiner<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring>
     {
-        public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, PythonInterOptEquationScoring problem) =>
-            ChildRefiner.RefineCandidate(candidate, random, searchSpace, problem.InnerProblem);
+        public static Parameter<InnerProblemParameterFittingRefiner, NumericParameterFittingRefiner> ChildRefinerParameter { get; } =
+            new(nameof(ChildRefiner), static refiner => refiner.ChildRefiner, static (refiner, value) => refiner with { ChildRefiner = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<ExpressionTreeSearchSpace, SymbolicRegressionProblem, ISearchState>()
+            };
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [ChildRefinerParameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+        protected override IRefinementExecutor<ExpressionTree> CreateExecutor<TRunSearchState>(ResolutionScope<ExpressionTree, ExpressionTreeSearchSpace, PythonInterOptEquationScoring, TRunSearchState> scope) =>
+            scope.For<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(scope.Problem.InnerProblem).Resolve(ChildRefiner);
     }
 
     public required SymbolicRegressionProblem InnerProblem { get; init; }
@@ -60,7 +71,7 @@ public class PythonInterOptEquationScoring(
             40,
             20,
             operations,
-            data.Inputs.Columns.Select(column => column.Name),
+            data.Inputs.Columns.Select(column => column.Name).ToArray(),
             [constant]);
         var innerProblem = new SymbolicRegressionProblem(
             data,
@@ -92,7 +103,7 @@ public class PythonInterOptEquationScoring(
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
-            Mutator = new ChooseOneMutator<ExpressionTree>(
+            Mutator = new ChoosePerItem<Mutation, ExpressionTree>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,
             Selector = new TournamentSelector<ExpressionTree>(4),
@@ -103,7 +114,7 @@ public class PythonInterOptEquationScoring(
         };
 
         return algorithm
-            .Complete(problem, RandomNumberGenerator.Create(seed), ct: CancellationToken.None)
+            .RunToCompletion(problem, RandomNumberGenerator.Create(seed), ct: CancellationToken.None)
             .Population;
     }
 

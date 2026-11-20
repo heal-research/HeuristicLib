@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Interceptors;
@@ -14,248 +15,290 @@ namespace HEAL.HeuristicLib.Tests.Operators;
 public class OperatorInspectionTests
 {
     [Theory]
-    [InlineData(OperatorCountMetric.Calls, 4, 5)]
-    [InlineData(OperatorCountMetric.Candidates, 7, 8)]
-    public void CountingMutator_RebindingPreservesChildStateAndTheSuppliedCounter(OperatorCountMetric metric, int sharedCount, int independentCount)
+    [InlineData(OperatorCountMetric.Invocations, 4)]
+    [InlineData(OperatorCountMetric.Candidates, 7)]
+    public void CountingMutator_NewExecutorsShareOnlyTheCounterOfTheirRun(OperatorCountMetric metric, int sharedCount)
     {
         var preparations = 0;
-        var counter = new CountAccumulator();
-        var observedCalls = new CountAccumulator();
+        var counter = new Counter();
+        var observedCalls = new Counter();
         var leaf = new AdvancingMutator(() => preparations++);
-        var source = leaf;
-        var aspect = Aspect.Create(Pointcut.Reference(source), new CountingMutatorAdvice<int>(counter, metric));
-        var problem = CreateProblem();
+        var source = leaf.Counted(counter, metric);
         var random = RandomNumberGenerator.Create(1);
-        var parent = ResolutionScope.Create(aspect);
+        var parent = ResolutionScope.Create();
         var outer = parent.ResolveMutator(source);
-        outer.Mutate([0, 0], random, problem.SearchSpace, problem).ShouldBe([1, 1]);
+        outer.Mutate([0, 0], random).ShouldBe([1, 1]);
 
-        var child = parent.CreateChildScope(Aspect.CountCalls(leaf, observedCalls));
-        var inner = child.ResolveMutator(source);
+        var child = parent.CreateChildScope();
+        var inner = child.ResolveMutator(source.Substitute(leaf.Invocations.Counting(observedCalls)));
         inner.ShouldNotBeSameAs(outer);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
-        outer.Mutate([0, 0, 0], random, problem.SearchSpace, problem).ShouldBe([3, 3, 3]);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([4]);
+        inner.Mutate([0], random).ShouldBe([1]);
+        outer.Mutate([0, 0, 0], random).ShouldBe([2, 2, 2]);
+        inner.Mutate([0], random).ShouldBe([2]);
 
-        counter.CurrentCount.ShouldBe(sharedCount);
-        observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(1);
-
-        var independent = ResolutionScope.Create(aspect).ResolveMutator(source);
-        independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
-        counter.CurrentCount.ShouldBe(independentCount);
-        observedCalls.CurrentCount.ShouldBe(2);
+        parent.Results.Result(counter).CurrentCount.ShouldBe(sharedCount);
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
         preparations.ShouldBe(2);
+
+        var independentScope = ResolutionScope.Create();
+        var independent = independentScope.ResolveMutator(source);
+        independent.Mutate([0], random).ShouldBe([1]);
+        parent.Results.Result(counter).CurrentCount.ShouldBe(sharedCount);
+        independentScope.Results.Result(counter).CurrentCount.ShouldBe(1);
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
+        preparations.ShouldBe(3);
+    }
+
+    // A child scope builds new executors, which add to the one duration of the run. An independent run has its own.
+    [Fact]
+    public void TimedMutator_NewExecutorsShareOnlyTheDurationOfTheirRun()
+    {
+        var preparations = 0;
+        var observedCalls = new Counter();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
+        var leaf = new AdvancingMutator(() => preparations++);
+        var source = leaf.Timed(duration);
+        var random = RandomNumberGenerator.Create(1);
+        var parent = ResolutionScope.Create(timeProvider);
+        var measured = parent.Results.Result(duration);
+        var outer = parent.ResolveMutator(source);
+        measured.CurrentDuration.ShouldBe(TimeSpan.Zero);
+        outer.Mutate([0], random).ShouldBe([1]);
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+
+        var child = parent.CreateChildScope();
+        var inner = child.ResolveMutator(source.Substitute(leaf.Invocations.Counting(observedCalls)));
+        inner.ShouldNotBeSameAs(outer);
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        inner.Mutate([0], random).ShouldBe([1]);
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        outer.Mutate([0], random).ShouldBe([2]);
+        inner.Mutate([0], random).ShouldBe([2]);
+
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
+        preparations.ShouldBe(2);
+
+        var independentScope = ResolutionScope.Create(timeProvider);
+        var independent = independentScope.ResolveMutator(source);
+        independent.Mutate([0], random).ShouldBe([1]);
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
+        independentScope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        parent.Results.Result(observedCalls).CurrentCount.ShouldBe(2);
+        preparations.ShouldBe(3);
+    }
+
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void TimedMutator_PropagatesTheOperationOrTimerFailure(bool failOperation, bool failTimer)
+    {
+        var operationFailure = new InvalidOperationException("operation");
+        var timerFailure = new InvalidOperationException("timer");
+        var calls = 0;
+        var timestamps = 0;
+        var source = new CallbackMutator((parents, _, _, _) =>
+        {
+            calls++;
+            return failOperation ? throw operationFailure : parents;
+        });
+        var time = new CallbackTimeProvider(() => ++timestamps == 2 && failTimer ? throw timerFailure : timestamps);
+        var duration = new Duration();
+        var scope = ResolutionScope.Create(time);
+        var executor = scope.ResolveMutator(source.Timed(duration));
+
+        var failure = Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1)));
+
+        // A timer failure while recording is thrown from finally and therefore replaces an operation failure.
+        failure.ShouldBeSameAs(failTimer ? timerFailure : operationFailure);
+        calls.ShouldBe(1);
+        timestamps.ShouldBe(2);
     }
 
     [Fact]
-    public void DurationMeasuringMutator_RebindingPreservesChildStateAndTheSuppliedDuration()
+    public void TimedMutator_WhenStartingTheTimerFails_DoesNotCallTheOperationOrFinishTheTimer()
     {
-        var preparations = 0;
-        var duration = new DurationAccumulator();
-        var observedCalls = new CountAccumulator();
-        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
-        var leaf = new AdvancingMutator(() => preparations++);
-        var source = leaf;
-        var aspect = Aspect.MeasureDuration(source, duration, timeProvider);
-        var problem = CreateProblem();
-        var random = RandomNumberGenerator.Create(1);
-        var parent = ResolutionScope.Create(aspect);
-        var outer = parent.ResolveMutator(source);
-        duration.CurrentDuration.ShouldBe(TimeSpan.Zero);
-        outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        var failure = new InvalidOperationException("timer start");
+        var calls = 0;
+        var timestamps = 0;
+        var source = new CallbackMutator((parents, _, _, _) => { calls++; return parents; });
+        var time = new CallbackTimeProvider(() => { timestamps++; throw failure; });
+        var duration = new Duration();
+        var scope = ResolutionScope.Create(time);
+        var executor = scope.ResolveMutator(source.Timed(duration));
 
-        var child = parent.CreateChildScope(Aspect.CountCalls(leaf, observedCalls));
-        var inner = child.ResolveMutator(source);
-        inner.ShouldNotBeSameAs(outer);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([2]);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
-        outer.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([3]);
-        inner.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([4]);
+        Record.Exception(() => executor.Mutate([1], RandomNumberGenerator.Create(1)))
+            .ShouldBeSameAs(failure);
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
-        observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(1);
-
-        var independent = ResolutionScope.Create(aspect).ResolveMutator(source);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(12));
-        independent.Mutate([0], random, problem.SearchSpace, problem).ShouldBe([1]);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(15));
-        observedCalls.CurrentCount.ShouldBe(2);
-        preparations.ShouldBe(2);
+        calls.ShouldBe(0);
+        timestamps.ShouldBe(1);
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.Zero);
     }
 
     [Fact]
     public void CountCreatorCalls_IncrementsOncePerCreateCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var creator = new SequenceCreator();
-        var aspect = Aspect.CountCalls(creator, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCreatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCreatorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveCreator(creator);
-        var problem = CreateProblem();
+        var counted = creator.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveCreator(counted);
 
-        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1));
+        executor.Create(1, RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountCreatedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var creator = new SequenceCreator();
-        var aspect = Aspect.CountCandidates(creator, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveCreator(creator);
-        var problem = CreateProblem();
+        var counted = creator.Counted(counter, OperatorCountMetric.Candidates);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveCreator(counted);
 
-        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1));
+        executor.Create(1, RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
     public void MeasureCreatorDuration_AddsElapsedCreatorExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var creator = new SequenceCreator();
-        var aspect = Aspect.MeasureDuration(creator, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCreatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCreatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveCreator(creator);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveCreator(creator.Timed(duration));
 
-        execution.Create(3, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Create(3, RandomNumberGenerator.Create(1));
+        executor.Create(1, RandomNumberGenerator.Create(2));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
     public void CountCreatorCalls_DoesNotIncrementWhenCreationThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingCreator();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveCreator(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveCreator(source.Counted(counter));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Create(1, RandomNumberGenerator.Create(1)));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void MeasureCreatorDuration_RecordsElapsedDurationWhenCreationThrows()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingCreator();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, timeProvider)).ResolveCreator(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveCreator(source.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Create(1, RandomNumberGenerator.Create(1)));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
     public void CountMutatorCalls_IncrementsOncePerMutateCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var mutator = new AddOneMutator();
-        var aspect = Aspect.CountCalls(mutator, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingMutatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingMutatorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
-        var problem = CreateProblem();
+        var counted = mutator.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveMutator(counted);
 
-        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Mutate([4], RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountMutatedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var mutator = new AddOneMutator();
-        var aspect = Aspect.CountCandidates(mutator, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
-        var problem = CreateProblem();
+        var counted = mutator.Counted(counter, OperatorCountMetric.Candidates);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveMutator(counted);
 
-        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Mutate([4], RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
     public void CountMutatorCalls_DoesNotIncrementWhenMutationThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingMutator();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveMutator(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveMutator(source.Counted(counter));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1)));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void MeasureMutatorDuration_AddsElapsedMutatorExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var mutator = new AddOneMutator();
-        var aspect = Aspect.MeasureDuration(mutator, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringMutatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveMutator(mutator.Timed(duration));
 
-        execution.Mutate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Mutate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Mutate([1, 2, 3], RandomNumberGenerator.Create(1));
+        executor.Mutate([4], RandomNumberGenerator.Create(2));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
     public void MeasureMutatorDuration_RecordsElapsedDurationWhenMutationThrows()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var mutator = new ThrowingMutator();
-        var aspect = Aspect.MeasureDuration(mutator, duration, timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveMutator(mutator);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveMutator(mutator.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1)));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
-    public void NestedDurationMeasuringMutators_ForwardTheSameInvocationDataAndInvokeTheChildMutatorOnce()
+    public void NestedTimedMutators_ForwardTheSameInvocationDataAndInvokeTheChildMutatorOnce()
     {
         var calls = 0;
         IReadOnlyList<int> parents = [1, 2, 3];
         var random = RandomNumberGenerator.Create(1);
         var problem = CreateProblem();
-        var innerDuration = new DurationAccumulator();
-        var outerDuration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var innerDuration = new Duration();
+        var outerDuration = new Duration();
         var childMutator = new CallbackMutator((actualParents, actualRandom, actualSearchSpace, actualProblem) =>
         {
             calls++;
@@ -265,474 +308,433 @@ public class OperatorInspectionTests
             actualProblem.ShouldBeSameAs(problem);
             return actualParents;
         });
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider),
-            Aspect.MeasureDuration(childMutator, outerDuration, timeProvider)).ResolveMutator(childMutator);
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(childMutator.Timed(innerDuration).Timed(outerDuration), problem);
 
-        var result = execution.Mutate(parents, random, problem.SearchSpace, problem);
+        var result = executor.Mutate(parents, random);
 
         result.ShouldBeSameAs(parents);
         calls.ShouldBe(1);
-        innerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
-        outerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(9));
+        scope.Results.Result(innerDuration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(outerDuration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(9));
     }
 
     [Fact]
-    public void NestedDurationMeasuringMutators_RecordEveryDurationWhenTheChildMutatorThrows()
+    public void NestedTimedMutators_RecordEveryDurationWhenTheChildMutatorThrows()
     {
         var calls = 0;
         var problem = CreateProblem();
-        var innerDuration = new DurationAccumulator();
-        var outerDuration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var innerDuration = new Duration();
+        var outerDuration = new Duration();
         var childMutator = new CallbackMutator((_, _, _, _) =>
         {
             calls++;
             throw new InvalidOperationException();
         });
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(childMutator, innerDuration, timeProvider),
-            Aspect.MeasureDuration(childMutator, outerDuration, timeProvider)).ResolveMutator(childMutator);
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(childMutator.Timed(innerDuration).Timed(outerDuration), problem);
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Mutate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Mutate([1], RandomNumberGenerator.Create(1)));
 
         calls.ShouldBe(1);
-        innerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
-        outerDuration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(9));
+        scope.Results.Result(innerDuration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(outerDuration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(9));
     }
 
     [Fact]
     public void CountCrossoverCalls_IncrementsOncePerCrossCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.CountCalls(crossover, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCrossoverAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingCrossoverAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
-        var problem = CreateProblem();
+        var counted = crossover.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveCrossover(counted);
 
-        execution.Cross(
+        executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
-        execution.Cross(
+            RandomNumberGenerator.Create(1));
+        executor.Cross(
             [Parents.From(4, 40)],
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountCrossedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.CountCandidates(crossover, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
-        var problem = CreateProblem();
+        var counted = crossover.Counted(counter, OperatorCountMetric.Candidates);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveCrossover(counted);
 
-        execution.Cross(
+        executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
-        execution.Cross(
+            RandomNumberGenerator.Create(1));
+        executor.Cross(
             [Parents.From(4, 40)],
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(4);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(4);
     }
 
     [Fact]
     public void MeasureCrossoverDuration_AddsElapsedCrossoverExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var crossover = new SumParentsCrossover();
-        var aspect = Aspect.MeasureDuration(crossover, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCrossoverAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringCrossoverAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveCrossover(crossover);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveCrossover(crossover.Timed(duration));
 
-        execution.Cross(
+        executor.Cross(
             [Parents.From(1, 10), Parents.From(2, 20), Parents.From(3, 30)],
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
-        execution.Cross(
+            RandomNumberGenerator.Create(1));
+        executor.Cross(
             [Parents.From(4, 40)],
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
     public void CountCrossoverCalls_DoesNotIncrementWhenCrossoverThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingCrossover();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveCrossover(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveCrossover(source.Counted(counter));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1)));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void MeasureCrossoverDuration_RecordsElapsedDurationWhenCrossoverThrows()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingCrossover();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, timeProvider)).ResolveCrossover(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveCrossover(source.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Cross([Parents.From(1, 10)], RandomNumberGenerator.Create(1)));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
     public void CountSelectorCalls_IncrementsOncePerSelectCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.CountCalls(selector, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingSelectorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingSelectorAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
-        var problem = CreateProblem();
+        var counted = selector.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveSelector(counted);
 
-        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), 1, RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountSelectedCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.CountCandidates(selector, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
-        var problem = CreateProblem();
+        var counted = selector.Counted(counter, OperatorCountMetric.Candidates);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveSelector(counted);
 
-        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), 1, RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Fact]
     public void CountSelectorCalls_DoesNotIncrementWhenSelectionThrows()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingSelector();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveSelector(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveSelector(source.Counted(counter));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Select(CreateEvaluatedCandidates([1]), 1, RandomNumberGenerator.Create(1)));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void MeasureSelectorDuration_AddsElapsedSelectorExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var selector = new FirstCandidatesSelector();
-        var aspect = Aspect.MeasureDuration(selector, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringSelectorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringSelectorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveSelector(selector.Timed(duration));
 
-        execution.Select(CreateEvaluatedCandidates([1, 2, 3]), problem.Objective, 2, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Select(CreateEvaluatedCandidates([4]), problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Select(CreateEvaluatedCandidates([1, 2, 3]), 2, RandomNumberGenerator.Create(1));
+        executor.Select(CreateEvaluatedCandidates([4]), 1, RandomNumberGenerator.Create(2));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
     public void MeasureSelectorDuration_RecordsElapsedDurationWhenSelectionThrows()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var selector = new ThrowingSelector();
-        var aspect = Aspect.MeasureDuration(selector, duration, timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveSelector(selector);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveSelector(selector.Timed(duration));
 
         Should.Throw<InvalidOperationException>(() =>
-            execution.Select(CreateEvaluatedCandidates([1]), problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+            executor.Select(CreateEvaluatedCandidates([1]), 1, RandomNumberGenerator.Create(1)));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
     public void CountReplacerCalls_IncrementsOncePerReplaceCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.CountCalls(replacer, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingReplacerAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingReplacerAdvice<int>>().Metric.ShouldBe(OperatorCountMetric.Calls);
-        var execution = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
-        var problem = CreateProblem();
+        var counted = replacer.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        counted.Metric.ShouldBe(OperatorCountMetric.Invocations);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveReplacer(counted);
 
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
-            problem.Objective,
             2,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
-        execution.Replace(
+            RandomNumberGenerator.Create(1));
+        executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
-            problem.Objective,
             1,
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void CountReplacementCandidates_IncrementsByReturnedCandidateCount()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.CountCandidates(replacer, counter);
-        var execution = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
-        var problem = CreateProblem();
+        var counted = replacer.Counted(counter, OperatorCountMetric.Candidates);
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveReplacer(counted);
 
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
-            problem.Objective,
             2,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
-        execution.Replace(
+            RandomNumberGenerator.Create(1));
+        executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
-            problem.Objective,
             1,
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(3);
     }
 
     [Fact]
     public void CountReplacerCalls_DoesNotCountFailedCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingReplacer();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).ResolveReplacer(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create();
+        var executor = scope.ResolveReplacer(source.Counted(counter));
 
-        Should.Throw<InvalidOperationException>(() => execution.Replace(
+        Should.Throw<InvalidOperationException>(() => executor.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
-            problem.Objective,
             1,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem));
+            RandomNumberGenerator.Create(1)));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void MeasureReplacerDuration_AddsElapsedReplacerExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var replacer = new FirstReplacementCandidatesReplacer();
-        var aspect = Aspect.MeasureDuration(replacer, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringReplacerAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringReplacerAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).ResolveReplacer(replacer);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveReplacer(replacer.Timed(duration));
 
-        execution.Replace(
+        executor.Replace(
             CreateEvaluatedCandidates([1, 2, 3]),
             CreateEvaluatedCandidates([10, 20]),
-            problem.Objective,
             2,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem);
-        execution.Replace(
+            RandomNumberGenerator.Create(1));
+        executor.Replace(
             CreateEvaluatedCandidates([4]),
             CreateEvaluatedCandidates([40]),
-            problem.Objective,
             1,
-            RandomNumberGenerator.Create(2),
-            problem.SearchSpace,
-            problem);
+            RandomNumberGenerator.Create(2));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
     public void MeasureReplacerDuration_RecordsFailedCall()
     {
-        var duration = new DurationAccumulator();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingReplacer();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))).ResolveReplacer(source);
-        var problem = CreateProblem();
+        var scope = ResolutionScope.Create(timeProvider);
+        var executor = scope.ResolveReplacer(source.Timed(duration));
 
-        Should.Throw<InvalidOperationException>(() => execution.Replace(
+        Should.Throw<InvalidOperationException>(() => executor.Replace(
             CreateEvaluatedCandidates([1]),
             CreateEvaluatedCandidates([2]),
-            problem.Objective,
             1,
-            RandomNumberGenerator.Create(1),
-            problem.SearchSpace,
-            problem));
+            RandomNumberGenerator.Create(1)));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
     public void CountInterceptorCalls_IncrementsOncePerTransformCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var interceptor = new AddOneInterceptor();
-        var aspect = Aspect.CountCalls(interceptor, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingInterceptorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor);
+        var counted = interceptor.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        var scope = ResolutionScope.Create();
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted, problem);
 
-        execution.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1));
+        executor.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void MeasureInterceptorDuration_AddsElapsedInterceptorExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var interceptor = new AddOneInterceptor();
-        var aspect = Aspect.MeasureDuration(interceptor, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringInterceptorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringInterceptorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor);
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(interceptor.Timed(duration), problem);
 
-        execution.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        execution.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        executor.Transform(new CounterState { Value = 1 }, previousState: null, RandomNumberGenerator.Create(1));
+        executor.Transform(new CounterState { Value = 2 }, new CounterState { Value = 1 }, RandomNumberGenerator.Create(2));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
     public void CountInterceptorCalls_DoesNotCountFailedCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingInterceptor();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
+        var scope = ResolutionScope.Create();
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter), problem);
 
-        Should.Throw<InvalidOperationException>(() => execution.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1)));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void MeasureInterceptorDuration_RecordsFailedCall()
     {
-        var duration = new DurationAccumulator();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingInterceptor();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration), problem);
 
-        Should.Throw<InvalidOperationException>(() => execution.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.Transform(new CounterState { Value = 1 }, null, RandomNumberGenerator.Create(1)));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     [Fact]
     public void CountTerminatorCalls_IncrementsOncePerTerminalStateCheck()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var terminator = new NeverTerminalStateTerminator();
-        var aspect = Aspect.CountCalls(terminator, counter);
-        aspect.Advices.Single().Advice.ShouldBeOfType<CountingTerminatorAdvice<int>>().Counter.ShouldBeSameAs(counter);
-        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator);
+        var counted = terminator.Counted(counter);
+        counted.Counter.ShouldBeSameAs(counter);
+        var scope = ResolutionScope.Create();
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(counted, problem);
 
-        execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
-        execution.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
+        executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0));
+        executor.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void MeasureTerminatorDuration_AddsElapsedTerminatorExecutionDuration()
     {
-        var duration = new DurationAccumulator();
         var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var terminator = new NeverTerminalStateTerminator();
-        var aspect = Aspect.MeasureDuration(terminator, duration, timeProvider);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringTerminatorAdvice<int>>().Duration.ShouldBeSameAs(duration);
-        aspect.Advices.Single().Advice.ShouldBeOfType<DurationMeasuringTerminatorAdvice<int>>().TimeProvider.ShouldBeSameAs(timeProvider);
-        var execution = ResolutionScope.Create(aspect).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator);
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(terminator.Timed(duration), problem);
 
-        execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem);
-        execution.IsTerminalState(new CounterState { Value = 2 }, problem.SearchSpace, problem);
+        executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0));
+        executor.IsTerminalState(new CounterState { Value = 2 }, RandomNumberGenerator.Create(0));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(6));
     }
 
     [Fact]
     public void CountTerminatorCalls_DoesNotCountFailedCall()
     {
-        var counter = new CountAccumulator();
+        var counter = new Counter();
         var source = new ThrowingTerminator();
-        var execution = ResolutionScope.Create(Aspect.CountCalls(source, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
+        var scope = ResolutionScope.Create();
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Counted(counter), problem);
 
-        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0)));
 
-        counter.CurrentCount.ShouldBe(0);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(0);
     }
 
     [Fact]
     public void MeasureTerminatorDuration_RecordsFailedCall()
     {
-        var duration = new DurationAccumulator();
+        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(3));
+        var duration = new Duration();
         var source = new ThrowingTerminator();
-        var execution = ResolutionScope.Create(Aspect.MeasureDuration(source, duration, new AdvancingTimeProvider(TimeSpan.FromSeconds(3)))).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source);
+        var scope = ResolutionScope.Create(timeProvider);
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>(source.Timed(duration), problem);
 
-        Should.Throw<InvalidOperationException>(() => execution.IsTerminalState(new CounterState { Value = 1 }, problem.SearchSpace, problem));
+        Should.Throw<InvalidOperationException>(() => executor.IsTerminalState(new CounterState { Value = 1 }, RandomNumberGenerator.Create(0)));
 
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
+        scope.Results.Result(duration).CurrentDuration.ShouldBe(TimeSpan.FromSeconds(3));
     }
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem()
@@ -793,28 +795,19 @@ public class OperatorInspectionTests
         DummySearchSpace<int> searchSpace,
         FuncProblem<int, DummySearchSpace<int>> problem);
 
-    private sealed class CallbackMutator(MutateCallback callback)
-        : IMutator<int>
+    private sealed record CallbackMutator(MutateCallback callback)
+        : Mutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public ExecutionFactory<IMutatorExecution<int, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
-        {
-            var execution = (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => execution;
-        }
+        protected override IMutationExecutor<int> CreateExecutor<TSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TSearchState> scope) =>
+            new Executor(callback, scope.Problem);
 
-        private IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateBoundExecution() =>
-            new Execution(callback);
-
-        private sealed class Execution(MutateCallback callback)
-            : IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
+        private sealed class Executor(MutateCallback callback, FuncProblem<int, DummySearchSpace<int>> problem)
+            : MutationExecutor<int>
         {
-            public IReadOnlyList<int> Mutate(
-                IReadOnlyList<int> parents,
-                IRandomNumberGenerator random,
-                DummySearchSpace<int> searchSpace,
-                FuncProblem<int, DummySearchSpace<int>> problem) =>
+            private readonly DummySearchSpace<int> searchSpace = problem.SearchSpace;
+
+            public override IReadOnlyList<int> Mutate(
+                IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
                 callback(parents, random, searchSpace, problem);
         }
     }
@@ -938,6 +931,7 @@ public class OperatorInspectionTests
     {
         public override bool IsTerminalState(
             CounterState state,
+            IRandomNumberGenerator random,
             DummySearchSpace<int> searchSpace,
             FuncProblem<int, DummySearchSpace<int>> problem)
         {
@@ -948,33 +942,40 @@ public class OperatorInspectionTests
     private sealed record ThrowingTerminator
         : StatelessTerminator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, CounterState>
     {
-        public override bool IsTerminalState(CounterState state, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
+        public override bool IsTerminalState(CounterState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem) =>
             throw new InvalidOperationException();
     }
 
-    private sealed class MutationState
+    private sealed record AdvancingMutator(Action Prepare) : Mutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public int Calls { get; set; }
-    }
 
-    private sealed record AdvancingMutator(Action Prepare) : StatefulMutator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, MutationState>
-    {
-        protected override MutationState CreateInitialState()
+        protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
         {
             Prepare();
-            return new MutationState();
+            return new Executor();
         }
 
-        protected override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, MutationState state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+        private sealed class Executor
+            : MutationExecutor<int>
         {
-            var call = ++state.Calls;
-            return parents.Select(parent => parent + call).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random)
+            {
+                var call = ++invocations;
+                return parents.Select(parent => parent + call).ToArray();
+            }
         }
     }
 
     private sealed record CounterState : SearchState
     {
         public required int Value { get; init; }
+    }
+
+    private sealed class CallbackTimeProvider(Func<long> timestamp) : TimeProvider
+    {
+        public override long GetTimestamp() => timestamp();
     }
 
     private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
@@ -1005,51 +1006,52 @@ public class OperatorInspectionTests
 /// </summary>
 file static class OperatorResolution
 {
+    private static readonly FuncProblem<int, DummySearchSpace<int>> Problem = FuncProblem.Create(static (int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
     extension(ResolutionScope scope)
     {
-        public ICreatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCreator(ICreator<int> creator) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
+        public ICreationExecutor<int> ResolveCreator(IOperator<Creation, int> creator) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator, Problem);
 
-        public ICrossoverExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveCrossover(ICrossover<int> crossover) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover);
+        public ICrossoverExecutor<int> ResolveCrossover(IOperator<Crossover, int> crossover) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(crossover, Problem);
 
-        public IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveMutator(IMutator<int> mutator) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator);
+        public IMutationExecutor<int> ResolveMutator(IOperator<Mutation, int> mutator) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(mutator, Problem);
 
-        public ISelectorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveSelector(ISelector<int> selector) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector);
+        public ISelectionExecutor<int> ResolveSelector(IOperator<Selection, int> selector) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(selector, Problem);
 
-        public IReplacerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> ResolveReplacer(IReplacer<int> replacer) =>
-            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer);
+        public IReplacementExecutor<int> ResolveReplacer(IOperator<Replacement, int> replacer) =>
+            scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(replacer, Problem);
     }
 
-    extension(ICreator<int> creator)
+    extension(IOperator<Creation, int> creator)
     {
-        public ICreatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCreatorExecution() =>
+        public ICreationExecutor<int> CreateCreatorExecutor() =>
             ResolutionScope.Create().ResolveCreator(creator);
     }
 
-    extension(ICrossover<int> crossover)
+    extension(IOperator<Crossover, int> crossover)
     {
-        public ICrossoverExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateCrossoverExecution() =>
+        public ICrossoverExecutor<int> CreateCrossoverExecutor() =>
             ResolutionScope.Create().ResolveCrossover(crossover);
     }
 
-    extension(IMutator<int> mutator)
+    extension(IOperator<Mutation, int> mutator)
     {
-        public IMutatorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateMutatorExecution() =>
+        public IMutationExecutor<int> CreateMutatorExecutor() =>
             ResolutionScope.Create().ResolveMutator(mutator);
     }
 
-    extension(ISelector<int> selector)
+    extension(IOperator<Selection, int> selector)
     {
-        public ISelectorExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateSelectorExecution() =>
+        public ISelectionExecutor<int> CreateSelectorExecutor() =>
             ResolutionScope.Create().ResolveSelector(selector);
     }
 
-    extension(IReplacer<int> replacer)
+    extension(IOperator<Replacement, int> replacer)
     {
-        public IReplacerExecution<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>> CreateReplacerExecution() =>
+        public IReplacementExecutor<int> CreateReplacerExecutor() =>
             ResolutionScope.Create().ResolveReplacer(replacer);
     }
 }

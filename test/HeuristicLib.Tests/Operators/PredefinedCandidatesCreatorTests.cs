@@ -14,39 +14,40 @@ public class PredefinedCandidatesCreatorTests
         var fallback = new ExpectedRandomCreator(random, 99);
         var creator = fallback.SeededWith([10, 20]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator, problem);
 
-        var first = execution.Create(1, random, DummySearchSpace<int>.Instance, problem);
-        var second = execution.Create(3, random, DummySearchSpace<int>.Instance, problem);
+        var first = executor.Create(1, random);
+        var second = executor.Create(3, random);
 
         first.ShouldBe([10]);
         second.ShouldBe([20, 99, 99]);
     }
 
     [Fact]
-    public void Rebinding_PreservesCursorAndUsesTheContextualFallback()
+    public void NewExecutorHasIndependentCursorAndContextualFallback()
     {
         var random = RandomNumberGenerator.Create(42);
-        ICreator<int> fallback = new ExpectedRandomCreator(random, 99);
+        IOperator<Creation, int> fallback = new ExpectedRandomCreator(random, 99);
         var creator = fallback.SeededWith([10, 20, 30]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
         var parent = ResolutionScope.Create();
-        var outer = parent.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
-        outer.Create(1, random, problem.SearchSpace, problem).ShouldBe([10]);
-        var observedFallbackCalls = new CountAccumulator();
-        var child = parent.CreateChildScope(Aspect.CountCalls(fallback, observedFallbackCalls));
-        var inner = child.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
+        var outer = parent.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(creator);
+        outer.Create(1, random).ShouldBe([10]);
+        var observing = creator.Counting(fallback, out var fallbackCalls);
+        var observedFallbackCalls = parent.Results.Result(fallbackCalls);
+        var child = parent.CreateChildScope();
+        var inner = child.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(observing);
 
         inner.ShouldNotBeSameAs(outer);
-        inner.Create(3, random, problem.SearchSpace, problem).ShouldBe([20, 30, 99]);
+        inner.Create(4, random).ShouldBe([10, 20, 30, 99]);
         observedFallbackCalls.CurrentCount.ShouldBe(1);
-        outer.Create(1, random, problem.SearchSpace, problem).ShouldBe([99]);
+        outer.Create(1, random).ShouldBe([20]);
         observedFallbackCalls.CurrentCount.ShouldBe(1);
-        inner.Create(1, random, problem.SearchSpace, problem).ShouldBe([99]);
+        inner.Create(1, random).ShouldBe([99]);
         observedFallbackCalls.CurrentCount.ShouldBe(2);
 
-        var independent = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>().Resolve(creator);
-        independent.Create(1, random, problem.SearchSpace, problem).ShouldBe([10]);
+        var independent = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(creator);
+        independent.Create(1, random).ShouldBe([10]);
         observedFallbackCalls.CurrentCount.ShouldBe(2);
     }
 

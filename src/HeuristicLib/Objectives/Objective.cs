@@ -24,6 +24,18 @@ public sealed class ObjectiveDirections
 
 public static class ObjectiveExtensions
 {
+    extension(ObjectiveDirections objective)
+    {
+        /// <summary>Uses an explicit objective comparer, or requires a total order from the objective.</summary>
+        public IComparer<ObjectiveVector> RequireTotalOrder(IComparer<ObjectiveVector>? objectiveComparer = null)
+        {
+            var totalOrder = objectiveComparer ?? objective.TotalOrderComparer;
+            return totalOrder is NoTotalOrderComparer
+                ? throw new InvalidOperationException("This operation requires a total order. Supply an objective-vector comparer.")
+                : totalOrder;
+        }
+    }
+
     extension(IEnumerable<ObjectiveVector> values)
     {
         public ObjectiveVector Best(ObjectiveDirections o) =>

@@ -1,71 +1,89 @@
 # Execution resolution
 
-Resolution selects persistent state by configuration reference and binds typed execution nodes with the requesting scope's aspects. Configurations prepare factories without a scope; the returned factories receive a construction scope and resolve their declared children.
+Resolution constructs execution nodes, including typed executors with the scope's run-bound results. Each configuration resolves its declared children through the scope received by its construction hook. Operators and algorithms use `CreateExecutor`; other execution nodes use `IConfigurationNode<TExecutionNode>.CreateExecutionNode`.
 
-See [configuration vs execution nodes](/contributing/architecture/execution-nodes) for authoring responsibilities.
+See [Execution nodes](/contributing/architecture/execution-nodes) for what configurations, executors and run results own, and [Operator implementation](/contributing/architecture/operator-implementation) for authoring operators and operations.
 
-## State and construction
+## Results and construction
 
-`ResolutionScope.Create(aspects)` creates an independent root. `CreateChildScope(aspects)` creates child-local state and inherits the parent's aspects. `With(aspects)` shares state and adds another aspect layer. All three accept zero or several aspects in supplied order.
+`ResolutionScope.Create()` creates an independent root with one run result table. Share configurations with `Share` before child scopes use them. `CreateChildScope()` keeps the same run results while creating independent executors for configurations that no ancestor shares.
 
-A scope stores its own aspects and its parent scope. Its internal `State` stores prepared factories by configuration reference, a parent state and advice factories. Aspect inheritance and state ownership are independent: adding an observation changes the bound graph without resetting prepared state.
+A typed view from `scope.For<TCandidate, TSearchSpace, TProblem>(problem)` retains the same scope and exposes `Problem` and `SearchSpace`. It creates no child activation. The problem's search space and objective stay fixed for the problem object's lifetime; mutable instance data may change. Fixed-signature operator and algorithm bases pass their declared search-space, problem and, where fixed, search-state types to children through `IConfigurationNode.ChildExecution`, matching their typed construction scopes. Preflight applies this mapping before each parameter's own `ChildExecution` mapping. A parent may create a view for another problem to bind a child; the parameter declares that child's signature and its mapping can ignore the parent's execution.
 
-For each resolution:
+For each operator or algorithm resolution:
 
-1. Find the configuration's prepared factory in the current state or its ancestors. Prepare it locally if none exists.
-2. Invoke that factory with the owner's state and the requesting aspects. Resolve children in that construction scope.
-3. Apply matching advice in scope order to the raw execution. Return the advised execution.
+1. Check the requested operation and run signature.
+2. Build an executor through the configuration's `CreateExecutor`, resolving contextual children through the supplied scope, unless the owning scope already holds an executor for the configuration and problem references.
+3. Check that the executor implements the requested executor interface and return it.
 
-A configuration selected first in a child stays local; a later selection in the parent does not replace it. Sibling states cannot see each other's local factories. A parent-first selection is reused by descendants. Dependencies resolve in the factory owner's state, so a direct child-local selection does not redirect an ancestor composite's dependencies.
+A scope keeps one execution node per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose execution node needs no problem, such as counters and adaptations, so every request in it returns the same execution node. A child scope builds its own execution node unless an ancestor shares the configuration. A context-free stateless configuration, such as a creator, crossover, mutator or refiner derived from its candidate-only stateless base, can serve as its own immutable executor, because the executor reads nothing from the scope. A stateless selector or replacer reads the objective of the bound problem, so it builds an executor that holds the problem.
 
-Resolution constructs nodes on every request. A prepared stateless or stateful leaf may return its existing raw node. Composite factories can construct fresh bindings around the same prepared state. Do not rely on advised node reference identity to identify a logical execution.
+### Shared configurations
 
-## Pointcuts, advice and join points
+A scope selects sharing by configuration reference and holds each execution node by configuration and optional problem references. The nearest ancestor sharing a configuration owns its entry. A shared configuration is first built in a dedicated child scope of that owner; the children its construction resolves stay there. Every request for that problem in the owner's subtree returns that executor.
 
-A `Pointcut<TConfiguration>` examines a configuration as it is resolved. `Pointcut.Reference(source)` uses reference identity; `Pointcut.OfType<TConfiguration>()` includes implementations and derived types. `Pointcut.Predicate<TConfiguration>(predicate)` supplies runtime-only property or attribute matching; custom selection can also derive a small class overriding `Matches`. Predicates examine configuration data, run on each query and propagate exceptions. Pointcuts do not traverse the graph.
+`algorithm.Sharing(configurations)` declares the configurations whose executors child scopes reuse. Configuration reference identity selects them; equal but distinct configurations keep separate entries. A new sharing owner or root starts independently. A request for incompatible run types is rejected rather than constructing a second executor. Configurations never requested construct nothing.
 
-`And` and `Or`, also spelled `&` and `|`, combine pointcuts and short-circuit from left to right. `Not()` and `!` complement a selection within its declared configuration type: negating a mutator pointcut still excludes every other role.
+`AlgorithmRun` creates an independent root scope, and executor construction remains lazy until first execution. Experiment trials each own an algorithm run and its result table. See [Run ownership](/contributing/architecture/layering#run-ownership) for the run lifecycle.
 
-`Pointcut.Named<TConfiguration>(name)` matches `INamedConfiguration.Name` ordinally and case-sensitively. Concrete configurations can implement that contract, or users can configure a role-preserving wrapper through `operator.Named(name)` or `algorithm.Named(name)`. Named wrappers forward the child's execution and use the ordinary child resolution rules. They and their children remain separate selectable configurations. Repeated names select every matching configuration; they do not identify shared state or caller paths.
+`Analyzer<TResult>` is a configuration node that creates one `IRunResult` per run and names the substitutions that place what collects into it. It is immutable and identified by reference. `RunResults.Result` reads the root scope's one configuration result table, lazily creating the result through `CreateExecutionNode`. The analyzer's result spans every Cycle turn; a `Share` does not narrow the result that recording and `AlgorithmRun.Result` use, while resolving a shared analyzer directly through a scope creates a separate execution node that nothing records into. Counters and durations also create run results, but resolving them honors the nearest sharing scope, which owns a separate accumulator. Callers read results through `AlgorithmRun.Result`.
 
-An `Aspect` stores ordered `(Pointcut, Advice)` pairs in `Advices`. `Aspect.Create(pointcut, advice)` creates one pair; derived constructors assign several pairs directly. Advice is a class with reference identity. Each role has a base beside its interface, such as `MutatorAdvice<TCandidate>`, whose `CreateWrapperFactory` accepts the configuration selected by the pointcut and the run's type parameters.
+### Operation-parameterized operators
 
-The role's resolution extension supplies a callback that casts to that role's advice base and calls its wrapper factory. The returned `WrapperExecutionFactory<TExecution>` wraps an already resolved execution. Advice resolves no configured children and introduces no configuration nodes into selection. An explicitly configured wrapper remains a configuration and can be selected independently of its child.
+An `IOperator<TOperation, TCandidate>` inherits one construction hook from `IOperator<TCandidate>`, for the run types. The hook names no operation, so a multi-operation configuration can only implement it once, and it shares its executor and private fields across those operation views within the scope. Resolution checks the built executor through the requested operation's `IsExecutor`.
 
-A join point is the execution built for one selected configuration. A shared configuration can have several contextual bindings; it does not identify one caller path or invocation. Resolution prepares advice once per advice instance, selected configuration and owner state. Allocate persistent join-point data in `CreateWrapperFactory`, before returning the wrapper constructor. Algorithm observation uses this boundary for its iteration counter. Invocation-local data stays in the operation or iterator.
+Operators, algorithms and consumer defined roles use the same run results and configuration reference construction guard. Every operation resolves through the generic path.
 
-## Ordering and shared advice
+For the generic path, resolution checks the run signature before building, so a configuration that cannot run with the requested types fails before any child is constructed and leaves the scope usable. A wrapper that cannot serve its child, such as a candidate counter on an operation without candidate work, checks that in its `CreateExecutor` before it resolves the child. A construction failure ends the scope tree while published results remain readable.
 
-The current scope's aspect layer precedes its parent's layers. Within each layer, aspect order and then pair order are application order. Earlier advice wraps closer to the raw execution; later advice wraps outside it. Entry order is reversed, while successful callbacks run in application order. Configured wrappers are already part of the raw graph.
+Each operation implements `IOperation<TSelf>`, whose static members recognize its executor interface for the run types, wrap an executor and state whether its calls report candidate work; resolution and wrappers reach them through `OperationInfo`, which a generic wrapper creates with `OperationInfo.For<TOperation, TCandidate, TSearchState>()`. [Define a new operation](/contributing/architecture/operator-implementation#define-a-new-operation) describes those members and the invocation each wrapper receives, and developer guidelines § 4.19 states the contract. Each layer is one executor compiled for its wrapper type, without delegates or argument tuples.
 
-Each advice instance applies once, at its first position in this chain. Two traces can include the same clock's advice without counting twice. A trace lists clock advice before its own observation, so the clock has advanced when it records an entry. Readding the clock later must not move that first position. If the same advice appears with two pointcuts, the first pairing wins without validation. Use separate advice instances to apply the same behavior at two distinct pointcuts; they may share a counter.
+`Named` returns its child's executor through `scope.ResolveOperator(ChildOperator)`; `Retry` and external configured wrappers use `TOperation.Wrap(scope.ResolveOperator(ChildOperator), wrapper)`. `ChoosePerInvocation` resolves all its children on each construction and wraps the first with a wrapper that samples a child per call and proceeds on it. `ChoosePerItem` resolves its children the same way and returns the executor of its operation's `Route(children)`, passing a `WeightedRouter<IExecutor>` over them. It accepts only operations marked with `IItemOperation<TSelf>`, for which routing is a capability of the operation: its `RoutingExecutor<TExecutor>` lets the router assign a call's items, runs each child's items as one call and restores their order ([Wrapping and multi operators](/contributing/architecture/operator-implementation#wrapping-and-multi-operators) describes the router). External wrappers use the same contract without adding operation members.
 
-## Child activation policies
+Candidate work means returned counts for candidate-producing operations and input count for evaluation. Termination, interception and scalar external operations report none; developer guidelines § 4.19 states which members an operation with candidate work implements. A candidate counter calls `RequireCandidateWork` before it resolves its child and counts only after success; call counting and timing never read candidate work. Wrappers use ordinary `try`/`finally`: duration measurement records failed calls, and an exception thrown while recording replaces the child's. Algorithms have no invocation wrapper; an algorithm wrapper builds its own executor around its child's.
 
-`ChildScopeSelector` belongs to a meta-algorithm's prepared state and selects a scope for each activation:
+### Algorithms and consumer-defined roles
 
-| Policy     | State for an activation                                                            |
-| ---------- | ---------------------------------------------------------------------------------- |
-| `Fresh`    | A new child state, still reusing factories already owned by ancestors.             |
-| `Retained` | Child state kept by child configuration reference across activations and bindings. |
-| `Shared`   | The parent's state.                                                                |
+Each resolution of an algorithm calls its `CreateExecutor` with a scope typed to the run types and the requested search state. A configuration that does not produce that state is rejected before it is built, and an algorithm bound to a search space and problem rejects other run types in its base before its hook runs.
 
-Retained selection uses the internal `CreateChildState` and `WithState` operations. The retained state stores no aspects; each activation uses its current scope's aspect chain. Advice factories remain in that retained state, so their counters and other prepared data survive. Cycle exercises these policies without another public scope API.
+A consumer-defined role is an `IConfigurationNode<TExecutionNode>` resolved through `ResolutionScope.Resolve`. A wrapper of the role implements the role, declares the child it holds and wraps the child's execution node in its `CreateExecutionNode`.
 
-## Controls, failures and lifetime
+### Observation sources
 
-Control projection reads the raw execution after the entire advised chain succeeds. Invoke operations through the returned advised execution. Advice need not implement the source's control interfaces. A configured wrapper exposes its own controls; projection does not search its children.
+Operator invocations and algorithm iterations or calls are observed by wrapping their executors. [Observation boundaries](/contributing/architecture/analyzers#observation-boundaries) describes the sources, the observation wrapper and how a Cycle turn is observed.
 
-This leaves a known correctness bug: a configured wrapper can hide a child capability that its algorithm needs. Even a named forwarding wrapper can lose the child's control when child advice changes the forwarded execution type. See [Known capability loss](/guide/extending/operator-composition#known-capability-loss) for the effect on mutation-strength adaptation.
+## Substitution and ordering
 
-Failed preparation or construction is not stored as a successful result and can be retried. Completed factories remain prepared when a later contextual binding fails. Recursive construction is detected across a root state and all its children. `TryResolve` converts `InvalidOperationException` to a reason; other exceptions propagate.
+`Substitute` places wrappers before resolution and returns a new configuration; resolution builds only the configuration it is given. [Configurations](/guide/fundamentals/configurations#rewriting-a-graph-with-substitute) states for users how a substitution selects, what it reaches and how the substitutions of one call and of several calls combine.
 
-Advice factories are weakly keyed by advice in the owning state. A long-lived aspect does not retain discarded fresh states, and a long-lived state does not retain discarded advice. A live deferred execution can retain its construction scope and the state and aspects it still needs. Resolution itself promises neither disposal nor concurrent access.
+A `Substitution` is one rewrite, created through its `Of` factories. [Select by reference](/guide/fundamentals/configurations#select-by-reference) and [Select by type or predicate](/guide/fundamentals/configurations#select-by-type-or-predicate) describe the selectors for users and what a substitution reaches. A predicate examines configuration data during substitution and propagates its exceptions.
+
+`ISubstitution.Expand()` returns its single substitutions in application order, with the same instances on every call. `SubstitutionGroup` caches the depth-first expansion of its parts; parts may themselves be groups, and recursive containment is an error. Applying belongs to the call: `Substitute` expands all arguments together, applies a repeated single substitution once at its last position and matches every target against the graph it received.
+
+Named wrappers, created through `operator.Named(name)` or `algorithm.Named(name)`, implement `INamedConfiguration` and forward the child's executor under the ordinary child resolution rules. They and their children remain separate selectable configurations, and repeated names select every matching configuration without identifying shared state or caller paths. [Select by name](/guide/execution/observability-and-analysis#select-by-name) shows how to select them.
+
+The configuration states the order of wrappers: a wrapper written inside another is closer to the executor, and [Configurations](/guide/fundamentals/configurations#what-substitute-guarantees) states how substitutions order theirs. A wrapper is an ordinary configuration, so building it changes nothing for the other configurations of its scope, and a shared wrapper has one executor whose private data every request in its sharing scope uses. Data that must accumulate across scopes or runs belongs to an object the wrapper receives, such as a `CountAccumulator`, or to a run result. Run results follow the run lifetime, so reusing a counter across trials creates independent accumulators.
+
+## Deferred construction
+
+Cycle resolves fresh children for every turn while forwarding search state. Sharing a child configuration on the Cycle, `cycle.Sharing(child)`, keeps one executor for that child across turns, including its private fields and children. A separately resolved Cycle has its own shared executors.
+
+Pipeline stages and dynamic racing contenders resolve fresh children through child scopes of their current scope. Every scope in the tree sees the same run results. Pause/resume continues the retained iterator and executors. `AlgorithmRun` measures each call advancing that iterator, as [Clocks](/contributing/architecture/analyzers#clocks) describes. The resolver returns the executor itself and measures no elapsed time.
+
+## Adaptation, failures and lifetime
+
+An adaptation is an `IConfigurationNode<IAdaptation>` that an executor resolves and applies to its configured base value. A scope resolves one runtime adaptation per configuration reference, and independent runs remain independent. The resolver does not detect unused links. [Adaptable parameters](/guide/extending/operator-composition#adaptable-parameters) shows the wiring and what to share when an adaptation is retained across Cycle turns.
+
+A construction failure ends the entire scope tree. Published results remain readable, but further resolution requires a new root. Rejections before construction, such as signature checks, leave the scope usable. `TryResolve` reports those rejections as reasons; a construction failure propagates.
+
+Executors live with their owning scopes and results with the root scope tree. Deferred executors may retain a scope. Neither resolution nor run completion disposes caller-owned dependencies. Table synchronization does not synchronize execution.
 
 ## Inspection and budgets
 
-Predefined observation, counting and timing advice lives in `HEAL.HeuristicLib.Inspection`. Inspection preserves the observed computation while updating its own collected data. General advice may change behavior. Counting updates after a successful call. Timing records duration in `finally`, including failed calls. The two concerns use standalone advice rather than allocating observations for every count.
+Predefined observation, counting and timing live in `HEAL.HeuristicLib.Inspection`. Counting updates after a successful call. Timing records duration in `finally`, including failed calls. `Counted` and `Timed` wrap the invocation directly rather than allocating an observation for every call. [Observation boundaries](/contributing/architecture/analyzers#observation-boundaries) states what inspection must preserve.
 
-Operator budgets remain configurations. During preparation they allocate an accumulator and use their counting or timing value strategy to create advice. Their child binding adds that aspect with `scope.With(aspect)` before resolving the inner algorithm. The budget therefore measures calls made through that child context. Resolving the same algorithm directly shares its prepared state but does not add the budget's advice. An observed operator absent from the algorithm matches nothing, so that budget does not stop it.
+Operator budgets remain configurations. A budget holds its algorithm with the `Counted` or `Timed` wrappers already in place, and the `Counter` or `Duration` node they add to. [Budgets on operator work](/guide/extending/operator-composition#budgets-on-operator-work) shows the extensions that build one, including the placement form, whose delegate runs during the call and is not stored. Each construction shares the node in its own scope, so it restarts with the budget, and only calls through the wrappers inside the budget's algorithm contribute. Directly resolving the original algorithm builds its own executors, which the budget does not count.
 
-A budget's local layer wraps closer to the operator than inherited analysis. This keeps observer work outside the measured operation. Among aspects in the same layer, order is explicit; add timing before an observation when its callback should remain outside the measurement.
+`LimitEvaluator` accounting is private to its executor. Sharing the limited evaluator lets several uses draw from one allowance. Atomic accumulation does not turn separate checking, evaluation and accounting into a strict concurrent budget. Such reservation semantics remain outside this contract.
+
+The order in which a budget and an analysis wrap an operator decides whether a duration budget includes observer time. [Budgets on operator work](/guide/extending/operator-composition#budgets-on-operator-work) states which placement excludes it.

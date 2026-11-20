@@ -4,13 +4,16 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record LimitEvaluator<TCandidate>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
 {
+    /// <remarks>
+    /// Each executor counts its own evaluations; share this configuration to let several uses draw from one allowance.
+    /// Checking and incrementing are separate, so concurrent callers may exceed the limit.
+    /// </remarks>
     public int MaxEvaluations { get; init; }
 
     /// <summary>
@@ -25,24 +28,37 @@ public sealed record LimitEvaluator<TCandidate>
     /// </summary>
     public bool EnforceLimitWithinBatch { get; init; }
 
-    public LimitEvaluator(IEvaluator<TCandidate> childEvaluator, int maxEvaluations)
+    public static Parameter<LimitEvaluator<TCandidate>, int> MaxEvaluationsParameter { get; } =
+        new(nameof(MaxEvaluations), static evaluator => evaluator.MaxEvaluations, static (evaluator, value) => evaluator with { MaxEvaluations = value });
+
+    public static Parameter<LimitEvaluator<TCandidate>, ObjectiveVector?> FallbackObjectiveVectorParameter { get; } =
+        new(nameof(FallbackObjectiveVector), static evaluator => evaluator.FallbackObjectiveVector, static (evaluator, value) => evaluator with { FallbackObjectiveVector = value });
+
+    public static Parameter<LimitEvaluator<TCandidate>, bool> EnforceLimitWithinBatchParameter { get; } =
+        new(nameof(EnforceLimitWithinBatch), static evaluator => evaluator.EnforceLimitWithinBatch, static (evaluator, value) => evaluator with { EnforceLimitWithinBatch = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MaxEvaluationsParameter, FallbackObjectiveVectorParameter, EnforceLimitWithinBatchParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public LimitEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, int maxEvaluations)
         : base(childEvaluator)
     {
         MaxEvaluations = maxEvaluations;
     }
 
-    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         var counter = new CountAccumulator();
-        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter);
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor(childEvaluator, MaxEvaluations, FallbackObjectiveVector, EnforceLimitWithinBatch, counter, scope.Problem);
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter)
-        : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, int maxEvaluations, ObjectiveVector? fallbackObjectiveVector, bool enforceLimitWithinBatch, CountAccumulator counter, IProblem problem)
+        : EvaluationExecutor<TCandidate>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var remainingEvaluations = maxEvaluations - counter.CurrentCount;
             var fallback = fallbackObjectiveVector ?? problem.Objective.Worst;
@@ -54,16 +70,15 @@ public sealed record LimitEvaluator<TCandidate>
 
             if (enforceLimitWithinBatch && remainingEvaluations < candidates.Count)
             {
-                var candidatesToEvaluate = candidates.Take(remainingEvaluations).ToList();
-                var candidatesToSkip = candidates.Skip(remainingEvaluations).ToList();
-                var evaluated = ChildEvaluator.Evaluate(candidatesToEvaluate, random, searchSpace, problem);
+                var candidatesToEvaluate = candidates.Take((int)remainingEvaluations).ToList();
+                var evaluated = childEvaluator.Evaluate(candidatesToEvaluate, random);
                 counter.IncrementBy(candidatesToEvaluate.Count);
-                var skipped = Enumerable.Repeat(fallback, candidatesToSkip.Count);
+                var skipped = Enumerable.Repeat(fallback, candidates.Count - candidatesToEvaluate.Count);
 
                 return evaluated.Concat(skipped).ToArray();
             }
 
-            var result = ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            var result = childEvaluator.Evaluate(candidates, random);
             counter.IncrementBy(candidates.Count);
             return result;
         }
@@ -72,7 +87,7 @@ public sealed record LimitEvaluator<TCandidate>
 
 public static class LimitEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
         public LimitEvaluator<TCandidate> LimitEvaluations(int maxEvaluations, ObjectiveVector? fallbackObjectiveVector = null, bool enforceLimitWithinBatch = false)
         {

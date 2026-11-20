@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class RotatedTestFunction(double[,] rotation, ITestFunction inner) : MetaTestFunction(inner)
 {
-    protected readonly double[,] Rotation = rotation;
+    protected double[,] Rotation { get; } = rotation;
     public override int Dimension => Rotation.GetLength(0);
 
     public override double Evaluate(RealVector solution) => Inner.Evaluate(RealVector.FromOwnedArray(Rotate(Rotation, solution)));
@@ -35,7 +35,7 @@ public class RotatedTestFunction(double[,] rotation, ITestFunction inner) : Meta
 
 public class RotatedGradientTestFunction(double[,] rotation, IGradientTestFunction inner) : RotatedTestFunction(rotation, inner), IGradientTestFunction
 {
-    protected readonly IGradientTestFunction GradientInner = inner;
+    protected IGradientTestFunction GradientInner { get; } = inner;
 
     public RealVector EvaluateGradient(RealVector solution)
     {

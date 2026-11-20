@@ -18,7 +18,7 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             variables: ["x0", "x1"],
             constants: [new EvolvableConstantSymbol(), new FixedConstantSymbol(2.0)]);
         var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
-        var mutator = new ChooseOneMutator<ExpressionTree>(
+        var mutator = new ChoosePerItem<Mutation, ExpressionTree>(
             [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()])
         {
             Weights = [1.0, 1.0, 1.0]
@@ -35,7 +35,7 @@ public sealed class SymbolicRegressionVerticalSliceScenario(ITestOutputHelper ou
             Elites = 1
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
             problem,
             RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken);

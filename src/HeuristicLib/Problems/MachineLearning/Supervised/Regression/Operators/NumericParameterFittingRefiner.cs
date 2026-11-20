@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Random;
@@ -61,6 +62,16 @@ public sealed record NumericParameterFittingRefiner
     /// </para>
     /// </remarks>
     public RegressionData? FittingData { get; init; }
+
+    public static Parameter<NumericParameterFittingRefiner, int> MaximumIterationsParameter { get; } =
+        new(nameof(MaximumIterations), static refiner => refiner.MaximumIterations, static (refiner, value) => refiner with { MaximumIterations = value });
+
+    public static Parameter<NumericParameterFittingRefiner, RegressionData?> FittingDataParameter { get; } =
+        new(nameof(FittingData), static refiner => refiner.FittingData, static (refiner, value) => refiner with { FittingData = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MaximumIterationsParameter, FittingDataParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, SymbolicRegressionProblem problem)
     {

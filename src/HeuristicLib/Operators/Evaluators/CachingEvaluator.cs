@@ -4,12 +4,11 @@ using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Operators;
 
 public record CachingEvaluator<TCandidate, TKey>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
     where TCandidate : notnull
     where TKey : notnull
 {
@@ -25,26 +24,36 @@ public record CachingEvaluator<TCandidate, TKey>
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    public CachingEvaluator(IEvaluator<TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
+    public static Parameter<CachingEvaluator<TCandidate, TKey>, ICacheKeySelector<TCandidate, TKey>> KeySelectorParameter { get; } =
+        new(nameof(KeySelector), static evaluator => evaluator.KeySelector, static (evaluator, value) => evaluator with { KeySelector = value });
+
+    public static Parameter<CachingEvaluator<TCandidate, TKey>, long?> SizeLimitParameter { get; } =
+        new(nameof(SizeLimit), static evaluator => evaluator.SizeLimit, static (evaluator, value) => evaluator with { SizeLimit = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [KeySelectorParameter, SizeLimitParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public CachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
         : base(childEvaluator)
     {
         KeySelector = keySelector;
     }
 
-    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        // Keep statistics disabled: MemoryCache's thread-local statistics can retain the cache and its entries
-        // on a live thread after the prepared execution state is released.
-        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = SizeLimit });
-        return childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, KeySelector, cache);
+        if (SizeLimit < 0)
+            throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
+        var cache = new EvaluationCache<TKey>(SizeLimit);
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor(childEvaluator, KeySelector, cache);
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, MemoryCache cache)
-        : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector, EvaluationCache<TKey> cache)
+        : EvaluationExecutor<TCandidate>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var n = candidates.Count;
             var results = new ObjectiveVector[n];
@@ -57,9 +66,9 @@ public record CachingEvaluator<TCandidate, TKey>
                 var candidate = candidates[i];
                 var key = keySelector.SelectKey(candidate);
 
-                if (cache.TryGetValue(key, out ObjectiveVector? cached))
+                if (cache.TryGet(key, out var cached))
                 {
-                    results[i] = cached!;
+                    results[i] = cached;
                     continue;
                 }
 
@@ -81,11 +90,11 @@ public record CachingEvaluator<TCandidate, TKey>
                 return results;
             }
 
-            var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
+            var newObjectiveVectors = childEvaluator.Evaluate(uncachedCandidates, random);
 
             for (var k = 0; k < uncachedKeys.Count; k++)
             {
-                cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
+                cache.Set(uncachedKeys[k], newObjectiveVectors[k]);
             }
 
             foreach (var (_, entry) in uncachedMap)
@@ -106,7 +115,7 @@ public sealed record CachingEvaluator<TCandidate>
     : CachingEvaluator<TCandidate, TCandidate>
     where TCandidate : notnull
 {
-    public CachingEvaluator(IEvaluator<TCandidate> childEvaluator)
+    public CachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator)
         : base(childEvaluator, CacheKeySelection<TCandidate>.Identity)
     {
     }
@@ -141,7 +150,7 @@ public static class CacheKeySelection<TCandidate>
 
 public static class CachingEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
         where TCandidate : notnull
     {
         public CachingEvaluator<TCandidate, TKey> Cached<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit = null) where TKey : notnull =>

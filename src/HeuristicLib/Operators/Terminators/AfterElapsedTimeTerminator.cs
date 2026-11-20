@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
@@ -5,34 +7,38 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Operators;
 
 public sealed record AfterElapsedTimeTerminator<TCandidate>
-    : StatefulTerminator<TCandidate, AfterElapsedTimeTerminator<TCandidate>.ExecutionState>
+    : Terminator<TCandidate>
 {
     public AfterElapsedTimeTerminator(TimeSpan maximumElapsedTime)
     {
         MaximumElapsedTime = maximumElapsedTime;
     }
 
-    public sealed class ExecutionState
-    {
-        public required long StartTimestamp { get; init; }
-    }
-
     /// <summary>
-    /// Gets the elapsed-time limit. The expected value is positive.
+    /// Gets the elapsed-time limit measured from executor construction with the run's time provider. The expected value is positive.
     /// </summary>
     /// <remarks>A nonpositive limit terminates on the first checked state.</remarks>
     public TimeSpan MaximumElapsedTime { get; init; }
 
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+    public static Parameter<AfterElapsedTimeTerminator<TCandidate>, TimeSpan> MaximumElapsedTimeParameter { get; } =
+        new(nameof(MaximumElapsedTime), static terminator => terminator.MaximumElapsedTime, static (terminator, value) => terminator with { MaximumElapsedTime = value });
 
-    protected override ExecutionState CreateInitialState() =>
-        new() { StartTimestamp = TimeProvider.GetTimestamp() };
+    public static IReadOnlyList<IParameter> Parameters { get; } = [MaximumElapsedTimeParameter];
 
-    protected override bool IsTerminalState(ExecutionState executionState) =>
-        TimeProvider.GetElapsedTime(executionState.StartTimestamp) >= MaximumElapsedTime;
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override TerminationExecutor CreateExecutor(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> scope) => new Executor(MaximumElapsedTime, scope.Results.TimeProvider);
+
+    private sealed class Executor(TimeSpan maximumElapsedTime, TimeProvider timeProvider) : TerminationExecutor
+    {
+        private readonly long startTimestamp = timeProvider.GetTimestamp();
+
+        public override bool IsTerminalState() => timeProvider.GetElapsedTime(startTimestamp) >= maximumElapsedTime;
+    }
 }
 
 public static class AfterElapsedTimeTerminator
 {
-    public static AfterElapsedTimeTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, TimeSpan maximumElapsedTime, TimeProvider? timeProvider = null) => new(maximumElapsedTime) { TimeProvider = timeProvider ?? TimeProvider.System };
+    /// <summary>Creates a terminator measuring elapsed time from executor construction with the run's time provider.</summary>
+    public static AfterElapsedTimeTerminator<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, TimeSpan maximumElapsedTime) => new(maximumElapsedTime);
 }

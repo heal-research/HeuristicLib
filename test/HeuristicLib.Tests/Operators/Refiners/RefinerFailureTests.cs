@@ -31,23 +31,23 @@ public class RefinerFailureTests
     }
 
     [Fact]
-    public void InARun_AFailingRefinerPropagatesOutOfComplete()
+    public void InARun_AFailingRefinerPropagatesOutOfRunToCompletion()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingRefiner() };
 
-        Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void InARun_AFailingRefinerPropagatesOutOfTheStream()
+    public void InARun_AFailingRefinerPropagatesOutOfRunStreaming()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingRefiner() };
 
         Should.Throw<InvalidOperationException>(() =>
         {
-            foreach (var _ in algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
+            foreach (var _ in algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
             {
                 // The failure happens while producing the first state.
             }
@@ -58,13 +58,13 @@ public class RefinerFailureTests
     public void WhenARunFailsPartWay_InspectionKeepsWhatItRecordedBefore()
     {
         var problem = CreateProblem();
-        var counter = new CountAccumulator();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2) };
+        var run = algorithm.Counting(algorithm.Refiner, out var counter).CreateRun(problem, RandomNumberGenerator.Create(42));
 
-        Should.Throw<InvalidOperationException>(() => algorithm.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(Aspect.CountCalls(algorithm.Refiner!, counter)).Complete(cancellationToken: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => run.Complete(cancellationToken: TestContext.Current.CancellationToken));
 
         // The two completed batches are counted; the failing one is not, because the counter increments on success.
-        counter.CurrentCount.ShouldBe(2);
+        run.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));
@@ -96,20 +96,17 @@ public class RefinerFailureTests
 
     private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutionFactory<IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory()
-        {
-            var counter = new Counter();
-            return _ => new Execution(counter, SuccessfulBatches);
-        }
+        protected override IRefinementExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+            new Executor(new Counter(), SuccessfulBatches);
 
         private sealed class Counter
         {
             public int Batches;
         }
 
-        private sealed class Execution(Counter counter, int successfulBatches) : IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Executor(Counter counter, int successfulBatches) : RefinementExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
                 counter.Batches++ < successfulBatches ? candidates : throw new InvalidOperationException("Refinement failed.");
         }
     }

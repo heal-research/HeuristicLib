@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -8,12 +10,36 @@ namespace HEAL.HeuristicLib.Execution;
 /// A scope that names the candidate, search space and problem once, so that a role binding on that triple does not
 /// name them again at every call.
 /// </summary>
-/// <remarks>Convenience only: every overload forwards to the scope overload of the same name.</remarks>
-public class ResolutionScope<TCandidate, TSearchSpace, TProblem>(ResolutionScope scope)
+/// <remarks>
+/// It is a view of the scope it was created from: it resolves and shares exactly like that scope and adds
+/// the problem object and its types. <c>CreateChildScope</c> keeps them.
+/// </remarks>
+public class ResolutionScope<TCandidate, TSearchSpace, TProblem> : ResolutionScope
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ResolutionScope Scope => scope;
+    public TProblem Problem { get; }
+    public TSearchSpace SearchSpace => Problem.SearchSpace;
+
+    public ResolutionScope(ResolutionScope scope, TProblem problem)
+        : base(scope)
+    {
+        Problem = problem;
+    }
+
+    /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
+    public new ResolutionScope<TCandidate, TSearchSpace, TProblem> CreateChildScope() =>
+        new(base.CreateChildScope(), Problem);
+
+    internal virtual IExecutor ResolveOperatorForProblem<TOperation>(IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperation<TOperation> =>
+        ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState>(source, Problem);
+
+    internal virtual bool TryResolveOperatorForProblem<TOperation, TExecutor>(IOperator<TOperation, TCandidate> source,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TOperation : IOperation<TOperation>
+        where TExecutor : class, IExecutor =>
+        TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, ISearchState, TExecutor>(source, Problem, out executor, out reason);
 }
 
 /// <summary>
@@ -24,28 +50,94 @@ public class ResolutionScope<TCandidate, TSearchSpace, TProblem>(ResolutionScope
 /// Terminators and interceptors name only their candidate, so the state they run over comes from the scope rather
 /// than from the call site.
 /// </remarks>
-public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState>(ResolutionScope scope)
-    : ResolutionScope<TCandidate, TSearchSpace, TProblem>(scope)
+public sealed class ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState>
+    : ResolutionScope<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState;
+    where TSearchState : class, ISearchState
+{
+    public ResolutionScope(ResolutionScope scope, TProblem problem)
+        : base(scope, problem)
+    {
+    }
+
+    /// <inheritdoc cref="ResolutionScope.CreateChildScope"/>
+    public new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> CreateChildScope() =>
+        new(base.CreateChildScope(), Problem);
+
+    internal override IExecutor ResolveOperatorForProblem<TOperation>(IOperator<TOperation, TCandidate> source) =>
+        ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source, Problem);
+
+    internal override bool TryResolveOperatorForProblem<TOperation, TExecutor>(IOperator<TOperation, TCandidate> source,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TExecutor : class =>
+        TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(source, Problem, out executor, out reason);
+}
 
 /// <summary>Creates a typed scope over a resolution scope, naming the triple once per creation method.</summary>
 public static class ResolutionScopeExtensions
 {
     extension(ResolutionScope scope)
     {
-        public ResolutionScope<TCandidate, TSearchSpace, TProblem> For<TCandidate, TSearchSpace, TProblem>()
+        public ResolutionScope<TCandidate, TSearchSpace, TProblem> For<TCandidate, TSearchSpace, TProblem>(TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
-            where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(scope);
+            where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(scope, problem);
 
         /// <summary>
         /// Names the search state as well, which an algorithm knows because it is the state the algorithm produces.
         /// The result still serves every role that binds on the triple alone.
         /// </summary>
-        public ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> For<TCandidate, TSearchSpace, TProblem, TSearchState>()
+        public ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> For<TCandidate, TSearchSpace, TProblem, TSearchState>(TProblem problem)
             where TSearchSpace : class, ISearchSpace<TCandidate>
             where TProblem : class, IProblem<TCandidate, TSearchSpace>
-            where TSearchState : class, ISearchState => new(scope);
+            where TSearchState : class, ISearchState => new(scope, problem);
     }
+
+    /// <summary>Resolves an operator for its operation and this scope's types, returning its executor untyped.</summary>
+    /// <remarks>
+    /// An operation's resolution extensions cast the result to its executor interface. This is a classic extension
+    /// method so that the operation stays the first type argument.
+    /// </remarks>
+    public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem>(
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperation<TOperation>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+        scope.ResolveOperatorForProblem(source);
+
+    /// <inheritdoc cref="ResolveOperator{TOperation, TCandidate, TSearchSpace, TProblem}"/>
+    public static IExecutor ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope, IOperator<TOperation, TCandidate> source)
+        where TOperation : IOperation<TOperation>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState =>
+        scope.ResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState>(source, scope.Problem);
+
+    /// <summary>Resolves an operator for its operation and this scope's types, reporting a rejection as a reason instead of throwing.</summary>
+    /// <remarks>
+    /// A rejection before anything is built, such as a signature mismatch, becomes a reason and leaves the scope usable.
+    /// A construction failure ends the scope tree and propagates. The executor variable's type, the operation's executor
+    /// interface, selects the type the result is returned as, so an operation's <c>TryResolve</c> extension passes its
+    /// own variables and names no type argument.
+    /// </remarks>
+    public static bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TExecutor>(
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem> scope, IOperator<TOperation, TCandidate> source,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TOperation : IOperation<TOperation>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TExecutor : class, IExecutor =>
+        scope.TryResolveOperatorForProblem(source, out executor, out reason);
+
+    /// <inheritdoc cref="TryResolveOperator{TOperation, TCandidate, TSearchSpace, TProblem, TExecutor}"/>
+    public static bool TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(
+        this ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope, IOperator<TOperation, TCandidate> source,
+        [NotNullWhen(true)] out TExecutor? executor, [NotNullWhen(false)] out string? reason)
+        where TOperation : IOperation<TOperation>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+        where TSearchState : class, ISearchState
+        where TExecutor : class, IExecutor =>
+        scope.TryResolveOperator<TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, TExecutor>(source, scope.Problem, out executor, out reason);
 }

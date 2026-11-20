@@ -6,35 +6,42 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Replacers;
 
-public abstract record StatelessReplacer<TCandidate, TSearchSpace, TProblem>
-    : Replacer<TCandidate, TSearchSpace, TProblem>, IReplacerExecution<TCandidate, TSearchSpace, TProblem>
+public abstract record StatelessReplacer<TCandidate, TSearchSpace, TProblem> : Replacer<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ExecutionFactory<IReplacerExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory() => _ => this;
+    protected sealed override IReplacementExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessReplacer<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : ReplacementExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random) => configuration.Replace(previousPopulation, offspringPopulation, problem.Objective, count, random, problem.SearchSpace, problem);
+    }
 }
 
-public abstract record StatelessReplacer<TCandidate, TSearchSpace>
-    : Replacer<TCandidate, TSearchSpace>, IReplacerExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract record StatelessReplacer<TCandidate, TSearchSpace> : Replacer<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ExecutionFactory<IReplacerExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory() => _ => this;
+    protected sealed override IReplacementExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> IReplacerExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace);
+    private sealed class Executor(StatelessReplacer<TCandidate, TSearchSpace> configuration, IProblem<TCandidate, TSearchSpace> problem) : ReplacementExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random) => configuration.Replace(previousPopulation, offspringPopulation, problem.Objective, count, random, problem.SearchSpace);
+    }
 }
 
-public abstract record StatelessReplacer<TCandidate>
-    : Replacer<TCandidate>, IReplacerExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract record StatelessReplacer<TCandidate> : Replacer<TCandidate>
 {
-    public sealed override ExecutionFactory<IReplacerExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory() => _ => this;
+    protected sealed override IReplacementExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
 
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> IReplacerExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Replace(previousPopulation, offspringPopulation, objective, count, random);
+    private sealed class Executor(StatelessReplacer<TCandidate> configuration, IProblem problem) : ReplacementExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, int count, IRandomNumberGenerator random) =>
+            configuration.Replace(previousPopulation, offspringPopulation, problem.Objective, count, random);
+    }
 }

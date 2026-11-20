@@ -24,7 +24,7 @@ public sealed class HeldKarpTravelingSalesmanExactSolver(int maximumCities = 18)
     private static TravelingSalesmanExactSolution SolveTwoCityProblem(ITravelingSalesmanProblemData problemData,
                                                                       IReadOnlyList<int> cities)
     {
-        var tour = ImmutableArray.Create(cities[0], cities[1]);
+        var tour = ValueArray.Create(cities[0], cities[1]);
         return new TravelingSalesmanExactSolution(tour,
             TravelingSalesmanExactSolverExtensions.EvaluateTour(problemData, tour));
     }
@@ -116,6 +116,6 @@ public sealed class HeldKarpTravelingSalesmanExactSolver(int maximumCities = 18)
 
         tour[0] = cities[0];
 
-        return new TravelingSalesmanExactSolution(tour.ToImmutableArray(), bestQuality);
+        return new TravelingSalesmanExactSolution(ValueArray.FromOwnedArray(tour), bestQuality);
     }
 }

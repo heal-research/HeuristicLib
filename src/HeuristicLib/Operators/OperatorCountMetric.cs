@@ -2,6 +2,6 @@ namespace HEAL.HeuristicLib.Operators;
 
 public enum OperatorCountMetric
 {
-    Calls,
+    Invocations,
     Candidates,
 }

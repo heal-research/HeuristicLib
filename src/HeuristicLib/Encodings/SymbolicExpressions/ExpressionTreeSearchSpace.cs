@@ -12,7 +12,7 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
 {
     private const int MaximumPrecomputedArity = 2;
 
-    private readonly Dictionary<int, Symbol[]> symbolsByArity;
+    private readonly Dictionary<int, ImmutableArray<Symbol>> symbolsByArity;
     private readonly Dictionary<int, WeightedItemSampler<Symbol>> samplerByArity;
     private readonly Dictionary<(int MinimumArity, int MaximumArity), WeightedItemSampler<Symbol>> samplerByArityRange;
     private readonly WeightedItemSampler<Symbol> sampler;
@@ -21,12 +21,12 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
     private readonly bool allowsVariables;
     private readonly bool allowsEvolvableConstants;
 
-    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IEnumerable<OperationSymbol> operations, IEnumerable<string> variables)
+    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IReadOnlyList<OperationSymbol> operations, IReadOnlyList<string> variables)
         : this(maximumLength, maximumDepth, ComposeCommonSymbols(operations, variables, [new EvolvableConstantSymbol()]))
     {
     }
 
-    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IEnumerable<OperationSymbol> operations, IEnumerable<string> variables, IEnumerable<ConstantSymbol> constants)
+    public ExpressionTreeSearchSpace(int maximumLength, int maximumDepth, IReadOnlyList<OperationSymbol> operations, IReadOnlyList<string> variables, IReadOnlyList<ConstantSymbol> constants)
         : this(maximumLength, maximumDepth, ComposeCommonSymbols(operations, variables, constants))
     {
     }
@@ -63,10 +63,10 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
 
         symbolsByArity = Symbols
             .GroupBy(symbol => symbol.Arity)
-            .ToDictionary(group => group.Key, group => group.ToArray());
+            .ToDictionary(group => group.Key, group => group.ToImmutableArray());
         if (!symbolsByArity.TryGetValue(0, out var terminalSymbols))
             throw new ArgumentException("At least one terminal symbol must be allowed.", nameof(symbols));
-        TerminalSymbols = terminalSymbols.ToImmutableArray();
+        TerminalSymbols = terminalSymbols.ToValueArray();
         maximumSymbolArity = symbolsByArity.Keys.Max();
 
         // Both sampler dictionaries slice the configured weights, so the SelectionWeights accessor rebuilds them.
@@ -101,7 +101,7 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
     }
 
     public ValueArray<Symbol> Symbols => sampler.Items;
-    public ImmutableArray<Symbol> TerminalSymbols { get; }
+    public ValueArray<Symbol> TerminalSymbols { get; }
 
     /// <summary>
     /// Gets the configured selection weights, exactly as supplied, or an empty collection for uniform selection.
@@ -262,22 +262,25 @@ public sealed record ExpressionTreeSearchSpace : SearchSpace<ExpressionTree>
             [.. indexes.Select(index => Symbols[index])],
             sampler.Weights.IsEmpty ? null : [.. indexes.Select(index => sampler.Weights[index])]);
 
-    private static IReadOnlyList<Symbol> ComposeCommonSymbols(IEnumerable<OperationSymbol> operations, IEnumerable<string> variables, IEnumerable<ConstantSymbol> constants)
+    private static IReadOnlyList<Symbol> ComposeCommonSymbols(IReadOnlyList<OperationSymbol> operations, IReadOnlyList<string> variables, IReadOnlyList<ConstantSymbol> constants)
     {
         var symbols = new List<Symbol>();
         symbols.AddRange(operations);
-        var variableArray = variables.ToArray();
-        if (variableArray.Length > 0)
-            symbols.Add(new VariableSymbol(variableArray));
+        if (variables.Count > 0)
+            symbols.Add(new VariableSymbol(variables));
         symbols.AddRange(constants);
         return symbols;
     }
 
     private static WeightedSymbolSet CreateWeightedSymbolSet(IReadOnlyList<(Symbol Symbol, double Weight)> symbols)
     {
-        var entries = symbols.ToArray();
-        return new WeightedSymbolSet(entries.Select(entry => entry.Symbol).ToArray(), entries.Select(entry => entry.Weight).ToArray());
+        var items = new Symbol[symbols.Count];
+        var weights = new double[symbols.Count];
+        for (var i = 0; i < symbols.Count; i++)
+            (items[i], weights[i]) = symbols[i];
+
+        return new WeightedSymbolSet(ValueArray.FromOwnedArray(items), ValueArray.FromOwnedArray(weights));
     }
 
-    private readonly record struct WeightedSymbolSet(Symbol[] Symbols, double[] Weights);
+    private readonly record struct WeightedSymbolSet(ValueArray<Symbol> Symbols, ValueArray<double> Weights);
 }

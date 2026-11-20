@@ -12,13 +12,32 @@ Follow the developer guidelines for implementation, public APIs and documentatio
 | Capability boundaries and architectural tradeoffs                  | [Requirements](docs/contributing/requirements.md) and [design goals](docs/contributing/design-goals.md)                                                 |
 | Naming and domain language in code, docs, tests, examples or plans | [Glossary](docs/guide/glossary.md); prefer canonical terms unless a local context explicitly defines a narrower meaning                                 |
 | Adding or moving types and dependencies                            | [Layering](docs/contributing/architecture/layering.md)                                                                                                  |
-| Execution state, resolution, sharing or wrappers                   | [Execution nodes](docs/contributing/architecture/execution-nodes.md) and [execution resolution](docs/contributing/architecture/execution-resolution.md) |
+| Scoped state, resolution, sharing or wrappers                      | [Execution nodes](docs/contributing/architecture/execution-nodes.md) and [execution resolution](docs/contributing/architecture/execution-resolution.md) |
 | Authoring or changing operators                                    | [Operator implementation](docs/contributing/architecture/operator-implementation.md)                                                                    |
 | Analyzers, observations and result ownership                       | [Analyzer architecture](docs/contributing/architecture/analyzers.md)                                                                                    |
 | Test placement, API usage specs and suite selection                | [Test suite guide](test/README.md)                                                                                                                      |
 | Planned work or a continuation                                     | The task's stated spec or relevant plan under `plans/`; identify current scope and decision status rather than inferring them from the branch name      |
 
 Unresolved work and rejected approaches are recorded in [the developer backlog](plans/developer-backlog.md). Check relevant rejected approaches before proposing a previously discussed direction.
+
+## Architecture checkpoint
+
+Discuss architectural changes with the developer and obtain explicit acceptance before implementing them. A change is architectural when it:
+
+- adds, removes or reshapes a public or shared type, interface, base class, generic parameter, role or child slot;
+- moves a responsibility, dependency, or state ownership or lifetime across types, layers or packages;
+- changes a contract, or how execution, resolution or substitution work;
+- introduces a new pattern, wrapper, adapter, registry or execution mechanism.
+
+Routine changes that follow established patterns may proceed. Before editing code, state in one line whether the change is routine or architectural.
+
+Before seeking agreement, inspect the relevant code and guidance yourself, and try to express the scenario with existing mechanisms as developer guidelines § 2.5 requires. Present the design as § 2.1 describes, together with unresolved risks or assumptions and a recommendation.
+
+Ask only about requirements and tradeoffs, recommend an answer to each question, and challenge weak designs, including the developer's own suggestions. For designs with several open decisions, use the `grilling` skill. Resolve material objections before implementing. Record accepted decisions in the relevant plan under `plans/`; accepted decisions need no repeated approval.
+
+A general implementation or refactoring request does not approve an agent-invented redesign. List unrequested architectural improvements as suggestions in the final reply instead of implementing them.
+
+Return to the discussion when implementation deviates from the accepted design, including when the code starts to need workarounds, flags, casts, parallel hierarchies or adapters that the design did not name. Do not patch around a design problem.
 
 ## Repository map
 
@@ -63,5 +82,14 @@ The repository ships general-purpose agent skills, copied verbatim from their so
 - Decisions, for `domain-modeling` and `grill-with-docs`: do not create ADRs or `docs/adr/`. Record a settled decision in the plan of the change it belongs to under `plans/`. Approaches that were tried and rejected go to "Discussed, tried, and rejected" in `plans/developer-backlog.md`. Contributor and architecture docs describe the current state of the code, not decision history.
 - Review scope, for `two-axis-review`: for reviews of the current working tree, compare against the fixed point with `git diff $(git merge-base <fixed-point> HEAD)` and include untracked files from `git status --short`.
 - Review sources, for `two-axis-review`: skip the generic `docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills` prerequisite. Use the task's stated spec or relevant plan under `plans/`, rather than assuming a branch-named plan. The standards are this file, the developer guidelines, the design goals, the glossary and, for tests, `test/README.md`.
+- Review remedies, for `two-axis-review`: apply developer guidelines § 2.4 and § 3.6 when assessing smells. Extraction, new types and polymorphism are alternatives to justify, not automatic fixes; consider removing or inlining machinery and retaining limited duplication when it keeps responsibilities clearer.
 - Compatibility, for `csharp-refactoring`: backward compatibility is not a design goal (developer guidelines § 1.1). A requested public rename, move or removal is an authorized breaking change. Migrate every in-repository caller, including tests, samples and documentation snippets, and add no `[Obsolete]` shims, forwarding members or `[TypeForwardedTo]` attributes.
 - Validation, for all skills: use the validation commands and test execution strategy above instead of a skill's generic build and test commands.
+
+## Commit messages
+
+Write every commit message as one short line in the imperative, at most 72 characters, such as `Forward root executor controls`. Do not add a body, bullet points, test counts or validation results. The plan and the diff hold the reasoning.
+
+## Git authorization
+
+Never include attribution to agents or AI tools in commits. This includes co-author trailers naming an agent or AI tool, agent signatures, and agent/AI credits or "generated by" notices anywhere in the commit message.

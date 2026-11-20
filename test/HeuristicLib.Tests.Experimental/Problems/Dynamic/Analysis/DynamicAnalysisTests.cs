@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Evaluators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.SearchSpaces;
 
@@ -13,15 +15,15 @@ public class DynamicAnalysisTests
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);
         var provider = new EpochBestKnown();
-        var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(problem, provider);
-        var execution = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator);
+        var evaluator = new ProblemEvaluator().ScaledToDynamicBestKnown(provider);
+        var executor = ResolutionScope.Create().Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(evaluator, problem);
 
-        execution.ShouldNotBeAssignableTo<IDisposable>();
-        execution.Evaluate([2, 2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.ShouldNotBeAssignableTo<IDisposable>();
+        executor.Evaluate([2, 2], RandomNumberGenerator.Create(0))
             .Select(value => value[0]).ShouldBe([1d, 1d]);
-        execution.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.Evaluate([2], RandomNumberGenerator.Create(0))
             .Single()[0].ShouldBe(0);
-        execution.Evaluate([2], RandomNumberGenerator.Create(0), problem.SearchSpace, problem)
+        executor.Evaluate([2], RandomNumberGenerator.Create(0))
             .Single()[0].ShouldBe(0);
         provider.Epochs.ShouldBe([0, 1]);
     }
@@ -46,17 +48,14 @@ public class DynamicAnalysisTests
             [4]
         ]);
         var epoch = Clock.FromEpoch(problem);
-        var bestPerEpoch = Analyzer.Trace(algorithm.Evaluator,
-            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
-            Aggregate.Best<int>(),
-            [epoch]);
+        var bestPerEpoch = algorithm.Evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(bestPerEpoch);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [bestPerEpoch]);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // One entry per firing, each tagged with the environment version its batch was evaluated against.
-        bestPerEpoch.By(epoch).Select(point => (point.Value.Candidate, point.Time))
+        run.Result(bestPerEpoch).By(epoch).Select(point => (point.Value.Candidate, point.Time))
                     .ShouldBe([(3, 0), (1, 1), (4, 2)]);
     }
 
@@ -68,17 +67,17 @@ public class DynamicAnalysisTests
             [5, 3, 7],
             [10, 1]
         ]);
-        var evaluations = Clock.FromEvaluations(algorithm.Evaluator);
+        var evaluations = new Counter();
         var epoch = Clock.FromEpoch(problem);
-        var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations, epoch);
+        var work = Analyzer.TraceEpochWork(algorithm.Evaluator, evaluations.Clock, epoch);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(work);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [work, algorithm.Evaluator.Invocations.CountingCandidates(evaluations)]);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // Under a batch policy an epoch ending mid-batch leaves the rest of that batch scored by the old environment:
         // 7 runs after the boundary at 3, and 1 after the boundary at 10.
-        EpochWorkTrace.PerEpoch(work, evaluations, epoch, evaluationsPerEpoch: 2)
+        EpochWorkTrace.PerEpoch(run.Result(work), evaluations.Clock, epoch, evaluationsPerEpoch: 2)
                       .ShouldBe([new EpochWork(0, 3, 1), new EpochWork(1, 2, 1)]);
     }
 
@@ -101,7 +100,7 @@ public class DynamicAnalysisTests
     }
 
     [Fact]
-    public void AfterEachIterationPolicy_UpdatesAtTheIterationBoundaryOfTheNamedAlgorithm()
+    public void AfterEachIterationPolicy_UpdatesAtTheIterationBoundaryOfTheWrappedAlgorithm()
     {
         var problem = new IntegerDynamicProblem(epochLength: 2, UpdatePolicy.AfterEachIteration);
         var algorithm = new BatchEvaluationAlgorithm([
@@ -110,12 +109,57 @@ public class DynamicAnalysisTests
             [4]
         ]);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(problem.CreateIterationUpdateAspect(algorithm));
+        var run = algorithm.ApplyingIterationUpdates().CreateRun(problem, RandomNumberGenerator.Create(0));
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         problem.Updates.ShouldBe(2);
         problem.CurrentEpoch.ShouldBe(2);
+    }
+
+    // A caller paused on a state has seen the updates of that state's iteration; one requested while it is paused waits
+    // for the end of the next iteration, so the next batch is still scored against the old environment.
+    [Fact]
+    public void IterationUpdates_AreAppliedBeforeTheStateIsYielded()
+    {
+        var problem = new IntegerDynamicProblem(epochLength: 100, UpdatePolicy.AfterEachIteration);
+        var algorithm = new BatchEvaluationAlgorithm([[1], [2]]).ApplyingIterationUpdates();
+        using var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator();
+
+        states.MoveNext().ShouldBeTrue();
+        problem.RequestUpdate();
+        problem.CurrentEpoch.ShouldBe(0);
+
+        states.MoveNext().ShouldBeTrue();
+        problem.CurrentEpoch.ShouldBe(1);
+        problem.ScoredAgainst.ShouldBe([0, 0]);
+    }
+
+    [Fact]
+    public void IterationUpdates_AreNotAppliedAfterTheStreamIsDisposed()
+    {
+        var problem = new IntegerDynamicProblem(epochLength: 100, UpdatePolicy.AfterEachIteration);
+        var algorithm = new BatchEvaluationAlgorithm([[1], [2]]).ApplyingIterationUpdates();
+        using (var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(0), ct: TestContext.Current.CancellationToken).GetEnumerator())
+        {
+            states.MoveNext().ShouldBeTrue();
+            problem.RequestUpdate();
+        }
+
+        problem.CurrentEpoch.ShouldBe(0);
+        problem.Updates.ShouldBe(0);
+    }
+
+    [Fact]
+    public void IterationUpdates_SupportOnlyDynamicProblems()
+    {
+        var algorithm = new AnyProblemAlgorithm();
+        var dynamic = ExecutionSignature.For<IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>();
+        var general = ExecutionSignature.For<IntegerSearchSpace, IProblem<int, IntegerSearchSpace>, PopulationState<int>>();
+
+        general.Supports(algorithm).ShouldBeTrue();
+        dynamic.Supports(algorithm.ApplyingIterationUpdates()).ShouldBeTrue();
+        general.Supports(algorithm.ApplyingIterationUpdates()).ShouldBeFalse();
     }
 
     [Fact]
@@ -165,6 +209,43 @@ public class DynamicAnalysisTests
     }
 
     [Fact]
+    public void BestBeforeChangeAnalyzer_KeepsEvaluatorReferencesOnce()
+    {
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator();
+        IOperator<Evaluation, int> equalButDistinct = new ProblemEvaluator();
+        equalButDistinct.ShouldBe(evaluator);
+        equalButDistinct.ShouldNotBeSameAs(evaluator);
+        var recorded = new List<double>();
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>(
+            [evaluator, evaluator, equalButDistinct], objectiveValueSelector: vector =>
+            {
+                recorded.Add(vector[0]);
+                return vector[0];
+            });
+        analysis.Expand().Count.ShouldBe(2);
+        var problem = new IntegerDynamicProblem(epochLength: 1);
+        var scope = ResolutionScope.Create();
+        var typed = scope.For<int, IntegerSearchSpace, IntegerDynamicProblem>(problem);
+        var first = typed.Resolve(evaluator.Substitute(analysis.Expand()[0]));
+        var second = typed.Resolve(equalButDistinct.Substitute(analysis.Expand()[1]));
+
+        first.Evaluate([5], RandomNumberGenerator.Create(1));
+        second.Evaluate([3], RandomNumberGenerator.Create(1));
+        first.Evaluate([1], RandomNumberGenerator.Create(1));
+
+        recorded.ShouldBe([5d, 3d]);
+        scope.Results.Result(analysis).BestBeforeChange.Select(entry => (entry.Candidate, entry.Epoch)).ShouldBe([(5, 0), (3, 1)]);
+    }
+
+    [Fact]
+    public void BestBeforeChangeAnalyzer_RejectsEmptyEvaluators()
+    {
+        Should.Throw<InvalidOperationException>(() =>
+            new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([]))
+            .Message.ShouldBe("An analyzer needs at least one observation source.");
+    }
+
+    [Fact]
     public void BestBeforeChangePerformanceAnalyzer_RecordsTheBestOfEveryCompletedEpoch()
     {
         var problem = new IntegerDynamicProblem(epochLength: 2);
@@ -175,18 +256,66 @@ public class DynamicAnalysisTests
         ]);
         var analysis =
             new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>(
-                problem,
                 [algorithm.Evaluator],
                 predictionEpochMultiplier: 2);
 
-        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis);
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(0), [analysis]);
 
         run.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The epoch in progress when the run ends never changed, so its best is not a best before a change.
-        analysis.BestBeforeChange.Select(entry => (entry.Candidate, entry.ObjectiveValue, entry.Epoch))
+        run.Result(analysis).BestBeforeChange.Select(entry => (entry.Candidate, entry.ObjectiveValue, entry.Epoch))
                 .ShouldBe([(3, 3.0, 0), (1, 1.0, 1)]);
-        analysis.Performance.ShouldBe(2.0);
+        run.Result(analysis).Performance.ShouldBe(2.0);
+    }
+
+    [Fact]
+    public void BestBeforeChangePerformanceAnalyzer_RecordsTheSameThroughItsSubstitutions()
+    {
+        var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([algorithm.Evaluator], predictionEpochMultiplier: 2);
+
+        var run = algorithm.Substitute(analysis.Expand()).CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(0));
+        run.Complete(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.Result(analysis).BestBeforeChange.Select(entry => (entry.Candidate, entry.ObjectiveValue, entry.Epoch)).ShouldBe([(3, 3.0, 0), (1, 1.0, 1)]);
+        run.Result(analysis).Performance.ShouldBe(2.0);
+    }
+
+    [Fact]
+    public async Task ReusingPerformanceDefinitionReadsEachRunsProblemAndCreatesFreshPredictionState()
+    {
+        var algorithm = new BatchEvaluationAlgorithm([[5, 3], [10, 1], [4]]);
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([algorithm.Evaluator]);
+        var configured = algorithm.Substitute(analysis);
+        var first = configured.CreateRun(new IntegerDynamicProblem(epochLength: 2), RandomNumberGenerator.Create(1));
+        var second = configured.CreateRun(new IntegerDynamicProblem(epochLength: 100), RandomNumberGenerator.Create(2));
+
+        await Task.WhenAll(first.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken),
+            second.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken));
+
+        first.Result(analysis).BestBeforeChange.Select(entry => entry.Epoch).ShouldBe([0, 1]);
+        second.Result(analysis).BestBeforeChange.ShouldBeEmpty();
+        second.Result(analysis).Performance.ShouldBe(double.NaN);
+        second.Result(analysis).Prediction.ShouldBe(double.NaN);
+        first.Result(analysis).ShouldNotBeSameAs(second.Result(analysis));
+    }
+
+    [Fact]
+    public void PerformanceAnalysisRejectsAnObservationFromAnUnsupportedProblemBeforeUpdatingItsResult()
+    {
+        IOperator<Evaluation, int> evaluator = new ProblemEvaluator<int>();
+        var analysis = new BestBeforeChangePerformanceAnalyzer<int, IntegerSearchSpace, IntegerDynamicProblem>([evaluator]);
+        var scope = ResolutionScope.Create();
+        var space = new IntegerSearchSpace();
+        var problem = FuncProblem.Create((int candidate) => candidate, space, SingleObjective.Minimize);
+        var executor = scope.Resolve<int, IntegerSearchSpace, IProblem<int, IntegerSearchSpace>>(evaluator.Substitute(analysis), problem);
+
+        var error = Should.Throw<InvalidOperationException>(() => executor.Evaluate([1], RandomNumberGenerator.Create(1)));
+
+        error.Message.ShouldContain(nameof(IntegerDynamicProblem));
+        scope.Results.Result(analysis).BestBeforeChange.ShouldBeEmpty();
+        scope.Results.Result(analysis).Performance.ShouldBe(double.NaN);
     }
 
     /// <summary>
@@ -253,29 +382,40 @@ public class DynamicAnalysisTests
             problem.Evaluate(candidates, random);
     }
 
-    private sealed record BatchEvaluationAlgorithm(IReadOnlyList<IReadOnlyList<int>> Batches)
+    // Runs over every problem over integers, so only a wrapper restricts the problems it supports. It is never run.
+    private sealed record AnyProblemAlgorithm : Algorithm<AnyProblemAlgorithm, int, PopulationState<int>>
+    {
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed record BatchEvaluationAlgorithm(ValueArray<ValueArray<int>> Batches)
         : Algorithm<BatchEvaluationAlgorithm, int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
     {
-        public IEvaluator<int> Evaluator { get; } = new ProblemEvaluator();
+        public IOperator<Evaluation, int> Evaluator { get; init; } = new ProblemEvaluator();
 
-        public override ExecutionFactory<AlgorithmExecution<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<int, IntegerSearchSpace, IntegerDynamicProblem>(Evaluator), Batches);
+        public static Parameter<BatchEvaluationAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+            new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
 
-        private sealed class Execution(
-            IEvaluatorExecution<int, IntegerSearchSpace, IntegerDynamicProblem> evaluator,
-            IReadOnlyList<IReadOnlyList<int>> batches)
-            : AlgorithmExecution<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>>
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
+
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor(
+            ResolutionScope<int, IntegerSearchSpace, IntegerDynamicProblem, PopulationState<int>> scope) =>
+            new Executor(scope.Resolve(Evaluator), Batches);
+
+        private sealed class Executor(
+            IEvaluationExecutor<int> evaluator,
+            ValueArray<ValueArray<int>> batches)
+            : AlgorithmExecutor<PopulationState<int>>
         {
             public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-                IntegerDynamicProblem problem,
-                IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null,
-                [EnumeratorCancellation] CancellationToken ct = default)
+                IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 foreach (var batch in batches)
                 {
                     ct.ThrowIfCancellationRequested();
-                    var objectiveVectors = evaluator.Evaluate(batch, random, problem.SearchSpace, problem);
+                    var objectiveVectors = evaluator.Evaluate(batch, random);
 
                     yield return Population.From(batch.ToEvaluated(objectiveVectors)).ToPopulationState();
                     await Task.CompletedTask;

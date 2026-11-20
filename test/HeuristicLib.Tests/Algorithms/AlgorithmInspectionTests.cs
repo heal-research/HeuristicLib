@@ -15,21 +15,22 @@ public sealed class AlgorithmInspectionTests
     public async Task CountsSuccessfulCompletionAndTimesIterationWorkIncludingFailures(bool fail)
     {
         var time = new ManualTimeProvider();
-        var algorithm = new ProbeAlgorithm(time, fail);
-        var count = new CountAccumulator();
-        var duration = new DurationAccumulator();
+        IAlgorithm<int, PopulationState<int>> algorithm = new ProbeAlgorithm(time, fail);
+        var completions = new Counter();
+        var duration = new Duration();
         var observed = new List<IAlgorithm<int, PopulationState<int>>>();
-        var scope = ResolutionScope.Create(Aspect.CountCalls(algorithm, count),
-            Aspect.MeasureDuration(algorithm, duration, time),
-            Aspect.Observe(algorithm, observation => observed.Add(observation.Algorithm)));
+        var scope = ResolutionScope.Create(time);
+        var analyzed = new CountingCompletions(algorithm.Substitute(algorithm.Iterations.Observing(observation => observed.Add(observation.Algorithm))), completions);
         var problem = FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var execution = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>().Resolve(algorithm);
-        await using var iterator = execution.RunStreamingAsync(problem, RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
+        var executor = scope.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(problem).Resolve(analyzed.Timed(duration));
+        var count = scope.Results.Result(completions);
+        var measured = scope.Results.Result(duration);
+        await using var iterator = executor.RunStreamingAsync(RandomNumberGenerator.Create(1), ct: TestContext.Current.CancellationToken)
             .GetAsyncEnumerator(TestContext.Current.CancellationToken);
 
         (await iterator.MoveNextAsync()).ShouldBeTrue();
         count.CurrentCount.ShouldBe(0);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(2));
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(2));
         time.Advance(20);
         if (fail)
             await Should.ThrowAsync<InvalidOperationException>(async () => await iterator.MoveNextAsync());
@@ -41,23 +42,32 @@ public sealed class AlgorithmInspectionTests
         }
 
         count.CurrentCount.ShouldBe(fail ? 0 : 1);
-        duration.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(5));
+        measured.CurrentDuration.ShouldBe(TimeSpan.FromSeconds(5));
         observed.Count.ShouldBe(fail ? 1 : 2);
         observed.ShouldAllBe(source => ReferenceEquals(source, algorithm));
     }
 
+    [Fact]
+    public void TimingTheIterations_PlacesTheTimedWrapper()
+    {
+        IAlgorithm<int, PopulationState<int>> algorithm = new ProbeAlgorithm(new ManualTimeProvider(), Fail: false);
+        var time = new Duration();
+
+        algorithm.Timing(algorithm.Iterations, out var timed).ShouldBe(algorithm.Timed(timed));
+        IAlgorithm<int, PopulationState<int>> receiver = algorithm;
+        receiver.Substitute(algorithm.Iterations.Timing(time)).ShouldBe(algorithm.Timed(time));
+    }
+
     private sealed record ProbeAlgorithm(ManualTimeProvider Time, bool Fail) : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
     {
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-            _ => new Execution<TRunSearchSpace, TRunProblem>(Time, Fail);
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            new Executor(Time, Fail);
 
-        private sealed class Execution<TSearchSpace, TProblem>(ManualTimeProvider time, bool fail)
-            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor(ManualTimeProvider time, bool fail)
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random,
-                PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 time.Advance(2);
                 yield return Population.From([1.ToEvaluated(1)]).ToPopulationState();
@@ -66,6 +76,31 @@ public sealed class AlgorithmInspectionTests
                 if (fail)
                     throw new InvalidOperationException("Iteration failed.");
                 yield return Population.From([2.ToEvaluated(2)]).ToPopulationState();
+            }
+        }
+    }
+
+    // Counts the calls that finish enumerating their states.
+    private sealed record CountingCompletions(IAlgorithm<int, PopulationState<int>> Child, Counter Completions)
+        : WrappingAlgorithm<int, PopulationState<int>>(Child)
+    {
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
+        {
+            var completions = scope.Resolve(Completions);
+            var child = scope.Resolve(ChildAlgorithm);
+            return new Executor(child, completions);
+        }
+
+        private sealed class Executor(
+            IAlgorithmExecutor<PopulationState<int>> child, CountAccumulator completions)
+            : WrappingAlgorithmExecutor<PopulationState<int>>(child)
+        {
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+            {
+                await foreach (var state in ChildAlgorithm.RunStreamingAsync(random, initialState, ct))
+                    yield return state;
+                completions.IncrementBy(1);
             }
         }
     }

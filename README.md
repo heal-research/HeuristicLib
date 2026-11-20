@@ -28,8 +28,8 @@ The library is developed by the [Heuristic and Evolutionary Algorithms Laborator
 
 ## Why HeuristicLib
 
-- Configure algorithms with C# object initializers and records. There is no operator graph or separate configuration language.
-- Keep candidate, search space, problem and operator types connected through the whole algorithm. The compiler catches incompatible combinations.
+- Configure algorithms with C# object initializers and records.
+- Keep candidate types connected through the whole algorithm. Run validation checks search space, problem and operator compatibility.
 - Stream search states or attach analyzers for quality, diversity, genealogy and evaluation counts.
 - Reproduce a run from its root seed. Forked random streams keep parallel work independent of scheduling.
 - Repeat configurations, build typed parameter grids and process independent trials concurrently.
@@ -51,6 +51,7 @@ This example loads the named `berlin52` benchmark from a standard TSPLIB file, s
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 
@@ -66,13 +67,12 @@ var algorithm = GeneticAlgorithm.For(
     maximumGenerations: 500,
     mutationRate: 0.05);
 
-var run = algorithm
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TracePopulationCandidates(out var qualityAnalyzer);
+var quality = algorithm.Iterations.TracePopulationCandidates();
+var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality]);
 
 await run.CompleteAsync();
 
-var qualityCurve = qualityAnalyzer.Snapshot().Values;
+var qualityCurve = run.Result(quality).Snapshot().Values;
 var best = qualityCurve[^1].Best;
 
 Console.WriteLine($"Instance: {instance.Name}");
@@ -88,9 +88,9 @@ foreach (var (entry, generation) in qualityCurve.Select((entry, i) => (entry, i 
 }
 ```
 
-`GeneticAlgorithm.For(problem, ...)` asks the problem and its encoding for suggested operators. Here the traveling salesperson problem supplies order crossover, while the permutation encoding supplies random creation and inversion mutation. Algorithm settings come from `GeneticAlgorithmDefaults` unless the call overrides them. Defaults are starting points rather than tuned choices. Configure an operator explicitly when an experiment depends on that choice.
+`GeneticAlgorithm.For(problem, ...)` asks the problem and its search space for suggested operators. Here the traveling salesperson problem supplies order crossover, while the permutation search space supplies random creation and inversion mutation. Algorithm settings come from `GeneticAlgorithmDefaults` unless the call overrides them. Defaults are starting points rather than tuned choices. Configure an operator explicitly when an experiment depends on that choice.
 
-The algorithm configuration stays reusable. Change the TSPLIB file to run another named instance. Use a `with` expression to change the crossover or mutation operator and test another search policy. Keep the problem, seed schedule and analyzer unchanged when comparing configurations.
+The algorithm configuration stays reusable. Change the TSPLIB file to run another named instance. Use a `with` expression to change the crossover or mutation operator and test another search policy. Keep the problem, seed schedule and analysis settings unchanged when comparing configurations; create the trace from each modified algorithm's iterations.
 
 See [problems](https://heuristiclib.github.io/guide/fundamentals/problems.html), [operators](https://heuristiclib.github.io/guide/fundamentals/operators.html), [observability and analysis](https://heuristiclib.github.io/guide/execution/observability-and-analysis.html) and [experiments](https://heuristiclib.github.io/guide/execution/experiments.html) for the underlying APIs.
 
@@ -131,7 +131,7 @@ var problem = new SymbolicRegressionProblem(
 var algorithm = GeneticAlgorithm.Create(
     new RampedHalfAndHalfTreeCreator(),
     new SubtreeCrossover(),
-    ChooseOneMutator.Create(
+    ChoosePerItem.Create(
         new NodeReplacementMutator(),
         new LocalPerturbationMutator(),
         new SubtreeMutator()),
@@ -144,7 +144,7 @@ var algorithm = GeneticAlgorithm.Create(
     maximumGenerations: 50,
     mutationRate: 0.25);
 
-var finalState = await algorithm.CompleteAsync(
+var finalState = await algorithm.RunToCompletionAsync(
     problem,
     RandomNumberGenerator.Create(seed: 42));
 
@@ -199,7 +199,7 @@ dotnet add package HEAL.HeuristicLib.Experimental --prerelease
 
 ## Build the repository
 
-Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then run:
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later, then run:
 
 ```console
 dotnet restore

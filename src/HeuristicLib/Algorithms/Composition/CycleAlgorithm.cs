@@ -6,14 +6,25 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
-    : Algorithm<CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>, TCandidate, TSearchState>
+/// <remarks>
+/// Every turn resolves its algorithm in a new child scope, so private executor data such as terminator counts restarts
+/// each turn. Share a configuration through <c>Sharing</c> on the Cycle to keep one executor for it across turns.
+/// </remarks>
+public record CycleAlgorithm<TCandidate, TSearchState>
+    : Algorithm<CycleAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
 {
-    public ValueArray<TAlgorithm> Algorithms { get; }
+    public ValueArray<IAlgorithm<TCandidate, TSearchState>> Algorithms { get; init; }
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits([.. Algorithms]);
+    public static ListParameter<CycleAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmsParameter { get; } =
+        new(nameof(Algorithms), static cycle => cycle.Algorithms, static (cycle, value) => cycle with { Algorithms = value.ToValueArray() });
+
+    public static Parameter<CycleAlgorithm<TCandidate, TSearchState>, int?> MaximumCyclesParameter { get; } =
+        new(nameof(MaximumCycles), static cycle => cycle.MaximumCycles, static (cycle, value) => cycle with { MaximumCycles = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmsParameter, MaximumCyclesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     /// <summary>
     /// Gets the cycle limit, or <see langword="null"/> for unlimited cycling. The expected value is positive.
@@ -21,10 +32,7 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
     /// <remarks>A nonpositive limit runs no cycles.</remarks>
     public int? MaximumCycles { get; init; }
 
-    /// <summary>Chooses fresh, retained child-local or shared state for inner algorithm activations.</summary>
-    public ChildScopePolicy ScopePolicy { get; init; } = ChildScopePolicy.Fresh;
-
-    public CycleAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
+    public CycleAlgorithm(IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
     {
         if (algorithms.Count == 0)
             throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
@@ -32,107 +40,86 @@ public record CycleAlgorithm<TAlgorithm, TCandidate, TSearchState>
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var scopeSelector = new ChildScopeSelector(ScopePolicy);
-        return scope => new CycleAlgorithmExecution<TAlgorithm, TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(
-            scope, Algorithms, MaximumCycles, scopeSelector);
+        if (Algorithms.Count == 0)
+            throw new InvalidOperationException("A cycle needs at least one algorithm.");
+        return new Executor<TSearchSpace, TProblem>(scope, Algorithms, MaximumCycles, scope.Problem);
+    }
+
+    private sealed class Executor<TSearchSpace, TProblem>
+        : AlgorithmExecutor<TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        private readonly ResolutionScope scope;
+        private readonly TProblem problem;
+        private ImmutableArray<IAlgorithm<TCandidate, TSearchState>> Algorithms { get; }
+        private int? MaximumCycles { get; }
+
+        public Executor(ResolutionScope scope, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms, int? maximumCycles, TProblem problem)
+        {
+            this.scope = scope;
+            this.problem = problem;
+            Algorithms = algorithms.ToImmutableArray();
+            MaximumCycles = maximumCycles;
+        }
+
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var state = initialState;
+
+            var cycleCountGenerator = MaximumCycles.HasValue
+                ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
+                : Enumerable.InfiniteSequence(0, 1);
+
+            foreach (var cycleCount in cycleCountGenerator)
+            {
+                ct.ThrowIfCancellationRequested();
+                var producedState = false;
+                var cycleRng = random.Fork(cycleCount);
+                foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i)))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var algorithmRng = cycleRng.Fork(algorithmIndex);
+                    var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem);
+
+                    await foreach (var newState in algorithmExecutor.RunStreamingAsync(algorithmRng, state, ct))
+                    {
+                        producedState = true;
+                        state = newState;
+                        yield return newState;
+                    }
+                }
+
+                if (!producedState)
+                {
+                    await Task.Yield();
+                }
+            }
+        }
     }
 }
 
 public static class CycleAlgorithm
 {
-    public static CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> Create<TAlgorithm, TCandidate, TSearchState>(
-        Algorithm<TAlgorithm, TCandidate, TSearchState> firstAlgorithm, params IReadOnlyList<TAlgorithm> followingAlgorithms)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
-        where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
-
-    public static CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> Create<TCandidate, TSearchState>(
+    public static CycleAlgorithm<TCandidate, TSearchState> Create<TCandidate, TSearchState>(
         params IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
         where TSearchState : class, ISearchState => new([.. algorithms]);
 }
 
 public static class CycleAlgorithmExtensions
 {
-    extension<TAlgorithm, TCandidate, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchState> algorithm)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchState>
-        where TSearchState : class, ISearchState
-    {
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(TAlgorithm followingAlgorithm, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm.Self, followingAlgorithm]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
-
-        public CycleAlgorithm<TAlgorithm, TCandidate, TSearchState> CycleWith(IReadOnlyList<TAlgorithm> followingAlgorithms, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm.Self, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
-    }
-
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
-            IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
+        public CycleAlgorithm<TCandidate, TSearchState> CycleWith(
+            IAlgorithm<TCandidate, TSearchState> followingAlgorithm, int? maximumCycles = null) =>
+            new([algorithm, followingAlgorithm]) { MaximumCycles = maximumCycles };
 
-        public CycleAlgorithm<IAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState> CycleWith(
-            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null, ChildScopePolicy scopePolicy = ChildScopePolicy.Fresh) =>
-            new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles, ScopePolicy = scopePolicy };
+        public CycleAlgorithm<TCandidate, TSearchState> CycleWith(
+            IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms, int? maximumCycles = null) =>
+            new([algorithm, .. followingAlgorithms]) { MaximumCycles = maximumCycles };
     }
-}
-
-public class CycleAlgorithmExecution<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchState>
-{
-    private readonly ResolutionScope scope;
-    protected readonly ImmutableArray<TAlgorithm> Algorithms;
-    protected readonly int? MaximumCycles;
-    private readonly ChildScopeSelector scopeSelector;
-
-    public CycleAlgorithmExecution(ResolutionScope scope, IReadOnlyList<TAlgorithm> algorithms, int? maximumCycles,
-        ChildScopeSelector scopeSelector)
-    {
-        this.scope = scope;
-        Algorithms = algorithms.ToImmutableArray();
-        MaximumCycles = maximumCycles;
-        this.scopeSelector = scopeSelector;
-    }
-
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        var state = initialState;
-
-        var cycleCountGenerator = MaximumCycles.HasValue
-            ? Enumerable.Range(0, Math.Max(0, MaximumCycles.Value))
-            : Enumerable.InfiniteSequence(0, 1);
-
-        foreach (var cycleCount in cycleCountGenerator)
-        {
-            ct.ThrowIfCancellationRequested();
-            var producedState = false;
-            var cycleRng = random.Fork(cycleCount);
-            foreach (var (algorithm, algorithmIndex) in Algorithms.Select((a, i) => (a, i)))
-            {
-                ct.ThrowIfCancellationRequested();
-                var algorithmRng = cycleRng.Fork(algorithmIndex);
-                var algorithmExecution = ResolveAlgorithmExecution(algorithm);
-
-                await foreach (var newState in algorithmExecution.RunStreamingAsync(problem, algorithmRng, state, ct))
-                {
-                    producedState = true;
-                    state = newState;
-                    yield return newState;
-                }
-            }
-
-            if (!producedState)
-            {
-                await Task.Yield();
-            }
-        }
-    }
-
-    private IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ResolveAlgorithmExecution(TAlgorithm algorithm) =>
-        scopeSelector.GetScopeFor(algorithm, scope).Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm);
 }

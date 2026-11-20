@@ -8,23 +8,27 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Experiments;
 
-public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>
+public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
     private readonly Lock sync = new();
-    private readonly Dictionary<AspectFactory<TAlgorithm>, ImmutableArray<Aspect>> trialAspects = new(ReferenceEqualityComparer.Instance);
-    private RunLifecycleState lifecycleState = RunLifecycleState.Preparing;
+    private RunLifecycleState lifecycleState = RunLifecycleState.Ready;
 
-    public IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> Experiment { get; }
+    // Completes once the lifecycle has left Running after StartTrials, so CompleteAsync can join the transition.
+    internal Task ExecutionCompletion { get; private set; } = Task.CompletedTask;
 
-    public TProblem Problem { get; }
+    /// <summary>The experiment defining this run's parameter candidates, repetitions and stream setting.</summary>
+    public Experiment<TCandidate, TAlgorithm, TSearchState> Experiment { get; }
+
+    /// <summary>The problems in the order used to assign trial positions.</summary>
+    public ImmutableArray<TProblem> Problems { get; }
 
     public IRandomNumberGenerator Random { get; }
 
-    public ImmutableArray<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>> Trials { get; }
+    public ImmutableArray<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>> Trials { get; }
 
     public RunLifecycleState LifecycleState
     {
@@ -35,86 +39,107 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
     }
 
-    public ExperimentRun(IExperiment<TCandidate, TAlgorithm, TSearchState, TKey> experiment, TProblem problem, IRandomNumberGenerator random)
+    /// <summary>Creates a run with the supplied configurations, skipping configuration validation.</summary>
+    public ExperimentRun(Experiment<TCandidate, TAlgorithm, TSearchState> experiment, TProblem problem, IRandomNumberGenerator random)
+        : this(experiment, [problem], random, null, false) { }
+
+    internal ExperimentRun(Experiment<TCandidate, TAlgorithm, TSearchState> experiment, ImmutableArray<TProblem> problems, IRandomNumberGenerator random,
+        IReadOnlyList<ISubstitution>? substitutions, bool validate)
     {
         Experiment = experiment;
-        Problem = problem;
+        Problems = problems;
         Random = random;
 
-        var cases = experiment.MaterializeCases();
-        if (cases.Length == 0)
-            throw new InvalidOperationException("An experiment must contain at least one trial.");
+        if (problems.IsEmpty)
+            throw new ArgumentException("Supply at least one problem.", nameof(problems));
 
-        var keys = new HashSet<TKey>();
-        var trials = new List<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>>(cases.Length);
-        for (var index = 0; index < cases.Length; index++)
+        var parameterCandidateCount = experiment.ParameterCandidateCount;
+        var trials = ImmutableArray.CreateBuilder<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>>(
+            checked(problems.Length * parameterCandidateCount * experiment.Repetitions));
+        var parameterCandidates = experiment.DecodeAll(parameterCandidateCount);
+
+        var algorithmsWithSubstitutions = new IAlgorithm<TCandidate, TSearchState>[parameterCandidateCount];
+        for (var parameterCandidateIndex = 0; parameterCandidateIndex < parameterCandidateCount; parameterCandidateIndex++)
         {
-            var experimentCase = cases[index];
-            if (!keys.Add(experimentCase.Key))
-                throw new InvalidOperationException($"Experiment trial key {experimentCase.Key} is not unique.");
-
-            var trialRandom = experimentCase.RandomForkPath.Aggregate(random, static (current, forkKey) => current.Fork(forkKey));
-            var algorithmRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState>(experimentCase.Algorithm, problem, trialRandom);
-            trials.Add(new ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>(index, experimentCase.Key, experimentCase.Algorithm, algorithmRun, experimentCase.RandomForkPath));
+            try
+            {
+                algorithmsWithSubstitutions[parameterCandidateIndex] = AlgorithmExtensions.ApplySubstitutions(parameterCandidates[parameterCandidateIndex].Algorithm, substitutions);
+            }
+            catch (Exception exception)
+            {
+                throw new ExperimentTrialException(0, parameterCandidateIndex, 0, exception);
+            }
         }
 
-        Trials = trials.ToImmutableArray();
+        for (var problemPosition = 0; problemPosition < problems.Length; problemPosition++)
+        {
+            var problem = problems[problemPosition];
+            var problemRandom = random.Fork(problemPosition);
+            for (var parameterCandidateIndex = 0; parameterCandidateIndex < parameterCandidateCount; parameterCandidateIndex++)
+            {
+                var (algorithm, settings) = parameterCandidates[parameterCandidateIndex];
+                if (validate)
+                {
+                    try
+                    {
+                        AlgorithmExtensions.ValidateConfiguration<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithmsWithSubstitutions[parameterCandidateIndex], problem);
+                    }
+                    catch (Exception exception)
+                    {
+                        throw new ExperimentTrialException(problemPosition, parameterCandidateIndex, 0, exception);
+                    }
+                }
 
+                var parameterCandidateRandom = experiment.ShareRandomStreamsAcrossParameterCandidates
+                    ? problemRandom
+                    : problemRandom.Fork(parameterCandidateIndex);
+                for (var repetition = 0; repetition < experiment.Repetitions; repetition++)
+                {
+                    var trialRandom = parameterCandidateRandom.Fork(repetition);
+                    AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> run;
+                    try
+                    {
+                        run = AlgorithmExtensions.CreateRunAndCheckRequiredNodes<TCandidate, TSearchSpace, TProblem, TSearchState>(
+                            algorithmsWithSubstitutions[parameterCandidateIndex], problem, trialRandom, substitutions);
+                    }
+                    catch (Exception exception)
+                    {
+                        throw new ExperimentTrialException(problemPosition, parameterCandidateIndex, repetition, exception);
+                    }
+
+                    trials.Add(new(problemPosition, parameterCandidateIndex, repetition, algorithm, settings, run));
+                }
+            }
+        }
+
+        Trials = trials.MoveToImmutable();
     }
 
-    /// <summary>Creates one aspect from this factory for every experiment trial and adds it to the trial's run.</summary>
-    public ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> AddAspectPerTrial<TAspect>(
-        AspectFactory<TAlgorithm, TAspect> aspectFactory)
-        where TAspect : Aspect
-    {
-        EnsureNotStarted();
-        if (trialAspects.ContainsKey(aspectFactory))
-            throw new InvalidOperationException("The same trial aspect cannot be added more than once.");
-
-        ImmutableArray<Aspect> aspects = [.. Trials.Select(trial => aspectFactory.Create(trial.Algorithm))];
-        for (var index = 0; index < Trials.Length; index++)
-            Trials[index].Run.AddAspect(aspects[index]);
-
-        trialAspects.Add(aspectFactory, aspects);
-        return this;
-    }
-
-    /// <summary>
-    /// Gets each trial together with the aspect this factory created for it, in trial order.
-    /// </summary>
-    public ImmutableArray<TrialAspect<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TAspect>> GetAspectPerTrial<TAspect>(AspectFactory<TAlgorithm, TAspect> aspectFactory)
-        where TAspect : Aspect
-    {
-        var aspects = trialAspects[aspectFactory];
-
-        return [.. Trials.Select((trial, index) => TrialAspect.From(trial, (TAspect)aspects[index]))];
-    }
-
-    public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
+    public ExecutionStream<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TSearchState>> Stream(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
         var execution = PrepareCombinedExecution(initialState, cancellationToken);
         return new(StreamScheduledExecution(execution, concurrency ?? ExecutionConcurrency.Sequential(), cancellationToken), cancellationToken);
     }
 
-    public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)>> StartTrials(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
+    public ImmutableArray<Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> Trial, TSearchState State)>> StartTrials(ExecutionConcurrency? concurrency = null, TSearchState? initialState = null, CancellationToken cancellationToken = default)
     {
         var execution = PrepareCombinedExecution(initialState, cancellationToken);
         var scheduledExecution = ScheduleTrials(execution, concurrency ?? ExecutionConcurrency.Sequential(), null, cancellationToken);
-        _ = TrackCompletion(scheduledExecution.TrialCompletions, scheduledExecution.WorkersCompletion, cancellationToken);
+        ExecutionCompletion = TrackCompletion(scheduledExecution.TrialCompletions, scheduledExecution.WorkersCompletion, cancellationToken);
         return scheduledExecution.TrialCompletions.Select((completion, index) => RequireFinalState(Trials[index], completion)).ToImmutableArray();
     }
 
-    private async IAsyncEnumerable<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>> StreamScheduledExecution(PreparedCombinedExecution execution, ExecutionConcurrency concurrency, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TSearchState>> StreamScheduledExecution(PreparedCombinedExecution execution, ExecutionConcurrency concurrency, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         using var stopSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var channel = Channel.CreateUnbounded<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = concurrency.MaximumConcurrency == 1 });
+        var channel = Channel.CreateUnbounded<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TSearchState>>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = concurrency.MaximumConcurrency == 1 });
         var scheduledExecution = ScheduleTrials(execution, concurrency, channel.Writer, stopSource.Token);
         try
         {
             await using var enumerator = channel.Reader.ReadAllAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
             while (true)
             {
-                ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState> entry;
+                ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TSearchState> entry;
                 try
                 {
                     if (!await enumerator.MoveNextAsync())
@@ -161,7 +186,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
     }
 
-    private ScheduledExecution ScheduleTrials(PreparedCombinedExecution execution, ExecutionConcurrency concurrency, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
+    private ScheduledExecution ScheduleTrials(PreparedCombinedExecution execution, ExecutionConcurrency concurrency, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
     {
         var completionSources = Enumerable.Range(0, Trials.Length)
             .Select(_ => new TaskCompletionSource<TrialExecutionResult>(TaskCreationOptions.RunContinuationsAsynchronously))
@@ -207,7 +232,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
     }
 
-    private async Task<TrialExecutionResult> ExecuteTrial(PreparedTrialStream preparedTrial, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
+    private async Task<TrialExecutionResult> ExecuteTrial(PreparedTrialStream preparedTrial, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
     {
         var trial = Trials[preparedTrial.TrialIndex];
         TSearchState? finalState = null;
@@ -230,22 +255,22 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
         catch (Exception exception)
         {
-            throw new ExperimentTrialException<TKey>(trial.Key, exception);
+            throw new ExperimentTrialException(trial.ProblemPosition, trial.ParameterCandidateIndex, trial.Repetition, exception);
         }
 
         return new TrialExecutionResult(producedState, finalState);
     }
 
-    private static async Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> Trial, TSearchState State)> RequireFinalState(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey> trial, Task<TrialExecutionResult> completion)
+    private static async Task<(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> Trial, TSearchState State)> RequireFinalState(ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm> trial, Task<TrialExecutionResult> completion)
     {
         var result = await completion;
         if (!result.ProducedState)
-            throw new ExperimentTrialException<TKey>(trial.Key, new InvalidOperationException("The algorithm did not yield a search state."));
+            throw new ExperimentTrialException(trial.ProblemPosition, trial.ParameterCandidateIndex, trial.Repetition, new InvalidOperationException("The algorithm did not yield a search state."));
 
         return (trial, result.FinalState!);
     }
 
-    private async Task FinishWorkers(Task[] workers, ImmutableArray<TaskCompletionSource<TrialExecutionResult>> completionSources, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
+    private async Task FinishWorkers(Task[] workers, ImmutableArray<TaskCompletionSource<TrialExecutionResult>> completionSources, ChannelWriter<ExperimentStreamEntry<ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>, TSearchState>>? progressWriter, CancellationToken cancellationToken)
     {
         Exception? workerFailure = null;
         try
@@ -295,25 +320,19 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     {
         lock (sync)
         {
-            EnsurePreparing();
-            if (Trials.Any(trial => trial.Run.LifecycleState != RunLifecycleState.Preparing))
+            EnsureReady();
+            if (Trials.Any(trial => trial.Run.LifecycleState != RunLifecycleState.Ready))
                 throw new InvalidOperationException("An experiment run cannot start after one of its trials has been started directly.");
             lifecycleState = RunLifecycleState.Running;
         }
     }
 
-    private void EnsurePreparing()
+    private void EnsureReady()
     {
-        if (lifecycleState != RunLifecycleState.Preparing)
+        if (lifecycleState != RunLifecycleState.Ready)
         {
-            throw new InvalidOperationException($"An experiment run only accepts aspects and can only start while it is {RunLifecycleState.Preparing}; its current lifecycle state is {lifecycleState}.");
+            throw new InvalidOperationException($"An experiment run can only start while it is {RunLifecycleState.Ready}. Its current lifecycle state is {lifecycleState}.");
         }
-    }
-
-    private void EnsureNotStarted()
-    {
-        lock (sync)
-            EnsurePreparing();
     }
 
     private void TransitionFromRunning(RunLifecycleState next)
@@ -360,7 +379,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
                 }
                 catch (Exception exception)
                 {
-                    preparedTrials.Add(new FailedPreparedTrial(trialIndex, new ExperimentTrialException<TKey>(trial.Key, exception)));
+                    preparedTrials.Add(new FailedPreparedTrial(trialIndex, new ExperimentTrialException(trial.ProblemPosition, trial.ParameterCandidateIndex, trial.Repetition, exception)));
                 }
             }
 
@@ -386,29 +405,46 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
     private sealed record TrialExecutionResult(bool ProducedState, TSearchState? FinalState);
 }
 
-public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm, TKey>
+public sealed class ExperimentTrial<TCandidate, TSearchSpace, TProblem, TSearchState, TAlgorithm>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
     where TAlgorithm : class, IAlgorithm<TCandidate, TSearchState>
 {
-    internal int Index { get; }
+    /// <summary>The problem this trial runs on.</summary>
+    public TProblem Problem => Run.Problem;
 
-    public TKey Key { get; }
+    /// <summary>The zero-based position of the problem in the run.</summary>
+    public int ProblemPosition { get; }
 
+    /// <summary>The zero-based index of the parameter candidate across the experiment's grids.</summary>
+    public int ParameterCandidateIndex { get; }
+
+    /// <summary>The zero-based repetition index for this parameter candidate and problem.</summary>
+    public int Repetition { get; }
+
+    /// <summary>The parameter candidate before run-time substitutions are applied.</summary>
     public TAlgorithm Algorithm { get; }
 
+    /// <summary>The varied descriptors in first declaration order, with values read after variation and before substitutions are applied.</summary>
+    /// <remarks>
+    /// A list parameter reports the configuration's stored <see cref="IReadOnlyList{T}"/>. Read it through the parameter's
+    /// typed <see cref="IParameter{TOwner, TValue}"/> form to get a <see cref="ValueArray{T}"/>.
+    /// </remarks>
+    public ImmutableArray<(IParameter Parameter, object? Value)> Settings { get; }
+
+    /// <summary>The independent algorithm run that executes this trial and owns its results.</summary>
     public AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> Run { get; }
 
-    public ImmutableArray<int> RandomForkPath { get; }
-
-    internal ExperimentTrial(int index, TKey key, TAlgorithm algorithm, AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> run, ImmutableArray<int> randomForkPath)
+    internal ExperimentTrial(int problemPosition, int parameterCandidateIndex, int repetition, TAlgorithm algorithm, ImmutableArray<(IParameter Parameter, object? Value)> settings,
+        AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchState> run)
     {
-        Index = index;
-        Key = key;
+        ProblemPosition = problemPosition;
+        ParameterCandidateIndex = parameterCandidateIndex;
+        Repetition = repetition;
         Algorithm = algorithm;
+        Settings = settings;
         Run = run;
-        RandomForkPath = randomForkPath;
     }
 }
 
@@ -419,12 +455,24 @@ public static class ExperimentStreamEntry
     public static ExperimentStreamEntry<TTrial, TSearchState> From<TTrial, TSearchState>(TTrial trial, TSearchState state) => new(trial, state);
 }
 
-public sealed class ExperimentTrialException<TKey> : Exception
+/// <summary>Reports a trial setup or execution failure with the affected trial positions.</summary>
+public sealed class ExperimentTrialException : Exception
 {
-    public TKey Key { get; }
+    /// <summary>The problem position. Failure to apply substitutions reports the first problem because all problems share the result of applying them.</summary>
+    public int ProblemPosition { get; }
 
-    public ExperimentTrialException(TKey key, Exception innerException) : base($"Experiment trial {key} failed.", innerException)
+    /// <summary>The global parameter candidate index across the experiment's grids.</summary>
+    public int ParameterCandidateIndex { get; }
+
+    /// <summary>The repetition position. A substitution or configuration validation failure reports the first repetition it affects.</summary>
+    public int Repetition { get; }
+
+    /// <summary>Creates a trial failure with its zero-based positions and underlying exception.</summary>
+    public ExperimentTrialException(int problemPosition, int parameterCandidateIndex, int repetition, Exception innerException)
+        : base($"Experiment trial for problem {problemPosition}, parameter candidate {parameterCandidateIndex}, repetition {repetition} failed.", innerException)
     {
-        Key = key;
+        ProblemPosition = problemPosition;
+        ParameterCandidateIndex = parameterCandidateIndex;
+        Repetition = repetition;
     }
 }

@@ -13,7 +13,7 @@ public class PipelineAlgorithmTests
         var first = new AdditiveStepAlgorithm(1);
         var second = new AdditiveStepAlgorithm(2);
         var algorithms = new List<AdditiveStepAlgorithm> { first, second };
-        var pipeline = new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>(algorithms);
+        var pipeline = new PipelineAlgorithm<int, PopulationState<int>>(algorithms);
 
         algorithms.Clear();
 
@@ -24,7 +24,7 @@ public class PipelineAlgorithmTests
     public void PipelineAlgorithm_RequiresAtLeastOneAlgorithm()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new PipelineAlgorithm<AdditiveStepAlgorithm, int, PopulationState<int>>([]));
+            new PipelineAlgorithm<int, PopulationState<int>>([]));
 
         exception.ParamName.ShouldBe("algorithms");
     }
@@ -39,19 +39,19 @@ public class PipelineAlgorithmTests
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => pipeline.Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+        Should.Throw<OperationCanceledException>(() => pipeline.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
 
         algorithm.ExecutionCount.ShouldBe(0);
     }
 
     [Fact]
-    public void PipelineAlgorithm_Stream_PassesEachStageResultToNextStage()
+    public void PipelineAlgorithm_RunStreaming_PassesEachStageResultToNextStage()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var pipeline = new AdditiveStepAlgorithm(1).Then(new AdditiveStepAlgorithm(10), new AdditiveStepAlgorithm(100));
 
         var states = pipeline
-                     .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+                     .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
                      .ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 111]);
@@ -65,7 +65,7 @@ public class PipelineAlgorithmTests
         var evaluator = new ForwardingEvaluator();
         var pipeline = new AdditiveStepAlgorithm(1) { Evaluator = evaluator }.Then(new AdditiveStepAlgorithm(10) { Evaluator = evaluator }, new AdditiveStepAlgorithm(100) { Evaluator = evaluator });
         var analysis = new EvaluationCountAnalysis(evaluator);
-        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0)).AddAspect(analysis);
+        var run = pipeline.CreateRun(problem, RandomNumberGenerator.Create(0), [analysis]);
 
         var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken).ToList();
 
@@ -74,21 +74,21 @@ public class PipelineAlgorithmTests
     }
 
     [Fact]
-    public void PipelineAlgorithm_CreatesEachStageExecutionWhileReusingResolvedParentDependencies()
+    public void PipelineAlgorithm_CreatesEachStageWithPrivateDependencies()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
         var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var pipeline = algorithm.Then(algorithm);
         var scope = ResolutionScope.Create();
-        _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator);
-        var pipelineExecution = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline);
+        _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, problem);
+        var pipelineExecutor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(pipeline, problem);
 
-        var states = pipelineExecution.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = pipelineExecutor.RunStreaming(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
         algorithm.ExecutionCount.ShouldBe(2);
-        evaluator.ExecutionCount.ShouldBe(1);
+        evaluator.ExecutionCount.ShouldBe(3);
     }
 
     private sealed record ForwardingEvaluator
@@ -101,17 +101,22 @@ public class PipelineAlgorithmTests
         }
     }
 
+    // An analyzer of its own, built on Observing.
     private sealed class EvaluationCountAnalysis
-        : Aspect
+        : ISubstitution
     {
+        private readonly ISubstitution observing;
+
         public Result AnalysisResult { get; } = new();
 
-        public EvaluationCountAnalysis(IEvaluator<int> evaluator)
+        public EvaluationCountAnalysis(IOperator<Evaluation, int> evaluator)
         {
-            Advices = Aspect.Observe<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, Record).Advices;
+            observing = evaluator.Invocations.Observing(Record);
         }
 
-        public void Record(EvaluatorObservation<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> observation) =>
+        public IReadOnlyList<Substitution> Expand() => observing.Expand();
+
+        public void Record(EvaluationObservation<int> observation) =>
             AnalysisResult.Count += observation.Candidates.Count;
 
         public sealed class Result

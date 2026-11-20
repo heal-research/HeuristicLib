@@ -69,16 +69,16 @@ public class ImprovementCheckingCompositionTests
             Refiner = new UpperBoundRefiner().CheckedForImprovement()
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldAllBe(candidate => candidate.Candidate != worsened);
     }
 
     private static IReadOnlyList<int> Refine(
-        IRefiner<int> refiner,
+        IOperator<Refinement, int> refiner,
         FuncProblem<int, DummySearchSpace<int>> problem,
         params int[] candidates) =>
-        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner).Refine(candidates, RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(refiner, problem).Refine(candidates, RandomNumberGenerator.Create(42));
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>
         FuncProblem.Create(static (int candidate) => candidate, DummySearchSpace<int>.Instance, SingleObjective.Minimize);

@@ -8,12 +8,12 @@ namespace HEAL.HeuristicLib.Execution;
 /// </summary>
 /// <remarks>
 /// Built where an execution graph is created — by a run, or by validation asking what a run would do — and passed down
-/// unchanged. A configuration reads the parts it is written about and ignores the rest, so an ordinary operator never
-/// builds one.
+/// through the configuration and parameter mappings for declared children. A configuration reads the parts it is written
+/// about and ignores the rest.
 /// <para>
-/// A meta algorithm or an adapting operator that starts an <em>inner</em> execution over different types does build
-/// one, for that inner execution, and passes it down in turn. Every signature belongs to exactly one execution, which
-/// is why such a configuration must not forward the outer one to children that belong to the inner.
+/// A meta algorithm or an adapting operator that starts an <em>inner</em> execution over different types states that
+/// execution on the slot of its child, through <see cref="Parameter{TOwner, TValue}.ChildExecution"/>. Every signature
+/// belongs to exactly one execution, so the outer one never reaches children that belong to the inner.
 /// </para>
 /// </remarks>
 public readonly record struct ExecutionSignature(Type SearchSpace, Type Problem, Type SearchState)
@@ -22,24 +22,30 @@ public readonly record struct ExecutionSignature(Type SearchSpace, Type Problem,
         new(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState));
 
     /// <summary>
-    /// Whether every one of <paramref name="configurations"/> fits this execution. An unset optional slot resolves to
-    /// nothing, so a <see langword="null"/> entry is skipped rather than failing.
+    /// Whether <paramref name="configuration"/> and the children it declares support this execution. An unset optional slot
+    /// resolves to nothing, so a <see langword="null"/> configuration is supported.
     /// </summary>
     /// <remarks>
-    /// This is how a composition answers for the children it resolves under the signature it was given itself. A
-    /// composition that resolves a child under different types — a different candidate, or a problem it adapts — must
-    /// not use it, because those children belong to a different execution: answering for itself alone, which is the
-    /// default, is what makes such a composition a boundary of the check. It may check them against the inner
-    /// signature instead.
+    /// A child is asked about the execution from <see cref="IConfigurationNode.ChildExecution"/> followed by its
+    /// parameter's <see cref="Parameter{TOwner, TValue}.ChildExecution"/> mapping. Fixed-signature parents hand their
+    /// declared types to children, matching construction. A parameter may state another execution instead. A reference
+    /// list entry is not asked, because it is not a place in the graph.
     /// </remarks>
-    public bool Fits(params ReadOnlySpan<IConfigurationNode?> configurations)
+    public bool Supports(IConfigurationNode? configuration)
     {
-        foreach (var configuration in configurations)
+        if (configuration is null)
+            return true;
+        if (!configuration.Supports(this))
+            return false;
+        foreach (var parameter in configuration.GetParameters())
         {
-            if (configuration is not null && !configuration.Fits(this))
-            {
-                return false;
-            }
+            var children = parameter.GetChildren(configuration);
+            if (children.Count == 0)
+                continue;
+            var childExecution = parameter.ChildExecution(configuration.ChildExecution(this));
+            foreach (var child in children)
+                if (!childExecution.Supports(child))
+                    return false;
         }
 
         return true;

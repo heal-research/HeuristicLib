@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
 
@@ -10,14 +11,14 @@ var cityCount = problem.SearchSpace.Length;
 
 var algorithm = GeneticAlgorithm.For(problem, populationSize: 100, maximumGenerations: 300);
 
-// A run pairs the configuration with a problem and a random source. Analyzers attach to the run, not to the
-// algorithm, so the same configuration can be run again under different observation.
-var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TracePopulationCandidates(out var quality);
+// A run pairs the configuration with a problem and a random source. CreateRun places the analyzers for this run only,
+// so the same configuration can be run again under different observation; read each run's own result from the run.
+var quality = algorithm.Iterations.TracePopulationCandidates();
+var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [quality]);
 
 var finalState = await run.CompleteAsync();
 
-var generations = quality.Snapshot().Values;
+var generations = run.Result(quality).Snapshot().Values;
 var bestTour = finalState.Population.EvaluatedCandidates
     .MinBy(candidate => candidate.ObjectiveVector, problem.Objective.TotalOrderComparer)!;
 

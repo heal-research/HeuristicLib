@@ -12,7 +12,7 @@ public class ReplacerConfigurationEqualityTests
     {
         var child = new OffsetReplacer(1);
 
-        new IdentityReplacer(child).ChildReplacer.ShouldBeSameAs(child);
+        new IdentityReplacer(child).ChildOperator.ShouldBeSameAs(child);
     }
 
     [Fact]
@@ -20,20 +20,20 @@ public class ReplacerConfigurationEqualityTests
     {
         var first = new OffsetReplacer(1);
         var second = new OffsetReplacer(2);
-        var children = new List<IReplacer<int>> { first, second };
+        var children = new List<IOperator<Replacement, int>> { first, second };
         var replacer = new FirstOfReplacer(children);
 
         children.Clear();
 
-        replacer.ChildReplacers.ShouldBe([first, second]);
+        replacer.ChildOperators.ShouldBe([first, second]);
     }
 
     [Fact]
     public void MultiReplacer_UsesOrderedStructuralEquality()
     {
-        var left = ChooseOneReplacer.Create(new OffsetReplacer(1), new OffsetReplacer(2));
-        var equal = ChooseOneReplacer.Create(new OffsetReplacer(1), new OffsetReplacer(2));
-        var reordered = ChooseOneReplacer.Create(new OffsetReplacer(2), new OffsetReplacer(1));
+        var left = ChoosePerInvocation.Create(new OffsetReplacer(1), new OffsetReplacer(2));
+        var equal = ChoosePerInvocation.Create(new OffsetReplacer(1), new OffsetReplacer(2));
+        var reordered = ChoosePerInvocation.Create(new OffsetReplacer(2), new OffsetReplacer(1));
 
         left.ShouldBe(equal);
         left.GetHashCode().ShouldBe(equal.GetHashCode());
@@ -41,10 +41,10 @@ public class ReplacerConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChooseOneReplacer_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerInvocationReplacer_WithDifferentWeights_IsNotEqual()
     {
-        IReplacer<int>[] children = [new OffsetReplacer(1), new OffsetReplacer(2)];
-        var left = new ChooseOneReplacer<int>(children) { Weights = [1.0, 2.0] };
+        IOperator<Replacement, int>[] children = [new OffsetReplacer(1), new OffsetReplacer(2)];
+        var left = new ChoosePerInvocation<Replacement, int>(children) { Weights = [1.0, 2.0] };
         var right = left with { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
@@ -69,33 +69,35 @@ public class ReplacerConfigurationEqualityTests
     }
 
     private sealed record FirstOfReplacer
-        : MultiReplacer<int>
+        : MultiOperator<Replacement, int>
     {
-        public FirstOfReplacer(IReadOnlyList<IReplacer<int>> childReplacers)
+        public FirstOfReplacer(IReadOnlyList<IOperator<Replacement, int>> childReplacers)
             : base(childReplacers)
         {
         }
 
-        protected override CompositeExecutionFactory<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childReplacers => new Execution<TRunSearchSpace, TRunProblem>(childReplacers);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<int, TSearchSpace, TProblem>> childReplacers)
-            : MultiReplacerExecution<int, TSearchSpace, TProblem>(childReplacers)
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            ImmutableArray<IReplacementExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IReplacementExecutor<int>> childReplacers)
+            : ReplacementExecutor<int>
+        {
+            public override IReadOnlyList<EvaluatedCandidate<int>> Replace(IReadOnlyList<EvaluatedCandidate<int>> previousPopulation, IReadOnlyList<EvaluatedCandidate<int>> offspringPopulation, int count, IRandomNumberGenerator random) =>
+                childReplacers[0].Replace(previousPopulation, offspringPopulation, count, random);
         }
     }
-    private sealed record IdentityReplacer : WrappingReplacer<int>
+    private sealed record IdentityReplacer : WrappingOperator<Replacement, int>
     {
-        public IdentityReplacer(IReplacer<int> child) : base(child)
+        public IdentityReplacer(IOperator<Replacement, int> child) : base(child)
         {
         }
 
-        protected override WrapperExecutionFactory<IReplacerExecution<int, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            child => child;
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
     }
 
 }

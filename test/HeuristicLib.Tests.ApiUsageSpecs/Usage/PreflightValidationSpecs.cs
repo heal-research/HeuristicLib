@@ -6,6 +6,7 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Operators.Crossovers;
+using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
 using HEAL.HeuristicLib.Random;
@@ -40,7 +41,7 @@ public class PreflightValidationSpecs
 
         report.IsValid.ShouldBeFalse();
         var diagnostic = report.Diagnostics.ShouldHaveSingleItem();
-        diagnostic.Path.ShouldContain("ChildMutators[1]");
+        diagnostic.Path.ShouldContain("ChildOperators[1]");
         diagnostic.Message.ShouldContain(nameof(FlipOneBitMutator));
         diagnostic.Message.ShouldContain("Cardinality(2)");
     }
@@ -68,7 +69,7 @@ public class PreflightValidationSpecs
         var report = SearchConfigurationValidation.Validate(pipeline, Unconstrained);
 
         var diagnostic = report.Diagnostics.ShouldHaveSingleItem();
-        diagnostic.Path.ShouldEndWith("ChildMutators[1]");
+        diagnostic.Path.ShouldEndWith("ChildOperators[1]");
         diagnostic.Message.ShouldContain(nameof(SwapSecondTrueMutator));
 
         var exception = Should.Throw<InvalidOperationException>(report.ThrowIfInvalid);
@@ -104,7 +105,7 @@ public class PreflightValidationSpecs
         report.IsValid.ShouldBeTrue();
         report.Diagnostics.ShouldBeEmpty();
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
 
@@ -114,7 +115,7 @@ public class PreflightValidationSpecs
     /// space would reject.
     /// </summary>
     /// <remarks>
-    /// Reaching the execution node directly, as here, bypasses run creation and therefore the check. That is the
+    /// Reaching the executor directly, as here, bypasses run creation and therefore the check. That is the
     /// behavior a caller opts into with <c>validate: false</c>, stated as a mechanism rather than as a default.
     /// </remarks>
     [Fact]
@@ -123,12 +124,12 @@ public class PreflightValidationSpecs
         var mutator = new FlipOneBitMutator();
         SearchConfigurationValidation.Validate(mutator, Constrained).IsValid.ShouldBeFalse();
 
-        var execution = ResolutionScope.Create()
-            .Resolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>>(mutator);
+        var executor = ResolutionScope.Create()
+            .Resolve<BoolVector, FixedCardinalityBoolVectorSearchSpace, IProblem<BoolVector, FixedCardinalityBoolVectorSearchSpace>>(mutator, ConstrainedProblem());
         var inSpace = BoolVector.Create(true, true, false, false);
         Constrained.Contains(inSpace).ShouldBeTrue();
 
-        var mutated = execution.Mutate([inSpace], RandomNumberGenerator.Create(1), Constrained, null!)[0];
+        var mutated = executor.Mutate([inSpace], RandomNumberGenerator.Create(1))[0];
 
         // Nothing checked or complained at this level; the candidate simply left the space.
         Constrained.Contains(mutated).ShouldBeFalse();
@@ -148,8 +149,10 @@ public class PreflightValidationSpecs
             Mutator = new FlipOneBitMutator()
         };
 
-        var failure = Should.Throw<InvalidOperationException>(
-            () => algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+        var failure = Should.Throw<InvalidOperationException>(() =>
+        {
+            algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1));
+        });
 
         failure.Message.ShouldContain(nameof(FlipOneBitMutator));
         failure.Message.ShouldContain("Cardinality(2)");
@@ -218,7 +221,7 @@ public class PreflightValidationSpecs
 
         // Skipping the check does not make the configuration work; it only moves the failure to run start.
         var atRunStart = Record.Exception(
-            () => algorithm.Complete(problem, RandomNumberGenerator.Create(seed: 1), validate: false));
+            () => algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(seed: 1), validate: false));
         atRunStart.ShouldNotBeNull();
         atRunStart.Message.ShouldContain(nameof(RandomBoolVectorCreator));
     }
@@ -246,6 +249,43 @@ public class PreflightValidationSpecs
         // Named with the path that leads to it, from the outer algorithm down to the stage's own slot.
         failure.Message.ShouldContain(nameof(RandomBoolVectorCreator));
         failure.Message.ShouldContain("Creator");
+    }
+
+    /// <summary>
+    /// A composed operator answers for what it composes without any code of its own, so the check reaches a selector
+    /// inside an elitist selection the same way it reaches the slots of the algorithm.
+    /// </summary>
+    [Fact]
+    public void CreatingARun_ReachesAnOperatorInsideAComposedOperator()
+    {
+        var problem = ConstrainedProblem();
+        var algorithm = new GeneticAlgorithm<BoolVector>
+        {
+            Creator = new FixedCardinalityCreator(),
+            Crossover = new FirstParentCrossover(),
+            Mutator = new BitSwapMutator(),
+            Selector = new WiderSpaceSelector().CombinedWithElites(),
+            PopulationSize = 4,
+            MaximumGenerations = 1
+        };
+
+        var failure = Should.Throw<InvalidOperationException>(
+            () => algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 1)));
+
+        failure.Message.ShouldContain(nameof(WiderSpaceSelector));
+        failure.Message.ShouldContain("SelectorForRemaining");
+    }
+
+    private sealed record FirstParentCrossover : SingleCandidateCrossover<BoolVector>
+    {
+        public override BoolVector CrossParents(Parents<BoolVector> parents, IRandomNumberGenerator random) => parents.Parent1;
+    }
+
+    /// <summary>A selector written for the space without the cardinality, which the constrained space does not derive from.</summary>
+    private sealed record WiderSpaceSelector : StatelessSelector<BoolVector, BoolVectorSearchSpace>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<BoolVector>> Select(IReadOnlyList<EvaluatedCandidate<BoolVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, BoolVectorSearchSpace searchSpace) =>
+            population;
     }
 
     /// <summary>A creator that really is written for the constrained space, unlike the library's bool vector creator.</summary>

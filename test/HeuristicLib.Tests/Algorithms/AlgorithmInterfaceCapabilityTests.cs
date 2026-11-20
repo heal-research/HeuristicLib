@@ -6,17 +6,19 @@ namespace HEAL.HeuristicLib.Tests.Algorithms;
 public class AlgorithmInterfaceCapabilityTests
 {
     [Theory]
-    [InlineData("held.Complete(problem, rng)")]
-    [InlineData("held.CompleteAsync(problem, rng)")]
-    [InlineData("held.Stream(problem, rng)")]
+    [InlineData("held.RunToCompletion(problem, rng)")]
+    [InlineData("held.RunToCompletionAsync(problem, rng)")]
+    [InlineData("held.RunStreaming(problem, rng)")]
     [InlineData("held.CreateRun(problem, rng)")]
     [InlineData("held.Validate(problem)")]
     [InlineData("held.TerminatedAfterIterations(10)")]
     [InlineData("held.TerminatedBy(new NeverTerminator<Permutation>())")]
     [InlineData("held.LimitedToDuration(TimeSpan.FromSeconds(1))")]
-    [InlineData("held.TracePopulationQuality()")]
-    [InlineData("held.AsGrid()")]
+    [InlineData("held.Iterations.TracePopulationQuality()")]
+    [InlineData("held.AsParameterGrid()")]
     [InlineData("held.Repeat(2)")]
+    [InlineData("Experiment.Create(held.AsParameterGrid(), repetitions: 2)")]
+    [InlineData("Experiment.Create([held.AsParameterGrid()])")]
     [InlineData("held.CycleWith(algorithm)")]
     [InlineData("held.Then(algorithm)")]
     public void ExecutionSurface_IsReachableOnlyWhenTheAlgorithmNamesItsSearchState(string expression)
@@ -29,7 +31,7 @@ public class AlgorithmInterfaceCapabilityTests
 
     [Theory]
     [InlineData("new List<IAlgorithm<Permutation>> { algorithm }")]
-    [InlineData("ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(held)")]
+    [InlineData("ResolutionScope.Create().Resolve<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, PopulationState<Permutation>>(held, problem)")]
     public void ErasedSurface_IsReachableFromBothForms(string expression)
     {
         Compiles("IAlgorithm<Permutation, PopulationState<Permutation>>", expression).ShouldBeTrue();
@@ -44,6 +46,7 @@ public class AlgorithmInterfaceCapabilityTests
         using HEAL.HeuristicLib.Encodings.Permutations;
         using HEAL.HeuristicLib.Execution;
         using HEAL.HeuristicLib.Experiments;
+        using HEAL.HeuristicLib.Inspection;
         using HEAL.HeuristicLib.Operators;
         using HEAL.HeuristicLib.Problems.TravelingSalesman;
         using HEAL.HeuristicLib.Random;

@@ -13,6 +13,13 @@ public abstract record SingleCandidateEvaluator<TCandidate, TSearchSpace, TProbl
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateEvaluator<TCandidate, TSearchSpace, TProblem>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static evaluator => evaluator.Concurrency, static (evaluator, value) => evaluator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
@@ -30,6 +37,13 @@ public abstract record SingleCandidateEvaluator<TCandidate, TSearchSpace>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateEvaluator<TCandidate, TSearchSpace>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static evaluator => evaluator.Concurrency, static (evaluator, value) => evaluator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
@@ -45,6 +59,13 @@ public abstract record SingleCandidateEvaluator<TCandidate>
     : StatelessEvaluator<TCandidate>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
+
+    public static Parameter<SingleCandidateEvaluator<TCandidate>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static evaluator => evaluator.Concurrency, static (evaluator, value) => evaluator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public abstract ObjectiveVector EvaluateCandidate(TCandidate candidate, IRandomNumberGenerator random);
 

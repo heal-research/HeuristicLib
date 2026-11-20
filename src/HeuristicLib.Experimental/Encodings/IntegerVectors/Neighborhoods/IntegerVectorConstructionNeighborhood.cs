@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 
@@ -12,6 +13,16 @@ public enum MoveMode
 
 public record IntegerVectorConstructionNeighborhood(MoveMode mode, int maxSize = int.MaxValue) : IntegerVectorNeighborhood<int>
 {
+    public static Parameter<IntegerVectorConstructionNeighborhood, MoveMode> ModeParameter { get; } =
+        new(nameof(mode), static neighborhood => neighborhood.mode, static (neighborhood, value) => neighborhood with { mode = value });
+
+    public static Parameter<IntegerVectorConstructionNeighborhood, int> MaxSizeParameter { get; } =
+        new(nameof(maxSize), static neighborhood => neighborhood.maxSize, static (neighborhood, value) => neighborhood with { maxSize = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ModeParameter, MaxSizeParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override IEnumerable<int> Moves(IntegerVector genotype, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace, IProblem<IntegerVector, IntegerVectorSearchSpace> problem)
     {
         if (genotype.Count >= searchSpace.Length)

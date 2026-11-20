@@ -16,8 +16,9 @@ public class OperatorStaticMethodGuidelineTests
         var population = CreateSingleObjectivePopulation();
         var objective = CreateSingleObjective();
 
-        var viaInstance = new TournamentSelector<int>(tournamentSize: 3)
-            .Select(population, objective, count: 4, RandomNumberGenerator.Create(123));
+        var viaInstance = ResolutionScope.Create().For<int, ISearchSpace<int>, DummyProblem<int>>(new(DummySearchSpace<int>.Instance, objective))
+            .Resolve(new TournamentSelector<int>(tournamentSize: 3))
+            .Select(population, count: 4, RandomNumberGenerator.Create(123));
         var viaStatic = TournamentSelector.Select(population, objective, count: 4, RandomNumberGenerator.Create(123), tournamentSize: 3);
 
         viaStatic.ShouldBe(viaInstance);
@@ -35,8 +36,9 @@ public class OperatorStaticMethodGuidelineTests
         ];
         var objective = CreateBiObjective();
 
-        var viaInstance = new ParetoCrowdingTournamentSelector<int>(dominateOnEqualities: false) { TournamentSize = 3 }
-            .Select(population, objective, count: 4, RandomNumberGenerator.Create(456));
+        var viaInstance = ResolutionScope.Create().For<int, ISearchSpace<int>, DummyProblem<int>>(new(DummySearchSpace<int>.Instance, objective))
+            .Resolve(new ParetoCrowdingTournamentSelector<int>(dominateOnEqualities: false) { TournamentSize = 3 })
+            .Select(population, count: 4, RandomNumberGenerator.Create(456));
         var viaStatic = ParetoCrowdingTournamentSelector.Select(population, objective, count: 4, RandomNumberGenerator.Create(456), dominateOnEqualities: false, tournamentSize: 3);
 
         viaStatic.ShouldBe(viaInstance);
@@ -53,7 +55,7 @@ public class OperatorStaticMethodGuidelineTests
         ]).ToPopulationState();
         var target = new ObjectiveVector(1.0);
 
-        var viaInstance = new TargetTerminator<int>(target).IsTerminalState(state, DummySearchSpace<int>.Instance, problem);
+        var viaInstance = new TargetTerminator<int>(target).IsTerminalState(state, RandomNumberGenerator.Create(0), DummySearchSpace<int>.Instance, problem);
         var viaCore = TargetTerminator.IsTerminalState(state, problem, target);
 
         viaCore.ShouldBe(viaInstance);
@@ -72,8 +74,8 @@ public class OperatorStaticMethodGuidelineTests
         var viaInstance = new RemoveDuplicatesInterceptor<string, PopulationState<string>>(comparer).Transform(state, previousState: null, RandomNumberGenerator.Create(1));
         var viaStatic = RemoveDuplicatesInterceptor.Transform(state, previousState: null, comparer);
 
-        viaStatic.Population.ShouldBe(viaInstance.Population);
-        viaStatic.Population.Select(x => x.Candidate).ShouldBe(["A", "B"]);
+        viaStatic.Population.EvaluatedCandidates.ShouldBe(viaInstance.Population.EvaluatedCandidates);
+        viaStatic.Population.EvaluatedCandidates.Select(x => x.Candidate).ShouldBe(["A", "B"]);
     }
 
     [Fact]

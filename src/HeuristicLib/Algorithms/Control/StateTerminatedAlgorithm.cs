@@ -13,23 +13,65 @@ public record StateTerminatedAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
-    public required ITerminator<TCandidate> Terminator { get; init; }
+    public required IOperator<Termination, TCandidate> Terminator { get; init; }
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm, Terminator);
+    public static Parameter<StateTerminatedAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() => scope =>
+    public static Parameter<StateTerminatedAlgorithm<TCandidate, TSearchState>, IOperator<Termination, TCandidate>> TerminatorParameter { get; } =
+        new(nameof(Terminator), static algorithm => algorithm.Terminator, static (algorithm, value) => algorithm with { Terminator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, TerminatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>();
         // Resolve the terminator before the wrapped algorithm so elapsed-time terminators start before wrapped algorithm construction.
-        var terminator = typed.Resolve(Terminator);
-        return new StateTerminatedAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(typed.Resolve(Algorithm), terminator);
-    };
+        var terminator = scope.Resolve(Terminator);
+        var algorithm = scope.Resolve(Algorithm);
+        return new Executor(algorithm, terminator);
+    }
+
+    private sealed class Executor : AlgorithmExecutor<TSearchState>
+    {
+        private IAlgorithmExecutor<TSearchState> Algorithm { get; }
+        private ITerminationExecutor<TSearchState> Terminator { get; }
+
+        // Iterative algorithms fork the run's generator by iteration index. A key no iteration reaches keeps the terminator
+        // from receiving the stream of an inner iteration.
+        private const ulong TerminationForkKey = ulong.MaxValue;
+
+        public Executor(IAlgorithmExecutor<TSearchState> algorithm, ITerminationExecutor<TSearchState> terminator)
+        {
+            Algorithm = algorithm;
+            Terminator = terminator;
+        }
+
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var terminationRandom = random.Fork(TerminationForkKey);
+            var yieldedStateCount = 0;
+            await foreach (var state in Algorithm.RunStreamingAsync(random, initialState, ct))
+            {
+                yield return state;
+
+                if (Terminator.IsTerminalState(state, terminationRandom.Fork(yieldedStateCount)))
+                {
+                    yield break;
+                }
+
+                yieldedStateCount++;
+            }
+        }
+    }
 }
 
 public static class StateTerminatedAlgorithm
 {
     public static StateTerminatedAlgorithm<TCandidate, TSearchState> Create<TCandidate, TSearchState>(
-        IAlgorithm<TCandidate, TSearchState> algorithm, ITerminator<TCandidate> terminator)
+        IAlgorithm<TCandidate, TSearchState> algorithm, IOperator<Termination, TCandidate> terminator)
         where TSearchState : class, ISearchState => new()
         {
             Algorithm = algorithm,
@@ -37,40 +79,12 @@ public static class StateTerminatedAlgorithm
         };
 }
 
-public class StateTerminatedAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    protected readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Algorithm;
-    protected readonly ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> Terminator;
-
-    public StateTerminatedAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, ITerminatorExecution<TCandidate, TSearchSpace, TProblem, TSearchState> terminator)
-    {
-        Algorithm = algorithm;
-        Terminator = terminator;
-    }
-
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        await foreach (var state in Algorithm.RunStreamingAsync(problem, random, initialState, ct))
-        {
-            yield return state;
-
-            if (Terminator.IsTerminalState(state, problem.SearchSpace, problem))
-            {
-                yield break;
-            }
-        }
-    }
-}
-
 public static class StateTerminatedAlgorithmExtensions
 {
     extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedBy(ITerminator<TCandidate> terminator)
+        public StateTerminatedAlgorithm<TCandidate, TSearchState> TerminatedBy(IOperator<Termination, TCandidate> terminator)
         {
             return StateTerminatedAlgorithm.Create(algorithm, terminator);
         }

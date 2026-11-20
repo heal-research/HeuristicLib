@@ -6,35 +6,36 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Evaluators;
 
-public abstract record StatelessEvaluator<TCandidate, TSearchSpace, TProblem>
-    : Evaluator<TCandidate, TSearchSpace, TProblem>, IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract record StatelessEvaluator<TCandidate, TSearchSpace, TProblem> : Evaluator<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ExecutionFactory<IEvaluatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory() => _ => this;
+    protected sealed override IEvaluationExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessEvaluator<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : EvaluationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Evaluate(candidates, random, problem.SearchSpace, problem);
+    }
 }
 
-public abstract record StatelessEvaluator<TCandidate, TSearchSpace>
-    : Evaluator<TCandidate, TSearchSpace>, IEvaluatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract record StatelessEvaluator<TCandidate, TSearchSpace> : Evaluator<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ExecutionFactory<IEvaluatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory() => _ => this;
+    protected sealed override IEvaluationExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TRunSearchState> scope) => new Executor(this, scope.SearchSpace);
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<ObjectiveVector> IEvaluatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Evaluate(candidates, random, searchSpace);
+    private sealed class Executor(StatelessEvaluator<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : EvaluationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) => configuration.Evaluate(candidates, random, searchSpace);
+    }
 }
 
-public abstract record StatelessEvaluator<TCandidate>
-    : Evaluator<TCandidate>, IEvaluatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract record StatelessEvaluator<TCandidate> : Evaluator<TCandidate>, IEvaluationExecutor<TCandidate>
 {
-    public sealed override ExecutionFactory<IEvaluatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory() => _ => this;
+    protected sealed override IEvaluationExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TRunSearchState> scope) => this;
 
     public abstract IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random);
-
-    IReadOnlyList<ObjectiveVector> IEvaluatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Evaluate(candidates, random);
 }

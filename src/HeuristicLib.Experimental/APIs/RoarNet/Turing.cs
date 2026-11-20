@@ -2,23 +2,21 @@ namespace HEAL.HeuristicLib.APIs.RoarNet;
 
 public record TuringMove(int State, int Symbol, bool Right) : Move;
 
-public record TuringSolution(int State, int Head, List<int> Tape, int Steps) : Solution
+public record TuringSolution(int State, int Head, ValueArray<int> Tape, int Steps) : Solution
 {
     public TuringSolution Apply(TuringMove move)
     {
-        if (Head == Tape.Count)
-            Tape.Add(move.Symbol);
-        else
-            Tape[Head] = move.Symbol;
-        return new TuringSolution(move.State, Head + (move.Right ? 1 : -1), Tape, Steps + 1);
+        var tape = Tape.AsImmutableArray();
+        var updatedTape = Head == Tape.Count ? tape.Add(move.Symbol) : tape.SetItem(Head, move.Symbol);
+        return new TuringSolution(move.State, Head + (move.Right ? 1 : -1), updatedTape, Steps + 1);
     }
 }
 
-public record TuringProblem(TuringMove[,] Transitions) : Operations, Problem, Neighbourhood
+public record TuringProblem(ValueArray<ValueArray<TuringMove>> Transitions) : Operations, Problem, Neighbourhood
 {
     public Solution apply_move(Move move, Solution solution) => ((TuringSolution)solution).Apply((TuringMove)move);
     public Neighbourhood construction_neighbourhood(Problem problem) => this;
-    public Solution copy_solution(Solution solution) => (TuringSolution)solution with { Tape = ((TuringSolution)solution).Tape.ToList() };
+    public Solution copy_solution(Solution solution) => (TuringSolution)solution with { };
     public Neighbourhood destruction_neighbourhood(Problem problem) => this;
     public Solution empty_solution(Problem problem) => new TuringSolution(0, 0, [], 0);
     public Solution heuristic_solution(Problem problem) => new TuringSolution(0, 0, [], 0);
@@ -40,7 +38,7 @@ public record TuringProblem(TuringMove[,] Transitions) : Operations, Problem, Ne
     {
         TuringSolution tempQualifier = (TuringSolution)solution;
         var read = tempQualifier.Head == tempQualifier.Tape.Count ? 0 : tempQualifier.Tape[tempQualifier.Head];
-        return tempQualifier.State < 0 ? null : Transitions[tempQualifier.State, read];
+        return tempQualifier.State < 0 ? null : Transitions[tempQualifier.State][read];
     }
 
     public IEnumerable<Move> random_moves_without_replacement(Neighbourhood neighbourhood, Solution solution) => moves(neighbourhood, solution);

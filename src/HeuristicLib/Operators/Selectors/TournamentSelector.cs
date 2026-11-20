@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -10,6 +11,13 @@ public record TournamentSelector<TCandidate>
     : StatelessSelector<TCandidate>
 {
     public int TournamentSize { get; init; }
+
+    public static Parameter<TournamentSelector<TCandidate>, int> TournamentSizeParameter { get; } =
+        new(nameof(TournamentSize), static selector => selector.TournamentSize, static (selector, value) => selector with { TournamentSize = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [TournamentSizeParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public TournamentSelector(int tournamentSize)
     {

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -10,6 +11,13 @@ public record ProportionalSelector<TCandidate>
     : StatelessSelector<TCandidate>
 {
     public bool Windowing { get; init; } = true;
+
+    public static Parameter<ProportionalSelector<TCandidate>, bool> WindowingParameter { get; } =
+        new(nameof(Windowing), static selector => selector.Windowing, static (selector, value) => selector with { Windowing = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [WindowingParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
         ProportionalSelector.Select(population, objective, count, random, Windowing);

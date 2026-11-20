@@ -13,40 +13,7 @@ namespace HEAL.HeuristicLib.Operators.MoveCreators;
 /// run requests, and a request the move creator was not written for is reported when the execution graph is built.
 /// </para>
 /// </remarks>
-public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState>
-    : IMoveCreator<TCandidate, TMove>
+public abstract record MoveCreator<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveCreation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveCreationExecutor<TCandidate, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    private sealed record Execution(MoveCreator<TCandidate, TSearchSpace, TProblem, TMove, TState> MoveCreator, TState State)
-        : IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>
-    {
-        public IEnumerable<TMove> Moves(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            MoveCreator.Moves(candidate, State, searchSpace, problem, random);
-    }
-
-    protected abstract IEnumerable<TMove> Moves(TCandidate candidate, TState state, TSearchSpace searchSpace, TProblem problem, IRandomNumberGenerator random);
-
-    protected abstract TState InitialState();
-
-    public virtual ExecutionFactory<IMoveCreatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory()
-    {
-        var execution = new Execution(this, InitialState());
-        return _ => execution;
-    }
-
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveCreator<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutionFactory<IMoveCreatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;

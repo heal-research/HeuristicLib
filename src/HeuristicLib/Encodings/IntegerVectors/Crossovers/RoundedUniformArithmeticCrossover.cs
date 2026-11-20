@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Random;
@@ -31,6 +32,16 @@ public record RoundedUniformArithmeticCrossover : SingleCandidateCrossover<Integ
     /// position, while at least one always blends it.
     /// </remarks>
     public double Probability { get; init; } = 1;
+
+    public static Parameter<RoundedUniformArithmeticCrossover, double> AlphaParameter { get; } =
+        new(nameof(Alpha), static crossover => crossover.Alpha, static (crossover, value) => crossover with { Alpha = value });
+
+    public static Parameter<RoundedUniformArithmeticCrossover, double> ProbabilityParameter { get; } =
+        new(nameof(Probability), static crossover => crossover.Probability, static (crossover, value) => crossover with { Probability = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [AlphaParameter, ProbabilityParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override IntegerVector CrossParents(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
         Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Probability);

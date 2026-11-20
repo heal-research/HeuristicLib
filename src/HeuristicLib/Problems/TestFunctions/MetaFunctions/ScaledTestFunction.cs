@@ -5,8 +5,8 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions;
 public class ScaledTestFunction(double[] inputScaling, double outputScaling, ITestFunction inner)
     : MetaTestFunction(inner)
 {
-    protected readonly RealVector InputScaling = RealVector.Create(inputScaling);
-    protected readonly double OutputScaling = outputScaling;
+    protected RealVector InputScaling { get; } = RealVector.Create(inputScaling);
+    protected double OutputScaling { get; } = outputScaling;
 
     public override double Evaluate(RealVector solution) => Inner.Evaluate(solution * InputScaling) * OutputScaling;
 }

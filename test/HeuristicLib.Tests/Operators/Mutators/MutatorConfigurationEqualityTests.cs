@@ -49,24 +49,24 @@ public class MutatorConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChooseOneMutator_WithDifferentChildMutators_IsNotEqual()
+    public void ChoosePerItemMutation_WithDifferentChildMutators_IsNotEqual()
     {
-        var left = ChooseOneMutator.Create([new AddOffsetMutator(1)], [1.0]);
-        var right = ChooseOneMutator.Create([new AddOffsetMutator(2)], [1.0]);
+        var left = ChoosePerItem.Create([new AddOffsetMutator(1)], [1.0]);
+        var right = ChoosePerItem.Create([new AddOffsetMutator(2)], [1.0]);
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChooseOneMutator_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerItemMutation_WithDifferentWeights_IsNotEqual()
     {
-        var children = new IMutator<int>[]
+        var children = new IOperator<Mutation, int>[]
         {
             new AddOffsetMutator(1),
             new AddOffsetMutator(2),
         };
-        var left = ChooseOneMutator.Create(children, [1.0, 2.0]);
-        var right = ChooseOneMutator.Create(children, [2.0, 1.0]);
+        var left = ChoosePerItem.Create(children, [1.0, 2.0]);
+        var right = ChoosePerItem.Create(children, [2.0, 1.0]);
 
         left.ShouldNotBe(right);
     }
@@ -75,7 +75,7 @@ public class MutatorConfigurationEqualityTests
     public void MultiMutatorTopologies_WithEqualChildMutators_AreNotEqualAcrossTypes()
     {
         var pipeline = PipelineMutator.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
-        var chooseOne = ChooseOneMutator.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
+        var chooseOne = ChoosePerItem.Create(new AddOffsetMutator(1), new AddOffsetMutator(2));
 
         pipeline.ShouldNotBe<object>(chooseOne);
     }
@@ -147,12 +147,12 @@ public class MutatorConfigurationEqualityTests
     {
         var first = new AddOffsetMutator(1);
         var second = new AddOffsetMutator(2);
-        var childMutators = new List<IMutator<int>> { first, second };
+        var childMutators = new List<IOperator<Mutation, int>> { first, second };
         var mutator = new FirstOfMutator(childMutators);
 
         childMutators.Clear();
 
-        mutator.ChildMutators.ShouldBe([first, second]);
+        mutator.ChildOperators.ShouldBe([first, second]);
     }
 
     private sealed record AddOffsetMutator(int Offset) : SingleCandidateMutator<int, DummySearchSpace<int>>
@@ -165,23 +165,25 @@ public class MutatorConfigurationEqualityTests
     /// structural equality follows from <c>ChildMutators</c> being a value array.
     /// </summary>
     private sealed record FirstOfMutator
-        : MultiMutator<int>
+        : MultiOperator<Mutation, int>
     {
-        public FirstOfMutator(IReadOnlyList<IMutator<int>> childMutators)
+        public FirstOfMutator(IReadOnlyList<IOperator<Mutation, int>> childMutators)
             : base(childMutators)
         {
         }
 
-        protected override CompositeExecutionFactory<IMutatorExecution<int, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<int, TSearchSpace, TProblem>> childMutators)
-            : MultiMutatorExecution<int, TSearchSpace, TProblem>(childMutators)
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildMutators[0].Mutate(parents, random, searchSpace, problem);
+            System.Collections.Immutable.ImmutableArray<IMutationExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IMutationExecutor<int>> childMutators)
+            : MutationExecutor<int>
+        {
+            public override IReadOnlyList<int> Mutate(IReadOnlyList<int> parents, IRandomNumberGenerator random) =>
+                childMutators[0].Mutate(parents, random);
         }
     }
 }

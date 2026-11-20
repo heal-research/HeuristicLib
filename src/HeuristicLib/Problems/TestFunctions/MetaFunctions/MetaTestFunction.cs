@@ -5,7 +5,7 @@ namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public abstract class MetaTestFunction : ITestFunction
 {
-    protected readonly ITestFunction Inner;
+    protected ITestFunction Inner { get; }
     protected MetaTestFunction(ITestFunction inner)
     {
         Inner = inner;

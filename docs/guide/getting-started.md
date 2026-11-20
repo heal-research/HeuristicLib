@@ -38,7 +38,7 @@ var algorithm = GeneticAlgorithm.Create(
     maximumGenerations: 500,
     mutationRate: 0.2);
 
-var finalState = await algorithm.CompleteAsync(
+var finalState = await algorithm.RunToCompletionAsync(
     problem,
     RandomNumberGenerator.Create(seed: 123));
 
@@ -62,21 +62,23 @@ Candidate: -0.000003, 0.000010, -0.000004, 0.000008
 
 The Rastrigin function has its global minimum at the zero vector with objective value `0`, so this run finished on the optimum to eight decimal places. It takes well under a second.
 
+`RunToCompletionAsync` creates and completes a run for you. The algorithm owns the search loop and the library constructs its executors automatically. Keep this entry point when changing operators or using your own problem. For progress use `RunStreaming`. For analysis, inspection or pause and resume, retain an [explicit run](/guide/execution/running-algorithms#explicit-runs-for-control-and-analysis).
+
 Seed `123` reproduces exactly these numbers. A heuristic search does not guarantee the optimum on every run: Rastrigin has local minima at every integer coordinate, so some seeds finish at `0.995` or `1.99` instead. Reducing the population or the generation count makes that much more likely.
 
 ## What the program assembled
 
-| Part                    | Role in this example                              |
-| ----------------------- | ------------------------------------------------- |
-| `TestFunctionProblem`   | Evaluates each vector with the Rastrigin function |
+| Part                           | Role in this example                              |
+| ------------------------------ | ------------------------------------------------- |
+| `TestFunctionProblem`          | Evaluates each vector with the Rastrigin function |
 | `BoundedRealVectorSearchSpace` | Defines the dimension and valid numeric bounds    |
-| `GeneticAlgorithm`      | Controls the population and generation loop       |
-| Creator                 | Produces the initial candidate vectors            |
-| Crossover and mutator   | Produce variation from selected candidates        |
-| Selector                | Chooses candidates that can reproduce             |
-| Random number generator | Makes the stochastic decisions reproducible       |
+| `GeneticAlgorithm`             | Controls the population and generation loop       |
+| Creator                        | Produces the initial candidate vectors            |
+| Crossover and mutator          | Produce variation from selected candidates        |
+| Selector                       | Chooses candidates that can reproduce             |
+| Random number generator        | Makes the stochastic decisions reproducible       |
 
-`GeneticAlgorithm.Create(...)` infers its candidate, search space and problem types from the operators. Those types still connect compatible components at compile time. A real vector algorithm cannot accidentally receive a permutation search space.
+`GeneticAlgorithm.Create(...)` infers its candidate type from the operators. The run supplies the search space and problem types and validates compatibility. A real vector algorithm cannot accidentally receive a permutation search space.
 
 ### Two settings are both called a mutation rate
 
@@ -89,12 +91,12 @@ With both at `0.2`, roughly one child in five is mutated, and in those children 
 
 ## Watch the search progress
 
-`CompleteAsync` returns only the final state. Use `Stream` when you want progress from every generation:
+`RunToCompletionAsync` returns only the final state. Use `RunStreaming` when you want progress from every generation:
 
 ```csharp
 var generation = 0;
 
-await foreach (var state in algorithm.Stream(
+await foreach (var state in algorithm.RunStreaming(
     problem,
     RandomNumberGenerator.Create(seed: 123)))
 {
@@ -118,7 +120,7 @@ Generation 500: 0.00000004
 
 The stream yields one state per generation. This example reports every hundredth so the output stays readable; drop the `continue` to see all 500.
 
-Starting the stream creates a fresh run. Reusing seed `123` reproduces the same stochastic decisions for the same configuration, which is why the last line matches the `CompleteAsync` result above.
+Starting the stream creates a fresh run. Reusing seed `123` reproduces the same stochastic decisions for the same configuration, which is why the last line matches the `RunToCompletionAsync` result above.
 
 ## Use your own objective
 
@@ -144,7 +146,9 @@ You can pass `sphereProblem` to a compatible algorithm just like the built-in be
 
 ## Next steps
 
-- [Understand how the components fit together](/guide/fundamentals/core-concepts)
+- [Understand how the components fit together](/guide/fundamentals/core-concepts), the first page of the Fundamentals path
 - [Model a custom problem](/guide/fundamentals/problems)
 - [Choose search spaces](/guide/fundamentals/search-spaces)
+- [Choose completion, progress or explicit run control](/guide/execution/running-algorithms)
+- [Compose existing operators](/guide/extending/operator-composition)
 - [Run repeated experiments](/guide/execution/experiments)

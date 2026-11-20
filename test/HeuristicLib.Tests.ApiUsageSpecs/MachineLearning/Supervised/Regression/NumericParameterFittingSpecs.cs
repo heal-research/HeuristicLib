@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Data;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
 using HEAL.HeuristicLib.Execution;
@@ -42,7 +43,7 @@ public class NumericParameterFittingSpecs
     // Fitting minimizes squared error against the raw targets, which is not necessarily the problem's objective. Wrap
     // the refiner in an improvement check to keep a fitted candidate only when it actually improves that objective.
     // Passing the algorithm's own evaluator to the check makes its two comparison evaluations share that evaluator's
-    // execution node, so they count against the same budget and hit the same cache. Leaving the evaluator unset
+    // executor, so they count against the same budget and hit the same cache. Leaving the evaluator unset
     // gives the check a private one, whose evaluations stay invisible to budgets and analysis.
     [Fact]
     public void KeepingAFittedCandidateOnlyWhenItImprovesTheObjective()
@@ -57,7 +58,7 @@ public class NumericParameterFittingSpecs
                 .CheckedForImprovement(evaluator)
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
@@ -74,7 +75,7 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().AppliedAtRate(0.25)
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
@@ -92,17 +93,18 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner { FittingData = everySecondRow }
         };
 
-        var result = algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        var result = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
 
         result.Population.EvaluatedCandidates.ShouldNotBeEmpty();
     }
 
     private static double BestMeanSquaredError(
         GeneticAlgorithm<ExpressionTree> algorithm,
-        SymbolicRegressionProblem problem) =>
-        algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
-            .Population.EvaluatedCandidates
-            .Min(candidate => candidate.ObjectiveVector[0]);
+        SymbolicRegressionProblem problem)
+    {
+        var state = algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken);
+        return state.Population.EvaluatedCandidates.Min(candidate => candidate.ObjectiveVector[0]);
+    }
 
     private static SymbolicRegressionProblem CreateProblem()
     {
@@ -129,7 +131,7 @@ public class NumericParameterFittingSpecs
     }
 
     // Whether refinement effort counts against the run's evaluation budget is decided by one thing: whether the
-    // algorithm and the improvement check hold the same evaluator object. Execution nodes resolve by reference, so
+    // algorithm and the improvement check hold the same evaluator object. Executors resolve by reference, so
     // one object means one counter. Sharing it makes the budget describe total effort including refinement; leaving the
     // check on its own evaluator keeps refinement outside the budget. Neither is a hidden default, and both are here.
     [Fact]
@@ -137,9 +139,9 @@ public class NumericParameterFittingSpecs
     {
         var problem = CreateProblem();
         var sharedEvaluator = new ProblemEvaluator<ExpressionTree>();
-        var sharedCounting = Aspect.CountCandidates(sharedEvaluator, out var sharedCounter);
+        var sharedCounter = new Counter();
         var algorithmEvaluator = new ProblemEvaluator<ExpressionTree>();
-        var ownCounting = Aspect.CountCandidates(algorithmEvaluator, out var ownCounter);
+        var ownCounter = new Counter();
 
         var sharing = CreateAlgorithm(problem) with
         {
@@ -152,12 +154,14 @@ public class NumericParameterFittingSpecs
             Refiner = new NumericParameterFittingRefiner().CheckedForImprovement()
         };
 
-        sharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(sharedCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
-        notSharing.CreateRun(problem, RandomNumberGenerator.Create(42)).AddAspect(ownCounting).Complete(cancellationToken: TestContext.Current.CancellationToken);
+        var sharedRun = sharing.CreateRun(problem, RandomNumberGenerator.Create(42), [sharedEvaluator.Invocations.CountingCandidates(sharedCounter)]);
+        sharedRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
+        var ownRun = notSharing.CreateRun(problem, RandomNumberGenerator.Create(42), [algorithmEvaluator.Invocations.CountingCandidates(ownCounter)]);
+        ownRun.Complete(cancellationToken: TestContext.Current.CancellationToken);
 
         // The shared counter saw the algorithm's evaluations plus the two comparison evaluations per refined candidate.
         // The private one saw only the algorithm's, over the very same search.
-        sharedCounter.CurrentCount.ShouldBeGreaterThan(ownCounter.CurrentCount);
+        sharedRun.Result(sharedCounter).CurrentCount.ShouldBeGreaterThan(ownRun.Result(ownCounter).CurrentCount);
     }
 
     private static GeneticAlgorithm<ExpressionTree> CreateAlgorithm(
@@ -168,7 +172,7 @@ public class NumericParameterFittingSpecs
             MaximumGenerations = 10,
             Creator = new RampedHalfAndHalfTreeCreator(),
             Crossover = new SubtreeCrossover(),
-            Mutator = ChooseOneMutator.Create(
+            Mutator = ChoosePerItem.Create(
                 new NodeReplacementMutator(),
                 new LocalPerturbationMutator(),
                 new SubtreeMutator()),

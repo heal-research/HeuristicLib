@@ -34,7 +34,7 @@ public sealed class AssemblyDependencyTests
         ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "SearchSpaces", "ICandidateInvariant.cs")).ShouldBe("HEAL.HeuristicLib.SearchSpaces");
         ReadNamespace(Path.Combine(repositoryRoot, "src", "HeuristicLib", "Problems", "IProblem.cs")).ShouldBe("HEAL.HeuristicLib.Problems");
 
-        typeof(ICrossover<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
+        typeof(IOperator<,>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(IRecommends<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
         typeof(Parents<>).Namespace.ShouldBe("HEAL.HeuristicLib.Operators");
 
@@ -71,7 +71,7 @@ public sealed class AssemblyDependencyTests
         main.GetType("HEAL.HeuristicLib.Algorithms.NSGA2`1").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Problems.QuadraticAssignment.QuadraticAssignmentProblem").ShouldNotBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.AlpsGeneticAlgorithm`1").ShouldBeNull();
-        main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityAggregation`1").ShouldBeNull();
+        main.GetType("HEAL.HeuristicLib.Analysis.PopulationSimilarityExtensions").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.SearchSpaces.ISubencodingComparable`1").ShouldBeNull();
         main.GetType("HEAL.HeuristicLib.Algorithms.ISolutionLayout`1").ShouldBeNull();
     }

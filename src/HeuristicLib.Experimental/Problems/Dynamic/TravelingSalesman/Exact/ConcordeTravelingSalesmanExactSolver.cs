@@ -53,7 +53,7 @@ public sealed class ConcordeTravelingSalesmanExactSolver : ITravelingSalesmanExa
     private static TravelingSalesmanExactSolution SolveTwoCityProblem(ITravelingSalesmanProblemData problemData,
                                                                       IReadOnlyList<int> cities)
     {
-        var tour = ImmutableArray.Create(cities[0], cities[1]);
+        var tour = ValueArray.Create(cities[0], cities[1]);
         return new TravelingSalesmanExactSolution(tour,
             TravelingSalesmanExactSolverExtensions.EvaluateTour(problemData, tour));
     }
@@ -130,7 +130,7 @@ public sealed class ConcordeTravelingSalesmanExactSolver : ITravelingSalesmanExa
             }
 
             var localTour = ReadConcordeTour(solutionPath, cities.Count);
-            var tour = localTour.Select(city => cities[city]).ToImmutableArray();
+            var tour = localTour.Select(city => cities[city]).ToValueArray();
             var quality = TravelingSalesmanExactSolverExtensions.EvaluateTour(problemData, tour);
 
             solved = true;

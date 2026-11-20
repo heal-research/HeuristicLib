@@ -18,7 +18,7 @@ public enum RelativeQualityZeroBestKnownPolicy
 /// Normalizes the objective vectors produced by the child evaluator against a fixed best-known objective vector.
 /// </summary>
 public sealed record RelativeQualityEvaluator<TCandidate>
-    : WrappingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
 {
     /// <summary>
     /// Gets the best-known objective vector used as the normalization reference.
@@ -27,22 +27,34 @@ public sealed record RelativeQualityEvaluator<TCandidate>
 
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
-    public RelativeQualityEvaluator(IEvaluator<TCandidate> childEvaluator, ObjectiveVector bestKnown)
+    public static Parameter<RelativeQualityEvaluator<TCandidate>, ObjectiveVector> BestKnownParameter { get; } =
+        new(nameof(BestKnown), static evaluator => evaluator.BestKnown, static (evaluator, value) => evaluator with { BestKnown = value });
+
+    public static Parameter<RelativeQualityEvaluator<TCandidate>, RelativeQualityZeroBestKnownPolicy> ZeroBestKnownPolicyParameter { get; } =
+        new(nameof(ZeroBestKnownPolicy), static evaluator => evaluator.ZeroBestKnownPolicy, static (evaluator, value) => evaluator with { ZeroBestKnownPolicy = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [BestKnownParameter, ZeroBestKnownPolicyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public RelativeQualityEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ObjectiveVector bestKnown)
         : base(childEvaluator)
     {
         BestKnown = bestKnown;
     }
 
-    protected override WrapperExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-        childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator, BestKnown, ZeroBestKnownPolicy);
-
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> childEvaluator, ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
-        : WrappingEvaluatorExecution<TCandidate, TSearchSpace, TProblem>(childEvaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor(childEvaluator, BestKnown, ZeroBestKnownPolicy);
+    }
+
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
+        : EvaluationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+            childEvaluator.Evaluate(candidates, random)
                 .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, bestKnown, zeroBestKnownPolicy))
                 .ToArray();
     }
@@ -50,7 +62,7 @@ public sealed record RelativeQualityEvaluator<TCandidate>
 
 public static class RelativeQualityEvaluator
 {
-    public static RelativeQualityEvaluator<TCandidate> Create<TCandidate>(IEvaluator<TCandidate> childEvaluator, ObjectiveVector bestKnown) =>
+    public static RelativeQualityEvaluator<TCandidate> Create<TCandidate>(IOperator<Evaluation, TCandidate> childEvaluator, ObjectiveVector bestKnown) =>
         new(childEvaluator, bestKnown);
 }
 
@@ -92,7 +104,7 @@ public static class RelativeQuality
 
 public static class RelativeQualityEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
         public RelativeQualityEvaluator<TCandidate> ScaledToBestKnown(ObjectiveVector bestKnown) =>
             new(evaluator, bestKnown);

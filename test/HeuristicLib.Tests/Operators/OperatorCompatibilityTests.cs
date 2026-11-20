@@ -32,7 +32,7 @@ public class OperatorCompatibilityTests
       var algorithm = new {GetCompilableName(algorithmType)}();
       var problem = new {GetCompilableName(problemType)}();
       var rng = HEAL.HeuristicLib.Random.RandomNumberGenerator.Create(0);
-      algorithm.Stream(problem, rng);
+      algorithm.RunStreaming(problem, rng);
     ";
 
         return DoesCompile(code, typeof(object), algorithmType, problemType);
@@ -46,7 +46,7 @@ public class OperatorCompatibilityTests
       algorithm.Crossover = @operator;
     ";
 
-        return DoesCompile(code, typeof(ICrossover<>), algorithmType, operatorType);
+        return DoesCompile(code, typeof(IOperator<,>), algorithmType, operatorType);
     }
 
     private static bool DoesCompile(string code, params Type[] usedTypes)
@@ -124,7 +124,7 @@ public class OperatorCompatibilityTests
     /// The two columns are the measurement. Before the crossover role dropped its search space and problem they
     /// were identical: assigning an operator into an algorithm slot was the compatibility check. The role now names
     /// only its candidate, so the compiler checks that alone and the search space and problem are checked when the
-    /// execution node is built. Every row where the columns differ is a check that moved from build time to
+    /// executor is built. Every row where the columns differ is a check that moved from build time to
     /// pre-flight, and the validation column still holds the answers the compiler used to give.
     /// </remarks>
     public static TheoryData<Type, Type, bool, bool> CrossoverCompatibility => new()
@@ -282,34 +282,13 @@ public class OperatorCompatibilityTests
         var @operator = Activator.CreateInstance(operatorType)!;
 
         // A crossover for a different candidate is not the same role at all, so it never reaches the binding check.
-        if (!typeof(ICrossover<>).MakeGenericType(candidate).IsInstanceOfType(@operator))
+        if (!typeof(IOperator<,>).MakeGenericType(typeof(Crossover), candidate).IsInstanceOfType(@operator))
         {
             return false;
         }
 
-        var tryResolve = typeof(CrossoverResolutionExtensions)
-            .GetMethods(BindingFlags.Public | BindingFlags.Static)
-            .Single(method => method.Name == nameof(CrossoverResolutionExtensions.TryResolve)
-                && method.GetParameters() is [{ ParameterType.Name: nameof(ResolutionScope) }, _, _, _])
-            .MakeGenericMethod(candidate, searchSpace, problem);
+        return new ExecutionSignature(searchSpace, problem, typeof(SearchState)).Supports((IConfigurationNode)@operator);
 
-        var arguments = new[] { ResolutionScope.Create(), @operator, null, null };
-        var validates = (bool)tryResolve.Invoke(null, arguments)!;
-
-        // The contract the check carries: a true result hands back the instance the run will use, and a false result
-        // says why. Asserting both here is what makes "validated" mean "creation will work".
-        if (validates)
-        {
-            arguments[2].ShouldNotBeNull();
-            arguments[3].ShouldBeNull();
-        }
-        else
-        {
-            arguments[2].ShouldBeNull();
-            arguments[3].ShouldNotBeNull();
-        }
-
-        return validates;
     }
 
 }
@@ -318,9 +297,9 @@ internal record IndependentAlgorithm<TCandidate, TSearchSpace, TProblem> : Algor
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public ICrossover<TCandidate> Crossover { get; set; } = new IndependentCrossover<TCandidate>();
+    public IOperator<Crossover, TCandidate> Crossover { get; set; } = new IndependentCrossover<TCandidate>();
 
-    public override ExecutionFactory<AlgorithmExecution<TCandidate, TSearchSpace, TProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record IndependentAlgorithm<TCandidate, TSearchSpace> : IndependentAlgorithm<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
@@ -331,35 +310,35 @@ internal record IndependentAlgorithm<TCandidate> : IndependentAlgorithm<TCandida
 internal record PermutationEncodingSpecificAlgorithm<TProblem> : Algorithm<PermutationEncodingSpecificAlgorithm<TProblem>, Permutation, PermutationSearchSpace, TProblem, SearchState>
     where TProblem : class, IProblem<Permutation, PermutationSearchSpace>
 {
-    public ICrossover<Permutation> Crossover { get; set; } = new PermutationSpecificCrossover();
+    public IOperator<Crossover, Permutation> Crossover { get; set; } = new PermutationSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<Permutation, PermutationSearchSpace, TProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<Permutation, PermutationSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record PermutationEncodingSpecificAlgorithm : PermutationEncodingSpecificAlgorithm<IProblem<Permutation, PermutationSearchSpace>>;
 
 public record TravelingSalesmanProblemSpecificAlgorithm : Algorithm<TravelingSalesmanProblemSpecificAlgorithm, Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>
 {
-    public ICrossover<Permutation> Crossover { get; set; } = new TspSpecificCrossover();
+    public IOperator<Crossover, Permutation> Crossover { get; set; } = new TspSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<Permutation, PermutationSearchSpace, TravelingSalesmanProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record RealVectorEncodingSpecificAlgorithm<TProblem> : Algorithm<RealVectorEncodingSpecificAlgorithm<TProblem>, RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>
     where TProblem : class, IProblem<RealVector, BoundedRealVectorSearchSpace>
 {
-    public ICrossover<RealVector> Crossover { get; set; } = new RealVectorSpecificCrossover();
+    public IOperator<Crossover, RealVector> Crossover { get; set; } = new RealVectorSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record RealVectorEncodingSpecificAlgorithm : RealVectorEncodingSpecificAlgorithm<IProblem<RealVector, BoundedRealVectorSearchSpace>>;
 
 public record TestFunctionProblemSpecificAlgorithm : Algorithm<TestFunctionProblemSpecificAlgorithm, RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState>
 {
-    public ICrossover<RealVector> Crossover { get; set; } = new TestFunctionProblemSpecificCrossover();
+    public IOperator<Crossover, RealVector> Crossover { get; set; } = new TestFunctionProblemSpecificCrossover();
 
-    public override ExecutionFactory<AlgorithmExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState>> CreateExecutionFactory() => throw new NotSupportedException();
+    protected override IAlgorithmExecutor<SearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, SearchState> scope) => throw new NotSupportedException();
 }
 
 internal record IndependentCrossover<TCandidate> : SingleCandidateCrossover<TCandidate>

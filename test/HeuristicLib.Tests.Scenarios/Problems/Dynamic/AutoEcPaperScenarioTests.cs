@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
@@ -60,7 +61,7 @@ public class AutoEcPaperScenarioTests
         var concordePath = FindLocalFile("for_Agent", "Concorde", "executablescygwin", "concorde.exe");
         if (tspFile is null || concordePath is null)
         {
-            return;
+            Assert.Skip("Needs the local files tsp/eil51.tsp and for_Agent/Concorde/executablescygwin/concorde.exe in a parent directory of the test output.");
         }
 
         const int targetEpochChanges = 50;
@@ -79,10 +80,16 @@ public class AutoEcPaperScenarioTests
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
-            problem,
+        IOperator<Evaluation, Permutation> evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
             new ActivatedTravelingSalesmanExactBestKnownProvider(
                 new ConcordeTravelingSalesmanExactSolver(concordePath)));
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
+                ActivatedTravelingSalesmanProblem>(
+                [evaluator]);
+        var analyzed = evaluator.Substitute(qualityCurve, bbcp);
 
         var racing = new DynamicRacingAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem,
             PopulationState<Permutation>,
@@ -91,7 +98,7 @@ public class AutoEcPaperScenarioTests
             metaCreator,
             metaMutator,
             new BestPopulationStateMerger<Permutation>(),
-            candidate => CreatePermutationGa(problem, evaluator, candidate),
+            candidate => CreatePermutationGa(problem, analyzed, candidate),
             algorithm => algorithm.Evaluator)
         {
             NoRacers = 2,
@@ -100,18 +107,8 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(evaluator,
-            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
-            Aggregate.Best<Permutation>(),
-            [epoch]);
-        var bbcp =
-            new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
-                ActivatedTravelingSalesmanProblem>(
-                problem,
-                [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -119,9 +116,9 @@ public class AutoEcPaperScenarioTests
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityCurve.By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(2);
-        bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
-        double.IsFinite(bbcp.Performance).ShouldBeTrue();
+        run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(2);
+        run.Result(bbcp).BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
+        double.IsFinite(run.Result(bbcp).Performance).ShouldBeTrue();
     }
 
     [Fact]
@@ -136,7 +133,13 @@ public class AutoEcPaperScenarioTests
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator();
+        IOperator<Evaluation, RealVector> evaluator = problem.CreateEvaluator();
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
+                [evaluator]);
+        var analyzed = evaluator.Substitute(qualityCurve, bbcp);
 
         var racing = new DynamicRacingAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem,
             PopulationState<RealVector>, GeneticAlgorithm<RealVector>>(
@@ -144,7 +147,7 @@ public class AutoEcPaperScenarioTests
             metaCreator,
             metaMutator,
             new BestPopulationStateMerger<RealVector>(),
-            candidate => CreateGa(problem, evaluator, candidate),
+            candidate => CreateGa(problem, analyzed, candidate),
             algorithm => algorithm.Evaluator)
         {
             NoRacers = 2,
@@ -153,17 +156,8 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = Analyzer.Trace(evaluator,
-            observation => observation.Candidates.ToEvaluated(observation.ObjectiveVectors),
-            Aggregate.Best<RealVector>(),
-            [epoch]);
-        var bbcp =
-            new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
-                problem,
-                [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123)).AddAspect(qualityCurve).AddAspect(bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
@@ -171,10 +165,10 @@ public class AutoEcPaperScenarioTests
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityCurve.SampleCount.ShouldBeGreaterThanOrEqualTo(3);
-        qualityCurve.By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(3);
-        bbcp.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
-        double.IsFinite(bbcp.Performance).ShouldBeTrue();
+        run.Result(qualityCurve).SampleCount.ShouldBeGreaterThanOrEqualTo(3);
+        run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(3);
+        run.Result(bbcp).BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
+        double.IsFinite(run.Result(bbcp).Performance).ShouldBeTrue();
     }
 
     private static async Task<TSearchState> RunUntilEpochChanges<TProblem, TCandidate, TSearchSpace, TSearchState>(
@@ -235,7 +229,7 @@ public class AutoEcPaperScenarioTests
     private static GeneticAlgorithm<Permutation>
         CreatePermutationGa(
             ActivatedTravelingSalesmanProblem problem,
-            IEvaluator<Permutation> evaluator,
+            IOperator<Evaluation, Permutation> evaluator,
             CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
         return new GeneticAlgorithm<Permutation>
@@ -253,7 +247,7 @@ public class AutoEcPaperScenarioTests
 
     private static GeneticAlgorithm<RealVector> CreateGa(
         MovingPeaksProblem problem,
-        IEvaluator<RealVector> evaluator,
+        IOperator<Evaluation, RealVector> evaluator,
         CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
         return new GeneticAlgorithm<RealVector>

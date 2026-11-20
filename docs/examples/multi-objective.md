@@ -67,7 +67,7 @@ The population size is also the resolution of your answer. A hundred candidates 
 ## Run and read the front
 
 ```csharp
-var finalState = await algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(seed: 5));
+var finalState = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(seed: 5));
 
 var front = ParetoFront.ExtractFrom(finalState.Population.EvaluatedCandidates, problem.Objective)
     .OrderBy(candidate => candidate.ObjectiveVector[0])

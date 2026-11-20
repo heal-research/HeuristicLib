@@ -1,3 +1,5 @@
+using HEAL.HeuristicLib.Operators.Creators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -7,27 +9,27 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.LocalSearch;
 public class HillClimberTests
 {
     [Fact]
-    public void Stream_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
+    public void RunStreaming_WhenNoImprovingNeighborExists_YieldsOnlyGeneratedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
 
         var states = algorithm.TerminatedAfterIterations(5)
-            .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
             .ToList();
 
         states.Select(StateCandidate).ShouldBe([0]);
     }
 
     [Fact]
-    public void Stream_WithInitialLocalOptimum_YieldsNoStates()
+    public void RunStreaming_WithInitialLocalOptimum_YieldsNoStates()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = CreateHillClimber(initialValue: 0, mutationOffset: 1);
         var initialState = SingleSolutionState.From(0, new ObjectiveVector(0.0));
 
         var states = algorithm.TerminatedAfterIterations(5)
-            .Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken)
             .ToList();
 
         states.ShouldBeEmpty();
@@ -49,45 +51,19 @@ public class HillClimberTests
 
     private static int StateCandidate(SingleSolutionState<int> state) => state.EvaluatedCandidate.Candidate;
 
-    private sealed record ConstantCreator(int Value)
-        : ICreator<int>,
-        ICreatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed record ConstantCreator(int Value) : StatelessCreator<int>
     {
-        public ExecutionFactory<ICreatorExecution<int, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-            where TRunSearchSpace : class, ISearchSpace<int>
-            where TRunProblem : class, IProblem<int, TRunSearchSpace>
-        {
-            var execution = (ICreatorExecution<int, TRunSearchSpace, TRunProblem>)(object)this;
-            return _ => execution;
-        }
-
-        public IReadOnlyList<int> Create(
+        public override IReadOnlyList<int> Create(
             int count,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            IProblem<int, DummySearchSpace<int>> problem) =>
+            IRandomNumberGenerator random) =>
             Enumerable.Repeat(Value, count).ToArray();
     }
 
-    private sealed record OffsetMutator(int Offset)
-        : IMutator<int>,
-        IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed record OffsetMutator(int Offset) : StatelessMutator<int>
     {
-        public ExecutionFactory<IMutatorExecution<int, TSearchSpace, TProblem>> CreateExecutionFactory<TSearchSpace, TProblem>()
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
-        {
-            var execution = (IMutatorExecution<int, TSearchSpace, TProblem>)CreateBoundExecution();
-            return _ => execution;
-        }
-
-        private IMutatorExecution<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateBoundExecution() => this;
-
-        public IReadOnlyList<int> Mutate(
+        public override IReadOnlyList<int> Mutate(
             IReadOnlyList<int> parents,
-            IRandomNumberGenerator random,
-            DummySearchSpace<int> searchSpace,
-            IProblem<int, DummySearchSpace<int>> problem) =>
+            IRandomNumberGenerator random) =>
             parents.Select(parent => parent + Offset).ToArray();
     }
 }

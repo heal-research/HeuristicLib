@@ -8,36 +8,17 @@ namespace HEAL.HeuristicLib.Operators.Mutators;
 /// <remarks>
 /// Derive directly from this base when the mutator needs direct control over its execution structure.
 /// Use <see cref="StatelessMutator{TCandidate,TSearchSpace,TProblem}"/> when no mutable execution data is needed.
-/// Use <see cref="StatefulMutator{TCandidate,TSearchSpace,TProblem,TState}"/> when only ordinary execution data is needed.
 /// <para>
 /// The type arguments are the search space and problem this mutator is written for. The base bridges to whatever a
 /// run requests, and a request the mutator was not written for is reported when the execution graph is built. A
-/// mutator that owns children stays agnostic and derives from <see cref="WrappingMutator{TCandidate}"/> or
-/// <see cref="MultiMutator{TCandidate}"/> instead.
+/// mutator that owns children stays agnostic and derives from <see cref="WrappingOperator{Mutation, TCandidate}"/> or
+/// <see cref="MultiOperator{Mutation, TCandidate}"/> instead.
 /// </para>
 /// </remarks>
 public abstract record Mutator<TCandidate, TSearchSpace, TProblem>
-    : IMutator<TCandidate>
+    : Operator<Mutation, TCandidate, TSearchSpace, TProblem, IMutationExecutor<TCandidate>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    public abstract ExecutionFactory<IMutatorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory();
-
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> IMutator<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutionFactory<IMutatorExecution<TCandidate, TRunSearchSpace, TRunProblem>>)CreateExecutionFactory();
-    }
-}
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 
 public abstract record Mutator<TCandidate, TSearchSpace>
     : Mutator<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
@@ -46,29 +27,8 @@ public abstract record Mutator<TCandidate, TSearchSpace>
 public abstract record Mutator<TCandidate>
     : Mutator<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>;
 
-public abstract class MutatorExecution<TCandidate, TSearchSpace, TProblem>
-    : IMutatorExecution<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-{
-    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
-}
-
-public abstract class MutatorExecution<TCandidate, TSearchSpace>
-    : IMutatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
-
-    IReadOnlyList<TCandidate> IMutatorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Mutate(parents, random, searchSpace);
-}
-
-public abstract class MutatorExecution<TCandidate>
-    : IMutatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract class MutationExecutor<TCandidate>
+    : IMutationExecutor<TCandidate>
 {
     public abstract IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random);
-
-    IReadOnlyList<TCandidate> IMutatorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Mutate(parents, random);
 }

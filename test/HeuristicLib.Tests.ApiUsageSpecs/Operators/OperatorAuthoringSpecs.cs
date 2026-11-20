@@ -24,18 +24,19 @@ namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Operators;
 public class OperatorAuthoringSpecs
 {
     [Fact]
-    public void AdaptiveMutator_ProjectsStrengthControlAndInvokesTheObservedExecution()
+    public void AdaptiveMutator_ResolvesAdaptationAndInvokesTheObservedExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var gaussian = new GaussianMutator(1.0, 3.0);
-        IMutator<RealVector> mutator = gaussian;
+        var adaptation = new ScaleAdaptation();
+        var gaussian = new GaussianMutator(1.0, 3.0) { MutationStrengthAdaptation = adaptation };
+        IOperator<Mutation, RealVector> mutator = gaussian;
         var observedCalls = 0;
-        var scope = ResolutionScope.Create(Aspect.Observe(mutator, _ => observedCalls++));
-        var execution = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator, out IMutationStrengthControl? strength);
-        strength.ShouldNotBeNull();
-        strength.CurrentMutationStrength = 0.0;
+        var observed = mutator.Substitute(mutator.Invocations.Observing(_ => observedCalls++));
+        var scope = ResolutionScope.Create();
+        var executor = scope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(observed);
+        scope.Resolve(adaptation).Factor *= 0.0;
 
-        var offspring = execution.Mutate([RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(12), problem.SearchSpace, problem);
+        var offspring = executor.Mutate([RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(12));
 
         offspring.ShouldBe([RealVector.Repeat(1.0, 3)]);
         observedCalls.ShouldBe(1);
@@ -45,15 +46,11 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void StatelessMutator_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
-        var problem = CreateRastriginProblem(dimension: 3);
         var mutator = new PullTowardZeroMutator();
-        var execution = ResolveMutator(mutator);
+        var executor = ResolveMutator(mutator);
 
-        var offspring = execution.Mutate(
-            [RealVector.Repeat(1.0, 3)],
-            RandomNumberGenerator.Create(12),
-            problem.SearchSpace,
-            problem);
+        var offspring = executor.Mutate(
+            [RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(12));
 
         offspring.ShouldBe([RealVector.Repeat(0.5, 3)]);
     }
@@ -74,17 +71,16 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
-    public void StatefulMutator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableMutator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
-        var problem = CreateRastriginProblem(dimension: 3);
-        var mutator = new CountingStatefulMutator();
-        var firstExecution = ResolveMutator(mutator);
-        var secondExecution = ResolveMutator(mutator);
+        var mutator = new CountingMutator();
+        var firstExecutor = ResolveMutator(mutator);
+        var secondExecutor = ResolveMutator(mutator);
         var parent = RealVector.Repeat(0.0, 3);
 
-        var first = firstExecution.Mutate([parent], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Mutate([parent], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Mutate([parent], RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Mutate([parent], RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Mutate([parent], RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Mutate([parent], RandomNumberGenerator.Create(3));
 
         first.ShouldBe([RealVector.Repeat(1.0, 3)]);
         second.ShouldBe([RealVector.Repeat(2.0, 3)]);
@@ -92,37 +88,33 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
-    public void StatefulMutator_AuthoringExample_SharesAncestorStateWhileIndependentRunsStartFresh()
+    public void MutableMutator_AuthoringExample_EachExecutorStartsFresh()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        IMutator<RealVector> mutator = new CountingStatefulMutator();
+        IOperator<Mutation, RealVector> mutator = new CountingMutator();
         var runScope = ResolutionScope.Create();
-        var outer = runScope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
-        var inner = runScope.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
-        var anotherRun = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>().Resolve(mutator);
+        var outer = runScope.For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(mutator);
+        var inner = runScope.CreateChildScope().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(mutator);
+        var anotherRun = ResolutionScope.Create().For<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problem).Resolve(mutator);
         var parent = RealVector.Repeat(0.0, 3);
 
-        var first = outer.Mutate([parent], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var shared = inner.Mutate([parent], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = anotherRun.Mutate([parent], RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = outer.Mutate([parent], RandomNumberGenerator.Create(1));
+        var shared = inner.Mutate([parent], RandomNumberGenerator.Create(2));
+        var independent = anotherRun.Mutate([parent], RandomNumberGenerator.Create(3));
 
         first.ShouldBe([RealVector.Repeat(1.0, 3)]);
-        shared.ShouldBe([RealVector.Repeat(2.0, 3)]);
+        shared.ShouldBe([RealVector.Repeat(1.0, 3)]);
         independent.ShouldBe([RealVector.Repeat(1.0, 3)]);
     }
 
     [Fact]
     public void ExplicitMutator_AuthoringExample_OwnsResolvedChildExecution()
     {
-        var problem = CreateRastriginProblem(dimension: 3);
         var mutator = new ApplyTwiceMutator(new PullTowardZeroMutator());
-        var execution = ResolveMutator(mutator);
+        var executor = ResolveMutator(mutator);
 
-        var offspring = execution.Mutate(
-            [RealVector.Repeat(1.0, 3)],
-            RandomNumberGenerator.Create(34),
-            problem.SearchSpace,
-            problem);
+        var offspring = executor.Mutate(
+            [RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(34));
 
         offspring.ShouldBe([RealVector.Repeat(0.25, 3)]);
     }
@@ -131,58 +123,50 @@ public class OperatorAuthoringSpecs
     public void TopologyMutators_AcceptProblemSpecificChildren()
     {
         // Topology bases forward the run's types to their problem-specific children.
-        var problem = CreateRastriginProblem(dimension: 3);
         var pipeline = PipelineMutator.Create(
             new PullTowardZeroMutator(),
             NoChangeMutator<RealVector>.Instance);
 
         var offspring = ResolveMutator(pipeline).Mutate(
-            [RealVector.Repeat(1.0, 3)],
-            RandomNumberGenerator.Create(34),
-            problem.SearchSpace,
-            problem);
+            [RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(34));
 
         offspring.ShouldBe([RealVector.Repeat(0.5, 3)]);
     }
 
     [Fact]
-    public void StatefulWrapper_PreparesItsCounterOnceAndIndependentRunsStartFresh()
+    public void StatefulWrapper_KeepsAPrivateCounterOnEachExecutor()
     {
         var problem = CreateRastriginProblem(dimension: 1);
         var mutator = new CallOffsetMutator(new PullTowardZeroMutator());
         var scope = ResolutionScope.Create();
-        var outer = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
-        var inner = scope.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
+        var outer = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator, problem);
+        var inner = scope.CreateChildScope().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator, problem);
         var independent = ResolveMutator(mutator);
 
         var parent = RealVector.Repeat(1.0, 1);
         var random = RandomNumberGenerator.Create(34);
-        outer.Mutate([parent], random, problem.SearchSpace, problem).ShouldBe([RealVector.Repeat(1.5, 1)]);
-        inner.Mutate([parent], random, problem.SearchSpace, problem).ShouldBe([RealVector.Repeat(2.5, 1)]);
-        outer.Mutate([parent], random, problem.SearchSpace, problem).ShouldBe([RealVector.Repeat(3.5, 1)]);
-        independent.Mutate([parent], random, problem.SearchSpace, problem).ShouldBe([RealVector.Repeat(1.5, 1)]);
+        outer.Mutate([parent], random).ShouldBe([RealVector.Repeat(1.5, 1)]);
+        inner.Mutate([parent], random).ShouldBe([RealVector.Repeat(1.5, 1)]);
+        outer.Mutate([parent], random).ShouldBe([RealVector.Repeat(2.5, 1)]);
+        independent.Mutate([parent], random).ShouldBe([RealVector.Repeat(1.5, 1)]);
     }
 
     [Fact]
     public void MutatorCompositionFactories_InferRoleTypes()
     {
-        IMutator<RealVector> childMutator = new PullTowardZeroMutator();
-        var counting = Aspect.CountCalls(childMutator, new CountAccumulator());
-        counting.Advices.Single().Pointcut.Matches(childMutator).ShouldBeTrue();
+        IOperator<Mutation, RealVector> childMutator = new PullTowardZeroMutator();
+        var counting = new Counter();
+        childMutator.Substitute(childMutator.Invocations.Counting(counting)).ShouldNotBeSameAs(childMutator);
     }
 
     [Fact]
     public void StatelessRefiner_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
-        var problem = CreateRastriginProblem(dimension: 3);
         var refiner = new HalveRefiner();
-        var execution = ResolveRefiner(refiner);
+        var executor = ResolveRefiner(refiner);
 
-        var refined = execution.Refine(
-            [RealVector.Repeat(1.0, 3)],
-            RandomNumberGenerator.Create(12),
-            problem.SearchSpace,
-            problem);
+        var refined = executor.Refine(
+            [RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(12));
 
         refined.ShouldBe([RealVector.Repeat(0.5, 3)]);
     }
@@ -203,17 +187,16 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
-    public void StatefulRefiner_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableRefiner_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
-        var problem = CreateRastriginProblem(dimension: 3);
-        var refiner = new CountingStatefulRefiner();
-        var firstExecution = ResolveRefiner(refiner);
-        var secondExecution = ResolveRefiner(refiner);
+        var refiner = new CountingRefiner();
+        var firstExecutor = ResolveRefiner(refiner);
+        var secondExecutor = ResolveRefiner(refiner);
         var candidate = RealVector.Repeat(0.0, 3);
 
-        var first = firstExecution.Refine([candidate], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Refine([candidate], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Refine([candidate], RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Refine([candidate], RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Refine([candidate], RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Refine([candidate], RandomNumberGenerator.Create(3));
 
         first.ShouldBe([RealVector.Repeat(1.0, 3)]);
         second.ShouldBe([RealVector.Repeat(2.0, 3)]);
@@ -223,15 +206,11 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void ExplicitRefiner_AuthoringExample_OwnsResolvedChildExecution()
     {
-        var problem = CreateRastriginProblem(dimension: 3);
         var refiner = new ApplyTwiceRefiner(new HalveRefiner());
-        var execution = ResolveRefiner(refiner);
+        var executor = ResolveRefiner(refiner);
 
-        var refined = execution.Refine(
-            [RealVector.Repeat(1.0, 3)],
-            RandomNumberGenerator.Create(34),
-            problem.SearchSpace,
-            problem);
+        var refined = executor.Refine(
+            [RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(34));
 
         refined.ShouldBe([RealVector.Repeat(0.25, 3)]);
     }
@@ -241,16 +220,12 @@ public class OperatorAuthoringSpecs
     {
         // Refinement is composed through operator topologies rather than through repeated lifecycle placement, so an
         // ordered pipeline such as repair, simplification and constant optimization is an ordinary configuration.
-        var problem = CreateRastriginProblem(dimension: 3);
         var pipeline = PipelineRefiner.Create(
             new HalveRefiner(),
             NoChangeRefiner<RealVector>.Instance);
 
         var refined = ResolveRefiner(pipeline).Refine(
-            [RealVector.Repeat(1.0, 3)],
-            RandomNumberGenerator.Create(34),
-            problem.SearchSpace,
-            problem);
+            [RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(34));
 
         refined.ShouldBe([RealVector.Repeat(0.5, 3)]);
     }
@@ -258,14 +233,10 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void IteratedRefiner_RepeatsOneRefinerInsteadOfPlacingItTwice()
     {
-        var problem = CreateRastriginProblem(dimension: 3);
         var refiner = new HalveRefiner().AsIterated(3);
 
         var refined = ResolveRefiner(refiner).Refine(
-            [RealVector.Repeat(1.0, 3)],
-            RandomNumberGenerator.Create(34),
-            problem.SearchSpace,
-            problem);
+            [RealVector.Repeat(1.0, 3)], RandomNumberGenerator.Create(34));
 
         refined.ShouldBe([RealVector.Repeat(0.125, 3)]);
     }
@@ -273,11 +244,11 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void RefinerCompositionFactories_InferRoleTypes()
     {
-        IRefiner<RealVector> childRefiner = new HalveRefiner();
-        var counting = Aspect.CountCalls(childRefiner, new CountAccumulator());
+        IOperator<Refinement, RealVector> childRefiner = new HalveRefiner();
+        var counting = new Counter();
         var iterated = IteratedRefiner.Create(childRefiner, 2);
-        counting.Advices.Single().Pointcut.Matches(childRefiner).ShouldBeTrue();
-        iterated.ChildRefiner.ShouldBeSameAs(childRefiner);
+        childRefiner.Substitute(childRefiner.Invocations.Counting(counting)).ShouldNotBeSameAs(childRefiner);
+        iterated.ChildOperator.ShouldBeSameAs(childRefiner);
     }
 
     /// <summary>
@@ -292,11 +263,8 @@ public class OperatorAuthoringSpecs
         var evaluator = new ProblemEvaluator<RealVector>()
             .AppliedAfterRefinement(new HalveRefiner());
 
-        var objectiveVectors = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator).Evaluate(
-            [candidate],
-            RandomNumberGenerator.Create(7),
-            problem.SearchSpace,
-            problem);
+        var objectiveVectors = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, problem).Evaluate(
+            [candidate], RandomNumberGenerator.Create(7));
 
         objectiveVectors[0].ShouldBe(problem.Evaluate(RealVector.Repeat(0.5, 3), RandomNumberGenerator.Create(7)));
         candidate.ShouldBe(RealVector.Repeat(1.0, 3));
@@ -315,7 +283,7 @@ public class OperatorAuthoringSpecs
             MaxNeighbors = 3
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
@@ -324,16 +292,16 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
-    public void StatefulCreator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableCreator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var creator = new CountingStatefulCreator();
-        var firstExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(creator);
-        var secondExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(creator);
+        var creator = new CountingCreator();
+        var firstExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(creator, problem);
+        var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(creator, problem);
 
-        var first = firstExecution.Create(1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Create(1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Create(1, RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Create(1, RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Create(1, RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Create(1, RandomNumberGenerator.Create(3));
 
         first.ShouldBe([RealVector.Repeat(1.0, 3)]);
         second.ShouldBe([RealVector.Repeat(2.0, 3)]);
@@ -341,17 +309,17 @@ public class OperatorAuthoringSpecs
     }
 
     [Fact]
-    public void StatefulCrossover_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableCrossover_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var crossover = new CountingStatefulCrossover();
-        var firstExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover);
-        var secondExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover);
+        var crossover = new CountingCrossover();
+        var firstExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover, problem);
+        var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover, problem);
         var parents = Parents.From(RealVector.Repeat(0.0, 3), RealVector.Repeat(10.0, 3));
 
-        var first = firstExecution.Cross([parents], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Cross([parents], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Cross([parents], RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Cross([parents], RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Cross([parents], RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Cross([parents], RandomNumberGenerator.Create(3));
 
         first.ShouldBe([RealVector.Repeat(1.0, 3)]);
         second.ShouldBe([RealVector.Repeat(2.0, 3)]);
@@ -363,10 +331,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var crossover = new ForwardingCrossover(SelectFirstParentCrossover.For(problem));
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(crossover, problem);
         var parents = Parents.From(RealVector.Repeat(1.0, 3), RealVector.Repeat(2.0, 3));
 
-        var offspring = execution.Cross([parents], RandomNumberGenerator.Create(4), problem.SearchSpace, problem);
+        var offspring = executor.Cross([parents], RandomNumberGenerator.Create(4));
 
         offspring.ShouldBe([RealVector.Repeat(1.0, 3)]);
     }
@@ -376,10 +344,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new FirstValueEvaluator();
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, problem);
 
         var candidate = RealVector.Repeat(2.0, 3);
-        var evaluatedCandidates = execution.Evaluate([candidate], RandomNumberGenerator.Create(5), problem.SearchSpace, problem);
+        var evaluatedCandidates = executor.Evaluate([candidate], RandomNumberGenerator.Create(5));
 
         evaluatedCandidates.ShouldBe([new ObjectiveVector(2.0)]);
     }
@@ -404,29 +372,26 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new ConcurrentFirstValueEvaluator { Concurrency = ExecutionConcurrency.Concurrent(2) };
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, problem);
 
-        var objectives = execution.Evaluate(
-            [RealVector.Repeat(2.0, 3), RealVector.Repeat(4.0, 3)],
-            RandomNumberGenerator.Create(5),
-            problem.SearchSpace,
-            problem);
+        var objectives = executor.Evaluate(
+            [RealVector.Repeat(2.0, 3), RealVector.Repeat(4.0, 3)], RandomNumberGenerator.Create(5));
 
         objectives.ShouldBe([new ObjectiveVector(2.0), new ObjectiveVector(4.0)]);
     }
 
     [Fact]
-    public void StatefulEvaluator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableEvaluator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var evaluator = new CountingStatefulEvaluator();
-        var firstExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
-        var secondExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
+        var evaluator = new CountingEvaluator();
+        var firstExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, problem);
+        var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, problem);
         var candidates = new[] { RealVector.Repeat(0.0, 3) };
 
-        var first = firstExecution.Evaluate(candidates, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Evaluate(candidates, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Evaluate(candidates, RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Evaluate(candidates, RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Evaluate(candidates, RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Evaluate(candidates, RandomNumberGenerator.Create(3));
 
         first.ShouldBe([new ObjectiveVector(1.0)]);
         second.ShouldBe([new ObjectiveVector(2.0)]);
@@ -438,10 +403,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var evaluator = new ForwardingEvaluator(new FirstValueEvaluator());
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(evaluator, problem);
 
         var candidate = RealVector.Repeat(4.0, 3);
-        var evaluatedCandidates = execution.Evaluate([candidate], RandomNumberGenerator.Create(6), problem.SearchSpace, problem);
+        var evaluatedCandidates = executor.Evaluate([candidate], RandomNumberGenerator.Create(6));
 
         evaluatedCandidates.ShouldBe([new ObjectiveVector(4.0)]);
     }
@@ -454,13 +419,13 @@ public class OperatorAuthoringSpecs
         var wrapping = new ForwardingWrappingEvaluator(child);
         var multi = new FirstMultiEvaluator([child, new FirstValueEvaluator()]);
 
-        var wrapped = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(wrapping)
-            .Evaluate([RealVector.Repeat(3.0, 3)], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var first = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(multi)
-            .Evaluate([RealVector.Repeat(4.0, 3)], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        var wrapped = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(wrapping, problem)
+            .Evaluate([RealVector.Repeat(3.0, 3)], RandomNumberGenerator.Create(1));
+        var first = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(multi, problem)
+            .Evaluate([RealVector.Repeat(4.0, 3)], RandomNumberGenerator.Create(2));
 
-        wrapping.ChildEvaluator.ShouldBeSameAs(child);
-        multi.ChildEvaluators[0].ShouldBeSameAs(child);
+        wrapping.ChildOperator.ShouldBeSameAs(child);
+        multi.ChildOperators[0].ShouldBeSameAs(child);
         wrapped.ShouldBe([new ObjectiveVector(3.0)]);
         first.ShouldBe([new ObjectiveVector(4.0)]);
     }
@@ -468,16 +433,16 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void EvaluatorCompositionFactories_InferRoleTypes()
     {
-        IEvaluator<RealVector> child = new FirstValueEvaluator();
-        var counting = Aspect.CountCalls(child, new CountAccumulator());
-        var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
+        IOperator<Evaluation, RealVector> child = new FirstValueEvaluator();
+        var counting = new Counter();
+        var duration = new Duration();
         var repeating = child.AsRepeated(3, ObjectiveVectorAggregation.Median);
         var caching = child.Cached(new FirstCoordinateCacheKeySelector());
-        counting.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
-        duration.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
-        repeating.ChildEvaluator.ShouldBeSameAs(child);
+        child.Substitute(child.Invocations.Counting(counting)).ShouldNotBeSameAs(child);
+        child.Substitute(child.Invocations.Timing(duration)).ShouldNotBeSameAs(child);
+        repeating.ChildOperator.ShouldBeSameAs(child);
         repeating.Aggregator.ShouldBe(ObjectiveVectorAggregation.Median);
-        caching.ChildEvaluator.ShouldBeSameAs(child);
+        caching.ChildOperator.ShouldBeSameAs(child);
         caching.KeySelector.ShouldBe(new FirstCoordinateCacheKeySelector());
     }
 
@@ -486,26 +451,26 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var selector = new FirstSelector();
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector, problem);
         var population = CreatePopulation(1.0, 2.0);
 
-        var selected = execution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(7), problem.SearchSpace, problem);
+        var selected = executor.Select(population, 1, RandomNumberGenerator.Create(7));
 
         selected.ShouldBe([population[0]]);
     }
 
     [Fact]
-    public void StatefulSelector_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableSelector_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var selector = new RotatingStatefulSelector();
-        var firstExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
-        var secondExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
+        var selector = new RotatingSelector();
+        var firstExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector, problem);
+        var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector, problem);
         var population = CreatePopulation(1.0, 2.0);
 
-        var first = firstExecution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Select(population, 1, RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Select(population, 1, RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Select(population, 1, RandomNumberGenerator.Create(3));
 
         first.ShouldBe([population[0]]);
         second.ShouldBe([population[1]]);
@@ -517,10 +482,10 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var selector = new ForwardingSelector(new FirstSelector());
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector, problem);
         var population = CreatePopulation(1.0, 2.0);
 
-        var selected = execution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(8), problem.SearchSpace, problem);
+        var selected = executor.Select(population, 1, RandomNumberGenerator.Create(8));
 
         selected.ShouldBe([population[0]]);
     }
@@ -531,12 +496,12 @@ public class OperatorAuthoringSpecs
         var problem = CreateRastriginProblem(dimension: 3);
         var childSelector = new FirstSelector();
         var selector = new DoublingWrappingSelector(childSelector);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector, problem);
         var population = CreatePopulation(1.0, 2.0);
 
-        var selected = execution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(11), problem.SearchSpace, problem);
+        var selected = executor.Select(population, 1, RandomNumberGenerator.Create(11));
 
-        selector.ChildSelector.ShouldBeSameAs(childSelector);
+        selector.ChildOperator.ShouldBeSameAs(childSelector);
         selected.ShouldBe([population[0], population[0]]);
     }
 
@@ -547,23 +512,23 @@ public class OperatorAuthoringSpecs
         var first = new FirstSelector();
         var last = new LastSelector();
         var selector = new PreferFirstMultiSelector([first, last]);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(selector, problem);
         var population = CreatePopulation(1.0, 2.0);
 
-        var selected = execution.Select(population, problem.Objective, 1, RandomNumberGenerator.Create(12), problem.SearchSpace, problem);
+        var selected = executor.Select(population, 1, RandomNumberGenerator.Create(12));
 
-        selector.ChildSelectors.ShouldBe([first, last]);
+        selector.ChildOperators.ShouldBe([first, last]);
         selected.ShouldBe([population[0]]);
     }
 
     [Fact]
     public void SelectorCompositionFactories_InferRoleTypes()
     {
-        ISelector<RealVector> childSelector = new FirstSelector();
-        var counting = Aspect.CountCalls(childSelector, new CountAccumulator());
-        var chooseOne = ChooseOneSelector.Create(childSelector, new LastSelector());
-        counting.Advices.Single().Pointcut.Matches(childSelector).ShouldBeTrue();
-        chooseOne.ChildSelectors[0].ShouldBeSameAs(childSelector);
+        IOperator<Selection, RealVector> childSelector = new FirstSelector();
+        var counting = new Counter();
+        var chooseOne = ChoosePerInvocation.Create(childSelector, new LastSelector());
+        childSelector.Substitute(childSelector.Invocations.Counting(counting)).ShouldNotBeSameAs(childSelector);
+        chooseOne.ChildOperators[0].ShouldBeSameAs(childSelector);
     }
 
     [Fact]
@@ -571,28 +536,28 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var replacer = new OffspringReplacer();
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer, problem);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
-        var replaced = execution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(9), problem.SearchSpace, problem);
+        var replaced = executor.Replace(previous, offspring, 1, RandomNumberGenerator.Create(9));
 
         replaced.ShouldBe(offspring);
     }
 
     [Fact]
-    public void StatefulReplacer_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableReplacer_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var replacer = new AlternatingStatefulReplacer();
-        var firstExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
-        var secondExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
+        var replacer = new AlternatingReplacer();
+        var firstExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer, problem);
+        var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer, problem);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
-        var first = firstExecution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Replace(previous, offspring, 1, RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Replace(previous, offspring, 1, RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Replace(previous, offspring, 1, RandomNumberGenerator.Create(3));
 
         first.ShouldBe(previous);
         second.ShouldBe(offspring);
@@ -604,11 +569,11 @@ public class OperatorAuthoringSpecs
     {
         var problem = CreateRastriginProblem(dimension: 3);
         var replacer = new ForwardingReplacer(new OffspringReplacer());
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer);
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(replacer, problem);
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
-        var replaced = execution.Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(10), problem.SearchSpace, problem);
+        var replaced = executor.Replace(previous, offspring, 1, RandomNumberGenerator.Create(10));
 
         replaced.ShouldBe(offspring);
     }
@@ -623,13 +588,13 @@ public class OperatorAuthoringSpecs
         var previous = CreatePopulation(1.0);
         var offspring = CreatePopulation(2.0);
 
-        var wrapped = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(wrapping)
-            .Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var first = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(multi)
-            .Replace(previous, offspring, problem.Objective, 1, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        var wrapped = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(wrapping, problem)
+            .Replace(previous, offspring, 1, RandomNumberGenerator.Create(1));
+        var first = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(multi, problem)
+            .Replace(previous, offspring, 1, RandomNumberGenerator.Create(2));
 
-        wrapping.ChildReplacer.ShouldBeSameAs(child);
-        multi.ChildReplacers[0].ShouldBeSameAs(child);
+        wrapping.ChildOperator.ShouldBeSameAs(child);
+        multi.ChildOperators[0].ShouldBeSameAs(child);
         wrapped.ShouldBe(offspring);
         first.ShouldBe(offspring);
     }
@@ -637,35 +602,35 @@ public class OperatorAuthoringSpecs
     [Fact]
     public void ReplacerCompositionFactories_InferRoleTypes()
     {
-        IReplacer<RealVector> child = new OffspringReplacer();
-        var counting = Aspect.CountCalls(child, new CountAccumulator());
-        var duration = Aspect.MeasureDuration(child, new DurationAccumulator());
-        counting.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
-        duration.Advices.Single().Pointcut.Matches(child).ShouldBeTrue();
+        IOperator<Replacement, RealVector> child = new OffspringReplacer();
+        var counting = new Counter();
+        var duration = new Duration();
+        child.Substitute(child.Invocations.Counting(counting)).ShouldNotBeSameAs(child);
+        child.Substitute(child.Invocations.Timing(duration)).ShouldNotBeSameAs(child);
     }
 
     [Fact]
     public void StatelessInterceptor_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new IncrementingInterceptor());
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new IncrementingInterceptor(), problem);
 
-        var transformed = execution.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var transformed = executor.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1));
 
         transformed.Value.ShouldBe(2);
     }
 
     [Fact]
-    public void StatefulInterceptor_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableInterceptor_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var interceptor = new CountingStatefulInterceptor();
-        var firstExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(interceptor);
-        var secondExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(interceptor);
+        var interceptor = new CountingInterceptor();
+        var firstExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(interceptor, problem);
+        var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(interceptor, problem);
 
-        var first = firstExecution.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        var second = firstExecution.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        var independent = secondExecution.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        var first = firstExecutor.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(1));
+        var second = firstExecutor.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(2));
+        var independent = secondExecutor.Transform(new CounterSearchState(0), previousState: null, RandomNumberGenerator.Create(3));
 
         first.Value.ShouldBe(1);
         second.Value.ShouldBe(2);
@@ -676,9 +641,9 @@ public class OperatorAuthoringSpecs
     public void ExplicitInterceptor_AuthoringExample_OwnsResolvedChildExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingInterceptor(new IncrementingInterceptor()));
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingInterceptor(new IncrementingInterceptor()), problem);
 
-        var transformed = execution.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var transformed = executor.Transform(new CounterSearchState(1), previousState: null, RandomNumberGenerator.Create(1));
 
         transformed.Value.ShouldBe(2);
     }
@@ -691,58 +656,58 @@ public class OperatorAuthoringSpecs
         var wrapping = new ForwardingWrappingInterceptor(child);
         var multi = new FirstMultiInterceptor([child]);
 
-        wrapping.ChildInterceptor.ShouldBeSameAs(child);
-        multi.ChildInterceptors.ShouldBe([child]);
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(wrapping).Transform(new CounterSearchState(1), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(2);
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(multi).Transform(new CounterSearchState(1), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(2);
+        wrapping.ChildOperator.ShouldBeSameAs(child);
+        multi.ChildOperators[0].ShouldBeSameAs(child);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(wrapping, problem).Transform(new CounterSearchState(1), null, RandomNumberGenerator.Create(1)).Value.ShouldBe(2);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(multi, problem).Transform(new CounterSearchState(1), null, RandomNumberGenerator.Create(1)).Value.ShouldBe(2);
     }
 
     [Fact]
     public void Interceptor_ReducedArities_KeepOnlyConsumedContextOnAuthoringSurface()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        IInterceptor<RealVector> searchSpaceOnly = new SearchSpaceInterceptor();
-        IInterceptor<RealVector> candidateOnly = new CandidateInterceptor();
-        IInterceptor<RealVector> statefulSearchSpaceOnly = new StatefulSearchSpaceInterceptor();
-        IInterceptor<RealVector> statefulCandidateOnly = new StatefulCandidateInterceptor();
+        IOperator<Interception<CounterSearchState>, RealVector> searchSpaceOnly = new SearchSpaceInterceptor();
+        IOperator<Interception<CounterSearchState>, RealVector> candidateOnly = new CandidateInterceptor();
+        IOperator<Interception<CounterSearchState>, RealVector> statefulSearchSpaceOnly = new ExplicitSearchSpaceInterceptor();
+        IOperator<Interception<CounterSearchState>, RealVector> statefulCandidateOnly = new ExplicitCandidateInterceptor();
 
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(searchSpaceOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(candidateOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulSearchSpaceOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulCandidateOnly).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1), problem.SearchSpace, problem).Value.ShouldBe(1);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(searchSpaceOnly, problem).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1)).Value.ShouldBe(1);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(candidateOnly, problem).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1)).Value.ShouldBe(1);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulSearchSpaceOnly, problem).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1)).Value.ShouldBe(1);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulCandidateOnly, problem).Transform(new CounterSearchState(0), null, RandomNumberGenerator.Create(1)).Value.ShouldBe(1);
     }
 
     [Fact]
     public void StatelessTerminator_AuthoringExample_UsesConfigurationAndExplicitInputs()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ValueTerminator(2));
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ValueTerminator(2), problem);
 
-        execution.IsTerminalState(new CounterSearchState(1), problem.SearchSpace, problem).ShouldBeFalse();
-        execution.IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(new CounterSearchState(1), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        executor.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
-    public void StatefulTerminator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
+    public void MutableTerminator_AuthoringExample_GetsIndependentExecutionDataPerExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var terminator = new CountingStatefulTerminator();
-        var firstExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(terminator);
-        var secondExecution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(terminator);
+        var terminator = new CountingTerminator();
+        var firstExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(terminator, problem);
+        var secondExecutor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(terminator, problem);
         var state = new CounterSearchState(0);
 
-        firstExecution.IsTerminalState(state, problem.SearchSpace, problem).ShouldBeFalse();
-        firstExecution.IsTerminalState(state, problem.SearchSpace, problem).ShouldBeTrue();
-        secondExecution.IsTerminalState(state, problem.SearchSpace, problem).ShouldBeFalse();
+        firstExecutor.IsTerminalState(state, RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        firstExecutor.IsTerminalState(state, RandomNumberGenerator.Create(0)).ShouldBeTrue();
+        secondExecutor.IsTerminalState(state, RandomNumberGenerator.Create(0)).ShouldBeFalse();
     }
 
     [Fact]
     public void ExplicitTerminator_AuthoringExample_OwnsResolvedChildExecution()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var execution = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingTerminator(new ValueTerminator(2)));
+        var executor = ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(new ForwardingTerminator(new ValueTerminator(2)), problem);
 
-        execution.IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
@@ -753,29 +718,29 @@ public class OperatorAuthoringSpecs
         var wrapping = new ForwardingWrappingTerminator(child);
         var multi = new FirstMultiTerminator([child]);
 
-        wrapping.ChildTerminator.ShouldBeSameAs(child);
-        multi.ChildTerminators.ShouldBe([child]);
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(wrapping).IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(multi).IsTerminalState(new CounterSearchState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        wrapping.ChildOperator.ShouldBeSameAs(child);
+        multi.ChildOperators[0].ShouldBeSameAs(child);
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(wrapping, problem).IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0)).ShouldBeTrue();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(multi, problem).IsTerminalState(new CounterSearchState(2), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
     public void Terminator_ReducedArities_IncludeStateAgnosticForm()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        ITerminator<RealVector> searchSpaceOnly = new SearchSpaceTerminator();
-        ITerminator<RealVector> stateOnly = new StateTerminator();
-        ITerminator<RealVector> stateAgnostic = new StateAgnosticTerminator();
-        ITerminator<RealVector> statefulSearchSpaceOnly = new StatefulSearchSpaceTerminator();
-        ITerminator<RealVector> statefulStateOnly = new StatefulStateTerminator();
-        ITerminator<RealVector> statefulStateAgnostic = new StatefulStateAgnosticTerminator();
+        IOperator<Termination, RealVector> searchSpaceOnly = new SearchSpaceTerminator();
+        IOperator<Termination, RealVector> stateOnly = new StateTerminator();
+        IOperator<Termination, RealVector> stateAgnostic = new StateAgnosticTerminator();
+        IOperator<Termination, RealVector> statefulSearchSpaceOnly = new ExplicitSearchSpaceTerminator();
+        IOperator<Termination, RealVector> statefulStateOnly = new ExplicitStateTerminator();
+        IOperator<Termination, RealVector> statefulStateAgnostic = new ExplicitStateAgnosticTerminator();
 
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(searchSpaceOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateAgnostic).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulSearchSpaceOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateOnly).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
-        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateAgnostic).IsTerminalState(new CounterSearchState(0), problem.SearchSpace, problem).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(searchSpaceOnly, problem).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateOnly, problem).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(stateAgnostic, problem).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulSearchSpaceOnly, problem).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateOnly, problem).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0)).ShouldBeFalse();
+        ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(statefulStateAgnostic, problem).IsTerminalState(new CounterSearchState(0), RandomNumberGenerator.Create(0)).ShouldBeFalse();
     }
 
     [Fact]
@@ -795,7 +760,7 @@ public class OperatorAuthoringSpecs
             MaxNeighbors = 2
         }.TerminatedAfterIterations(1);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(456),
           ct: TestContext.Current.CancellationToken);
@@ -811,44 +776,35 @@ public class OperatorAuthoringSpecs
     private static IReadOnlyList<EvaluatedCandidate<RealVector>> CreatePopulation(params double[] values) =>
         values.Select(value => EvaluatedCandidate.From(RealVector.Repeat(value, 3), new ObjectiveVector(value))).ToArray();
 
-    private static IMutatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> ResolveMutator(IMutator<RealVector> mutator)
+    private static IMutationExecutor<RealVector> ResolveMutator(IOperator<Mutation, RealVector> mutator)
     {
-        return ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator);
+        return ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(mutator, CreateRastriginProblem(3));
     }
 
-    private static IRefinerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> ResolveRefiner(IRefiner<RealVector> refiner)
+    private static IRefinementExecutor<RealVector> ResolveRefiner(IOperator<Refinement, RealVector> refiner)
     {
-        return ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(refiner);
+        return ResolutionScope.Create().Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(refiner, CreateRastriginProblem(3));
     }
 
     /// <summary>
-    /// A wrapper that reads a specific problem. Its preparation hook stays generic in the run's types; the returned
-    /// constructor checks and adapts the resolved child for its bound execution.
+    /// A wrapper that reads a specific problem uses the fixed-signature authoring base. Its factory resolves the
+    /// child with that search space and problem after the common compatibility check.
     /// </summary>
-    private sealed record PrefixingWrappingCreator(ICreator<RealVector> Child)
-        : WrappingCreator<RealVector>(Child)
+    private sealed record PrefixingWrappingCreator(IOperator<Creation, RealVector> Child)
+        : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        protected override WrapperExecutionFactory<ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+        protected override ICreationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
         {
-            return childCreator =>
-            {
-                if (childCreator is not ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> boundChild
-                    || new Execution(boundChild) is not ICreatorExecution<RealVector, TRunSearchSpace, TRunProblem> typed)
-                {
-                    throw new InvalidOperationException(
-                        $"{GetType().Name} reads {typeof(TestFunctionProblem).Name} and cannot run over {typeof(TRunProblem).Name}.");
-                }
-
-                return typed;
-            };
+            var child = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Child, scope.Problem);
+            return new Executor(child, scope.Problem);
         }
 
-        private sealed class Execution(ICreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> childCreator)
-            : WrappingCreatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(childCreator)
+        private sealed class Executor(ICreationExecutor<RealVector> childCreator, TestFunctionProblem problem)
+            : CreationExecutor<RealVector>
         {
-            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random)
             {
-                var candidates = ChildCreator.Create(count, random, searchSpace, problem).ToArray();
+                var candidates = childCreator.Create(count, random).ToArray();
                 candidates[0] = RealVector.Repeat(0.0, problem.TestFunction.Dimension);
                 return candidates;
             }
@@ -867,35 +823,37 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record CountingStatefulCreator : StatefulCreator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulCreator.ExecutionState>
+    private sealed record CountingCreator : Creator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class ExecutionState
-        {
-            public int Calls { get; set; }
-        }
+        protected override ICreationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+                new Executor(scope.Problem);
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<RealVector> Create(int count, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        private sealed class Executor(TestFunctionProblem problem) : CreationExecutor<RealVector>
         {
-            state.Calls++;
-            return Enumerable.Repeat(RealVector.Repeat(state.Calls, problem.TestFunction.Dimension), count).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<RealVector> Create(int count, IRandomNumberGenerator random)
+            {
+                invocations++;
+                return Enumerable.Repeat(RealVector.Repeat(invocations, problem.TestFunction.Dimension), count).ToArray();
+            }
         }
     }
 
-    private sealed record CountingStatefulCrossover : StatefulCrossover<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulCrossover.ExecutionState>
+    private sealed record CountingCrossover : Crossover<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class ExecutionState
-        {
-            public int Calls { get; set; }
-        }
+        protected override ICrossoverExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+                new Executor();
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        private sealed class Executor : CrossoverExecutor<RealVector>
         {
-            state.Calls++;
-            return parents.Select(parent => new RealVector(parent.Parent1.Select(value => value + state.Calls))).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random)
+            {
+                invocations++;
+                return parents.Select(parent => new RealVector(parent.Parent1.Select(value => value + invocations))).ToArray();
+            }
         }
     }
 
@@ -916,75 +874,83 @@ public class OperatorAuthoringSpecs
         public double SelectKey(RealVector candidate) => candidate[0];
     }
 
-    private sealed record CountingStatefulEvaluator : StatefulEvaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulEvaluator.ExecutionState>
+    private sealed record CountingEvaluator : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class ExecutionState
-        {
-            public int Calls { get; set; }
-        }
+        protected override IEvaluationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+                new Executor();
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        private sealed class Executor : EvaluationExecutor<RealVector>
         {
-            state.Calls++;
-            return candidates.Select(candidate => new ObjectiveVector(state.Calls)).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
+            {
+                invocations++;
+                return candidates.Select(candidate => new ObjectiveVector(invocations)).ToArray();
+            }
         }
     }
 
-    private sealed record ForwardingEvaluator(IEvaluator<RealVector> Inner)
+    private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
         : Evaluator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutionFactory<EvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
-
-        private sealed class Execution(IEvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
-            : EvaluatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        protected override EvaluationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-                inner.Evaluate(candidates, random, searchSpace, problem);
+            var inner = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner, scope.Problem);
+            return new Executor(inner);
+        }
+
+        private sealed class Executor(IEvaluationExecutor<RealVector> inner)
+            : EvaluationExecutor<RealVector>
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
+                inner.Evaluate(candidates, random);
         }
     }
 
     private sealed record ForwardingWrappingEvaluator
-        : WrappingEvaluator<RealVector>
+        : WrappingOperator<Evaluation, RealVector>
     {
-        public ForwardingWrappingEvaluator(IEvaluator<RealVector> childEvaluator)
+        public ForwardingWrappingEvaluator(IOperator<Evaluation, RealVector> childEvaluator)
             : base(childEvaluator)
         {
         }
 
-        protected override WrapperExecutionFactory<IEvaluatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            childEvaluator => new Execution<TRunSearchSpace, TRunProblem>(childEvaluator);
-
-        private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<RealVector, TSearchSpace, TProblem> childEvaluator)
-            : WrappingEvaluatorExecution<RealVector, TSearchSpace, TProblem>(childEvaluator)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildEvaluator.Evaluate(candidates, random, searchSpace, problem);
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator);
+        }
+
+        private sealed class Executor(IEvaluationExecutor<RealVector> childEvaluator)
+            : EvaluationExecutor<RealVector>
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
+                childEvaluator.Evaluate(candidates, random);
         }
     }
 
     private sealed record FirstMultiEvaluator
-        : MultiEvaluator<RealVector>
+        : MultiOperator<Evaluation, RealVector>
     {
-        public FirstMultiEvaluator(IReadOnlyList<IEvaluator<RealVector>> childEvaluators)
+        public FirstMultiEvaluator(IReadOnlyList<IOperator<Evaluation, RealVector>> childEvaluators)
             : base(childEvaluators)
         {
         }
 
-        protected override CompositeExecutionFactory<IEvaluatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childEvaluators => new Execution<TRunSearchSpace, TRunProblem>(childEvaluators);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IEvaluatorExecution<RealVector, TSearchSpace, TProblem>> childEvaluators)
-            : MultiEvaluatorExecution<RealVector, TSearchSpace, TProblem>(childEvaluators)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildEvaluators[0].Evaluate(candidates, random, searchSpace, problem);
+            ImmutableArray<IEvaluationExecutor<RealVector>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IEvaluationExecutor<RealVector>> childEvaluators)
+            : EvaluationExecutor<RealVector>
+        {
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
+                childEvaluators[0].Evaluate(candidates, random);
         }
     }
 
@@ -994,33 +960,37 @@ public class OperatorAuthoringSpecs
             population.Take(count).ToArray();
     }
 
-    private sealed record RotatingStatefulSelector : StatefulSelector<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, RotatingStatefulSelector.ExecutionState>
+    private sealed record RotatingSelector : Selector<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class ExecutionState
-        {
-            public int Calls { get; set; }
-        }
+        protected override ISelectionExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+                new Executor();
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        private sealed class Executor : SelectionExecutor<RealVector>
         {
-            var start = state.Calls++ % population.Count;
-            return Enumerable.Range(0, count).Select(index => population[(start + index) % population.Count]).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, int count, IRandomNumberGenerator random)
+            {
+                var start = invocations++ % population.Count;
+                return Enumerable.Range(0, count).Select(index => population[(start + index) % population.Count]).ToArray();
+            }
         }
     }
 
-    private sealed record ForwardingSelector(ISelector<RealVector> Inner)
+    private sealed record ForwardingSelector(IOperator<Selection, RealVector> Inner)
         : Selector<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutionFactory<SelectorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
-
-        private sealed class Execution(ISelectorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
-            : SelectorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        protected override SelectionExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-                inner.Select(population, objective, count, random, searchSpace, problem);
+            var inner = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner, scope.Problem);
+            return new Executor(inner);
+        }
+
+        private sealed class Executor(ISelectionExecutor<RealVector> inner)
+            : SelectionExecutor<RealVector>
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, int count, IRandomNumberGenerator random) =>
+                inner.Select(population, count, random);
         }
     }
 
@@ -1031,47 +1001,51 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record DoublingWrappingSelector
-        : WrappingSelector<RealVector>
+        : WrappingOperator<Selection, RealVector>
     {
-        public DoublingWrappingSelector(ISelector<RealVector> childSelector)
+        public DoublingWrappingSelector(IOperator<Selection, RealVector> childSelector)
             : base(childSelector)
         {
         }
 
-        protected override WrapperExecutionFactory<ISelectorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            childSelector => new Execution<TRunSearchSpace, TRunProblem>(childSelector);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ISelectorExecution<RealVector, TSearchSpace, TProblem> childSelector)
-            : WrappingSelectorExecution<RealVector, TSearchSpace, TProblem>(childSelector)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator);
+        }
+
+        private sealed class Executor(ISelectionExecutor<RealVector> childSelector)
+            : SelectionExecutor<RealVector>
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, int count, IRandomNumberGenerator random)
             {
-                var selected = ChildSelector.Select(population, objective, count, random, searchSpace, problem);
+                var selected = childSelector.Select(population, count, random);
                 return [.. selected, .. selected];
             }
         }
     }
 
     private sealed record PreferFirstMultiSelector
-        : MultiSelector<RealVector>
+        : MultiOperator<Selection, RealVector>
     {
-        public PreferFirstMultiSelector(ImmutableArray<ISelector<RealVector>> childSelectors)
+        public PreferFirstMultiSelector(ImmutableArray<IOperator<Selection, RealVector>> childSelectors)
             : base(childSelectors)
         {
         }
 
-        protected override CompositeExecutionFactory<ISelectorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childSelectors => new Execution<TRunSearchSpace, TRunProblem>(childSelectors);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<ISelectorExecution<RealVector, TSearchSpace, TProblem>> childSelectors)
-            : MultiSelectorExecution<RealVector, TSearchSpace, TProblem>(childSelectors)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildSelectors[0].Select(population, objective, count, random, searchSpace, problem);
+            ImmutableArray<ISelectionExecutor<RealVector>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<ISelectionExecutor<RealVector>> childSelectors)
+            : SelectionExecutor<RealVector>
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Select(IReadOnlyList<EvaluatedCandidate<RealVector>> population, int count, IRandomNumberGenerator random) =>
+                childSelectors[0].Select(population, count, random);
         }
     }
 
@@ -1081,72 +1055,80 @@ public class OperatorAuthoringSpecs
             offspringPopulation.Take(count).ToArray();
     }
 
-    private sealed record AlternatingStatefulReplacer : StatefulReplacer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, AlternatingStatefulReplacer.ExecutionState>
+    private sealed record AlternatingReplacer : Replacer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class ExecutionState
+        protected override IReplacementExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+                new Executor();
+
+        private sealed class Executor : ReplacementExecutor<RealVector>
         {
-            public int Calls { get; set; }
+            private int invocations;
+
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, int count, IRandomNumberGenerator random) =>
+                invocations++ % 2 == 0 ? previousPopulation.Take(count).ToArray() : offspringPopulation.Take(count).ToArray();
         }
-
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-            state.Calls++ % 2 == 0 ? previousPopulation.Take(count).ToArray() : offspringPopulation.Take(count).ToArray();
     }
 
-    private sealed record ForwardingReplacer(IReplacer<RealVector> Inner)
+    private sealed record ForwardingReplacer(IOperator<Replacement, RealVector> Inner)
         : Replacer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutionFactory<ReplacerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
-
-        private sealed class Execution(IReplacerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
-            : ReplacerExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        protected override ReplacementExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-                inner.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            var inner = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner, scope.Problem);
+            return new Executor(inner);
+        }
+
+        private sealed class Executor(IReplacementExecutor<RealVector> inner)
+            : ReplacementExecutor<RealVector>
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, int count, IRandomNumberGenerator random) =>
+                inner.Replace(previousPopulation, offspringPopulation, count, random);
         }
     }
 
     private sealed record ForwardingWrappingReplacer
-        : WrappingReplacer<RealVector>
+        : WrappingOperator<Replacement, RealVector>
     {
-        public ForwardingWrappingReplacer(IReplacer<RealVector> childReplacer)
+        public ForwardingWrappingReplacer(IOperator<Replacement, RealVector> childReplacer)
             : base(childReplacer)
         {
         }
 
-        protected override WrapperExecutionFactory<IReplacerExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            childReplacer => new Execution<TRunSearchSpace, TRunProblem>(childReplacer);
-
-        private sealed class Execution<TSearchSpace, TProblem>(IReplacerExecution<RealVector, TSearchSpace, TProblem> childReplacer)
-            : WrappingReplacerExecution<RealVector, TSearchSpace, TProblem>(childReplacer)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildReplacer.Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator);
+        }
+
+        private sealed class Executor(IReplacementExecutor<RealVector> childReplacer)
+            : ReplacementExecutor<RealVector>
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, int count, IRandomNumberGenerator random) =>
+                childReplacer.Replace(previousPopulation, offspringPopulation, count, random);
         }
     }
 
     private sealed record FirstMultiReplacer
-        : MultiReplacer<RealVector>
+        : MultiOperator<Replacement, RealVector>
     {
-        public FirstMultiReplacer(IReadOnlyList<IReplacer<RealVector>> childReplacers)
+        public FirstMultiReplacer(IReadOnlyList<IOperator<Replacement, RealVector>> childReplacers)
             : base(childReplacers)
         {
         }
 
-        protected override CompositeExecutionFactory<IReplacerExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childReplacers => new Execution<TRunSearchSpace, TRunProblem>(childReplacers);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IReplacerExecution<RealVector, TSearchSpace, TProblem>> childReplacers)
-            : MultiReplacerExecution<RealVector, TSearchSpace, TProblem>(childReplacers)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildReplacers[0].Replace(previousPopulation, offspringPopulation, objective, count, random, searchSpace, problem);
+            ImmutableArray<IReplacementExecutor<RealVector>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IReplacementExecutor<RealVector>> childReplacers)
+            : ReplacementExecutor<RealVector>
+        {
+            public override IReadOnlyList<EvaluatedCandidate<RealVector>> Replace(IReadOnlyList<EvaluatedCandidate<RealVector>> previousPopulation, IReadOnlyList<EvaluatedCandidate<RealVector>> offspringPopulation, int count, IRandomNumberGenerator random) =>
+                childReplacers[0].Replace(previousPopulation, offspringPopulation, count, random);
         }
     }
 
@@ -1170,113 +1152,123 @@ public class OperatorAuthoringSpecs
             currentState with { Value = currentState.Value + 1 };
     }
 
-    private sealed record StatefulSearchSpaceInterceptor : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceInterceptor.ExecutionState>
+    private sealed record ExplicitSearchSpaceInterceptor : Interceptor<RealVector, BoundedRealVectorSearchSpace, CounterSearchState>
     {
-        public sealed class ExecutionState { }
+        protected override IInterceptionExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, CounterSearchState> scope) =>
+                new Executor();
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) =>
-            currentState with { Value = currentState.Value + 1 };
-    }
-
-    private sealed record StatefulCandidateInterceptor : StatefulInterceptor<RealVector, CounterSearchState, StatefulCandidateInterceptor.ExecutionState>
-    {
-        public sealed class ExecutionState { }
-
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random) =>
-            currentState with { Value = currentState.Value + 1 };
-    }
-
-    private sealed record CountingStatefulInterceptor : StatefulInterceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState, CountingStatefulInterceptor.ExecutionState>
-    {
-        public sealed class ExecutionState
+        private sealed class Executor : InterceptionExecutor<CounterSearchState>
         {
-            public int Calls { get; set; }
-        }
-
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
-        {
-            state.Calls++;
-            return currentState with { Value = currentState.Value + state.Calls };
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random) =>
+                currentState with { Value = currentState.Value + 1 };
         }
     }
 
-    private sealed record ForwardingInterceptor(IInterceptor<RealVector> Inner)
+    private sealed record ExplicitCandidateInterceptor : Interceptor<RealVector, CounterSearchState>
+    {
+        protected override IInterceptionExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, CounterSearchState> scope) =>
+                new Executor();
+
+        private sealed class Executor : InterceptionExecutor<CounterSearchState>
+        {
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random) =>
+                currentState with { Value = currentState.Value + 1 };
+        }
+    }
+
+    private sealed record CountingInterceptor : Interceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+    {
+        protected override IInterceptionExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState> scope) =>
+                new Executor();
+
+        private sealed class Executor : InterceptionExecutor<CounterSearchState>
+        {
+            private int invocations;
+
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random)
+            {
+                invocations++;
+                return currentState with { Value = currentState.Value + invocations };
+            }
+        }
+    }
+
+    private sealed record ForwardingInterceptor(IOperator<Interception<CounterSearchState>, RealVector> Inner)
         : Interceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        public override ExecutionFactory<InterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(Inner));
-
-        private sealed class Execution(IInterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState> inner)
-            : InterceptorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+        protected override InterceptionExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState> scope)
         {
-            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-                inner.Transform(currentState, previousState, random, searchSpace, problem);
+            var inner = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(Inner, scope.Problem);
+            return new Executor(inner);
+        }
+
+        private sealed class Executor(IInterceptionExecutor<CounterSearchState> inner)
+            : InterceptionExecutor<CounterSearchState>
+        {
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random) =>
+                inner.Transform(currentState, previousState, random);
         }
     }
 
     private sealed record ForwardingWrappingInterceptor
-        : WrappingInterceptor<RealVector>
+        : WrappingOperator<Interception<CounterSearchState>, RealVector>
     {
-        public ForwardingWrappingInterceptor(IInterceptor<RealVector> childInterceptor)
+        public ForwardingWrappingInterceptor(IOperator<Interception<CounterSearchState>, RealVector> childInterceptor)
             : base(childInterceptor)
         {
         }
 
-        protected override WrapperExecutionFactory<IInterceptorExecution<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-            childInterceptor => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptor);
-
-        private sealed class Execution<TSearchSpace, TProblem, TSearchState>(IInterceptorExecution<RealVector, TSearchSpace, TProblem, TSearchState> childInterceptor)
-            : WrappingInterceptorExecution<RealVector, TSearchSpace, TProblem, TSearchState>(childInterceptor)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
-            where TSearchState : class, ISearchState
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildInterceptor.Transform(currentState, previousState, random, searchSpace, problem);
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator);
+        }
+
+        private sealed class Executor(IInterceptionExecutor<CounterSearchState> childInterceptor)
+            : InterceptionExecutor<CounterSearchState>
+        {
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random) =>
+                childInterceptor.Transform(currentState, previousState, random);
         }
     }
 
     private sealed record FirstMultiInterceptor
-        : MultiInterceptor<RealVector>
+        : MultiOperator<Interception<CounterSearchState>, RealVector>
     {
-        public FirstMultiInterceptor(IReadOnlyList<IInterceptor<RealVector>> childInterceptors)
+        public FirstMultiInterceptor(IReadOnlyList<IOperator<Interception<CounterSearchState>, RealVector>> childInterceptors)
             : base(childInterceptors)
         {
         }
 
-        protected override CompositeExecutionFactory<IInterceptorExecution<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-            childInterceptors => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childInterceptors);
-
-        private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ImmutableArray<IInterceptorExecution<RealVector, TSearchSpace, TProblem, TSearchState>> childInterceptors)
-            : MultiInterceptorExecution<RealVector, TSearchSpace, TProblem, TSearchState>(childInterceptors)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
-            where TSearchState : class, ISearchState
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override TSearchState Transform(TSearchState currentState, TSearchState? previousState, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildInterceptors[0].Transform(currentState, previousState, random, searchSpace, problem);
+            ImmutableArray<IInterceptionExecutor<CounterSearchState>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IInterceptionExecutor<CounterSearchState>> childInterceptors)
+            : InterceptionExecutor<CounterSearchState>
+        {
+            public override CounterSearchState Transform(CounterSearchState currentState, CounterSearchState? previousState, IRandomNumberGenerator random) =>
+                childInterceptors[0].Transform(currentState, previousState, random);
         }
     }
 
     private sealed record ValueTerminator(int MaximumValue) : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        public override bool IsTerminalState(CounterSearchState state, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => state.Value >= MaximumValue;
+        public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => state.Value >= MaximumValue;
     }
 
     private sealed record SearchSpaceTerminator : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, CounterSearchState>
     {
-        public override bool IsTerminalState(CounterSearchState state, BoundedRealVectorSearchSpace searchSpace) => false;
+        public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => false;
     }
 
     private sealed record StateTerminator : StatelessTerminator<RealVector, CounterSearchState>
     {
-        public override bool IsTerminalState(CounterSearchState state) => false;
+        public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random) => false;
     }
 
     private sealed record StateAgnosticTerminator : StatelessTerminator<RealVector>
@@ -1284,113 +1276,130 @@ public class OperatorAuthoringSpecs
         public override bool IsTerminalState() => false;
     }
 
-    private sealed record StatefulSearchSpaceTerminator : StatefulTerminator<RealVector, BoundedRealVectorSearchSpace, CounterSearchState, StatefulSearchSpaceTerminator.ExecutionState>
+    private sealed record ExplicitSearchSpaceTerminator : Terminator<RealVector, BoundedRealVectorSearchSpace, CounterSearchState>
     {
-        public sealed class ExecutionState { }
+        protected override ITerminationExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>, CounterSearchState> scope) =>
+                new Executor();
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, BoundedRealVectorSearchSpace searchSpace) => false;
-    }
-
-    private sealed record StatefulStateTerminator : StatefulTerminator<RealVector, CounterSearchState, StatefulStateTerminator.ExecutionState>
-    {
-        public sealed class ExecutionState { }
-
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state) => false;
-    }
-
-    private sealed record StatefulStateAgnosticTerminator : StatefulTerminator<RealVector, StatefulStateAgnosticTerminator.ExecutionState>
-    {
-        public sealed class ExecutionState { }
-
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override bool IsTerminalState(ExecutionState state) => false;
-    }
-
-    private sealed record CountingStatefulTerminator : StatefulTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState, CountingStatefulTerminator.ExecutionState>
-    {
-        public sealed class ExecutionState
+        private sealed class Executor : TerminationExecutor<CounterSearchState>
         {
-            public int Calls { get; set; }
+            public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random) => false;
         }
-
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override bool IsTerminalState(CounterSearchState searchState, ExecutionState state, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => ++state.Calls >= 2;
     }
 
-    private sealed record ForwardingTerminator(ITerminator<RealVector> Inner)
+    private sealed record ExplicitStateTerminator : Terminator<RealVector, CounterSearchState>
+    {
+        protected override ITerminationExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, CounterSearchState> scope) =>
+                new Executor();
+
+        private sealed class Executor : TerminationExecutor<CounterSearchState>
+        {
+            public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random) => false;
+        }
+    }
+
+    private sealed record ExplicitStateAgnosticTerminator : Terminator<RealVector>
+    {
+        protected override ITerminationExecutor<ISearchState> CreateExecutor(ResolutionScope<RealVector, ISearchSpace<RealVector>, IProblem<RealVector, ISearchSpace<RealVector>>, ISearchState> scope) =>
+                new Executor();
+
+        private sealed class Executor : TerminationExecutor
+        {
+            public override bool IsTerminalState() => false;
+        }
+    }
+
+    private sealed record CountingTerminator : Terminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+    {
+        protected override ITerminationExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState> scope) =>
+                new Executor();
+
+        private sealed class Executor : TerminationExecutor<CounterSearchState>
+        {
+            private int invocations;
+
+            public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random) => ++invocations >= 2;
+        }
+    }
+
+    private sealed record ForwardingTerminator(IOperator<Termination, RealVector> Inner)
         : Terminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
     {
-        public override ExecutionFactory<TerminatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(Inner));
-
-        private sealed class Execution(ITerminatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState> inner)
-            : TerminatorExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>
+        protected override TerminationExecutor<CounterSearchState> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState> scope)
         {
-            public override bool IsTerminalState(CounterSearchState state, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) => inner.IsTerminalState(state, searchSpace, problem);
+            var inner = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CounterSearchState>(Inner, scope.Problem);
+            return new Executor(inner);
+        }
+
+        private sealed class Executor(ITerminationExecutor<CounterSearchState> inner)
+            : TerminationExecutor<CounterSearchState>
+        {
+            public override bool IsTerminalState(CounterSearchState state, IRandomNumberGenerator random) => inner.IsTerminalState(state, random);
         }
     }
 
     private sealed record ForwardingWrappingTerminator
-        : WrappingTerminator<RealVector>
+        : WrappingOperator<Termination, RealVector>
     {
-        public ForwardingWrappingTerminator(ITerminator<RealVector> childTerminator)
+        public ForwardingWrappingTerminator(IOperator<Termination, RealVector> childTerminator)
             : base(childTerminator)
         {
         }
 
-        protected override WrapperExecutionFactory<ITerminatorExecution<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-            childTerminator => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminator);
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor<TRunSearchState>(childOperator);
+        }
 
-        private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ITerminatorExecution<RealVector, TSearchSpace, TProblem, TSearchState> childTerminator)
-            : WrappingTerminatorExecution<RealVector, TSearchSpace, TProblem, TSearchState>(childTerminator)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor<TSearchState>(ITerminationExecutor<TSearchState> childTerminator)
+            : TerminationExecutor<TSearchState>
             where TSearchState : class, ISearchState
         {
-            public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-                ChildTerminator.IsTerminalState(state, searchSpace, problem);
+            public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) =>
+                childTerminator.IsTerminalState(state, random);
         }
     }
 
     private sealed record FirstMultiTerminator
-        : MultiTerminator<RealVector>
+        : MultiOperator<Termination, RealVector>
     {
-        public FirstMultiTerminator(IReadOnlyList<ITerminator<RealVector>> childTerminators)
+        public FirstMultiTerminator(IReadOnlyList<IOperator<Termination, RealVector>> childTerminators)
             : base(childTerminators)
         {
         }
 
-        protected override CompositeExecutionFactory<ITerminatorExecution<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateCompositeFactory<TRunSearchSpace, TRunProblem, TRunSearchState>() =>
-            childTerminators => new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>(childTerminators);
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
+        {
+            ImmutableArray<ITerminationExecutor<TRunSearchState>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor<TRunSearchState>(childOperators);
+        }
 
-        private sealed class Execution<TSearchSpace, TProblem, TSearchState>(ImmutableArray<ITerminatorExecution<RealVector, TSearchSpace, TProblem, TSearchState>> childTerminators)
-            : MultiTerminatorExecution<RealVector, TSearchSpace, TProblem, TSearchState>(childTerminators)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        private sealed class Executor<TSearchState>(ImmutableArray<ITerminationExecutor<TSearchState>> childTerminators)
+            : TerminationExecutor<TSearchState>
             where TSearchState : class, ISearchState
         {
-            public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) =>
-                ChildTerminators[0].IsTerminalState(state, searchSpace, problem);
+            public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) =>
+                childTerminators[0].IsTerminalState(state, random);
         }
     }
 
-    private sealed record ForwardingCrossover(ICrossover<RealVector> Inner)
+    private sealed record ForwardingCrossover(IOperator<Crossover, RealVector> Inner)
         : Crossover<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override ExecutionFactory<CrossoverExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>> CreateExecutionFactory() =>
-            scope => new Execution(scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner));
-
-        private sealed class Execution(ICrossoverExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem> inner)
-            : CrossoverExecution<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
+        protected override CrossoverExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
-                inner.Cross(parents, random, searchSpace, problem);
+            var inner = scope.Resolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(Inner, scope.Problem);
+            return new Executor(inner);
+        }
+
+        private sealed class Executor(ICrossoverExecutor<RealVector> inner)
+            : CrossoverExecutor<RealVector>
+        {
+            public override IReadOnlyList<RealVector> Cross(IReadOnlyList<Parents<RealVector>> parents, IRandomNumberGenerator random) =>
+                inner.Cross(parents, random);
         }
     }
 
@@ -1432,73 +1441,71 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record CountingStatefulMutator : StatefulMutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulMutator.ExecutionState>
+    private sealed record CountingMutator : Mutator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class ExecutionState
+        protected override IMutationExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+                new Executor();
+
+        private sealed class Executor : MutationExecutor<RealVector>
         {
-            public int Calls { get; set; }
-        }
+            private int invocations;
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
-        {
-            state.Calls++;
-            return parents.Select(parent => new RealVector(parent.Select(value => value + state.Calls))).ToArray();
-        }
-    }
-
-    private sealed record ApplyTwiceMutator
-        : WrappingMutator<RealVector>
-    {
-        public ApplyTwiceMutator(IMutator<RealVector> childMutator)
-            : base(childMutator)
-        {
-        }
-
-        protected override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            childMutator => new Execution<TRunSearchSpace, TRunProblem>(childMutator);
-
-        private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<RealVector, TSearchSpace, TProblem> childMutator)
-            : WrappingMutatorExecution<RealVector, TSearchSpace, TProblem>(childMutator)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
-        {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
-                var first = ChildMutator.Mutate(parents, random, searchSpace, problem);
-                return ChildMutator.Mutate(first, random, searchSpace, problem);
+                invocations++;
+                return parents.Select(parent => new RealVector(parent.Select(value => value + invocations))).ToArray();
             }
         }
     }
 
-    private sealed record CallOffsetMutator : WrappingMutator<RealVector>
+    private sealed record ApplyTwiceMutator
+        : WrappingOperator<Mutation, RealVector>
     {
-        public CallOffsetMutator(IMutator<RealVector> childMutator) : base(childMutator)
+        public ApplyTwiceMutator(IOperator<Mutation, RealVector> childMutator)
+            : base(childMutator)
         {
         }
 
-        private sealed class ExecutionState
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            public int Calls;
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator);
         }
 
-        protected override WrapperExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
+        private sealed class Executor(IMutationExecutor<RealVector> childMutator)
+            : MutationExecutor<RealVector>
         {
-            var state = new ExecutionState();
-            return child => new Execution<TRunSearchSpace, TRunProblem>(child, state);
-        }
-
-        private sealed class Execution<TSearchSpace, TProblem>(IMutatorExecution<RealVector, TSearchSpace, TProblem> child, ExecutionState state)
-            : WrappingMutatorExecution<RealVector, TSearchSpace, TProblem>(child)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
-        {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
             {
-                var children = ChildMutator.Mutate(parents, random, searchSpace, problem);
-                state.Calls++;
-                return children.Select(child => new RealVector(child.Select(value => value + state.Calls))).ToArray();
+                var first = childMutator.Mutate(parents, random);
+                return childMutator.Mutate(first, random);
+            }
+        }
+    }
+
+    private sealed record CallOffsetMutator : WrappingOperator<Mutation, RealVector>
+    {
+        public CallOffsetMutator(IOperator<Mutation, RealVector> childMutator) : base(childMutator)
+        {
+        }
+
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
+        {
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator);
+        }
+
+        private sealed class Executor(IMutationExecutor<RealVector> child)
+            : MutationExecutor<RealVector>
+        {
+            private int invocations;
+
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random)
+            {
+                var children = child.Mutate(parents, random);
+                invocations++;
+                return children.Select(child => new RealVector(child.Select(value => value + invocations))).ToArray();
             }
         }
     }
@@ -1516,42 +1523,45 @@ public class OperatorAuthoringSpecs
         }
     }
 
-    private sealed record CountingStatefulRefiner : StatefulRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, CountingStatefulRefiner.ExecutionState>
+    private sealed record CountingRefiner : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public sealed class ExecutionState
-        {
-            public int Calls { get; set; }
-        }
+        protected override IRefinementExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+                new Executor();
 
-        protected override ExecutionState CreateInitialState() => new();
-
-        protected override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, ExecutionState state, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem)
+        private sealed class Executor : RefinementExecutor<RealVector>
         {
-            state.Calls++;
-            return candidates.Select(candidate => new RealVector(candidate.Select(value => value + state.Calls))).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
+            {
+                invocations++;
+                return candidates.Select(candidate => new RealVector(candidate.Select(value => value + invocations))).ToArray();
+            }
         }
     }
 
     private sealed record ApplyTwiceRefiner
-        : WrappingRefiner<RealVector>
+        : WrappingOperator<Refinement, RealVector>
     {
-        public ApplyTwiceRefiner(IRefiner<RealVector> childRefiner)
+        public ApplyTwiceRefiner(IOperator<Refinement, RealVector> childRefiner)
             : base(childRefiner)
         {
         }
 
-        protected override WrapperExecutionFactory<IRefinerExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-            childRefiner => new Execution<TRunSearchSpace, TRunProblem>(childRefiner);
-
-        private sealed class Execution<TSearchSpace, TProblem>(IRefinerExecution<RealVector, TSearchSpace, TProblem> childRefiner)
-            : WrappingRefinerExecution<RealVector, TSearchSpace, TProblem>(childRefiner)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<RealVector, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+            var childOperator = scope.Resolve(ChildOperator);
+            return new Executor(childOperator);
+        }
+
+        private sealed class Executor(IRefinementExecutor<RealVector> childRefiner)
+            : RefinementExecutor<RealVector>
+        {
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
             {
-                var first = ChildRefiner.Refine(candidates, random, searchSpace, problem);
-                return ChildRefiner.Refine(first, random, searchSpace, problem);
+                var first = childRefiner.Refine(candidates, random);
+                return childRefiner.Refine(first, random);
             }
         }
     }
@@ -1566,23 +1576,25 @@ public class OperatorAuthoringSpecs
     }
 
     private sealed record PreferFirstMultiMutator
-        : MultiMutator<RealVector>
+        : MultiOperator<Mutation, RealVector>
     {
-        public PreferFirstMultiMutator(ImmutableArray<IMutator<RealVector>> childMutators)
+        public PreferFirstMultiMutator(ImmutableArray<IOperator<Mutation, RealVector>> childMutators)
             : base(childMutators)
         {
         }
 
-        protected override CompositeExecutionFactory<IMutatorExecution<RealVector, TRunSearchSpace, TRunProblem>> CreateCompositeFactory<TRunSearchSpace, TRunProblem>() =>
-            childMutators => new Execution<TRunSearchSpace, TRunProblem>(childMutators);
-
-        private sealed class Execution<TSearchSpace, TProblem>(ImmutableArray<IMutatorExecution<RealVector, TSearchSpace, TProblem>> childMutators)
-            : MultiMutatorExecution<RealVector, TSearchSpace, TProblem>(childMutators)
-            where TSearchSpace : class, ISearchSpace<RealVector>
-            where TProblem : class, IProblem<RealVector, TSearchSpace>
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<RealVector, TSearchSpace, TProblem, TSearchState> scope)
         {
-            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-                ChildMutators[0].Mutate(parents, random, searchSpace, problem);
+            ImmutableArray<IMutationExecutor<RealVector>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IMutationExecutor<RealVector>> childMutators)
+            : MutationExecutor<RealVector>
+        {
+            public override IReadOnlyList<RealVector> Mutate(IReadOnlyList<RealVector> parents, IRandomNumberGenerator random) =>
+                childMutators[0].Mutate(parents, random);
         }
     }
 }

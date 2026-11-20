@@ -4,38 +4,34 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
+/// <remarks>A wrapping algorithm resolves its child through the scope and builds its executor around the result.</remarks>
 public abstract record WrappingAlgorithm<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> ChildAlgorithm)
     : IAlgorithm<TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState) && execution.Fits(ChildAlgorithm);
+    public static Parameter<WrappingAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> ChildAlgorithmParameter { get; } =
+        new(nameof(ChildAlgorithm), static algorithm => algorithm.ChildAlgorithm, static (algorithm, value) => algorithm with { ChildAlgorithm = value });
 
-    public ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
-    {
-        var advice = CreateWrapperFactory<TRunSearchSpace, TRunProblem>();
-        return scope => advice(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(ChildAlgorithm));
-    }
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ChildAlgorithmParameter];
 
-    protected abstract WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+    /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
+    public virtual IReadOnlyList<IParameter> GetParameters() => Parameters;
 
-    ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> IAlgorithm<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-    {
-        if (typeof(TRunSearchState) != typeof(TSearchState))
-            throw new InvalidOperationException($"{GetType().Name} produces {typeof(TSearchState).Name}, and cannot run producing {typeof(TRunSearchState).Name}.");
-        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>>)CreateExecutionFactory<TRunSearchSpace, TRunProblem>();
-    }
+    public virtual bool Supports(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
+
+    IAlgorithmExecutor<TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => CreateExecutor(scope);
+
+    /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
+    protected abstract IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 }
 
-public abstract class WrappingAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>(
-    IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> childAlgorithm)
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public abstract class WrappingAlgorithmExecutor<TSearchState>(IAlgorithmExecutor<TSearchState> childAlgorithm)
+    : AlgorithmExecutor<TSearchState>
     where TSearchState : class, ISearchState
 {
-    protected IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> ChildAlgorithm { get; } = childAlgorithm;
+    protected IAlgorithmExecutor<TSearchState> ChildAlgorithm { get; } = childAlgorithm;
 }

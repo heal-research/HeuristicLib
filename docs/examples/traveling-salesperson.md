@@ -18,6 +18,7 @@ Download [`berlin52.tsp`](https://github.com/heal-research/HeuristicLib/blob/mai
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -35,13 +36,14 @@ var algorithm = GeneticAlgorithm.For(
     maximumGenerations: 1000,
     mutationRate: 0.25);
 
-var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TracePopulationCandidates(out var qualityAnalyzer);
+var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
+var run = algorithm.CreateRun(
+    problem, RandomNumberGenerator.Create(seed: 42), [qualityAnalyzer]);
 
 await run.CompleteAsync();
 
-var qualityCurve = qualityAnalyzer.Snapshot().Values;
-var best = qualityAnalyzer.RequireLatestValue().Best;
+var qualityCurve = run.Result(qualityAnalyzer).Snapshot().Values;
+var best = run.Result(qualityAnalyzer).RequireLatestValue().Best;
 
 Console.WriteLine($"Execution: {instance.Name}");
 Console.WriteLine($"Best tour length: {best.ObjectiveVector[0]:F0}");

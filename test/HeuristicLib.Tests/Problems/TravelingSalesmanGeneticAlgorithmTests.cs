@@ -6,7 +6,7 @@ namespace HEAL.HeuristicLib.Tests.Problems;
 public class TravelingSalesmanGeneticAlgorithmTests
 {
     [Fact]
-    public void GaWithDefaultTsp_Complete_ReturnsPopulationWithinProblemSearchSpace()
+    public void GaWithDefaultTsp_RunToCompletion_ReturnsPopulationWithinProblemSearchSpace()
     {
         var problem = TravelingSalesmanProblem.CreateDefault();
         var ga = GeneticAlgorithm.For(
@@ -21,7 +21,7 @@ public class TravelingSalesmanGeneticAlgorithmTests
           elites: 0);
 
         var result = ga
-                       .Complete(
+                       .RunToCompletion(
                          problem,
                          RandomNumberGenerator.Create(42),
                          ct: TestContext.Current.CancellationToken);

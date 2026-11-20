@@ -9,7 +9,7 @@ Population based algorithms yield `PopulationState<TCandidate>`. Its population 
 ```csharp
 var generation = 0;
 
-await foreach (var state in algorithm.Stream(problem, random))
+await foreach (var state in algorithm.RunStreaming(problem, random))
 {
     generation++;
     if (generation % 10 != 0) continue;
@@ -51,6 +51,10 @@ Do not modify candidates held by an evaluated state. Variation should create new
 
 ## Final state
 
-`CompleteAsync` consumes the stream and returns its last state. It is convenient when only the result matters. Use `Stream` when each intermediate state has value.
+`RunToCompletionAsync` consumes the stream and returns its last state. It is convenient when only the result matters. Use `RunStreaming` when each intermediate state has value.
 
 Search states are not automatically durable checkpoints. If an application needs resume support, persist all configuration, problem data, random state and algorithm specific information required to recreate a valid run.
+
+## Next steps
+
+- [Randomness](/guide/execution/randomness) continues the Execution path with seeds and independent streams.

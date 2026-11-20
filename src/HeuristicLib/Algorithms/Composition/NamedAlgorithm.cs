@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.Execution;
 namespace HEAL.HeuristicLib.Algorithms;
 
 /// <summary>Gives an algorithm configuration a name and forwards its execution unchanged.</summary>
-/// <remarks>The wrapper and its child are separate configurations; a name pointcut selects the wrapper.</remarks>
+/// <remarks>The wrapper and its child are separate configurations; selecting by name selects the wrapper.</remarks>
 public sealed record NamedAlgorithm<TCandidate, TSearchState> : WrappingAlgorithm<TCandidate, TSearchState>, INamedConfiguration
     where TSearchState : class, ISearchState
 {
@@ -15,8 +15,16 @@ public sealed record NamedAlgorithm<TCandidate, TSearchState> : WrappingAlgorith
 
     public string Name { get; init; }
 
-    protected override WrapperExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateWrapperFactory<TRunSearchSpace, TRunProblem>() =>
-        child => child;
+    public static Parameter<NamedAlgorithm<TCandidate, TSearchState>, string> NameParameter { get; } =
+        new(nameof(Name), static named => named.Name, static (named, value) => named with { Name = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [NameParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        scope.Resolve(ChildAlgorithm);
 }
 
 public static class NamedAlgorithm

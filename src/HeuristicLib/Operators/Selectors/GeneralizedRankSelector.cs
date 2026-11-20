@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -8,6 +9,13 @@ namespace HEAL.HeuristicLib.Operators;
 
 public record GeneralizedRankSelector<TCandidate>(double Pressure) : StatelessSelector<TCandidate>
 {
+    public static Parameter<GeneralizedRankSelector<TCandidate>, double> PressureParameter { get; } =
+        new(nameof(Pressure), static selector => selector.Pressure, static (selector, value) => selector with { Pressure = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [PressureParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
         GeneralizedRankSelector.Select(population, objective, count, random, Pressure);
 }

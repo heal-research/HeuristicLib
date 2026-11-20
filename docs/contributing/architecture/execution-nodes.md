@@ -1,39 +1,28 @@
-# Configuration vs execution nodes
+# Execution nodes
 
-Configurations describe reusable settings and child configurations. Resolution prepares their persistent state once and constructs typed execution nodes for the current context. Lookup uses configuration object reference rather than service type or value equality. Execution creation and child resolution are explicit.
+A configuration is immutable data. A run builds execution nodes from configurations, and the nodes hold everything that changes. This page defines the kinds of node and what each owns. [Execution resolution](/contributing/architecture/execution-resolution) describes how a scope builds, keeps and shares them, and [Configurations](/guide/fundamentals/configurations) describes the configuration side for users.
 
-| Concept           | Responsibility                                                    |
-| ----------------- | ----------------------------------------------------------------- |
-| Configuration     | Settings, declared children and a typed preparation method.       |
-| Execution factory | Persistent state prepared once; construction of contextual nodes. |
-| Execution node    | Typed operations and resolved child references.                   |
-| Resolution scope  | State selection and applying the requesting aspects.              |
-| Pointcut          | Selecting configurations during resolution.                       |
-| Advice            | Wrapping the execution built for a selected configuration.        |
-| Aspect            | Ordered pointcut/advice pairs added to a scope or run.            |
+| Concept          | Responsibility                                                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| Configuration    | Settings, declared children, analyzers and a construction hook.                                               |
+| Execution node   | A runtime object created by a configuration and held by a scope.                                              |
+| Executor         | Typed operations, private fields and resolved child references.                                               |
+| Analyzer         | Immutable configuration that creates one result per run and names the substitutions that place its collector. |
+| Run result       | An `IRunResult` execution node, such as an analyzer result or counter accumulator.                            |
+| Resolution scope | Constructing execution nodes with contextual children and run results.                                        |
 
-## Authoring execution behavior
+## Ownership
 
-Stateless operators use role-specific stateless bases. Operators with ordinary execution data use stateful bases and framework-managed state. Operators needing child executions or custom structure use an authored execution node. Algorithms use authored execution nodes because they coordinate operators and execution flow.
+Configurations describe reusable settings, child configurations and analyzers. Executors own private mutable fields and the child executors they call. `IExecutionNode` covers executors, adaptations and run results. Invocation-local values stay in the operation or iterator, and a configuration never stores mutable execution data.
 
-A configuration prepares an `ExecutionFactory<TExecution>` without a scope. Allocate persistent counters, caches and helper data before returning that factory. Its construction callback receives a `ResolutionScope`; resolve every child through it and pass the resolved child to the node constructor. Invocation-local values stay in the operation or iterator. Never store run data on a configuration.
+Run results belong to the run, not to an executor. Analyzers, counters and durations create them, and configurations read them through `scope.Results.Result(configuration)`. Reusing an analyzer across runs creates independent results; reusing a wrapper of your own may intentionally retain its caller-owned runtime dependencies.
 
-A prepared leaf may return one retained raw execution. Composite factories can return fresh nodes around the same persistent state. Therefore the same configuration does not promise the same node reference on every resolve. A parent caller keeps its original children and observations when another context binds the same state.
+## Construction hooks
 
-## Configured wrappers and advice
+Every configuration exposes one construction hook, which resolution calls for every build. Operators and algorithms build their executors in a typed `CreateExecutor`; other nodes, such as adaptations, clocks and consumer-defined roles, implement `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope)`. The hook resolves each child through its scope, passes it to the node it builds and initializes private counters, cursors and adaptation values on that node, so repeated construction of one configuration creates independent private data. Construction may be deferred: a cycle retains the scope its hook received and, during each turn, resolves its inner algorithms in a new child scope of it, so construction always goes through a scope and never through a child's hook. The rules are developer guidelines § 4.3 and § 4.4, and [Operator implementation](/contributing/architecture/operator-implementation) covers the authoring paths for operators. Algorithms always author an executor (§ 4.17).
 
-Configured wrappers are ordinary configurations with declared children. A wrapping base prepares a `WrapperExecutionFactory<TExecution>` through its protected hook and supplies the child resolved by the construction scope.
+A configured wrapper is an ordinary configuration that declares the configuration it wraps as its child. It checks the run in `Supports`, resolves the child through its scope and receives its other runtime dependencies through its properties. `Substitute` and analyzers place wrappers in a new configuration before resolution: [Substitution and ordering](/contributing/architecture/execution-resolution#substitution-and-ordering) describes the rewrite and [Observation boundaries](/contributing/architecture/analyzers#observation-boundaries) the wrappers that observe.
 
-Advice is separate from the configuration graph. Its role-specific `CreateWrapperFactory` receives the configuration the pointcut selected and prepares a constructor accepting the already resolved execution. It introduces no configured children. Observation advice reports successful operator calls or states yielded by an algorithm; standalone counting and timing advice avoid observation allocations.
+## Next
 
-Use `Aspect.Observe`, `Aspect.CountCalls`, `Aspect.CountCandidates` or `Aspect.MeasureDuration` from `Inspection` for predefined behavior. Add the result to a run with `AddAspect`, or pass aspects to `ResolutionScope.Create`, `With` or `CreateChildScope`.
-
-## State ownership and child activations
-
-A scope finds prepared factories in its state and ancestors. Parent-first selection lets descendants reuse state. Child-first selection stays local, and siblings cannot see each other's local selections. Children resolve in their factory owner's state with the requesting aspect chain.
-
-`With` changes aspects while sharing state. `CreateChildScope` creates child-local state and inherits aspects. A meta-algorithm prepares one `ChildScopeSelector` for its activation policy: Fresh creates a child state, Retained keeps child state by configuration reference, and Shared uses parent state. Retained state keeps advice preparation but applies each activation's current aspects.
-
-Stateful operations are not inherently thread safe. Concurrent use needs synchronization appropriate to the execution path. Execution nodes have no general disposal contract; resources needing deterministic cleanup require an explicit lifecycle owner.
-
-See [execution resolution](/contributing/architecture/execution-resolution) for ordering, controls, failure retry and lifetime rules, and [operator implementation](/contributing/architecture/operator-implementation) for authoring examples.
+[Execution resolution](/contributing/architecture/execution-resolution) describes scopes, sharing, ordering, adaptation, failure and lifetime rules. [Operator implementation](/contributing/architecture/operator-implementation) shows authoring examples.

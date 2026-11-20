@@ -1,8 +1,6 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -10,48 +8,52 @@ namespace HEAL.HeuristicLib.Operators;
 /// Emits predefined candidates across successive calls before delegating remaining requests to a fallback creator.
 /// </summary>
 public record PredefinedCandidatesCreator<TCandidate>
-    : ICreator<TCandidate>
+    : Operator<Creation, TCandidate>
 {
-    public ICreator<TCandidate> CreatorForRemainingCandidates { get; init; }
+    public IOperator<Creation, TCandidate> CreatorForRemainingCandidates { get; init; }
 
     public ValueArray<TCandidate> PredefinedCandidates { get; init; }
 
-    public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate> creatorForRemainingCandidates)
+    public static Parameter<PredefinedCandidatesCreator<TCandidate>, IOperator<Creation, TCandidate>> CreatorForRemainingCandidatesParameter { get; } =
+        new(nameof(CreatorForRemainingCandidates), static creator => creator.CreatorForRemainingCandidates, static (creator, value) => creator with { CreatorForRemainingCandidates = value });
+
+    public static SettingParameter<PredefinedCandidatesCreator<TCandidate>, ValueArray<TCandidate>> PredefinedCandidatesParameter { get; } =
+        new(nameof(PredefinedCandidates), static creator => creator.PredefinedCandidates, static (creator, value) => creator with { PredefinedCandidates = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [CreatorForRemainingCandidatesParameter, PredefinedCandidatesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public PredefinedCandidatesCreator(IReadOnlyList<TCandidate> predefinedCandidates, IOperator<Creation, TCandidate> creatorForRemainingCandidates)
     {
         PredefinedCandidates = predefinedCandidates.ToValueArray();
         CreatorForRemainingCandidates = creatorForRemainingCandidates;
     }
 
-    public ExecutionFactory<ICreatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        var state = new ExecutionState();
-        return scope => new Execution<TRunSearchSpace, TRunProblem>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem>(CreatorForRemainingCandidates), PredefinedCandidates, state);
+        var creatorForRemainingCandidates = scope.Resolve(CreatorForRemainingCandidates);
+        return new Executor(creatorForRemainingCandidates, PredefinedCandidates);
     }
 
-    private sealed class ExecutionState
+    private sealed class Executor(ICreationExecutor<TCandidate> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates)
+        : CreationExecutor<TCandidate>
     {
-        public int CurrentCandidateIndex { get; set; }
-    }
+        private int currentCandidateIndex;
 
-    private sealed class Execution<TSearchSpace, TProblem>(ICreatorExecution<TCandidate, TSearchSpace, TProblem> creatorForRemainingCandidates, ValueArray<TCandidate> predefinedCandidates, ExecutionState state)
-        : CreatorExecution<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    {
-        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random)
         {
             var candidates = new TCandidate[count];
-            var countPredefined = Math.Min(predefinedCandidates.Count - state.CurrentCandidateIndex, count);
+            var countPredefined = Math.Min(predefinedCandidates.Count - currentCandidateIndex, count);
             if (countPredefined > 0)
             {
                 for (var i = 0; i < countPredefined; i++)
                 {
-                    candidates[i] = predefinedCandidates[state.CurrentCandidateIndex + i];
+                    candidates[i] = predefinedCandidates[currentCandidateIndex + i];
                 }
 
-                state.CurrentCandidateIndex += countPredefined;
+                currentCandidateIndex += countPredefined;
             }
 
             var countRemaining = count - countPredefined;
@@ -60,7 +62,7 @@ public record PredefinedCandidatesCreator<TCandidate>
                 return candidates;
             }
 
-            var remaining = creatorForRemainingCandidates.Create(countRemaining, random, searchSpace, problem);
+            var remaining = creatorForRemainingCandidates.Create(countRemaining, random);
             for (var i = 0; i < remaining.Count; i++)
             {
                 candidates[countPredefined + i] = remaining[i];
@@ -73,13 +75,13 @@ public record PredefinedCandidatesCreator<TCandidate>
 
 public static class PredefinedCandidatesCreator
 {
-    public static PredefinedCandidatesCreator<TCandidate> Create<TCandidate>(IReadOnlyList<TCandidate> predefinedCandidates, ICreator<TCandidate> creatorForRemainingCandidates) =>
+    public static PredefinedCandidatesCreator<TCandidate> Create<TCandidate>(IReadOnlyList<TCandidate> predefinedCandidates, IOperator<Creation, TCandidate> creatorForRemainingCandidates) =>
         new(predefinedCandidates, creatorForRemainingCandidates);
 }
 
 public static class PredefinedCandidatesCreatorExtensions
 {
-    extension<TCandidate>(ICreator<TCandidate> creator)
+    extension<TCandidate>(IOperator<Creation, TCandidate> creator)
     {
         public PredefinedCandidatesCreator<TCandidate> SeededWith(IReadOnlyList<TCandidate> predefinedCandidates) =>
             PredefinedCandidatesCreator.Create(predefinedCandidates, creator);

@@ -16,25 +16,26 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchState>
 {
     internal TSelf Self => (TSelf)this;
 
-    public abstract ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace>;
+    IAlgorithmExecutor<TSearchState> IAlgorithm<TCandidate, TSearchState>.CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => CreateExecutor(scope);
 
     /// <summary>
     /// Agnostic in the search space and problem, so this base answers on the search state alone, which
-    /// <see cref="IAlgorithmExecution{TCandidate, TSearchSpace, TProblem, TSearchState}"/> is invariant in.
+    /// <see cref="IAlgorithmExecutor{TSearchState}"/> is invariant in.
     /// </summary>
-    public virtual bool Fits(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
+    public virtual bool Supports(ExecutionSignature execution) => execution.SearchState == typeof(TSearchState);
 
-    ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>> IAlgorithm<TCandidate>.CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-    {
-        if (typeof(TRunSearchState) != typeof(TSearchState))
-        {
-            throw new InvalidOperationException($"{GetType().Name} produces {typeof(TSearchState).Name}, and cannot run producing {typeof(TRunSearchState).Name}.");
-        }
+    /// <inheritdoc cref="IConfigurationNode.ChildExecution"/>
+    public virtual ExecutionSignature ChildExecution(ExecutionSignature execution) => execution;
 
-        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState>>)CreateExecutionFactory<TRunSearchSpace, TRunProblem>();
-    }
+    /// <inheritdoc cref="IConfigurationNode.GetParameters"/>
+    public virtual IReadOnlyList<IParameter> GetParameters() => [];
+
+    /// <inheritdoc cref="IAlgorithm{TCandidate, TSearchState}.CreateExecutor{TSearchSpace, TProblem}"/>
+    protected abstract IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>;
 }
 
 /// <remarks>
@@ -52,32 +53,36 @@ public abstract record Algorithm<TSelf, TCandidate, TSearchSpace, TProblem, TSea
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
     where TSearchState : class, ISearchState
 {
-    public abstract ExecutionFactory<AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>> CreateExecutionFactory();
-
-    public override bool Fits(ExecutionSignature execution) =>
-        base.Fits(execution)
+    public override bool Supports(ExecutionSignature execution) =>
+        base.Supports(execution)
         && execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
         && execution.Problem.IsAssignableTo(typeof(TProblem));
 
-    public sealed override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-    {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
+    /// <inheritdoc cref="IConfigurationNode.ChildExecution"/>
+    public override ExecutionSignature ChildExecution(ExecutionSignature execution) =>
+        ExecutionSignature.For<TSearchSpace, TProblem, TSearchState>();
+
+    // Supports has already accepted the run's types, so the run's problem is a TProblem.
+    protected sealed override IAlgorithmExecutor<TSearchState> CreateExecutor<TRunSearchSpace, TRunProblem>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TSearchState> scope) =>
+        scope.Problem is TProblem problem
+            ? CreateExecutor(new ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState>(scope, problem))
+            : throw ExecutionSignature.Mismatch(
                 this,
                 ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
+                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem), typeof(TSearchState)));
 
-        return (ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>>)CreateExecutionFactory();
-    }
+    /// <summary>Builds this algorithm's executor for the types it is written for, resolving children through the scope.</summary>
+    /// <remarks>
+    /// Resolution calls this once per configuration and problem in a scope, on the first request; later requests for that
+    /// pair receive the same executor. Validate the configuration first and look up run results through the scope.
+    /// Keep private mutable data in executor fields; explicit sharing retains the executor across child scopes.
+    /// </remarks>
+    protected abstract IAlgorithmExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope);
 }
 
-public abstract class AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public abstract class AlgorithmExecutor<TSearchState> : IAlgorithmExecutor<TSearchState>
     where TSearchState : class, ISearchState
 {
-    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
+    public abstract IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, CancellationToken ct = default);
 }

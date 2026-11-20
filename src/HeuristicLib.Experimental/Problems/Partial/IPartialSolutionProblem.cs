@@ -16,13 +16,15 @@ public interface IPartialSolutionProblem<TCandidate, out TSearchSpace>
 
 public static class PartialSolutionProblemExtensions
 {
-    public static bool IsTerminal<TCandidate, TSearchSpace>(this IPartialSolutionProblem<TCandidate, TSearchSpace> problem, TCandidate candidate, IRandomNumberGenerator random)
-        where TSearchSpace : class, ISearchSpace<TCandidate> =>
-        problem.IsTerminal([candidate], random)[0];
+    extension<TCandidate, TSearchSpace>(IPartialSolutionProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+    {
+        public bool IsTerminal(TCandidate candidate, IRandomNumberGenerator random) =>
+            problem.IsTerminal([candidate], random)[0];
 
-    public static ObjectiveVector? EvaluatePartial<TCandidate, TSearchSpace>(this IPartialSolutionProblem<TCandidate, TSearchSpace> problem, TCandidate candidate, IRandomNumberGenerator random)
-        where TSearchSpace : class, ISearchSpace<TCandidate> =>
-        problem.EvaluatePartial([candidate], random)[0];
+        public ObjectiveVector? EvaluatePartial(TCandidate candidate, IRandomNumberGenerator random) =>
+            problem.EvaluatePartial([candidate], random)[0];
+    }
 }
 
 public interface IBoundedProblem<TCandidate, out TSearchSpace>
@@ -34,9 +36,12 @@ public interface IBoundedProblem<TCandidate, out TSearchSpace>
 
 public static class BoundedProblemExtensions
 {
-    public static ObjectiveVector Bound<TCandidate, TSearchSpace>(this IBoundedProblem<TCandidate, TSearchSpace> problem, TCandidate candidate, IRandomNumberGenerator random)
-        where TSearchSpace : class, ISearchSpace<TCandidate> =>
-        problem.Bound([candidate], random)[0];
+    extension<TCandidate, TSearchSpace>(IBoundedProblem<TCandidate, TSearchSpace> problem)
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+    {
+        public ObjectiveVector Bound(TCandidate candidate, IRandomNumberGenerator random) =>
+            problem.Bound([candidate], random)[0];
+    }
 }
 
 public abstract class SingleSolutionBoundedProblem<TSelf, TCandidate, TSearchSpace>

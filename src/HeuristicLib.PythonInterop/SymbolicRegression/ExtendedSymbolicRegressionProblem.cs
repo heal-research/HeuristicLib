@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.SymbolicExpressions;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.MachineLearning;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
@@ -15,6 +16,13 @@ public sealed record EquationScoringEvaluator(
     Func<ExpressionTree[], ObjectiveVector[], double[][]> PythonCallback)
     : StatelessEvaluator<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
 {
+    public static Parameter<EquationScoringEvaluator, Func<ExpressionTree[], ObjectiveVector[], double[][]>> PythonCallbackParameter { get; } =
+        new(nameof(PythonCallback), static evaluator => evaluator.PythonCallback, static (evaluator, value) => evaluator with { PythonCallback = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [PythonCallbackParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<ExpressionTree> candidates, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem)
     {
         var normalObjectives = problem.Evaluate(candidates, random);
@@ -34,10 +42,20 @@ public class ExtendedSymbolicRegressionProblem(
     : SingleSolutionProblem<ExtendedSymbolicRegressionProblem, ExpressionTree, ExpressionTreeSearchSpace>(objective, searchSpace)
 {
     private sealed record InnerProblemParameterFittingRefiner(NumericParameterFittingRefiner ChildRefiner)
-        : SingleCandidateRefiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
+        : Refiner<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem>
     {
-        public override ExpressionTree RefineCandidate(ExpressionTree candidate, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace, ExtendedSymbolicRegressionProblem problem) =>
-            ChildRefiner.RefineCandidate(candidate, random, searchSpace, problem.InnerProblem);
+        public static Parameter<InnerProblemParameterFittingRefiner, NumericParameterFittingRefiner> ChildRefinerParameter { get; } =
+            new(nameof(ChildRefiner), static refiner => refiner.ChildRefiner, static (refiner, value) => refiner with { ChildRefiner = value })
+            {
+                ChildExecution = static _ => ExecutionSignature.For<ExpressionTreeSearchSpace, SymbolicRegressionProblem, ISearchState>()
+            };
+
+        public static IReadOnlyList<IParameter> Parameters { get; } = [ChildRefinerParameter];
+
+        public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+        protected override IRefinementExecutor<ExpressionTree> CreateExecutor<TRunSearchState>(ResolutionScope<ExpressionTree, ExpressionTreeSearchSpace, ExtendedSymbolicRegressionProblem, TRunSearchState> scope) =>
+            scope.For<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(scope.Problem.InnerProblem).Resolve(ChildRefiner);
     }
 
     public required SymbolicRegressionProblem InnerProblem { get; init; }
@@ -75,7 +93,7 @@ public class ExtendedSymbolicRegressionProblem(
             40,
             20,
             operations,
-            data.Inputs.Columns.Select(column => column.Name),
+            data.Inputs.Columns.Select(column => column.Name).ToArray(),
             [constant]);
         var innerProblem = new SymbolicRegressionProblem(
             data,
@@ -108,7 +126,7 @@ public class ExtendedSymbolicRegressionProblem(
         {
             Creator = new ProbabilisticTreeCreator(),
             Crossover = new SubtreeCrossover { InternalNodeProbability = 0.9 },
-            Mutator = new ChooseOneMutator<ExpressionTree>(
+            Mutator = new ChoosePerItem<Mutation, ExpressionTree>(
                 [.. SymbolicExpressionMutators.Default]),
             MutationRate = 0.1,
             Selector = new TournamentSelector<ExpressionTree>(4),
@@ -120,7 +138,7 @@ public class ExtendedSymbolicRegressionProblem(
         };
 
         return algorithm
-            .Complete(problem, RandomNumberGenerator.Create(seed), ct: CancellationToken.None)
+            .RunToCompletion(problem, RandomNumberGenerator.Create(seed), ct: CancellationToken.None)
             .Population;
     }
 }

@@ -16,8 +16,15 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.PythonInterop;
 
+/// <summary>Runs configured algorithms to completion and exports their analysis values to Python.</summary>
+/// <remarks>
+/// Each run owns its analysis results. Quality curves retain running-best candidate references and evaluated-candidate
+/// counts; elapsed time is not recorded. Multi-objective problems need an explicit total-order comparer in the parameters.
+/// </remarks>
 public class PythonGenealogyAnalysis
 {
+    /// <summary>Receives each yielded population state synchronously on the observation's thread.</summary>
+    /// <remarks>Exceptions propagate into execution; captured mutable state is the caller's responsibility.</remarks>
     public delegate void GenerationCallback(object current);
 
     #region public methods
@@ -30,6 +37,8 @@ public class PythonGenealogyAnalysis
                              .ToArray();
     }
 
+    /// <summary>Runs independent seeded repetitions in parallel and returns one analysis result per repetition.</summary>
+    /// <remarks>Each repetition gets its own analyzer definitions and results.</remarks>
     public static ExperimentResult<ExpressionTree>[] RunSymbolicRegressionConfigurable(
         string file, SymRegExperimentParameters parameters, int repetitions) =>
         RunConfigurableRepeated(
@@ -38,6 +47,8 @@ public class PythonGenealogyAnalysis
                 RunSymbolicRegressionConfigurable(file, new SymRegExperimentParameters(parameters) { Seed = seed }),
             parameters.Seed);
 
+    /// <summary>Runs independent seeded repetitions in parallel and returns one analysis result per repetition.</summary>
+    /// <remarks>Each repetition gets its own analyzer definitions and results.</remarks>
     public static ExperimentResult<Permutation>[] RunTravelingSalesmanConfigurable(
         string file, TravelingSalesmanExperimentParameters parameters, int repetitions) =>
         RunConfigurableRepeated(
@@ -47,6 +58,8 @@ public class PythonGenealogyAnalysis
                     new TravelingSalesmanExperimentParameters(parameters) { Seed = seed }),
             parameters.Seed);
 
+    /// <summary>Runs independent seeded repetitions in parallel and returns one analysis result per repetition.</summary>
+    /// <remarks>Each repetition gets its own analyzer definitions and results.</remarks>
     public static ExperimentResult<RealVector>[] RunTestFunctionConfigurable(
         string file, TestFunctionExperimentParameters parameters, int repetitions) =>
         RunConfigurableRepeated(
@@ -56,6 +69,8 @@ public class PythonGenealogyAnalysis
             parameters.Seed);
     #endregion
 
+    /// <summary>Runs one configured experiment and exports its quality curve and enabled population or genealogy analyses.</summary>
+    /// <remarks>The optional callback receives each yielded population state; callback exceptions fail execution.</remarks>
     public static ExperimentResult<ExpressionTree> RunSymbolicRegressionConfigurable(
         string file,
         SymRegExperimentParameters parameters,
@@ -66,7 +81,7 @@ public class PythonGenealogyAnalysis
             Creator = parameters.Creator ?? new ProbabilisticTreeCreator(),
             Crossover = parameters.Crossover ?? new SubtreeCrossover { InternalNodeProbability = 0.9 },
             Mutator = parameters.Mutator ??
-                new ChooseOneMutator<ExpressionTree>([.. SymbolicExpressionMutators.Default])
+                new ChoosePerItem<Mutation, ExpressionTree>([.. SymbolicExpressionMutators.Default])
         };
         var problem = ProblemGeneration.CreateSymbolicRegressionProblem(file, parameters);
         var actionCallback = callback is null ? null : new Action<PopulationState<ExpressionTree>>(callback);
@@ -78,6 +93,8 @@ public class PythonGenealogyAnalysis
         return RunAlgorithmConfigurable(problem, actionCallback, parameters, parameterFitting);
     }
 
+    /// <summary>Runs one configured experiment and exports its quality curve and enabled population or genealogy analyses.</summary>
+    /// <remarks>The optional callback receives each yielded population state; callback exceptions fail execution.</remarks>
     public static ExperimentResult<Permutation> RunTravelingSalesmanConfigurable(
         string file,
         TravelingSalesmanExperimentParameters parameters,
@@ -96,6 +113,8 @@ public class PythonGenealogyAnalysis
         return RunAlgorithmConfigurable(problem, actionCallback, parameters);
     }
 
+    /// <summary>Runs one configured experiment and exports its quality curve and enabled population or genealogy analyses.</summary>
+    /// <remarks>The optional callback receives each yielded population state; callback exceptions fail execution.</remarks>
     public static ExperimentResult<RealVector> RunTestFunctionConfigurable(
         string file,
         TestFunctionExperimentParameters parameters,
@@ -116,11 +135,18 @@ public class PythonGenealogyAnalysis
     #endregion
 
     #region generic helpers
+    /// <summary>Runs the selected algorithm and returns its collected analysis values after completion.</summary>
+    /// <remarks>
+    /// Required operators must be set in the parameters. A callback observes each yielded population synchronously.
+    /// A negative child count is replaced with the population size on the supplied parameters.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The algorithm name is unsupported or a required operator is missing.</exception>
+    /// <exception cref="NotSupportedException">Local search runs, but its result extraction is not implemented.</exception>
     public static ExperimentResult<TCandidate> RunAlgorithmConfigurable<TCandidate, TSearchSpace, TProblem>(
         TProblem problem,
         Action<PopulationState<TCandidate>>? callback,
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
-        IRefiner<TCandidate>? refiner = null) where TCandidate : notnull
+        IOperator<Refinement, TCandidate>? refiner = null) where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
@@ -145,12 +171,10 @@ public class PythonGenealogyAnalysis
                         elites: parameters.Elites);
                     var analyzers = CreateAnalyzers(parameters, gaAlgorithm, gaAlgorithm.Evaluator, gaAlgorithm.Crossover, gaAlgorithm.Mutator, callback);
                     var gaRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
-                                               gaAlgorithm.TerminatedAfterIterations(parameters.Iterations),
+                                               analyzers.AttachTo(gaAlgorithm.TerminatedAfterIterations(parameters.Iterations)),
                                                problem, RandomNumberGenerator.Create(parameters.Seed));
-                    foreach (var analyzer in analyzers.GetAll())
-                        gaRun.AddAspect(analyzer);
                     gaRun.Complete();
-                    return analyzers.ToExperimentResult();
+                    return analyzers.ToExperimentResult(gaRun);
                 }
             case "es":
                 {
@@ -166,12 +190,10 @@ public class PythonGenealogyAnalysis
                     var analyzers = CreateAnalyzers(parameters, esAlgorithm, esAlgorithm.Evaluator, esAlgorithm.Crossover, esAlgorithm.Mutator, callback);
 
                     var esRun = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
-                                               esAlgorithm.TerminatedAfterIterations(parameters.Iterations),
+                                               analyzers.AttachTo(esAlgorithm.TerminatedAfterIterations(parameters.Iterations)),
                                                problem, RandomNumberGenerator.Create(parameters.Seed));
-                    foreach (var analyzer in analyzers.GetAll())
-                        esRun.AddAspect(analyzer);
                     esRun.Complete();
-                    return analyzers.ToExperimentResult();
+                    return analyzers.ToExperimentResult(esRun);
                 }
             case "ls":
                 var lsAlgorithm = HillClimber.Create(
@@ -199,12 +221,10 @@ public class PythonGenealogyAnalysis
                         mutationRate: parameters.MutationRate);
                     var analyzers = CreateAnalyzers(parameters, nsga2Algorithm, nsga2Algorithm.Evaluator, nsga2Algorithm.Crossover, nsga2Algorithm.Mutator, callback);
                     var nsga2Run = new AlgorithmRun<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(
-                                                     nsga2Algorithm.TerminatedAfterIterations(parameters.Iterations),
+                                                     analyzers.AttachTo(nsga2Algorithm.TerminatedAfterIterations(parameters.Iterations)),
                                                      problem, RandomNumberGenerator.Create(parameters.Seed));
-                    foreach (var analyzer in analyzers.GetAll())
-                        nsga2Run.AddAspect(analyzer);
                     _ = nsga2Run.Complete();
-                    return analyzers.ToExperimentResult();
+                    return analyzers.ToExperimentResult(nsga2Run);
                 }
             default:
                 throw new ArgumentException($"Algorithm '{parameters.AlgorithmName}' is not supported.");
@@ -212,52 +232,44 @@ public class PythonGenealogyAnalysis
     }
 
     private sealed record MyAnalyzers<TCandidate>(
-        TraceAnalyzer<BestMedianWorstEntry<TCandidate>> Qualities,
-        RankAnalyzer<TCandidate>? RankAnalysis,
-        TraceAnalyzer<EvaluatedCandidate<TCandidate>> QualityCurve,
-        TraceAnalyzer<IReadOnlyList<EvaluatedCandidate<TCandidate>>>? AllPopulations,
-        Aspect? CallbackAnalyzer)
+        TraceAnalyzer<AlgorithmObservation<TCandidate, PopulationState<TCandidate>>, BestMedianWorstEntry<TCandidate>> Qualities,
+        Analyzer<RankState<TCandidate>>? RankAnalysis,
+        BestSoFarAnalyzer<TCandidate> QualityCurve,
+        TraceAnalyzer<AlgorithmObservation<TCandidate, PopulationState<TCandidate>>, ValueArray<EvaluatedCandidate<TCandidate>>>? AllPopulations,
+        ISubstitution? CallbackAnalyzer)
         where TCandidate : notnull
     {
-        public ExperimentResult<TCandidate> ToExperimentResult()
+        public ExperimentResult<TCandidate> ToExperimentResult(AlgorithmRun run)
         {
-            var qRes = Qualities.Snapshot().Select(entry => entry.Value).ToList();
+            var qRes = run.Result(Qualities).Snapshot().Select(entry => entry.Value).ToValueArray();
 
             var rankGraph = string.Empty;
-            IReadOnlyList<List<double>> rankLines = [];
+            ValueArray<ValueArray<double>> rankLines = [];
 
             if (RankAnalysis is not null)
             {
-                rankGraph = RankAnalysis.State.Graph.ToGraphViz();
-                rankLines = RankAnalysis.State.Ranks.Select(row => row.ToList()).ToArray();
+                rankGraph = run.Result(RankAnalysis).Graph.ToGraphViz();
+                rankLines = run.Result(RankAnalysis).Ranks.Select(row => row.ToValueArray()).ToValueArray();
             }
 
-            IReadOnlyList<EvaluatedCandidate<TCandidate>[]> apRes =
-                AllPopulations is null ? [] : [.. AllPopulations.Snapshot().Select(entry => entry.Value.ToArray())];
+            ValueArray<ValueArray<EvaluatedCandidate<TCandidate>>> apRes =
+                AllPopulations is null ? [] : [.. run.Result(AllPopulations).Snapshot().Select(entry => entry.Value)];
 
-            return new ExperimentResult<TCandidate>(rankGraph, rankLines, qRes, apRes);
+            return new ExperimentResult<TCandidate>(rankGraph, rankLines, qRes, apRes, [.. run.Result(QualityCurve)]);
         }
 
-        public IReadOnlyList<Aspect> GetAll()
+        // All analysis definitions collect into their own result in this run.
+        public IAlgorithm<TCandidate, TSearchState> AttachTo<TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+            where TSearchState : class, ISearchState
         {
-            var analyzers = new List<Aspect>
-            {
-                Qualities,
-                QualityCurve
-            };
-            if (RankAnalysis is not null)
-            {
-                analyzers.Add(RankAnalysis);
-            }
-
+            List<ISubstitution> analyzers = [Qualities, QualityCurve];
             if (AllPopulations is not null)
-            {
                 analyzers.Add(AllPopulations);
-            }
-
+            if (RankAnalysis is not null)
+                analyzers.Add(RankAnalysis);
             if (CallbackAnalyzer is not null)
                 analyzers.Add(CallbackAnalyzer);
-            return analyzers;
+            return algorithm.Substitute(analyzers);
         }
     }
 
@@ -269,19 +281,19 @@ public class PythonGenealogyAnalysis
     /// The parameters arrive from Python, where every operator is optional and unset, so this is the boundary that has
     /// to establish the contract the rest of the library relies on.
     /// </remarks>
-    private static ICreator<TCandidate> RequireCreator<TCandidate, TSearchSpace>(
+    private static IOperator<Creation, TCandidate> RequireCreator<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Creator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Creator));
 
     /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
-    private static ICrossover<TCandidate> RequireCrossover<TCandidate, TSearchSpace>(
+    private static IOperator<Crossover, TCandidate> RequireCrossover<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Crossover ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Crossover));
 
     /// <inheritdoc cref="RequireCreator{TCandidate, TSearchSpace}"/>
-    private static IMutator<TCandidate> RequireMutator<TCandidate, TSearchSpace>(
+    private static IOperator<Mutation, TCandidate> RequireMutator<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters)
         where TSearchSpace : class, ISearchSpace<TCandidate> =>
         parameters.Mutator ?? throw MissingOperator(parameters.AlgorithmName, nameof(parameters.Mutator));
@@ -289,25 +301,24 @@ public class PythonGenealogyAnalysis
     private static ArgumentException MissingOperator(string algorithmName, string operatorName) =>
         new($"Algorithm '{algorithmName}' requires '{operatorName}' to be set on the experiment parameters.");
 
-    private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace, TSearchState>(
+    private static MyAnalyzers<TCandidate> CreateAnalyzers<TCandidate, TSearchSpace>(
         ExperimentParameters<TCandidate, TSearchSpace> parameters,
-        IAlgorithm<TCandidate, TSearchState> algorithm,
-        IEvaluator<TCandidate> evaluator,
-        ICrossover<TCandidate>? crossover,
-        IMutator<TCandidate>? mutator,
+        IAlgorithm<TCandidate, PopulationState<TCandidate>> algorithm,
+        IOperator<Evaluation, TCandidate> evaluator,
+        IOperator<Crossover, TCandidate>? crossover,
+        IOperator<Mutation, TCandidate>? mutator,
         Action<PopulationState<TCandidate>>? callback)
         where TCandidate : notnull
         where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TSearchState : PopulationState<TCandidate>
     {
-        var qualities = algorithm.TracePopulationCandidates(objectiveComparer: parameters.ObjectiveComparer);
+        var qualities = algorithm.Iterations.TracePopulationCandidates(objectiveComparer: parameters.ObjectiveComparer);
         var rankAnalysis = parameters.TrackGenealogy
-            ? Analyzer.Rank(crossover, mutator, algorithm, objectiveComparer: parameters.ObjectiveComparer)
+            ? Analyzer.Rank(algorithm, crossover, mutator, objectiveComparer: parameters.ObjectiveComparer)
             : null;
-        var qc = evaluator.TraceBestCandidateSoFar(objectiveComparer: parameters.ObjectiveComparer);
-        var apt = parameters.TrackPopulations ? Analyzer.TraceAllPopulations(algorithm) : null;
+        var qc = Analyzer.BestSoFar(evaluator, objectiveComparer: parameters.ObjectiveComparer);
+        var apt = parameters.TrackPopulations ? algorithm.Iterations.Trace(static observation => observation.State.Population.EvaluatedCandidates) : null;
         var c = callback != null
-            ? Aspect.Observe(algorithm, observation => callback(observation.State))
+            ? algorithm.Iterations.Observing(observation => callback(observation.State))
             : null;
         return new MyAnalyzers<TCandidate>(qualities, rankAnalysis, qc, apt, c);
     }

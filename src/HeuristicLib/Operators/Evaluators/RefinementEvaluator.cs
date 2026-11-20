@@ -1,9 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -23,13 +21,13 @@ namespace HEAL.HeuristicLib.Operators;
 /// </para>
 /// <para>
 /// The evaluations issued here belong to <see cref="Evaluator"/>, so counting, limiting and caching attach in the usual
-/// way. Resolving the same evaluator configuration in a shared scope shares its execution state, including counters and caches.
+/// way. Observation uses evaluator configuration identity. Share the evaluator configuration explicitly to share its cache or allowance.
 /// </para>
 /// </remarks>
 public sealed record RefinementEvaluator<TCandidate>
-    : IEvaluator<TCandidate>
+    : Operator<Evaluation, TCandidate>
 {
-    public RefinementEvaluator(IRefiner<TCandidate> refiner)
+    public RefinementEvaluator(IOperator<Refinement, TCandidate> refiner)
     {
         Refiner = refiner;
     }
@@ -37,7 +35,7 @@ public sealed record RefinementEvaluator<TCandidate>
     /// <summary>
     /// Gets the refiner that produces the transient candidates being measured.
     /// </summary>
-    public IRefiner<TCandidate> Refiner { get; init; }
+    public IOperator<Refinement, TCandidate> Refiner { get; init; }
 
     /// <summary>
     /// Gets the evaluator that measures the refined candidates.
@@ -47,24 +45,32 @@ public sealed record RefinementEvaluator<TCandidate>
     /// invisible to budgets and analysis. Supply the same evaluator configuration the algorithm uses to have these
     /// evaluations counted, limited or served from one shared cache.
     /// </remarks>
-    public IEvaluator<TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
 
-    public ExecutionFactory<IEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
-        where TRunSearchSpace : class, ISearchSpace<TCandidate>
-        where TRunProblem : class, IProblem<TCandidate, TRunSearchSpace> => scope =>
-    {
-        var typed = scope.For<TCandidate, TRunSearchSpace, TRunProblem>();
-        return new Execution<TRunSearchSpace, TRunProblem>(typed.Resolve(Evaluator), typed.Resolve(Refiner));
-    };
+    public static Parameter<RefinementEvaluator<TCandidate>, IOperator<Refinement, TCandidate>> RefinerParameter { get; } =
+        new(nameof(Refiner), static evaluator => evaluator.Refiner, static (evaluator, value) => evaluator with { Refiner = value });
 
-    private sealed class Execution<TSearchSpace, TProblem>(IEvaluatorExecution<TCandidate, TSearchSpace, TProblem> evaluator, IRefinerExecution<TCandidate, TSearchSpace, TProblem> refiner)
-        : EvaluatorExecution<TCandidate, TSearchSpace, TProblem>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    public static Parameter<RefinementEvaluator<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static evaluator => evaluator.Evaluator, static (evaluator, value) => evaluator with { Evaluator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [RefinerParameter, EvaluatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        var evaluator = scope.Resolve(Evaluator);
+        var refiner = scope.Resolve(Refiner);
+        return new Executor(evaluator, refiner);
+    }
+
+    private sealed class Executor(IEvaluationExecutor<TCandidate> evaluator, IRefinementExecutor<TCandidate> refiner)
+        : EvaluationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            var refined = refiner.Refine(candidates, random, searchSpace, problem);
+            var refined = refiner.Refine(candidates, random);
 
             // Refiners map a population to a population and are free to change its size. This evaluator is not: it owes
             // its caller one objective vector per supplied candidate, in that order, so it needs a refiner that keeps
@@ -73,25 +79,25 @@ public sealed record RefinementEvaluator<TCandidate>
             if (refined.Count != candidates.Count)
                 throw new InvalidOperationException($"The refiner returned {refined.Count} candidates for {candidates.Count} candidates. Transient refinement measures one refined candidate for each supplied candidate, so its refiner must preserve the population size and order.");
 
-            return evaluator.Evaluate(refined, random, searchSpace, problem);
+            return evaluator.Evaluate(refined, random);
         }
     }
 }
 
 public static class RefinementEvaluator
 {
-    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner) =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner) =>
         new(refiner);
 
-    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IRefiner<TCandidate> refiner, IEvaluator<TCandidate> evaluator) =>
+    public static RefinementEvaluator<TCandidate> Create<TCandidate>(IOperator<Refinement, TCandidate> refiner, IOperator<Evaluation, TCandidate> evaluator) =>
         new(refiner) { Evaluator = evaluator };
 }
 
 public static class RefinementEvaluatorExtensions
 {
-    extension<TCandidate>(IEvaluator<TCandidate> evaluator)
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
-        public RefinementEvaluator<TCandidate> AppliedAfterRefinement(IRefiner<TCandidate> refiner) =>
+        public RefinementEvaluator<TCandidate> AppliedAfterRefinement(IOperator<Refinement, TCandidate> refiner) =>
             new RefinementEvaluator<TCandidate>(refiner) { Evaluator = evaluator };
     }
 }

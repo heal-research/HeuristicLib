@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -11,6 +12,16 @@ public record ParetoCrowdingTournamentSelector<TCandidate>
 {
     public int TournamentSize { get; init; } = 2;
     public bool DominateOnEqualities { get; init; }
+
+    public static Parameter<ParetoCrowdingTournamentSelector<TCandidate>, int> TournamentSizeParameter { get; } =
+        new(nameof(TournamentSize), static selector => selector.TournamentSize, static (selector, value) => selector with { TournamentSize = value });
+
+    public static Parameter<ParetoCrowdingTournamentSelector<TCandidate>, bool> DominateOnEqualitiesParameter { get; } =
+        new(nameof(DominateOnEqualities), static selector => selector.DominateOnEqualities, static (selector, value) => selector with { DominateOnEqualities = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [TournamentSizeParameter, DominateOnEqualitiesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public ParetoCrowdingTournamentSelector(bool dominateOnEqualities)
     {

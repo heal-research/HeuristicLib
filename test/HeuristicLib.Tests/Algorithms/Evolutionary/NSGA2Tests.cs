@@ -8,7 +8,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 public class NSGA2Tests
 {
     [Fact]
-    public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
+    public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
         var algorithm = new NSGA2<RealVector>
@@ -21,7 +21,7 @@ public class NSGA2Tests
             MaximumGenerations = 5
         };
 
-        var result = algorithm.Complete(
+        var result = algorithm.RunToCompletion(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);

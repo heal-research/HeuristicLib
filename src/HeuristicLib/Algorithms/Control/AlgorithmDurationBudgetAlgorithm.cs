@@ -12,67 +12,90 @@ public record AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>
 {
     public required IAlgorithm<TCandidate, TSearchState> Algorithm { get; init; }
 
-    public override bool Fits(ExecutionSignature execution) => base.Fits(execution) && execution.Fits(Algorithm);
-    public TimeProvider TimeProvider { get; init; } = TimeProvider.System;
-
     /// <summary>
-    /// Gets the duration budget. The expected value is positive.
+    /// Gets the duration budget measured with the run's time provider. The expected value is positive.
     /// </summary>
     /// <remarks>The budget is checked after each produced state, so a nonpositive budget stops after the first state.</remarks>
     public TimeSpan MaximumDuration { get; init; }
 
-    public override ExecutionFactory<IAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>() =>
-        scope => new AlgorithmDurationBudgetAlgorithmExecution<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(scope.Resolve<TCandidate, TRunSearchSpace, TRunProblem, TSearchState>(Algorithm), MaximumDuration, TimeProvider);
-}
+    public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmParameter { get; } =
+        new(nameof(Algorithm), static algorithm => algorithm.Algorithm, static (algorithm, value) => algorithm with { Algorithm = value });
 
-public sealed class AlgorithmDurationBudgetAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-{
-    private readonly IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm;
-    private readonly TimeSpan maximumDuration;
-    private readonly TimeProvider timeProvider;
+    public static Parameter<AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState>, TimeSpan> MaximumDurationParameter { get; } =
+        new(nameof(MaximumDuration), static algorithm => algorithm.MaximumDuration, static (algorithm, value) => algorithm with { MaximumDuration = value });
 
-    public AlgorithmDurationBudgetAlgorithmExecution(IAlgorithmExecution<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmParameter, MaximumDurationParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
-        this.algorithm = algorithm;
-        this.maximumDuration = maximumDuration;
-        this.timeProvider = timeProvider;
+        var algorithm = scope.Resolve(Algorithm);
+        return new Executor(algorithm, MaximumDuration, scope.Results.TimeProvider);
     }
 
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+    private sealed class Executor
+        : AlgorithmExecutor<TSearchState>
     {
-        var duration = TimeSpan.Zero;
-        await using var enumerator = algorithm
-            .RunStreamingAsync(problem, random, initialState, ct)
-            .GetAsyncEnumerator(ct);
+        private readonly IAlgorithmExecutor<TSearchState> algorithm;
+        private readonly TimeSpan maximumDuration;
+        private readonly TimeProvider timeProvider;
 
-        while (true)
+        public Executor(IAlgorithmExecutor<TSearchState> algorithm, TimeSpan maximumDuration, TimeProvider timeProvider)
         {
-            var startTimestamp = timeProvider.GetTimestamp();
-            bool hasNext;
-            try
-            {
-                hasNext = await enumerator.MoveNextAsync();
-            }
-            finally
-            {
-                duration += timeProvider.GetElapsedTime(startTimestamp);
-            }
+            this.algorithm = algorithm;
+            this.maximumDuration = maximumDuration;
+            this.timeProvider = timeProvider;
+        }
 
-            if (!hasNext)
-            {
-                yield break;
-            }
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var duration = TimeSpan.Zero;
+            await using var enumerator = algorithm
+                .RunStreamingAsync(random, initialState, ct)
+                .GetAsyncEnumerator(ct);
 
-            yield return enumerator.Current;
-
-            if (duration >= maximumDuration)
+            while (true)
             {
-                yield break;
+                var startTimestamp = timeProvider.GetTimestamp();
+                bool hasNext;
+                try
+                {
+                    hasNext = await enumerator.MoveNextAsync();
+                }
+                finally
+                {
+                    duration += timeProvider.GetElapsedTime(startTimestamp);
+                }
+
+                if (!hasNext)
+                {
+                    yield break;
+                }
+
+                yield return enumerator.Current;
+
+                if (duration >= maximumDuration)
+                {
+                    yield break;
+                }
             }
         }
+    }
+}
+
+public static class AlgorithmDurationBudgetExtensions
+{
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
+        where TSearchState : class, ISearchState
+    {
+        /// <summary>Stops after the produced state that reaches the duration budget, measured with the run's time provider.</summary>
+        public AlgorithmDurationBudgetAlgorithm<TCandidate, TSearchState> LimitedToDuration(TimeSpan maximumDuration) =>
+            new()
+            {
+                Algorithm = algorithm,
+                MaximumDuration = maximumDuration
+            };
     }
 }

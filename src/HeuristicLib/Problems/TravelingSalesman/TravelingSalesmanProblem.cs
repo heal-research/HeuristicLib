@@ -8,13 +8,13 @@ namespace HEAL.HeuristicLib.Problems.TravelingSalesman;
 
 public class TravelingSalesmanProblem(ITravelingSalesmanProblemData problemData)
     : PermutationProblem<TravelingSalesmanProblem>(SingleObjective.Minimize, GetEncoding(problemData)),
-      IRecommends<ICrossover<Permutation>>
+      IRecommends<IOperator<Crossover, Permutation>>
 {
 
     public TravelingSalesmanProblem() : this(new TravelingSalesmanCoordinatesData(DefaultProblemCoordinates)) { }
     public ITravelingSalesmanProblemData ProblemData { get; } = problemData;
 
-    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out ICrossover<Permutation>? recommendation)
+    public bool TryCreateRecommendedOperator([NotNullWhen(true)] out IOperator<Crossover, Permutation>? recommendation)
     {
         recommendation = new OrderCrossover();
         return true;

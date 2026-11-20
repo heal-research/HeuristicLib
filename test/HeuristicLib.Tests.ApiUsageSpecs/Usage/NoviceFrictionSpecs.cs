@@ -43,7 +43,7 @@ public class NoviceFrictionSpecs
 
         var algorithm = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
             problem,
             RandomNumberGenerator.Create(seed: 42),
             ct: TestContext.Current.CancellationToken);
@@ -148,43 +148,49 @@ public class NoviceFrictionSpecs
     /// The friction this suite was written to measure, and its result: there is no operator slot left that shows it.
     /// </summary>
     /// <remarks>
-    /// Every operator slot names the candidate; the search space, problem and search state are supplied by the run.
+    /// Every operator slot names the candidate, and the interceptor slot also the algorithm's search state; the search
+    /// space and problem are supplied by the run.
     /// </remarks>
     [Fact]
     public void EveryOperatorSlot_NamesOnlyWhatTheOperatorIsWrittenAbout()
     {
         var algorithm = typeof(GeneticAlgorithm<RealVector>);
 
-        // Every slot, terminators and interceptors included, names the candidate and nothing else.
-        string[] slots =
+        // Every slot identifies the operation and candidate, without the run's search space or problem.
+        (string Slot, Type Operation)[] operations =
         [
-            nameof(GeneticAlgorithm<RealVector>.Creator), nameof(GeneticAlgorithm<RealVector>.Crossover),
-            nameof(GeneticAlgorithm<RealVector>.Mutator), nameof(GeneticAlgorithm<RealVector>.Selector),
-            nameof(GeneticAlgorithm<RealVector>.Terminator), nameof(GeneticAlgorithm<RealVector>.Interceptor)
+            (nameof(GeneticAlgorithm<RealVector>.Creator), typeof(Creation)),
+            (nameof(GeneticAlgorithm<RealVector>.Crossover), typeof(Crossover)),
+            (nameof(GeneticAlgorithm<RealVector>.Mutator), typeof(Mutation)),
+            (nameof(GeneticAlgorithm<RealVector>.Evaluator), typeof(Evaluation)),
+            (nameof(GeneticAlgorithm<RealVector>.Selector), typeof(Selection)),
+            (nameof(GeneticAlgorithm<RealVector>.Refiner), typeof(Refinement)),
+            (nameof(GeneticAlgorithm<RealVector>.Terminator), typeof(Termination)),
+            (nameof(GeneticAlgorithm<RealVector>.Interceptor), typeof(Interception<PopulationState<RealVector>>))
         ];
+        foreach (var (slot, operation) in operations)
+            algorithm.GetProperty(slot)!.PropertyType.ShouldBe(typeof(IOperator<,>).MakeGenericType(operation, typeof(RealVector)));
 
-        foreach (var slot in slots)
-        {
-            algorithm.GetProperty(slot)!.PropertyType.GetGenericArguments().ShouldHaveSingleItem();
-        }
+        typeof(NSGA2<RealVector>).GetProperty(nameof(NSGA2<RealVector>.Replacer))!.PropertyType
+            .ShouldBe(typeof(IOperator<Replacement, RealVector>));
     }
 
     /// <summary>
     /// The same measurement on the migrated role, which is what the arity reduction buys. A mutator that reads
     /// <see cref="BoundedRealVectorSearchSpace"/> fills the one argument algorithm's slot, because the slot no longer
-    /// names a search space at all: the run supplies it when the execution node is created, and a mismatch is
+    /// names a search space at all: the run supplies it when the executor is created, and a mismatch is
     /// reported by the pre-flight check rather than by a conversion the author has to talk the compiler out of.
     /// </summary>
     [Fact]
     public void TheOneArgumentAlgorithm_TakesAnOperatorThatReadsTheSearchSpace()
     {
-        IMutator<RealVector> encodingBoundMutator =
+        IOperator<Mutation, RealVector> encodingBoundMutator =
             new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1);
 
         var mutatorSlot = typeof(GeneticAlgorithm<RealVector>)
             .GetProperty(nameof(GeneticAlgorithm<RealVector>.Mutator))!;
 
-        mutatorSlot.PropertyType.ShouldBe(typeof(IMutator<RealVector>));
+        mutatorSlot.PropertyType.ShouldBe(typeof(IOperator<Mutation, RealVector>));
         mutatorSlot.PropertyType.IsInstanceOfType(encodingBoundMutator).ShouldBeTrue();
     }
 
@@ -276,11 +282,11 @@ public class NoviceFrictionSpecs
 
         // Accepted, and should not be. A single flip takes the candidate straight out of the constrained space, and
         // no arrangement of type arguments would have caught it, because it is a fact about the output.
-        IMutator<BoolVector> constrainedSlot = new FlipOneBitMutator();
+        IOperator<Mutation, BoolVector> constrainedSlot = new FlipOneBitMutator();
 
         // Accepted, and now rightly so. This was CS0266 before the reduction: the slot named the unconstrained space,
         // BitSwapMutator named the narrower one, and contravariance ran the wrong way. The slot names neither now.
-        IMutator<BoolVector> wideSlot = new BitSwapMutator();
+        IOperator<Mutation, BoolVector> wideSlot = new BitSwapMutator();
 
         var flipped = new FlipOneBitMutator().MutateCandidate(candidate, RandomNumberGenerator.Create(seed: 1));
 
@@ -314,13 +320,13 @@ public class NoviceFrictionSpecs
 
         // A scope serves one run, so each triple is asked in its own.
         ResolutionScope.Create()
-            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, out var execution, out var reason)
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(problemBound, new TestFunctionProblem(new SphereFunction(3)), out var executor, out var reason)
             .ShouldBeTrue();
-        execution.ShouldNotBeNull();
+        executor.ShouldNotBeNull();
         reason.ShouldBeNull();
 
         ResolutionScope.Create()
-            .TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problemBound, out var wrong, out var refusal)
+            .TryResolve<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(problemBound, new TestFunctionProblem(new SphereFunction(3)), out var wrong, out var refusal)
             .ShouldBeFalse();
         wrong.ShouldBeNull();
         refusal.ShouldNotBeNull();
@@ -378,19 +384,17 @@ public class NoviceFrictionSpecs
     }
 
     /// <summary>
-    /// Composition adds the algorithm self type and the search state on top of the three a stage already carries.
-    /// Recorded for later; the simple cases come first.
+    /// Composition names what its stages must share, which is the candidate and the search state.
     /// </summary>
     [Fact]
-    public void ComposingAlgorithms_AddsOneFurtherTypeArgument()
+    public void ComposingAlgorithms_NamesTheCandidateAndTheSearchState()
     {
         var problem = new TravelingSalesmanProblem();
         var stage = GeneticAlgorithm.For(problem, populationSize: 20, maximumGenerations: 5);
 
         var cycled = stage.CycleWith(stage with { PopulationSize = 40 }, maximumCycles: 2);
 
-        // The composed algorithm, the candidate, and the state threaded between stages.
-        cycled.GetType().GetGenericArguments().Length.ShouldBe(3);
+        cycled.GetType().GetGenericArguments().Length.ShouldBe(2);
         cycled.Algorithms.Count.ShouldBe(2);
     }
 

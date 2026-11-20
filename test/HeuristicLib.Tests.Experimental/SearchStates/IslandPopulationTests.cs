@@ -12,5 +12,6 @@ public class IslandPopulationTests
         islands.Clear();
 
         population.Islands.ShouldBe([island]);
+        population.Islands.ShouldHaveSingleItem().Candidates.ShouldBe([1]);
     }
 }

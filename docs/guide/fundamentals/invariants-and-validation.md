@@ -20,7 +20,7 @@ var constrained = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinali
 
 // Accepted by the compiler. One flip changes the number of set elements, so the
 // candidate leaves the space on the first mutation.
-IMutator<BoolVector> slot = new FlipOneBitMutator();
+IOperator<Mutation, BoolVector> slot = new FlipOneBitMutator();
 ```
 
 The invariant system closes the gap with values instead of types. Operators and search spaces each state what they mean, and the statements are compared.
@@ -36,7 +36,7 @@ public sealed record BoolVectorCardinality(int Cardinality) : ICandidateInvarian
 {
     public string Name => $"Cardinality({Cardinality})";
 
-    public bool Holds(BoolVector candidate) => CountSetElements(candidate) == Cardinality;
+    public bool Holds(BoolVector candidate) => candidate.TrueCount() == Cardinality;
 }
 ```
 
@@ -60,12 +60,14 @@ Nothing enumerates invariants. Any type may declare a new one, and a custom sear
 ```csharp
 public record FixedCardinalityBoolVectorSearchSpace : SearchSpace<BoolVector>
 {
-    public override IReadOnlyList<ICandidateInvariant<BoolVector>> Invariants =>
+    // ... constructor, Length and Cardinality properties, and Contains override omitted.
+
+    public override ValueArray<ICandidateInvariant<BoolVector>> Invariants =>
         [new BoolVectorLength(Length), new BoolVectorCardinality(Cardinality)];
 }
 ```
 
-An empty list — the default — means the space requires nothing, so every operator over that candidate representation is compatible with it. This is why adopting invariants is a per-space decision and why configurations written before the system existed still validate unchanged.
+The default `ValueArray<T>` is empty. A space that declares no invariants gives an operator no output invariant to answer for, so the output check passes for every operator over its candidate representation. An operator that requires an invariant is still rejected there, because nothing the space declares entails it. This is why adopting invariants is a per-space decision and why configurations written before the system existed still validate unchanged.
 
 ### An operator states its side of the deal
 
@@ -80,6 +82,11 @@ public record BitSwapMutator
         BoolVectorLength or BoolVectorCardinality => true,
         _ => null
     };
+
+    public override BoolVector MutateCandidate(
+        BoolVector parent,
+        IRandomNumberGenerator random,
+        FixedCardinalityBoolVectorSearchSpace searchSpace) => ...;
 }
 ```
 
@@ -98,7 +105,7 @@ So **declaring is opt-in, per invariant**. An operator that implements nothing, 
 The other half is `Requires`, the invariants an operator needs of the candidates handed to it:
 
 ```csharp
-public IReadOnlyList<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
+public ValueArray<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
 ```
 
 An operator that swaps the second set element cannot be handed a candidate with fewer than two, so it is usable over a fixed cardinality space and not over an unconstrained one. That is the mirror image of the flip mutator, and it is why neither check substitutes for the other: accepting more input makes an operator more widely usable, and so does ensuring more about its output.
@@ -120,7 +127,14 @@ authored at a bound rung names the search space and problem it was written for, 
 ```csharp
 // Written for one specific problem.
 public sealed record TravellingSalesmanSpecificCrossover
-    : SingleCandidateCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>;
+    : SingleCandidateCrossover<Permutation, PermutationSearchSpace, TravelingSalesmanProblem>
+{
+    public override Permutation CrossParents(
+        Parents<Permutation> parents,
+        IRandomNumberGenerator random,
+        PermutationSearchSpace searchSpace,
+        TravelingSalesmanProblem problem) => ...;
+}
 ```
 
 Put that in an algorithm running over a different permutation problem and it cannot work. That is decided entirely by
@@ -130,17 +144,17 @@ type arguments, so nothing has to be built to find out:
 public interface IConfigurationNode
 {
     /// A configuration that names no search space, problem or search state is written for every run.
-    bool Fits(ExecutionSignature execution) => true;
+    bool Supports(ExecutionSignature execution) => true;
 }
 ```
 
-`ExecutionSignature` is the triple an execution is built for — its search space, its problem, and the search state it
+`ExecutionSignature` is the triple an executor is built for — its search space, its problem, and the search state it
 produces. It is built where an execution graph is created, by a run or by validation asking what a run would do, and
-passed down unchanged; a configuration reads the parts it is written about and ignores
+passed through the configuration and parameter mappings for declared children; a configuration reads the parts it is written about and ignores
 the rest, so an ordinary operator never builds one:
 
 ```csharp
-public bool Fits(ExecutionSignature execution) =>
+public bool Supports(ExecutionSignature execution) =>
     execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
     && execution.Problem.IsAssignableTo(typeof(TProblem));
 ```
@@ -149,37 +163,53 @@ A mutator is not written about a search state, so it does not look at that field
 for it — contravariant, like the other two. An interceptor _returns_ its search state, so it is invariant in it and
 compares exactly.
 
-The assignability runs toward the declared type because the instance contracts are contravariant in the search space
-and problem: an operator written for `BoundedRealVectorSearchSpace` accepts a run over exactly that or narrower.
+The assignability runs toward the declared type because the authoring bases accept compatible search space
+and problem types: an operator written for `BoundedRealVectorSearchSpace` accepts a run over exactly that or narrower.
 
-A meta algorithm that starts an inner run over different types builds a signature for **that** run and passes it down
-in turn. Every signature belongs to exactly one run, which is what the boundary rule below follows from.
+A meta-algorithm that binds a child to different types states **that** execution signature on the slot of its
+child. Every signature describes that child's execution, as the next section shows.
 
 **This is the same rule the authoring bases apply when they bridge**, so a run and a validation pass cannot disagree.
 It is also cheap: two type checks, about 4 ns, paid once per operator per run rather than per iteration.
 
 ### A composition answers for what it resolves
 
-`Fits` is a question about a subtree, not about one object. A composition that resolves its children under the
-run it was given forwards to them:
+A configuration answers for itself alone. `ExecutionSignature.Supports(configuration)` asks it, then asks the children
+it declares, so a composition writes no code to answer for them:
 
 ```csharp
-// WrappingMutator<TCandidate>
-public virtual bool Fits(ExecutionSignature execution) => execution.Fits(ChildMutator);
+public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
+{
+    public IOperator<Selection, TCandidate> SelectorForRemaining { get; init; }
 
-// GeneticAlgorithm<TCandidate>
-public override bool Fits(ExecutionSignature execution) =>
-    base.Fits(execution) && execution.Fits(Creator, Crossover, Mutator, Terminator, Evaluator, Refiner, Selector);
+    public static Parameter<EliteSelector<TCandidate>, IOperator<Selection, TCandidate>> SelectorForRemainingParameter { get; } =
+        new(nameof(SelectorForRemaining), static selector => selector.SelectorForRemaining, static (selector, value) => selector with { SelectorForRemaining = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), SelectorForRemainingParameter];
+
+    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => ...;
+}
 ```
 
-A composition that resolves a child under _different_ types — a different candidate, or a problem it adapts and then
-calls directly — must **not** forward, because those children belong to a different run. Not forwarding is the default,
-so such a composition needs no code: it answers for itself, and its children are never asked about a run they were
-never part of. If it wants them checked, it checks them against the inner run's own signature.
+A child is asked about the run of its owner, unless its parameter says otherwise. A composition that resolves a child
+under _different_ types states them on the slot, the same types it passes when it resolves the child:
 
-That default is deliberate and it fails open. An author who writes a pass-through composition and forgets to forward
-loses the check for its children rather than getting a wrong answer, which matches how declaring an invariant contract
-is opt in.
+```csharp
+// CompositeSearchSpace<T1, TS1, T2, TS2>.Creator
+public static Parameter<Creator, IOperator<Creation, T1>> Operator1Parameter { get; } =
+    new(nameof(Operator1), static creator => creator.Operator1, static (creator, value) => creator with { Operator1 = value })
+    {
+        ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
+    };
+```
+
+The child and everything below it are then checked against those types, and never against a run they were not part of.
+
+The walk reaches a child only through its declaration, so a composition that leaves one out loses the check for that
+child rather than getting a wrong answer. An entry of a `ReferenceListParameter` names a configuration that lives
+elsewhere in the graph, so it is not asked either. Neither is a value declared with a `SettingParameter`, which is data
+even when its type closes over a configuration. Use it for a value typed by a type parameter, such as a target candidate.
 
 ## When validation happens
 
@@ -195,7 +225,7 @@ var run = algorithm.CreateRun(problem, random);
 //     run over PermutationSearchSpace with FuncProblem`2 producing PopulationState`1.
 ```
 
-`Stream`, `Complete` and `CompleteAsync` go through `CreateRun`, so they validate too.
+`RunStreaming`, `RunToCompletion` and `RunToCompletionAsync` go through `CreateRun`, so they validate too.
 
 **Opt out with `validate: false`** when deliberately running a configuration whose declared contracts do not hold — while an operator is being written, or to observe what a mismatched operator actually does:
 
@@ -216,19 +246,19 @@ foreach (var diagnostic in report.Diagnostics)
 
 `algorithm.ValidateAndThrow(problem)` is the same check as a guard clause. `SearchConfigurationValidation.Validate(configuration, searchSpace)` checks any configuration — a single operator, a composition — against a space directly, without a problem.
 
-`SearchConfigurationValidation`, `ValidationReport` and `ValidationDiagnostic` are in the `HEAL.HeuristicLib.Execution` namespace.
+`SearchConfigurationValidation`, `ValidationReport` and `ValidationDiagnostic` are in the `HEAL.HeuristicLib.Execution` namespace. The report exposes its diagnostics as a `ValueArray<ValidationDiagnostic>`.
 
 Every form reports **every** failure it finds rather than stopping at the first, so one pass tells you everything to fix.
 
 ::: warning Resolution does not validate
-The check happens when a run is created. Reaching an execution node directly through
+The check happens when a run is created. Reaching an executor directly through
 `ResolutionScope.Resolve` bypasses it, by design — that is the same escape hatch as `validate: false`, and
 it is how the library's own internals build operators.
 :::
 
 ## What the walk covers
 
-Validation walks the configuration graph by reflection, following any property whose value is a configuration, and any configuration inside an enumerable property. It therefore reaches operators nested inside compositions, and it works for algorithms and operators written outside the library.
+Validation walks the configuration graph over declared parameters, following each configuration a parameter holds or names. It therefore reaches operators nested inside compositions, and it works for algorithms and operators written outside the library that declare their parameters. A configuration that declares nothing is a leaf to the walk.
 
 Because it reads what each configuration declares rather than building anything, it reaches operators a run would only construct much later. A cycling algorithm resolves each stage lazily, once per cycle and during the run; an operator at fault inside one of those stages is still reported before the run starts.
 
@@ -238,7 +268,7 @@ Diagnostics carry the path that leads to the operator:
 var pipeline = PipelineMutator.Create(new BitSwapMutator(), new FlipOneBitMutator());
 var report = SearchConfigurationValidation.Validate(pipeline, constrained);
 
-report.Diagnostics.Single().Path;    // "PipelineMutator.ChildMutators[1]"
+Console.WriteLine(report.Diagnostics.Single().Path); // PipelineMutator`1.ChildOperators[1]
 ```
 
 A composition's own failure is suppressed when a child already reported the same invariant. A composed operator inherits its children's limits, so repeating them would bury the one diagnostic naming the operator you actually have to change.
@@ -273,6 +303,7 @@ Write this test for any operator that declares a contract. A declared invariant 
 
 ## Next steps
 
+- [Configurations](/guide/fundamentals/configurations) — the configuration graph that validation walks.
 - [Search spaces](/guide/fundamentals/search-spaces) — the spaces these invariants describe.
 - [Operators](/guide/fundamentals/operators) — choosing operators for a representation.
 - [Operator composition](/guide/extending/operator-composition) — how composed operators combine their children's contracts.

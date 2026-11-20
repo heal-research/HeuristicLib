@@ -3,44 +3,26 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace HEAL.HeuristicLib.Analyzers;
 
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 {
-    public const string StatefulStateDiagnosticId = "HLib0002";
     public const string ConfigurationMutationDiagnosticId = "HLib0003";
-    public const string StateContractDiagnosticId = "HLib0004";
 
-    private const string OperatorMetadataName = "HEAL.HeuristicLib.Operators.IOperator";
-    private const string CreateInitialStateMethodName = "CreateInitialState";
-
-    private static readonly DiagnosticDescriptor StatefulStateRule = new(
-        id: StatefulStateDiagnosticId,
-        title: "Stateful operator state must not contain execution graph dependencies",
-        messageFormat: "State member '{0}' exposes execution graph dependency '{1}'. Use the explicit execution node operator path instead.",
-        category: "Architecture",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
+    private const string ConfigurationMetadataName = "HEAL.HeuristicLib.Execution.IConfigurationNode";
 
     private static readonly DiagnosticDescriptor ConfigurationMutationRule = new(
         id: ConfigurationMutationDiagnosticId,
-        title: "Operator configurations must not be mutated during operation logic",
-        messageFormat: "Operator configuration member '{0}' is mutated during operation logic. Store mutable execution data in state or an explicit execution node instead.",
+        title: "Configurations must not be mutated after construction",
+        messageFormat: "Configuration member '{0}' is mutated outside construction. Store mutable execution data in an executor instead.",
         category: "Architecture",
         defaultSeverity: DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
-    private static readonly DiagnosticDescriptor StateContractRule = new(
-        id: StateContractDiagnosticId,
-        title: "Stateful operator state must be a dedicated state type",
-        messageFormat: "'{0}' is a framework contract type and cannot be operator state. Check the type argument order: the state type parameter is always last, so omitting an earlier argument such as TProblem or TSearchState shifts a framework contract into the TState position.",
-        category: "Architecture",
-        defaultSeverity: DiagnosticSeverity.Error,
-        isEnabledByDefault: true);
-
-    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [StatefulStateRule, ConfigurationMutationRule, StateContractRule];
+    public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => [ConfigurationMutationRule];
 
     public override void Initialize(AnalysisContext context)
     {
@@ -49,15 +31,9 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 
         context.RegisterCompilationStartAction(startContext =>
         {
-            var forbiddenTypes = GetForbiddenTypes(startContext.Compilation);
-            var stateContractTypes = GetStateContractTypes(startContext.Compilation, forbiddenTypes);
-            var operatorContract = startContext.Compilation.GetTypeByMetadataName(OperatorMetadataName);
-            startContext.RegisterSymbolAction(
-                symbolContext => AnalyzeStatefulOperator(symbolContext, forbiddenTypes, stateContractTypes, operatorContract),
-                SymbolKind.NamedType);
-
+            var configurationContract = startContext.Compilation.GetTypeByMetadataName(ConfigurationMetadataName);
             startContext.RegisterSyntaxNodeAction(
-                syntaxContext => AnalyzeAssignment(syntaxContext, operatorContract),
+                syntaxContext => AnalyzeAssignment(syntaxContext, configurationContract),
                 SyntaxKind.SimpleAssignmentExpression,
                 SyntaxKind.AddAssignmentExpression,
                 SyntaxKind.SubtractAssignmentExpression,
@@ -72,248 +48,12 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
                 SyntaxKind.CoalesceAssignmentExpression);
 
             startContext.RegisterSyntaxNodeAction(
-                syntaxContext => AnalyzeIncrementOrDecrement(syntaxContext, operatorContract),
+                syntaxContext => AnalyzeIncrementOrDecrement(syntaxContext, configurationContract),
                 SyntaxKind.PreIncrementExpression,
                 SyntaxKind.PreDecrementExpression,
                 SyntaxKind.PostIncrementExpression,
                 SyntaxKind.PostDecrementExpression);
         });
-    }
-
-    private static ImmutableArray<INamedTypeSymbol> GetForbiddenTypes(Compilation compilation)
-    {
-        var metadataNames = new[]
-        {
-            "HEAL.HeuristicLib.Execution.IExecutionNode",
-            "HEAL.HeuristicLib.Execution.IConfigurationNode",
-            "HEAL.HeuristicLib.Execution.ResolutionScope",
-            "HEAL.HeuristicLib.Operators.IOperator"
-        };
-
-        return [.. metadataNames
-            .Select(compilation.GetTypeByMetadataName)
-            .Where(static type => type is not null)
-            .Cast<INamedTypeSymbol>()];
-    }
-
-    private static ImmutableArray<INamedTypeSymbol> GetStateContractTypes(Compilation compilation, ImmutableArray<INamedTypeSymbol> forbiddenTypes)
-    {
-        var metadataNames = new[]
-        {
-            "HEAL.HeuristicLib.Problems.IProblem`2",
-            "HEAL.HeuristicLib.SearchSpaces.ISearchSpace",
-            "HEAL.HeuristicLib.Algorithms.ISearchState",
-            "HEAL.HeuristicLib.Operators.IOperatorExecution"
-        };
-
-        return [.. forbiddenTypes.Concat(metadataNames
-            .Select(compilation.GetTypeByMetadataName)
-            .Where(static type => type is not null)
-            .Cast<INamedTypeSymbol>())];
-    }
-
-    private static void AnalyzeStatefulOperator(SymbolAnalysisContext context, ImmutableArray<INamedTypeSymbol> forbiddenTypes, ImmutableArray<INamedTypeSymbol> stateContractTypes, INamedTypeSymbol? operatorContract)
-    {
-        if (context.Symbol is not INamedTypeSymbol operatorType || operatorContract is null || !TryGetOperatorStateType(operatorType, operatorContract, out var stateType))
-        {
-            return;
-        }
-
-        if (stateType.TypeKind == TypeKind.TypeParameter)
-        {
-            return;
-        }
-
-        var stateContract = stateContractTypes.FirstOrDefault(candidate => IsOrImplementsDefinition(stateType, candidate));
-        if (stateContract is not null)
-        {
-            var contractLocation = GetBaseTypeLocation(operatorType) ?? operatorType.Locations.FirstOrDefault(static candidate => candidate.IsInSource);
-            if (contractLocation is not null)
-            {
-                context.ReportDiagnostic(Diagnostic.Create(
-                    StateContractRule,
-                    contractLocation,
-                    stateType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-            }
-
-            return;
-        }
-
-        foreach (var member in GetStateMembers(stateType))
-        {
-            var memberType = GetMemberType(member);
-            if (memberType is null)
-            {
-                continue;
-            }
-
-            if (!TryFindForbiddenType(memberType, forbiddenTypes, new HashSet<ITypeSymbol>(SymbolEqualityComparer.Default), out var forbiddenType))
-            {
-                continue;
-            }
-
-            var location = member.Locations.FirstOrDefault(static candidate => candidate.IsInSource) ?? operatorType.Locations.FirstOrDefault();
-            if (location is null)
-            {
-                continue;
-            }
-
-            context.ReportDiagnostic(Diagnostic.Create(
-                StatefulStateRule,
-                location,
-                member.Name,
-                forbiddenType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)));
-        }
-    }
-
-    private static bool TryGetOperatorStateType(INamedTypeSymbol type, INamedTypeSymbol operatorContract, out ITypeSymbol stateType)
-    {
-        for (var current = type; current is not null; current = current.BaseType)
-        {
-            if (!IsOrImplements(current, operatorContract))
-            {
-                continue;
-            }
-
-            var stateFactory = current.OriginalDefinition.GetMembers(CreateInitialStateMethodName)
-                .OfType<IMethodSymbol>()
-                .FirstOrDefault(static method => !method.IsStatic && method.Parameters.Length == 0 && method.ReturnType is ITypeParameterSymbol);
-            if (stateFactory?.ReturnType is not ITypeParameterSymbol stateParameter
-                || stateParameter.TypeParameterKind != TypeParameterKind.Type
-                || !SymbolEqualityComparer.Default.Equals(stateParameter.ContainingSymbol, current.OriginalDefinition)
-                || stateParameter.Ordinal >= current.TypeArguments.Length)
-            {
-                continue;
-            }
-
-            stateType = current.TypeArguments[stateParameter.Ordinal];
-            return true;
-        }
-
-        stateType = null!;
-        return false;
-    }
-
-    private static IEnumerable<ISymbol> GetStateMembers(ITypeSymbol stateType)
-    {
-        if (stateType is not INamedTypeSymbol namedState)
-        {
-            yield break;
-        }
-
-        for (var current = namedState; current is not null; current = current.BaseType)
-        {
-            if (!current.Locations.Any(static location => location.IsInSource))
-            {
-                continue;
-            }
-
-            foreach (var member in current.GetMembers().Where(static member => member switch
-                     {
-                         IFieldSymbol field => !field.IsStatic && !field.IsImplicitlyDeclared,
-                         IPropertySymbol property => !property.IsStatic && !property.IsIndexer,
-                         _ => false
-                     }))
-            {
-                yield return member;
-            }
-        }
-    }
-
-    private static ITypeSymbol? GetMemberType(ISymbol member) => member switch
-    {
-        IFieldSymbol field => field.Type,
-        IPropertySymbol property => property.Type,
-        _ => null
-    };
-
-    private static bool TryFindForbiddenType(ITypeSymbol type, ImmutableArray<INamedTypeSymbol> forbiddenTypes, HashSet<ITypeSymbol> visited, out INamedTypeSymbol forbiddenType)
-    {
-        var matchingForbiddenType = forbiddenTypes.FirstOrDefault(candidate => IsOrImplements(type, candidate));
-        if (matchingForbiddenType is not null)
-        {
-            forbiddenType = matchingForbiddenType;
-            return true;
-        }
-
-        if (!visited.Add(type))
-        {
-            forbiddenType = null!;
-            return false;
-        }
-
-        if (type is IArrayTypeSymbol arrayType && TryFindForbiddenType(arrayType.ElementType, forbiddenTypes, visited, out forbiddenType))
-        {
-            return true;
-        }
-
-        if (type is not INamedTypeSymbol namedType)
-        {
-            forbiddenType = null!;
-            return false;
-        }
-
-        foreach (var typeArgument in namedType.TypeArguments)
-        {
-            if (TryFindForbiddenType(typeArgument, forbiddenTypes, visited, out forbiddenType))
-            {
-                return true;
-            }
-        }
-
-        if (!namedType.Locations.Any(static location => location.IsInSource))
-        {
-            forbiddenType = null!;
-            return false;
-        }
-
-        foreach (var member in GetStateMembers(namedType))
-        {
-            var memberType = GetMemberType(member);
-            if (memberType is not null && TryFindForbiddenType(memberType, forbiddenTypes, visited, out forbiddenType))
-            {
-                return true;
-            }
-        }
-
-        forbiddenType = null!;
-        return false;
-    }
-
-    private static Location? GetBaseTypeLocation(INamedTypeSymbol operatorType)
-    {
-        foreach (var reference in operatorType.DeclaringSyntaxReferences)
-        {
-            if (reference.GetSyntax() is TypeDeclarationSyntax { BaseList.Types.Count: > 0 } declaration)
-            {
-                return declaration.BaseList.Types[0].GetLocation();
-            }
-        }
-
-        return null;
-    }
-
-    private static bool IsOrImplementsDefinition(ITypeSymbol type, INamedTypeSymbol candidateDefinition)
-    {
-        if (SymbolEqualityComparer.Default.Equals(type.OriginalDefinition, candidateDefinition))
-        {
-            return true;
-        }
-
-        if (type is not INamedTypeSymbol namedType)
-        {
-            return false;
-        }
-
-        for (var current = namedType.BaseType; current is not null; current = current.BaseType)
-        {
-            if (SymbolEqualityComparer.Default.Equals(current.OriginalDefinition, candidateDefinition))
-            {
-                return true;
-            }
-        }
-
-        return namedType.AllInterfaces.Any(@interface => SymbolEqualityComparer.Default.Equals(@interface.OriginalDefinition, candidateDefinition));
     }
 
     private static bool IsOrImplements(ITypeSymbol type, INamedTypeSymbol candidate)
@@ -339,15 +79,20 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
         return namedType.AllInterfaces.Any(@interface => SymbolEqualityComparer.Default.Equals(@interface, candidate));
     }
 
-    private static void AnalyzeAssignment(SyntaxNodeAnalysisContext context, INamedTypeSymbol? operatorContract)
+    private static void AnalyzeAssignment(SyntaxNodeAnalysisContext context, INamedTypeSymbol? configurationContract)
     {
-        if (context.Node is AssignmentExpressionSyntax assignment)
+        if (context.Node is AssignmentExpressionSyntax assignment && !SetsMemberOfNewInstance(assignment))
         {
-            AnalyzeMutationTarget(context, assignment.Left, operatorContract);
+            AnalyzeMutationTarget(context, assignment.Left, configurationContract);
         }
     }
 
-    private static void AnalyzeIncrementOrDecrement(SyntaxNodeAnalysisContext context, INamedTypeSymbol? operatorContract)
+    // A top-level assignment in an object or with initializer sets a member of the instance that expression creates.
+    // Array initializers and nested member initializers can still reach the current instance.
+    private static bool SetsMemberOfNewInstance(AssignmentExpressionSyntax assignment) =>
+        assignment.Parent is InitializerExpressionSyntax { Parent: BaseObjectCreationExpressionSyntax or WithExpressionSyntax };
+
+    private static void AnalyzeIncrementOrDecrement(SyntaxNodeAnalysisContext context, INamedTypeSymbol? configurationContract)
     {
         var operand = context.Node switch
         {
@@ -358,18 +103,19 @@ public sealed class OperatorAuthoringAnalyzer : DiagnosticAnalyzer
 
         if (operand is not null)
         {
-            AnalyzeMutationTarget(context, operand, operatorContract);
+            AnalyzeMutationTarget(context, operand, configurationContract);
         }
     }
 
-    private static void AnalyzeMutationTarget(SyntaxNodeAnalysisContext context, ExpressionSyntax target, INamedTypeSymbol? operatorContract)
+    // Every configuration is reusable settings: operators, algorithms and consumer-defined roles alike.
+    private static void AnalyzeMutationTarget(SyntaxNodeAnalysisContext context, ExpressionSyntax target, INamedTypeSymbol? configurationContract)
     {
         var enclosingSymbol = context.SemanticModel.GetEnclosingSymbol(target.SpanStart, context.CancellationToken);
         if (enclosingSymbol is not IMethodSymbol method
             || method.MethodKind is MethodKind.Constructor or MethodKind.StaticConstructor or MethodKind.PropertySet or MethodKind.EventAdd or MethodKind.EventRemove
             || method.ContainingType is null
-            || operatorContract is null
-            || !IsOrImplements(method.ContainingType, operatorContract))
+            || configurationContract is null
+            || !IsOrImplements(method.ContainingType, configurationContract))
         {
             return;
         }

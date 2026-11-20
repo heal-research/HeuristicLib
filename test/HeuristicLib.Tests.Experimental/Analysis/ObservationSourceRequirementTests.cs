@@ -12,13 +12,13 @@ public class ObservationSourceRequirementTests
     [Fact]
     public void RequiredSources_RejectAnEmptyCollection()
     {
-        var exception = Should.Throw<ArgumentException>(() =>
-            new ParetoFrontAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>(
+        var exception = Should.Throw<InvalidOperationException>(() =>
+            new ParetoFrontAnalyzer<RealVector>(
                 SingleObjective.Minimize,
                 new ObjectiveVector(1.0),
                 []));
 
-        exception.ParamName.ShouldBe("evaluators");
+        exception.Message.ShouldContain("at least one observation source");
     }
 
     [Fact]
@@ -34,9 +34,9 @@ public class ObservationSourceRequirementTests
             Selector = RandomSelector.For(problem)
         };
 
-        var analysis = Analyzer.TraceAverageSimilarity(new NoSimilarity(), algorithm);
+        var analysis = algorithm.Iterations.TraceAverageSimilarity(new NoSimilarity());
 
-        analysis.SampleCount.ShouldBe(0);
+        ResolutionScope.Create().Results.Result(analysis).SampleCount.ShouldBe(0);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ public class ObservationSourceRequirementTests
     public void GenealogyAnalyzer_NeedsAtLeastOneSourceOfAnyKind()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new GenealogyAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>());
+            new GenealogyAnalyzer<RealVector, PopulationState<RealVector>>());
 
         exception.Message.ShouldContain("at least one crossover, mutator or algorithm");
     }
@@ -56,10 +56,10 @@ public class ObservationSourceRequirementTests
     public void GenealogyAnalyzer_AcceptsAnyOneKindOnItsOwn()
     {
         // Without an interceptor the graph still records descent, it just gains no generational structure.
-        var withCrossoverOnly = new GenealogyAnalyzer<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>(
+        var withCrossoverOnly = new GenealogyAnalyzer<RealVector, PopulationState<RealVector>>(
             crossovers: [new SinglePointCrossover()]);
 
-        withCrossoverOnly.Graph.ShouldNotBeNull();
+        ResolutionScope.Create().Results.Result(withCrossoverOnly).ShouldNotBeNull();
     }
 
     private sealed class NoSimilarity : ICandidateSimilarityCalculator<RealVector>

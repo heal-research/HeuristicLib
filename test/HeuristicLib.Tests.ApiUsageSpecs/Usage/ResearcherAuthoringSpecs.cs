@@ -25,7 +25,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         }.TerminatedAfterIterations(5);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(1234),
           ct: TestContext.Current.CancellationToken);
@@ -48,7 +48,7 @@ public class ResearcherAuthoringSpecs
 
         var algorithm = innerAlgorithm.TerminatedBy(new FirstEvaluatedStateTerminator());
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(4321),
           ct: TestContext.Current.CancellationToken);
@@ -73,7 +73,7 @@ public class ResearcherAuthoringSpecs
 
         var algorithm = innerAlgorithm.TerminatedBy(CancellationTokenTerminator.For(problem, stopAfterCurrentState.Token));
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(2468),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -86,7 +86,6 @@ public class ResearcherAuthoringSpecs
     public void AfterElapsedTimeTerminator_Example_StopsGracefullyAfterProducedState()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var timeProvider = new AdvancingTimeProvider(TimeSpan.FromSeconds(2));
         var innerAlgorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -96,9 +95,9 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var algorithm = innerAlgorithm.TerminatedBy(AfterElapsedTimeTerminator.For(problem, TimeSpan.FromSeconds(1), timeProvider));
+        var algorithm = innerAlgorithm.TerminatedBy(AfterElapsedTimeTerminator.For(problem, TimeSpan.Zero));
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(8642),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -120,7 +119,7 @@ public class ResearcherAuthoringSpecs
             MaxNeighbors = 12
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(9876),
           ct: TestContext.Current.CancellationToken);
@@ -152,6 +151,7 @@ public class ResearcherAuthoringSpecs
     {
         public override bool IsTerminalState(
           SingleSolutionState<RealVector> state,
+          IRandomNumberGenerator random,
           BoundedRealVectorSearchSpace searchSpace,
           TestFunctionProblem problem)
         {
@@ -168,20 +168,6 @@ public class ResearcherAuthoringSpecs
           TestFunctionProblem problem)
         {
             return RealVector.Repeat(0.0, problem.TestFunction.Dimension);
-        }
-    }
-
-    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
-    {
-        private long timestamp;
-
-        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
-
-        public override long GetTimestamp()
-        {
-            var current = timestamp;
-            timestamp += step.Ticks;
-            return current;
         }
     }
 }

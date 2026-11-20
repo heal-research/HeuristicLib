@@ -9,44 +9,72 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.MetaAlgorithms;
 public class StateTerminatedAlgorithmTests
 {
     [Fact]
-    public void Stream_DoesNotCheckSuppliedInitialState()
+    public void RunStreaming_DoesNotCheckSuppliedInitialState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var terminator = new RecordingTerminator(_ => false);
+        var checkedCandidates = new List<int>();
+        var terminator = new RecordingTerminator(_ => false, checkedCandidates.Add);
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
-        terminator.CheckedCandidates.ShouldBe([42]);
+        checkedCandidates.ShouldBe([42]);
     }
 
     [Fact]
-    public void Stream_YieldsFirstProducedStateBeforeCheckingTerminator()
+    public void RunStreaming_YieldsFirstProducedStateBeforeCheckingTerminator()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var terminator = new RecordingTerminator(_ => true);
+        var checkedCandidates = new List<int>();
+        var terminator = new RecordingTerminator(_ => true, checkedCandidates.Add);
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
         var initialState = CreateState(41);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), initialState, TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([42]);
-        terminator.CheckedCandidates.ShouldBe([42]);
+        checkedCandidates.ShouldBe([42]);
     }
 
     [Fact]
-    public void Stream_TerminatorThatStopsImmediatelyStillIncludesTriggeringState()
+    public void RunStreaming_TerminatorThatStopsImmediatelyStillIncludesTriggeringState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var terminator = new RecordingTerminator(_ => true);
+        var checkedCandidates = new List<int>();
+        var terminator = new RecordingTerminator(_ => true, checkedCandidates.Add);
         var algorithm = CreateStateTerminatedAlgorithm(terminator);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
-        terminator.CheckedCandidates.ShouldBe([1]);
+        checkedCandidates.ShouldBe([1]);
+    }
+
+    [Fact]
+    public void RunStreaming_GivesTheTerminatorAStreamPerStateApartFromTheIterationStreams()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var iterationDraws = new List<double>();
+        var terminatorDraws = new List<double>();
+        var terminator = new DrawingTerminator(terminatorDraws.Add, () => terminatorDraws.Count >= 3);
+
+        var states = new DrawingIterativeAlgorithm(iterationDraws.Add).TerminatedBy(terminator)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var repeatedDraws = new List<double>();
+        var repeated = new DrawingTerminator(repeatedDraws.Add, () => repeatedDraws.Count >= 3);
+        _ = new DrawingIterativeAlgorithm(_ => { }).TerminatedBy(repeated)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var undrawnIterationDraws = new List<double>();
+        _ = new DrawingIterativeAlgorithm(undrawnIterationDraws.Add).TerminatedAfterIterations(3)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+
+        states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2, 3]);
+        terminatorDraws.Distinct().Count().ShouldBe(3);
+        terminatorDraws.ShouldNotContain(draw => iterationDraws.Contains(draw));
+        repeatedDraws.ShouldBe(terminatorDraws);
+        iterationDraws.ShouldBe(undrawnIterationDraws);
     }
 
     [Fact]
@@ -55,7 +83,7 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(1);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
@@ -66,43 +94,43 @@ public class StateTerminatedAlgorithmTests
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var algorithm = new AdditiveStepAlgorithm(1).TerminatedAfterIterations(0);
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
-    public void Stream_WithCanceledRunToken_InterruptsBeforeProducingState()
+    public void RunStreaming_WithCanceledRunToken_InterruptsBeforeProducingState()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => new AdditiveStepAlgorithm(1).Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+        Should.Throw<OperationCanceledException>(() => new AdditiveStepAlgorithm(1).RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
     }
 
     [Fact]
-    public void Stream_WithCanceledTerminatorToken_YieldsProducedStateThenStops()
+    public void RunStreaming_WithCanceledTerminatorToken_YieldsProducedStateThenStops()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
         cts.Cancel();
         var algorithm = CreateStateTerminatedAlgorithm(new CancellationTokenTerminator<int>(cts.Token));
 
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
 
     [Fact]
-    public void Stream_WithTerminatorTokenCanceledImmediatelyBeforeRun_YieldsProducedStateThenStops()
+    public void RunStreaming_WithTerminatorTokenCanceledImmediatelyBeforeRun_YieldsProducedStateThenStops()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         using var cts = new CancellationTokenSource();
         var algorithm = CreateStateTerminatedAlgorithm(new CancellationTokenTerminator<int>(cts.Token));
 
         cts.Cancel();
-        var states = algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1]);
     }
@@ -112,37 +140,37 @@ public class StateTerminatedAlgorithmTests
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var timeProvider = new ManualTimeProvider();
-        var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5)) { TimeProvider = timeProvider };
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator);
+        var terminator = new AfterElapsedTimeTerminator<int>(TimeSpan.FromSeconds(5));
+        var executor = ResolutionScope.Create(timeProvider).Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(terminator, problem);
 
-        execution.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeFalse();
+        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0)).ShouldBeFalse();
 
         timeProvider.Advance(TimeSpan.FromSeconds(5));
 
-        execution.IsTerminalState(CreateState(2), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(2), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
     public void AfterElapsedTimeTerminator_StopsOnFirstCheck_WhenMaximumElapsedTimeIsNotPositive()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(new AfterElapsedTimeTerminator<int>(TimeSpan.Zero), problem);
 
-        execution.IsTerminalState(CreateState(1), problem.SearchSpace, problem).ShouldBeTrue();
+        executor.IsTerminalState(CreateState(1), RandomNumberGenerator.Create(0)).ShouldBeTrue();
     }
 
     [Fact]
     public void Binding_ResolvesTerminatorBeforeWrappedAlgorithm()
     {
         var events = new List<string>();
-        var algorithm = new RecordingAlgorithm(events).TerminatedBy(new RecordingResolveTerminator(events));
+        var algorithm = new RecordingAlgorithm(events.Add).TerminatedBy(new RecordingResolveTerminator(events.Add));
 
-        _ = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm);
+        _ = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(algorithm, MetaAlgorithmTestHelpers.CreateIntegerProblem());
 
         events.ShouldBe(["terminator", "algorithm"]);
     }
 
-    private static StateTerminatedAlgorithm<int, PopulationState<int>> CreateStateTerminatedAlgorithm(ITerminator<int> terminator)
+    private static StateTerminatedAlgorithm<int, PopulationState<int>> CreateStateTerminatedAlgorithm(IOperator<Termination, int> terminator)
     {
         return new AdditiveStepAlgorithm(1).TerminatedBy(terminator);
     }
@@ -152,16 +180,42 @@ public class StateTerminatedAlgorithmTests
         return Population.From([EvaluatedCandidate.From(candidate, candidate)]).ToPopulationState();
     }
 
-    private sealed record RecordingTerminator(Func<int, bool> ShouldStop)
+    private sealed record RecordingTerminator(Func<int, bool> ShouldStop, Action<int> RecordCandidate)
         : StatelessTerminator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
     {
-        public List<int> CheckedCandidates { get; } = [];
-
-        public override bool IsTerminalState(PopulationState<int> state, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
+        public override bool IsTerminalState(PopulationState<int> state, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem)
         {
             var candidate = MetaAlgorithmTestHelpers.StateCandidate(state);
-            CheckedCandidates.Add(candidate);
+            RecordCandidate(candidate);
             return ShouldStop(candidate);
+        }
+    }
+
+    private sealed record DrawingTerminator(Action<double> RecordDraw, Func<bool> ShouldStop)
+        : StatelessTerminator<int, PopulationState<int>>
+    {
+        public override bool IsTerminalState(PopulationState<int> state, IRandomNumberGenerator random)
+        {
+            RecordDraw(random.NextDouble());
+            return ShouldStop();
+        }
+    }
+
+    private sealed record DrawingIterativeAlgorithm(Action<double> RecordDraw)
+        : IterativeAlgorithm<DrawingIterativeAlgorithm, int, PopulationState<int>>
+    {
+        protected override IterativeAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+            new Executor(RecordDraw);
+
+        private sealed class Executor(Action<double> recordDraw)
+            : IterativeAlgorithmExecutor<PopulationState<int>>(null)
+        {
+            protected override PopulationState<int> ExecuteStep(PopulationState<int>? previousState, IRandomNumberGenerator random)
+            {
+                recordDraw(random.NextDouble());
+                return CreateState(previousState is null ? 1 : MetaAlgorithmTestHelpers.StateCandidate(previousState) + 1);
+            }
         }
     }
 
@@ -182,22 +236,21 @@ public class StateTerminatedAlgorithmTests
         }
     }
 
-    private sealed record RecordingAlgorithm(List<string> Events)
+    private sealed record RecordingAlgorithm(Action<string> RecordEvent)
         : Algorithm<RecordingAlgorithm, int, PopulationState<int>>
     {
-        public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
-            Events.Add("algorithm");
-            var execution = new Execution<TRunSearchSpace, TRunProblem>();
-            return _ => execution;
+            RecordEvent("algorithm");
+            return new Executor();
         }
 
-        private sealed class Execution<TSearchSpace, TProblem>
-            : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor
+            : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 await Task.CompletedTask;
                 yield break;
@@ -205,25 +258,19 @@ public class StateTerminatedAlgorithmTests
         }
     }
 
-    private sealed record RecordingResolveTerminator(List<string> Events)
-        : ITerminator<int>
+    private sealed record RecordingResolveTerminator(Action<string> RecordEvent)
+        : Operator<Termination, int>
     {
-        public ExecutionFactory<ITerminatorExecution<int, TRunSearchSpace, TRunProblem, TRunSearchState>> CreateExecutionFactory<TRunSearchSpace, TRunProblem, TRunSearchState>()
-            where TRunSearchSpace : class, ISearchSpace<int>
-            where TRunProblem : class, IProblem<int, TRunSearchSpace>
-            where TRunSearchState : class, ISearchState
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
         {
-            Events.Add("terminator");
-            var execution = new Execution<TRunSearchSpace, TRunProblem, TRunSearchState>();
-            return _ => execution;
+            RecordEvent("terminator");
+            return new Executor<TSearchState>();
         }
 
-        private sealed class Execution<TSearchSpace, TProblem, TSearchState> : TerminatorExecution<int, TSearchSpace, TProblem, TSearchState>
-            where TSearchSpace : class, ISearchSpace<int>
-            where TProblem : class, IProblem<int, TSearchSpace>
+        private sealed class Executor<TSearchState> : TerminationExecutor<TSearchState>
             where TSearchState : class, ISearchState
         {
-            public override bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem) => false;
+            public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => false;
         }
     }
 }

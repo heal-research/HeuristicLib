@@ -12,6 +12,13 @@ public abstract record SingleCandidateMutator<TCandidate, TSearchSpace, TProblem
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateMutator<TCandidate, TSearchSpace, TProblem>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static mutator => mutator.Concurrency, static (mutator, value) => mutator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract TCandidate MutateCandidate(TCandidate parent, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public sealed override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
@@ -29,6 +36,13 @@ public abstract record SingleCandidateMutator<TCandidate, TSearchSpace>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateMutator<TCandidate, TSearchSpace>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static mutator => mutator.Concurrency, static (mutator, value) => mutator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract TCandidate MutateCandidate(TCandidate parent, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     public sealed override IReadOnlyList<TCandidate> Mutate(IReadOnlyList<TCandidate> parents, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
@@ -44,6 +58,13 @@ public abstract record SingleCandidateMutator<TCandidate>
     : StatelessMutator<TCandidate>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
+
+    public static Parameter<SingleCandidateMutator<TCandidate>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static mutator => mutator.Concurrency, static (mutator, value) => mutator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public abstract TCandidate MutateCandidate(TCandidate parent, IRandomNumberGenerator random);
 

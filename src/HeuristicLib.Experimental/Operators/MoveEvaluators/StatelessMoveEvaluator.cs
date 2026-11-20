@@ -6,34 +6,21 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
-/// <remarks>
-/// A move evaluator that carries no mutable execution data is its own execution node, so it needs no separate instance
-/// type. The type arguments are still the search space and problem it is written for, and a run it was not written
-/// for is reported when the execution graph is built.
-/// </remarks>
+/// <summary>A stateless move operator whose executor retains its bound problem.</summary>
 public abstract record StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove>
-    : IMoveEvaluator<TCandidate, TMove>, IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveEvaluationExecutor<TCandidate, TMove>>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public virtual ExecutionFactory<IMoveEvaluatorExecution<TCandidate, TSearchSpace, TProblem, TMove>> CreateExecutionFactory() => _ => this;
+    protected sealed override IMoveEvaluationExecutor<TCandidate, TMove> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
 
-    public bool Fits(ExecutionSignature execution) => execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace)) && execution.Problem.IsAssignableTo(typeof(TProblem));
-
-    ExecutionFactory<IMoveEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>> IMoveEvaluator<TCandidate, TMove>.CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    private sealed class Executor(StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove> configuration, TProblem problem) : IMoveEvaluationExecutor<TCandidate, TMove>
     {
-        if (!typeof(TRunSearchSpace).IsAssignableTo(typeof(TSearchSpace)) || !typeof(TRunProblem).IsAssignableTo(typeof(TProblem)))
-        {
-            throw ExecutionSignature.Mismatch(
-                this,
-                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem)),
-                ExecutionSignature.Describe(typeof(TRunSearchSpace), typeof(TRunProblem)));
-        }
-
-        return (ExecutionFactory<IMoveEvaluatorExecution<TCandidate, TRunSearchSpace, TRunProblem, TMove>>)CreateExecutionFactory();
+        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random) => configuration.Evaluate(oldQuality, candidate, move, random, problem.SearchSpace, problem);
+        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random) => configuration.Evaluate(candidate, random, problem.SearchSpace, problem);
     }
 }

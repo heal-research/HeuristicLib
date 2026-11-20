@@ -5,35 +5,36 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Crossovers;
 
-public abstract record StatelessCrossover<TCandidate, TSearchSpace, TProblem>
-    : Crossover<TCandidate, TSearchSpace, TProblem>, ICrossoverExecution<TCandidate, TSearchSpace, TProblem>
+public abstract record StatelessCrossover<TCandidate, TSearchSpace, TProblem> : Crossover<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ExecutionFactory<ICrossoverExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory() => _ => this;
+    protected sealed override ICrossoverExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessCrossover<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : CrossoverExecutor<TCandidate>
+    {
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) => configuration.Cross(parents, random, problem.SearchSpace, problem);
+    }
 }
 
-public abstract record StatelessCrossover<TCandidate, TSearchSpace>
-    : Crossover<TCandidate, TSearchSpace>, ICrossoverExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract record StatelessCrossover<TCandidate, TSearchSpace> : Crossover<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ExecutionFactory<ICrossoverExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory() => _ => this;
+    protected sealed override ICrossoverExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TRunSearchState> scope) => new Executor(this, scope.SearchSpace);
 
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<TCandidate> ICrossoverExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Cross(parents, random, searchSpace);
+    private sealed class Executor(StatelessCrossover<TCandidate, TSearchSpace> configuration, TSearchSpace searchSpace) : CrossoverExecutor<TCandidate>
+    {
+        public override IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random) => configuration.Cross(parents, random, searchSpace);
+    }
 }
 
-public abstract record StatelessCrossover<TCandidate>
-    : Crossover<TCandidate>, ICrossoverExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract record StatelessCrossover<TCandidate> : Crossover<TCandidate>, ICrossoverExecutor<TCandidate>
 {
-    public sealed override ExecutionFactory<ICrossoverExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory() => _ => this;
+    protected sealed override ICrossoverExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TRunSearchState> scope) => this;
 
     public abstract IReadOnlyList<TCandidate> Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random);
-
-    IReadOnlyList<TCandidate> ICrossoverExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Cross(IReadOnlyList<Parents<TCandidate>> parents, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Cross(parents, random);
 }

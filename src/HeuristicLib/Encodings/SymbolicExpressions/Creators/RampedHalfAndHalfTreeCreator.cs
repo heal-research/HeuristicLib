@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 
@@ -14,6 +15,16 @@ public sealed record RampedHalfAndHalfTreeCreator
     /// An explicit depth range must be positive, ordered and feasible within the search-space depth and length limits.
     /// </summary>
     public int? MaximumDepth { get; init; }
+
+    public static Parameter<RampedHalfAndHalfTreeCreator, int> MinimumDepthParameter { get; } =
+        new(nameof(MinimumDepth), static creator => creator.MinimumDepth, static (creator, value) => creator with { MinimumDepth = value });
+
+    public static Parameter<RampedHalfAndHalfTreeCreator, int?> MaximumDepthParameter { get; } =
+        new(nameof(MaximumDepth), static creator => creator.MaximumDepth, static (creator, value) => creator with { MaximumDepth = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [MinimumDepthParameter, MaximumDepthParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override IReadOnlyList<ExpressionTree> Create(int count, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {

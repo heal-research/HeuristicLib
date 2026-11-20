@@ -192,7 +192,7 @@ public class SymbolicRegressionRedesignSpecs
         var algorithm = GeneticAlgorithm.Create(
             new RampedHalfAndHalfTreeCreator(),
             new SubtreeCrossover(),
-            ChooseOneMutator.Create(
+            ChoosePerItem.Create(
                 [new NodeReplacementMutator(), new SubtreeMutator(), new LocalPerturbationMutator()],
                 [1.0, 1.0, 1.0]),
             selector: TournamentSelector.For(problem, tournamentSize: 2),
@@ -200,7 +200,7 @@ public class SymbolicRegressionRedesignSpecs
             maximumGenerations: 8,
             mutationRate: 0.2);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);

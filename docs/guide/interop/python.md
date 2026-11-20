@@ -4,7 +4,7 @@ HeuristicLib can run inside Python through [pythonnet](https://pythonnet.github.
 
 ## Requirements
 
-- .NET 10 SDK
+- .NET 10 SDK or later
 - Python 3.10 or newer
 - A local clone of HeuristicLib
 
@@ -93,7 +93,7 @@ python python-samples/PythonInteractiveDemonstrator/app.py
 
 Open `http://localhost:8765` after the server starts.
 
-The `python-samples/PythonInteroperability` directory contains notebooks for Python callbacks and custom symbolic regression scoring. They use the same local publish workflow.
+The `python-samples/PythonInteroperability` directory contains notebooks for Python callbacks and custom symbolic regression scoring, and `best_so_far_curve.py`, which plots a run's best quality over evaluations. They use the same local publish workflow.
 
 ## Current limitations
 

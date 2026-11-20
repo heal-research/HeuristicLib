@@ -10,62 +10,66 @@ public class EvaluatorCompositionTests
     [Fact]
     public void CachingEvaluator_UsesIndependentCachePerExecution()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var evaluator = observed.Cached();
-        var firstExecution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
-        var secondExecution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var evaluator = observed.Cached().Counting(observed, out var counter);
+        var firstScope = ResolutionScope.Create();
         var problem = CreateProblem();
+        var firstExecutor = firstScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
+        var secondScope = ResolutionScope.Create();
+        var secondExecutor = secondScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        firstExecution.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        firstExecution.Evaluate([1], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
-        secondExecution.Evaluate([1], RandomNumberGenerator.Create(3), problem.SearchSpace, problem);
+        firstExecutor.Evaluate([1], RandomNumberGenerator.Create(1));
+        firstExecutor.Evaluate([1], RandomNumberGenerator.Create(2));
+        secondExecutor.Evaluate([1], RandomNumberGenerator.Create(3));
 
-        counter.CurrentCount.ShouldBe(2);
+        firstScope.Results.Result(counter).CurrentCount.ShouldBe(1);
+        secondScope.Results.Result(counter).CurrentCount.ShouldBe(1);
     }
 
     [Fact]
     public void LimitEvaluator_UsesIndependentCounterPerExecution()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var evaluator = observed.LimitEvaluations(2, enforceLimitWithinBatch: true);
-        var firstExecution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
-        var secondExecution = ResolutionScope.Create(Aspect.CountCandidates(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var evaluator = observed.LimitEvaluations(2, enforceLimitWithinBatch: true).Counting(observed, out var counter, OperatorCountMetric.Candidates);
+        var firstScope = ResolutionScope.Create();
         var problem = CreateProblem();
+        var firstExecutor = firstScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
+        var secondScope = ResolutionScope.Create();
+        var secondExecutor = secondScope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var limited = firstExecution.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
-        secondExecution.Evaluate([4], RandomNumberGenerator.Create(2), problem.SearchSpace, problem);
+        var limited = firstExecutor.Evaluate([1, 2, 3], RandomNumberGenerator.Create(1));
+        secondExecutor.Evaluate([4], RandomNumberGenerator.Create(2));
 
         limited.Count.ShouldBe(3);
-        counter.CurrentCount.ShouldBe(3);
+        firstScope.Results.Result(counter).CurrentCount.ShouldBe(2);
+        secondScope.Results.Result(counter).CurrentCount.ShouldBe(1);
     }
 
     [Fact]
     public void RepeatingEvaluator_InvokesResolvedChildForEveryEvaluation()
     {
-        var counter = new CountAccumulator();
         var observed = CreateEvaluator();
-        var evaluator = observed.AsRepeated(2, ObjectiveVectorAggregation.Mean);
-        var execution = ResolutionScope.Create(Aspect.CountCalls(observed, counter)).Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
+        var evaluator = observed.AsRepeated(2, ObjectiveVectorAggregation.Mean).Counting(observed, out var counter);
+        var scope = ResolutionScope.Create();
         var problem = CreateProblem();
+        var executor = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        execution.Evaluate([1], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        executor.Evaluate([1], RandomNumberGenerator.Create(1));
 
-        counter.CurrentCount.ShouldBe(2);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     [Fact]
     public void RelativeQualityEvaluator_NormalizesElementwise()
     {
         var evaluator = CreateEvaluator().ScaledToBestKnown(new ObjectiveVector(2.0, -4.0));
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = new FuncProblem<int, DummySearchSpace<int>>(
             static candidate => new ObjectiveVector(candidate, -2.0 * candidate),
             DummySearchSpace<int>.Instance,
             MultiObjective.Minimize(2));
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var result = execution.Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var result = executor.Evaluate([3], RandomNumberGenerator.Create(1));
 
         result[0].ShouldBe(new ObjectiveVector(0.5, -0.5));
     }
@@ -75,15 +79,15 @@ public class EvaluatorCompositionTests
     {
         var evaluator = CreateEvaluator().ScaledToBestKnown(new ObjectiveVector(0.0),
             RelativeQualityZeroBestKnownPolicy.Difference);
-        var execution = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator);
         var problem = CreateProblem();
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var result = execution.Evaluate([3], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var result = executor.Evaluate([3], RandomNumberGenerator.Create(1));
 
         result[0].ShouldBe(new ObjectiveVector(3.0));
     }
 
-    private static IEvaluator<int> CreateEvaluator() =>
+    private static IOperator<Evaluation, int> CreateEvaluator() =>
         new ProblemEvaluator();
 
     private static FuncProblem<int, DummySearchSpace<int>> CreateProblem() =>

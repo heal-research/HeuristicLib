@@ -1,18 +1,12 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Experiments;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Experiments.TestSupport;
-
-internal sealed record FixedExperiment<TAlgorithm>(ImmutableArray<ExperimentCase<TAlgorithm, int>> Cases)
-    : Experiment<int, TAlgorithm, PopulationState<int>, int>
-    where TAlgorithm : class, IAlgorithm<int, PopulationState<int>>
-{
-    public override ImmutableArray<ExperimentCase<TAlgorithm, int>> MaterializeCases() => Cases;
-}
 
 internal sealed record ProbeAlgorithm(
     int Value,
@@ -25,7 +19,8 @@ internal sealed record ProbeAlgorithm(
     int HoldAfterYieldMilliseconds = 0)
     : Algorithm<ProbeAlgorithm, int, PopulationState<int>>
 {
-    public override ExecutionFactory<IAlgorithmExecution<int, TRunSearchSpace, TRunProblem, PopulationState<int>>> CreateExecutionFactory<TRunSearchSpace, TRunProblem>()
+    protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
     {
         Probe?.RecordSetup();
         if (FailDuringSetup)
@@ -33,19 +28,14 @@ internal sealed record ProbeAlgorithm(
             throw new InvalidOperationException($"Setup failed for {Value}.");
         }
 
-        return _ => new Execution<TRunSearchSpace, TRunProblem>(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
+        return new Executor(Value, Probe, DelayMilliseconds, UseRandomValue, FailDuringExecution, YieldState, HoldAfterYieldMilliseconds);
     }
 
-    private sealed class Execution<TSearchSpace, TProblem>(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
-        : AlgorithmExecution<int, TSearchSpace, TProblem, PopulationState<int>>
-        where TSearchSpace : class, ISearchSpace<int>
-        where TProblem : class, IProblem<int, TSearchSpace>
+    private sealed class Executor(int value, ExecutionProbe? probe, int delayMilliseconds, bool useRandomValue, bool failDuringExecution, bool yieldState, int holdAfterYieldMilliseconds)
+        : AlgorithmExecutor<PopulationState<int>>
     {
         public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-            TProblem problem,
-            IRandomNumberGenerator random,
-            PopulationState<int>? initialState = null,
-            [EnumeratorCancellation] CancellationToken ct = default)
+            IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             probe?.BeginExecution();
             try
@@ -87,6 +77,7 @@ internal sealed class ExecutionProbe
     private int setupCount;
     private int executionCount;
     private readonly ConcurrentQueue<int> candidates = new();
+    private readonly SemaphoreSlim executionsBegun = new(0);
 
     public int SetupCount => setupCount;
 
@@ -115,6 +106,17 @@ internal sealed class ExecutionProbe
 
             maximum = observed;
         }
+
+        executionsBegun.Release();
+    }
+
+    /// <summary>Completes once the given number of executions have begun, counting those that began earlier.</summary>
+    public async Task WaitForExecutionsAsync(int count, CancellationToken cancellationToken)
+    {
+        for (var execution = 0; execution < count; execution++)
+        {
+            await executionsBegun.WaitAsync(cancellationToken);
+        }
     }
 
     public void RecordCandidate(int candidate) => candidates.Enqueue(candidate);
@@ -124,11 +126,22 @@ internal sealed class ExecutionProbe
 
 internal static class ExperimentTestSupport
 {
-    public static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm, int> CreateRun<TAlgorithm>(
-        IExperiment<int, TAlgorithm, PopulationState<int>, int> experiment,
+    public static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, TAlgorithm> CreateRun<TAlgorithm>(
+        Experiment<int, TAlgorithm, PopulationState<int>> experiment,
         int seed = 42)
         where TAlgorithm : class, IAlgorithm<int, PopulationState<int>> =>
         experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(seed));
+
+    public static GeneticAlgorithm<RealVector> CreateGeneticAlgorithm()
+    {
+        return new()
+        {
+            Creator = new UniformDistributedCreator(),
+            Crossover = SelectFirstParentCrossover<RealVector>.Instance,
+            Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            MaximumGenerations = 2
+        };
+    }
 
     public static PopulationState<int> CreateState(int candidate) => new()
     {

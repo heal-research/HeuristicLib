@@ -28,7 +28,7 @@ public class BoolVectorOperatorTests
             populationSize: 40,
             maximumGenerations: 60);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
             problem,
             RandomNumberGenerator.Create(seed: 42),
             ct: TestContext.Current.CancellationToken);

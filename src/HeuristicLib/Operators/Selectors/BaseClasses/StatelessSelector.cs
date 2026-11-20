@@ -6,35 +6,42 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Selectors;
 
-public abstract record StatelessSelector<TCandidate, TSearchSpace, TProblem>
-    : Selector<TCandidate, TSearchSpace, TProblem>, ISelectorExecution<TCandidate, TSearchSpace, TProblem>
+public abstract record StatelessSelector<TCandidate, TSearchSpace, TProblem> : Selector<TCandidate, TSearchSpace, TProblem>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public sealed override ExecutionFactory<ISelectorExecution<TCandidate, TSearchSpace, TProblem>> CreateExecutionFactory() => _ => this;
+    protected sealed override ISelectionExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessSelector<TCandidate, TSearchSpace, TProblem> configuration, TProblem problem) : SelectionExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random) => configuration.Select(population, problem.Objective, count, random, problem.SearchSpace, problem);
+    }
 }
 
-public abstract record StatelessSelector<TCandidate, TSearchSpace>
-    : Selector<TCandidate, TSearchSpace>, ISelectorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>
+public abstract record StatelessSelector<TCandidate, TSearchSpace> : Selector<TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    public sealed override ExecutionFactory<ISelectorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>> CreateExecutionFactory() => _ => this;
+    protected sealed override ISelectionExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> ISelectorExecution<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>>.Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        Select(population, objective, count, random, searchSpace);
+    private sealed class Executor(StatelessSelector<TCandidate, TSearchSpace> configuration, IProblem<TCandidate, TSearchSpace> problem) : SelectionExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random) => configuration.Select(population, problem.Objective, count, random, problem.SearchSpace);
+    }
 }
 
-public abstract record StatelessSelector<TCandidate>
-    : Selector<TCandidate>, ISelectorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>
+public abstract record StatelessSelector<TCandidate> : Selector<TCandidate>
 {
-    public sealed override ExecutionFactory<ISelectorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>> CreateExecutionFactory() => _ => this;
+    protected sealed override ISelectionExecutor<TCandidate> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
     public abstract IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random);
 
-    IReadOnlyList<EvaluatedCandidate<TCandidate>> ISelectorExecution<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>>.Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        Select(population, objective, count, random);
+    private sealed class Executor(StatelessSelector<TCandidate> configuration, IProblem problem) : SelectionExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random) =>
+            configuration.Select(population, problem.Objective, count, random);
+    }
 }

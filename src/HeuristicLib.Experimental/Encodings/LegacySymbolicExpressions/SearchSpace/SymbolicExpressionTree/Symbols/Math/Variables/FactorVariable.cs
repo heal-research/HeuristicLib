@@ -9,7 +9,6 @@ public sealed class FactorVariable : VariableBase
         get => variableValues;
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
             variableValues.Clear();
             foreach (var kvp in value)
             {
