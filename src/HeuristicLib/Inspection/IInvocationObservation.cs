@@ -1,6 +1,7 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Inspection;
@@ -16,13 +17,17 @@ public interface IInvocationObservation<TOperation, TCandidate, TSelf>
     where TOperation : IOperation<TOperation>
 {
     /// <summary>Returns an executor that reports each successful call of the given executor.</summary>
+    /// <typeparam name="TSearchState">
+    /// The run's search-state type, which resolution supplies. An operation whose executor interface depends on it, such as
+    /// termination, casts to that interface with it; other operations ignore it.
+    /// </typeparam>
     /// <param name="executor">The executor to wrap, which performs the operation for the run types.</param>
     /// <param name="source">The configuration the observation names.</param>
     /// <param name="record">Receives each observation.</param>
     /// <param name="problem">The problem bound to the executor, also reported in observations.</param>
-    static abstract IExecutor Wrap<TSearchSpace, TProblem, TSearchState>(IExecutor executor, IOperator<TOperation, TCandidate> source, Action<TSelf> record, TProblem problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, Problems.IProblem<TCandidate, TSearchSpace>
+    static abstract IExecutor Wrap<TSearchState>(
+        IExecutor executor, IOperator<TOperation, TCandidate> source, Action<TSelf> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         where TSearchState : class, ISearchState;
 }
 
@@ -40,8 +45,7 @@ public interface IAlgorithmObservation<TCandidate, TSearchState, TSelf>
     /// <param name="source">The configuration the observation names.</param>
     /// <param name="record">Receives each observation.</param>
     /// <param name="problem">The problem bound to the executor, also reported in observations.</param>
-    static abstract IAlgorithmExecutor<TSearchState> Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<TSelf> record, TProblem problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, Problems.IProblem<TCandidate, TSearchSpace>;
+    static abstract IAlgorithmExecutor<TSearchState> Wrap(
+        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<TSelf> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem);
 }

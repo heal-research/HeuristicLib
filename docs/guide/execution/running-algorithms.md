@@ -87,9 +87,7 @@ Create the random number generator from a recorded seed:
 var random = RandomNumberGenerator.Create(seed: 123);
 ```
 
-The algorithm forks that source deterministically for its work. Keep the seed, package version, algorithm configuration and problem data with every reported result.
-
-Parallel scheduling can change completion order. Trial identity and seed derivation should not depend on that order. The experiment API handles independent trial runs for you.
+The algorithm forks that source deterministically for its work. [Randomness](/guide/execution/randomness) shows how to draw values, fork independent streams and reproduce reported results.
 
 ## Explicit runs for control and analysis
 
@@ -100,24 +98,28 @@ var run = algorithm.CreateRun(problem, random);
 var finalState = await run.CompleteAsync();
 ```
 
-Completing an explicit run follows the same path as `algorithm.RunToCompletionAsync(problem, random)`. Each `CreateRun` creates independent executors and run results. The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
+Completing an explicit run follows the same path as `algorithm.RunToCompletionAsync(problem, random)`. Each `CreateRun` creates independent executors and run results ([Core concepts](/guide/fundamentals/core-concepts#configurations-and-executors)). The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
 
-Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. Use `Substitute` when keeping the instrumented configuration. The algorithm owns the search process, including its operators and child algorithms.
-
-See [Observability and analysis](/guide/execution/observability-and-analysis) for an analyzer example.
+Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) explains how substitutions for one run differ from a configuration you keep with `Substitute`, and which configuration names their targets when a budget produced the algorithm. [Observability and analysis](/guide/execution/observability-and-analysis) shows the analyzers you can pass.
 
 ## Read run-bound results
 
-An analyzer defines one result per run. Pass it to `algorithm.CreateRun(problem, random, [analyzer])`, then read it with `run.Result(analyzer)`. A definition with placement substitutions must be held by the run's algorithm, or lookup throws unless a declared delegate prevents proving it absent. A lookup before execution creates the result lazily; execution and later reads use the same object. Reusing the definition across runs gives each run independent data. Counters and durations also create run results, read through their configurations in the same way.
+An analyzer creates one result per run. Pass it to `algorithm.CreateRun(problem, random, [analyzer])`, then read it with `run.Result(analyzer)`. An analyzer that places wrappers must be held by the run's algorithm, or lookup throws unless a declared delegate prevents proving it absent. A lookup before execution creates the result lazily; execution and later reads use the same object. Reusing an analyzer across runs gives each run independent data, and one run keeps one result for all placements of an analyzer, also across child activations such as the turns of a cycle. Counters and durations also create run results, read through their configurations in the same way.
 
-Private execution data, such as a cache, belongs to its executor. Use `Sharing` on a configuration enclosing its uses to keep one executor across child scopes. Runs provide no live-object supply API.
+A result stays readable after completion, cancellation, failure and pausing. Whether a read during execution is safe depends on the result type: a trace supports snapshots, while an accumulating result is read once execution has stopped.
+
+Private execution data, such as a cache, belongs to its executor, and [Sharing](/guide/fundamentals/configurations#sharing-executors) keeps one executor across child scopes. Runs provide no live-object supply API.
 
 ## Pause and resume an explicit run
 
-An explicit `AlgorithmRun` is returned in `Ready` without constructing the executor graph. Consume each returned stream only once and finish or dispose it before requesting another stream from the run. Requesting another stream while one is active throws without changing the active execution.
+An explicit `AlgorithmRun` is returned in `Ready` without constructing the executor graph. Its `LifecycleState` is `Ready`, `Running`, `Paused`, `Completed`, `Canceled` or `Failed`. The run accepts no further analyzers after `CreateRun` returns. Consume each returned stream only once and finish or dispose it before requesting another stream from the run. Requesting another stream while one is active throws without changing the active execution.
 
-Ending enumeration early pauses the run. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained iterator, executors and run-bound results. The root algorithm is resolved only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
+Ending enumeration early, including disposing the stream, leaves the run `Paused`. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained iterator, executors and run-bound results. The root algorithm is resolved only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
 
 Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup failure sets `Failed` and propagates the original exception, including an `OperationCanceledException` thrown during cleanup. Execution-graph setup or execution failures are terminal; cancellation thrown during graph setup sets `Canceled`. A failed or canceled run cannot resume. A construction failure also ends its resolution scope tree.
 
 [Experiment runs](/guide/execution/experiments#run-lifecycle) use terminal cancellation and do not support pause and resume. Terminal cancellation of a trial records `Canceled` before iterator cleanup, so that trial remains canceled even if cleanup throws.
+
+## Next steps
+
+- [Search states](/guide/execution/search-states) continues the Execution path with what a run yields.

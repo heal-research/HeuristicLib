@@ -45,8 +45,9 @@ public sealed record AlgorithmCallObservation<TCandidate, TSearchState>(
     // A call reports its start and its end, and counts once.
     bool IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Counts => Event == AlgorithmCallEvent.Started;
 
-    static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmCallObservation<TCandidate, TSearchState>> record, TProblem problem) =>
+    static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmCallObservation<TCandidate, TSearchState>>.Wrap(
+        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmCallObservation<TCandidate, TSearchState>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor(executor, source, record, problem);
 
     private sealed class Executor(

@@ -155,8 +155,9 @@ public static class ScoringResolutionExtensions
 public sealed record ScoringObservation<TCandidate>(ValueArray<TCandidate> Candidates, ValueArray<double> Scores)
     : IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Scoring, TCandidate> source, Action<ScoringObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Scoring, TCandidate, ScoringObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Scoring, TCandidate> source, Action<ScoringObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((IScoringExecutor<TCandidate>)executor, record);
 
     private sealed class Executor(IScoringExecutor<TCandidate> executor,

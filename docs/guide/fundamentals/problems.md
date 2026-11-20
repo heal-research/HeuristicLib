@@ -89,3 +89,8 @@ Before choosing an algorithm, verify that:
 - every objective has the correct minimize or maximize direction
 - evaluation failures produce clear domain errors
 - repeated evaluation is safe
+
+## Next steps
+
+- [Search spaces](/guide/fundamentals/search-spaces) continues the Fundamentals path with the candidates a problem accepts.
+- [Objectives and candidates](/guide/fundamentals/objectives) covers objective direction and evaluated candidates.

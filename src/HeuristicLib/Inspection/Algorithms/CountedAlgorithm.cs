@@ -28,7 +28,7 @@ public sealed record CountedAlgorithm<TCandidate, TSearchState, TObservation> : 
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
     {
         var counter = scope.Resolve(Counter);
-        return TObservation.Wrap<TSearchSpace, TProblem>(scope.Resolve(ChildAlgorithm), ChildAlgorithm, observation =>
+        return TObservation.Wrap(scope.Resolve(ChildAlgorithm), ChildAlgorithm, observation =>
         {
             if (observation.Counts)
                 counter.IncrementBy(1);

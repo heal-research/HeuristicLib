@@ -1,7 +1,7 @@
 # Writing meta-algorithms
 
 ::: info Advanced extension
-This page assumes you have read [Write an algorithm](/guide/extending/writing-algorithms) and [Configuration vs executors](/contributing/architecture/execution-nodes).
+This page assumes you have read [Write an algorithm](/guide/extending/writing-algorithms) and [Execution nodes](/contributing/architecture/execution-nodes).
 :::
 
 A meta-algorithm coordinates child algorithms rather than operators. It is still an algorithm: it produces search states, it can be run directly, and it can itself be a child of another meta-algorithm. `CycleAlgorithm` and `PipelineAlgorithm` are the built-in examples.
@@ -88,7 +88,7 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 Five details carry the design:
 
 - **Both children are declared as parameters.** Analysis and other substitutions reach only declared children, so an undeclared child could not be observed.
-- **Both children are resolved in `CreateExecutor`.** Each build receives children with the requesting context's observations, with independent private fields except for explicitly shared executors.
+- **Both children are resolved in `CreateExecutor`, in the one scope it received.** A configuration that both stages hold by the same reference, such as the same algorithm in both positions or an operator the two stages have in common, is built once, and its executor serves both stages, private fields included. Equal but distinct configurations get separate executors. Each build receives children with the requesting context's observations, and [sharing](/guide/fundamentals/configurations#sharing-executors) decides what a child scope or another run reuses.
 - **The last state of the first stage becomes the initial state of the second.** Nothing converts between them, because both stages are declared over the same `TSearchState`.
 - **Each stage gets its own random stream** through `random.Fork(index)`. Forking by a stable index keeps the stages independent and the run reproducible.
 - **The stages are named by candidate and state only.** `IAlgorithm<TCandidate, TSearchState>` accepts any algorithm over that candidate producing that state, whatever search space or problem it was written for. The run supplies those as the method type arguments `TSearchSpace` and `TProblem` on `CreateExecutor`. The typed scope keeps both `Resolve` calls free of type arguments. The resolved children retain their problem bindings, and the nested executor derives from `AlgorithmExecutor<TSearchState>`. A wrapper can derive from `WrappingAlgorithmExecutor<TSearchState>` and use its protected `ChildAlgorithm`. Pass any problem or search space the wrapper reads to its constructor.
@@ -112,20 +112,24 @@ var wholeRun = staged.Iterations.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [wholeRun]);
 ```
 
-Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem.
+Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem. `explore` and `exploit` are copies of one `geneticAlgorithm`, so they hold its creator, mutator and evaluator by the same references, and the scope builds one executor of each for both stages. Stages that must not share an executor hold distinct configurations.
 
-Because the children are declared, either stage can also be observed on its own:
+Because the children are declared, either stage can also be observed on its own. A trace holds data once the run has produced it, so complete the run before reading the results. Run this code from an async method, passing your host application's `cancellationToken`:
 
 ```csharp
 var exploreQuality = explore.Iterations.TracePopulationQuality();
 
 var wholeRun = staged.Iterations.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [exploreQuality, wholeRun]);
+await run.CompleteAsync(cancellationToken: cancellationToken);
+
+var exploreTrace = run.Result(exploreQuality);
+var wholeTrace = run.Result(wholeRun);
 ```
 
-`run.Result(exploreQuality)` then holds only the first stage's generations, and `run.Result(wholeRun)` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
+`exploreTrace` holds only the first stage's generations, and `wholeTrace` holds every state the meta-algorithm yielded. Note that `explore` and `exploit` must be distinct objects for this to work, since observation sources are matched by reference.
 
-## Deferred children and shared executors
+## Deferred children, turns and shared executors
 
 Resolve fixed children through the scope received by `CreateExecutor`. Retain that scope on the executor when child construction is deferred. Create a child scope when an activation needs fresh private fields while keeping the same run results:
 
@@ -135,15 +139,27 @@ var execution = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProb
 
 A typed scope created with `For<TCandidate, TSearchSpace, TProblem, TSearchState>(problem)` avoids repeating the type arguments. It is a view of the same scope, not a child scope. To bind a child to another subproblem, create a view with that problem and declare its signature on the child parameter with `ChildExecution`.
 
-Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executors for each turn and carries search state forward. Share a configuration on the Cycle to keep one executor for it across turns:
+Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executors for each turn and carries search state forward. `CycleAlgorithm.MaximumCycles` limits the number of cycles: `null` means unlimited, and a nonpositive value runs no cycles.
 
 ```csharp
 var cycle = first.CycleWith(second, maximumCycles: 3).Sharing(first, second);
 ```
 
-Sharing is local to one executor of the sharing node and uses configuration reference identity, so `Cycle(A, A)` shared on A uses one A executor. Equal but distinct configurations keep separate executors. A shared executor preserves its private fields and resolved children. A separately constructed Cycle starts independently. Share any configuration the same way, for example a cached evaluator used by both algorithms, to keep only that part across turns while terminators and budgets restart.
+`Sharing` on the Cycle keeps one executor for a configuration across turns. [Configurations](/guide/fundamentals/configurations#sharing-executors) states which configurations it shares, who owns the executor and what a separately constructed Cycle starts with. A Cycle turn is one call of an inner algorithm; [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns) shows how to observe the calls of the inner algorithms.
 
-A Cycle turn is one call of an inner algorithm. Observe the inner algorithms' `Calls` to record starts and outcomes, including a turn that yields no state; see [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns).
+### A new problem object for each turn
+
+A scope keeps one executor for each configuration and problem object. A meta-algorithm that creates a new problem object for every turn therefore gets a new, empty executor for the child in every turn, while the scope keeps all the earlier ones. There are two remedies. Update one subproblem object in place, which avoids the new executors: its objective and search space stay fixed for the lifetime of the object, but its other instance data may change, so the child's executor is resolved once. The update reaches the child only when its executor reads the changed data from the problem at each call, not when it copied the data at construction. Or resolve each turn in a child scope, which still gives each turn a new executor but stops them from accumulating: a discarded child scope releases the executors it owns, together with the scope. An ancestor scope that [shares](/guide/fundamentals/configurations#sharing-executors) a configuration still owns that executor, and it keeps one for each problem object it is asked for, so a shared configuration resolved for a new problem object every turn accumulates executors there.
+
+Use these imports in a C# project with implicit system usings enabled:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/MetaAlgorithmDocumentationSpecs.cs#meta-algorithm-turns-imports{csharp}
+
+The example resolves a creator that remembers how many predefined candidates it has returned. `subproblem` and `anotherSubproblem` are two distinct problem objects over one search space, and `random` is the call's random number generator:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/MetaAlgorithmDocumentationSpecs.cs#new-problem-per-turn{csharp}
+
+The second problem object restarts the creator with its first candidate, and the scope still holds the executor of the first problem, which continues with the second candidate when it is requested again. The child scope builds a third executor.
 
 ## Preserve run behavior
 

@@ -22,8 +22,9 @@ public sealed record SelectionObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Selection, TCandidate> source, Action<SelectionObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Selection, TCandidate, SelectionObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Selection, TCandidate> source, Action<SelectionObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((ISelectionExecutor<TCandidate>)executor, source, record, problem);
 
     private sealed class Executor(ISelectionExecutor<TCandidate> executor,

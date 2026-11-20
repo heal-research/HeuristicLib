@@ -109,4 +109,7 @@ The [experiments API](/guide/execution/experiments#compare-problems-and-control-
 - Use `Fork` with stable keys for independent work.
 - Record the root seed with every reported result.
 
-See [Running algorithms](/guide/execution/running-algorithms) for run creation and cancellation.
+## Next steps
+
+- [Observability and analysis](/guide/execution/observability-and-analysis) continues the Execution path with what a run records.
+- [Running algorithms](/guide/execution/running-algorithms) covers run creation and cancellation.

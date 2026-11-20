@@ -26,8 +26,9 @@ public sealed record InterceptionObservation<TCandidate, TSearchState>(
     : IInvocationObservation<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>
     where TSearchState : class, ISearchState
 {
-    static IExecutor IInvocationObservation<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem, TRunSearchState>(
-        IExecutor executor, IOperator<Interception<TSearchState>, TCandidate> source, Action<InterceptionObservation<TCandidate, TSearchState>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Interception<TSearchState>, TCandidate, InterceptionObservation<TCandidate, TSearchState>>.Wrap<TRunSearchState>(
+        IExecutor executor, IOperator<Interception<TSearchState>, TCandidate> source, Action<InterceptionObservation<TCandidate, TSearchState>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((IInterceptionExecutor<TSearchState>)executor, source, record, problem);
 
     private sealed class Executor(IInterceptionExecutor<TSearchState> executor,

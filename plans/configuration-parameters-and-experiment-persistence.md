@@ -151,4 +151,4 @@ Define deterministic ordering of dimensions, alternatives and generated values s
 
 ## Repository guidance
 
-Use the [glossary](../docs/guide/glossary.md#configuration-node) for configuration graph identity and the [developer guidelines](../docs/contributing/developer-guidelines.md) for configuration immutability, execution ownership and validation responsibilities. Runtime metadata accessors are construction machinery under section 4.8; configured behavior stored in persisted instances must remain representable as data.
+Use the [glossary](../docs/guide/glossary.md#configuration-graph) for configuration graph identity and the [developer guidelines](../docs/contributing/developer-guidelines.md) for configuration immutability, execution ownership and validation responsibilities. Runtime metadata accessors are construction machinery under section 4.8; configured behavior stored in persisted instances must remain representable as data.

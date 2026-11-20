@@ -23,8 +23,9 @@ public sealed record ReplacementObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Replacement, TCandidate, ReplacementObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Replacement, TCandidate, ReplacementObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Replacement, TCandidate> source, Action<ReplacementObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Replacement, TCandidate, ReplacementObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Replacement, TCandidate> source, Action<ReplacementObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((IReplacementExecutor<TCandidate>)executor, source, record, problem);
 
     private sealed class Executor(IReplacementExecutor<TCandidate> executor,

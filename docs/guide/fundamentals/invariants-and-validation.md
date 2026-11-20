@@ -303,6 +303,7 @@ Write this test for any operator that declares a contract. A declared invariant 
 
 ## Next steps
 
+- [Configurations](/guide/fundamentals/configurations) — the configuration graph that validation walks.
 - [Search spaces](/guide/fundamentals/search-spaces) — the spaces these invariants describe.
 - [Operators](/guide/fundamentals/operators) — choosing operators for a representation.
 - [Operator composition](/guide/extending/operator-composition) — how composed operators combine their children's contracts.

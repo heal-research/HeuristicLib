@@ -121,3 +121,8 @@ The [Experiments](/guide/execution/experiments) API helps express repetitions an
 ## Custom algorithms
 
 Most domain customization belongs in a problem or operator. Create an algorithm only when the state transition or control flow itself is new. Read [Writing algorithms](/guide/extending/writing-algorithms) before implementing one.
+
+## Next steps
+
+- [Configurations](/guide/fundamentals/configurations) continues the Fundamentals path with reading, rewriting and sharing the configurations an algorithm holds.
+- [Running algorithms](/guide/execution/running-algorithms) covers streaming, cancellation and budgets.

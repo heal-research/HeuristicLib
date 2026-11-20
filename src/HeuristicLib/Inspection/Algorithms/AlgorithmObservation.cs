@@ -28,8 +28,9 @@ public sealed record AlgorithmObservation<TCandidate, TSearchState>(
     : IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>
     where TSearchState : class, ISearchState
 {
-    static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>.Wrap<TSearchSpace, TProblem>(
-        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmObservation<TCandidate, TSearchState>> record, TProblem problem) =>
+    static IAlgorithmExecutor<TSearchState> IAlgorithmObservation<TCandidate, TSearchState, AlgorithmObservation<TCandidate, TSearchState>>.Wrap(
+        IAlgorithmExecutor<TSearchState> executor, IAlgorithm<TCandidate, TSearchState> source, Action<AlgorithmObservation<TCandidate, TSearchState>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor(executor, source, record, problem);
 
     private sealed class Executor(

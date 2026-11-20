@@ -6,7 +6,7 @@ Most applications only configure built-in operators. Use this page when your can
 
 Operator configurations are reusable descriptions. Operator executors perform the work and own their private mutable fields. HeuristicLib provides two authoring paths so an operator can use the smallest execution model that fits its responsibilities.
 
-Operator configurations build their executors in a `CreateExecutor` hook that resolution calls for every build. Each construction binds an executor to contextual children and observations, initializes its private fields and reads any configured run results.
+Operator configurations build their executors in a `CreateExecutor` hook that resolution calls for every build ([Execution nodes](/contributing/architecture/execution-nodes#construction-hooks)). Each construction resolves the executor's children through its scope, initializes its private fields and reads any configured run results.
 
 ## Choose an authoring path
 
@@ -15,17 +15,17 @@ Operator configurations build their executors in a `CreateExecutor` hook that re
 | Stateless         | `StatelessEvaluator<...>` | The operation needs configuration values but no mutable execution data                       |
 | Explicit executor | `Evaluator<...>`          | The operator resolves child operators or needs complete control over its execution structure |
 
-The same pattern exists for creators, crossovers, mutators, selectors, replacers, interceptors and terminators.
+The same pattern exists for creators, crossovers, mutators, refiners, selectors, replacers, interceptors and terminators.
 
 The unprefixed role base is the common base of both paths. Stateless bases derive from it. Derive directly from the unprefixed base when authoring an explicit executor.
 
-Some roles add a single-item base as a further stateless convenience, for operations that apply independently to each item of a batch: `SingleCandidateMutator<...>`, `SingleCandidateCrossover<...>`, `SingleCandidateCreator<...>` and `SingleCandidateEvaluator<...>`. Implement the single-item method for one item; the inherited batch-wise role operation handles deterministic per-item random forks and batching. Callers holding the specialized base may invoke the single-item method directly, while ordinary role consumers continue to use the batch role operation. A role gets such a base only when independent per-item application is a genuine shape for it, so Selector, Replacer, Interceptor and Terminator have no equivalent.
+Some roles add a single-candidate base as a further stateless convenience, for operations that apply independently to each item of a batch: `SingleCandidateMutator<...>`, `SingleCandidateCrossover<...>`, `SingleCandidateCreator<...>`, `SingleCandidateRefiner<...>` and `SingleCandidateEvaluator<...>`. Implement the single-candidate method for one item; the inherited batch-wise role operation handles deterministic per-item random forks and batching. Callers holding the specialized base may invoke the single-candidate method directly, while ordinary role consumers continue to use the batch role operation. A role gets such a base only when independent per-item application is a genuine shape for it, so Selector, Replacer, Interceptor and Terminator have no equivalent. Developer guidelines [§ 8.14](/contributing/developer-guidelines#§-8-14-say-item-for-a-split-call-and-candidate-for-the-candidates) states when a name says item and when it says candidate.
 
-The single-item method has its own name so it stays distinct from the batch operation it drives. The default is the role's verb followed by `Candidate`: `MutateCandidate`, `CreateCandidate` and `EvaluateCandidate`. `CrossParents` is the deliberate exception, because a crossover crosses one `Parents<TCandidate>` group into one candidate, so its single-item unit is a parent group rather than a candidate. A creator receives no input at all, so `CreateCandidate` takes only the random number generator and the context it needs; the requested count belongs to the batch operation.
+The single-candidate method has its own name so it stays distinct from the batch operation it drives. The default is the role's verb followed by `Candidate`: `MutateCandidate`, `CreateCandidate`, `RefineCandidate` and `EvaluateCandidate`. `CrossParents` is the deliberate exception, because a crossover crosses one `Parents<TCandidate>` group into one candidate, so its unit is a parent group rather than a candidate. A creator receives no input at all, so `CreateCandidate` takes only the random number generator and the context it needs; the requested count belongs to the batch operation.
 
-A single-item base owns its batch operation and seals it. A subclass that replaced the batch operation would no longer be the single-item operator its type claims to be, and the single-item method it must still implement would become unreachable. Batching is a configuration decision instead: set the `Concurrency` property to run the per-item calls concurrently. Each item receives a random number generator forked from its batch position, so the result is identical for every concurrency setting and the choice is a performance decision rather than a semantic one. An operator that genuinely needs a different batch-wise operation derives from the stateless base directly, where the batch operation is the authoring surface.
+A single-candidate base owns its batch operation and seals it. A subclass that replaced the batch operation would no longer be the single-candidate operator its type claims to be, and the single-candidate method it must still implement would become unreachable. Batching is a configuration decision instead: set the `Concurrency` property to run the per-item calls concurrently. Each item receives a random number generator forked from its batch position, so the result is identical for every concurrency setting and the choice is a performance decision rather than a semantic one. An operator that genuinely needs a different batch-wise operation derives from the stateless base directly, where the batch operation is the authoring surface.
 
-`SingleCandidateMutator` is the reference implementation of this rule; `SingleCandidateCrossover`, `SingleCandidateCreator` and `SingleCandidateEvaluator` follow it.
+`SingleCandidateMutator` is the reference implementation of this rule; `SingleCandidateCrossover`, `SingleCandidateCreator`, `SingleCandidateRefiner` and `SingleCandidateEvaluator` follow it.
 
 ## Choose an arity
 
@@ -51,9 +51,7 @@ Reduction changes what the author declares, not where the operator fits. **Candi
 
 The arity lives in the authoring bases: the base performs the type check when a run supplies types the operator was not written for, and the stateless helper supplies the bound search space and problem to the typed author override. A consumer, field or child property never names them.
 
-`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` store one child or an ordered child collection. They declare their children, so `ExecutionSignature.Supports` asks them too, and they forward candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Resolve children through the typed scope it receives, and initialize private data on the executor. Read run results through `scope.Results.Result(configuration)`; share configurations explicitly to retain their executors across child scopes.
-
-Use `.Named("name")` for a transparent selectable boundary and `.Retry(3)` to allow up to three attempts after a directly thrown `RetryableOperationException`. `ChoosePerInvocation` chooses one child per call. A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern.
+The topology bases `WrappingOperator` and `MultiOperator` have no reduced arities (§ 8.5); see [Wrapping and multi operators](#wrapping-and-multi-operators).
 
 ## Stateless operators
 
@@ -78,9 +76,9 @@ Use specialized helpers such as `SingleCandidateEvaluator` when the role offers 
 
 ## Private fields and shared executors
 
-Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Different runs, problem objects or fresh child activations construct independent fields. Repeated resolution of the same configuration/problem pair in one scope reuses its fields.
+Mutable operators author an executor with ordinary fields. A counter or cursor is private by default. Different runs, problem objects or fresh child activations construct independent fields, and repeated resolution of the same configuration and problem in one scope reuses them ([Execution resolution](/contributing/architecture/execution-resolution#results-and-construction)).
 
-Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are configuration nodes whose executors hold the run's count or time. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` resolve them.
+Keep data such as a cache or an allowance in executor fields too. To share it, users share the configuration through `Sharing`, which gives every use within the sharing node one executor and therefore one set of fields. Structure the configuration so that data shared independently of other behavior is its own node. Counters and durations are configuration nodes whose run results hold the run's count or time. `AfterOperatorCountTerminator` and `AfterOperatorDurationTerminator` resolve them.
 
 The [tested composition and cache examples](/guide/extending/operator-composition#authoring-a-composition) show private fields and a shared cache. Shared executors retain their resolved children. Authors own concurrency correctness across all participants. Executors have no automatic disposal lifecycle; dependencies requiring cleanup remain caller owned.
 
@@ -90,7 +88,7 @@ Derive an explicit executor from its role's executor base, such as `EvaluationEx
 
 Selection and replacement executors that rank candidates read `problem.Objective` from their bound problem. To bind an operator to another fixed objective, construct a problem with that objective once in `CreateExecutor` and resolve the operator through `scope.For<TCandidate, TSearchSpace, TProblemWithObjective, TSearchState>(problemWithThatObjective)`. All operators resolved through that view use the same problem. See [execution resolution](/contributing/architecture/execution-resolution) for declaring a child's binding when its problem type differs from the parent's.
 
-The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected typed `CreateExecutor` runs for every build and exposes the problem on its scope. It resolves child configurations through the supplied scope and creates a node for that context. The executor owns typed operation logic and resolved child references; private data belongs to executor fields and `Sharing` retains selected executors across child scopes.
+The configuration describes reusable parameters and graph structure. For creation, crossover, mutation, evaluation, selection, refinement and replacement, the protected typed `CreateExecutor` runs for every build and exposes the problem on its scope. It resolves child configurations through the supplied scope and builds the executor. The executor owns typed operation logic and resolved child references; private data belongs to executor fields.
 
 ```csharp
 private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inner)
@@ -120,23 +118,19 @@ private sealed record ForwardingEvaluator(IOperator<Evaluation, RealVector> Inne
 }
 ```
 
-Resolve declared child operators inside `CreateExecutor`. Initialize private counters and helper data in executor fields. Read run results through their configurations, such as analyzers, counters or durations; share configurations to retain their executors. Retain the scope only when deferred graph construction is an intentional part of the operator. Algorithms resolve their configured parameters and keep parameter-derived behavior in their execution code rather than constructing hidden operators.
+Resolve declared child operators inside `CreateExecutor`, initialize private counters and helper data in executor fields, and read run results through their configurations, such as analyzers, counters or durations. Developer guidelines § 4.3 and § 4.4 state when to retain the scope and how algorithms keep parameter-derived behavior in their execution code.
 
 Return the most concrete accessible executor type that is useful to callers. A private nested executor is returned through its role specific executor base.
 
 ## Adaptable parameters
 
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/AdaptationDocumentationSpecs.cs#adaptation-wiring{csharp}
-
-`GaussianMutator.MutationStrength` remains the configured base value. Its optional `MutationStrengthAdaptation` child is an `IConfigurationNode<IAdaptation>`: the executor resolves it and calls `Apply(baseValue)` once per mutation invocation. `ScaleAdaptation` starts with factor 1 and `OffsetAdaptation` with offset 0. A rule writes their runtime objects through the settable `Factor` and `Offset` properties.
-
-The strategy's slot is `ScaleAdaptation?`, the form its 1/5 success rule writes. Both slots must name the same instance. An unset strategy slot means no adaptation. Wrappers forward nothing: `Timed`, `Counted`, `PipelineMutator` and `ChoosePerInvocation` can surround mutators that read the same link. Several mutators can read one adaptation with different base values. External nodes may implement `IConfigurationNode<IAdaptation>` directly, including as records.
-
-A scope resolves one runtime adaptation per configuration reference. Independent runs remain independent. To retain adaptation across Cycle turns, share the adaptation on the Cycle. Sharing the mutator also requires sharing the adaptation: otherwise the retained mutator reads its original adaptation while each fresh strategy writes a different one. The resolver does not detect unused links.
+An operator that reads a value adjusted during the run resolves an `IConfigurationNode<IAdaptation>` child in `CreateExecutor` and applies it to its configured base value, as `GaussianMutator` does for `MutationStrength`. [Adaptable parameters](/guide/extending/operator-composition#adaptable-parameters) shows the wiring, and [Adaptation, failures and lifetime](/contributing/architecture/execution-resolution#adaptation-failures-and-lifetime) states how a scope resolves and shares an adaptation.
 
 ## Wrapping and multi operators
 
-Every operation uses `WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>`, with `ChildOperator` and `ChildOperators` configuration properties. Their executors hold the resolved children themselves. Keep private data in executor fields, read run results through their configurations, such as counters or durations, and resolve current children inside `CreateExecutor`. Existing executors keep their original children when a new context is resolved.
+`WrappingOperator<TOperation, TCandidate>` and `MultiOperator<TOperation, TCandidate>` serve every operation. They store one child or an ordered child collection, with `ChildOperator` and `ChildOperators` configuration properties. They declare their children, so `ExecutionSignature.Supports` asks them too, and they forward candidate contracts. Their protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)` validates the configuration and constructs an executor for the run's search-space, problem and state types on every build. Their executors hold the resolved children themselves: resolve current children through the typed scope inside `CreateExecutor`, keep private data in executor fields and read run results through their configurations, such as counters or durations. Existing executors keep their original children when a new context is resolved.
+
+A generic wrapper of your own returns `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(scope.ResolveOperator(ChildOperator), wrapper)` with a struct `IInvocationWrapper`, which works for every operation, including external ones. The wrapper can read the call's random number generator and proceed with another one or on another executor of the same operation. The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) shows the complete authoring pattern, and [Compose operators](/guide/extending/operator-composition) covers `Named`, `Retry` and the choice wrappers from the user's side.
 
 When a child plays a specific part in the operation, derive from `Operator<TOperation, TCandidate>` and declare that child yourself. This configuration excerpt omits the executor body:
 
@@ -203,11 +197,11 @@ An operation is observable once it declares two parts beside the operation, as e
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Architecture/OperationDefinitionDocumentationSpecs.cs#operation-observation{csharp}
 
-`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `estimator.Invocations.Observing(…)` then work as they do for built-in operations. The `Observed` form takes an `IObservationReceiver<TObservation>` in its `receiver` slot and binds that receiver's recorder when constructed. `Wrap` casts because it receives the executor untyped, and resolution has already checked that the executor performs the operation.
+`Analyzer.Trace(estimator.Invocations, observation => observation.Estimates.Count)` and `estimator.Invocations.Observing(…)` then work as they do for built-in operations. The `Observed` form takes an `IObservationReceiver<TObservation>` in its `receiver` slot and binds that receiver's recorder when constructed. The observation record's `Wrap<TSearchState>` hook receives the bound problem as `IProblem<TCandidate, ISearchSpace<TCandidate>>`. The search-state type lets roles such as termination name their executor interface. The hook casts to the operation's executor interface after resolution has checked that the executor performs the operation.
 
 ## Scaffolding roles and cross-cutting concerns
 
-Coding agents are useful optional aids for the repetitive parts of operator authoring. Adding a concrete operator to an existing role is usually small work, because deriving from an existing authoring base is most of it. A new operator role is not: it brings a whole family with it, including a configuration arity ladder and an executor base, stateless bases, applicable single-item bases, wrapping and multi topologies, construction companions, tests and API usage specs. A new cross-cutting concern brings one role-specific adapter for every applicable role. That expansion is mechanical enough for an agent to draft and large enough to make agent assistance worthwhile.
+Coding agents are useful optional aids for the repetitive parts of operator authoring. Adding a concrete operator to an existing role is usually small work, because deriving from an existing authoring base is most of it. A new operator role is not: it brings a whole family with it, including a configuration arity ladder and an executor base, stateless bases, applicable single-candidate bases, wrapping and multi topologies, construction companions, tests and API usage specs. A new cross-cutting concern brings one role-specific adapter for every applicable role. That expansion is mechanical enough for an agent to draft and large enough to make agent assistance worthwhile.
 
 Agent-produced code is normal contributor-owned source. Inspect and refactor it normally, review every public member as a deliberate API addition, and validate it with the compiler, analyzers, focused behavior tests and API usage specs. Point the agent at the current contracts and guidelines in addition to the closest accepted role family: all nine current roles follow the accepted topology, but their operation inputs, applicability and lifecycle semantics still differ.
 
@@ -215,18 +209,14 @@ An agent will not settle a concern's semantics for you. Implement and review the
 
 ## Configuration and execution rules
 
-- Keep configuration values unchanged during execution. Retained collection inputs are immutable snapshots.
-- Keep randomness explicit in operation calls and bind the problem explicitly during executor construction.
-- Store mutable execution data in executor fields or run results; use `Sharing` to retain selected executors across child scopes.
-- Use `Sharing` when child scopes should retain a selected configuration's executor and its data.
-- Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes create independent executors except for explicitly shared configurations; all child scopes use the root's run-bound results. Separate roots have independent results.
-- Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.
+Developer guidelines § 4 states the ownership rules for configurations, executors and run results, and [Execution resolution](/contributing/architecture/execution-resolution) states how a scope keeps and shares executors. Do not assume stateful operation calls are serialized unless the owning execution path guarantees it.
 
 ## Roslyn analyzer guardrails
 
-The `OperatorAuthoringAnalyzer` Roslyn analyzer assists with common mistakes across operator roles:
+The repository's Roslyn analyzers assist with common mistakes in every construction hook:
 
-- `HLib0003` reports direct mutation of configuration members outside construction, in operators, algorithms and consumer-defined roles alike.
+- `HLib0001` (`ChildResolutionAnalyzer`) reports a direct call of a child configuration's `CreateExecutor` or `CreateExecutionNode` hook in construction hooks, custom resolvers and deferred execution methods; resolve the child through the scope instead.
+- `HLib0003` (`OperatorAuthoringAnalyzer`) reports direct mutation of configuration members outside construction, in operators, algorithms and consumer-defined roles alike.
 
 These diagnostics are guardrails, not a proof that every invariant is satisfied. They cannot reliably identify every indirect mutation through a referenced collection, helper object or delegate.
 
@@ -236,6 +226,8 @@ Algorithms coordinate operators and execution flow, so they always use a configu
 
 ## Related pages
 
+- [Execution resolution](/contributing/architecture/execution-resolution) for how scopes build and share the executors an operator authors
+- [Analyzers](/contributing/architecture/analyzers) for the observation records and sources of an operation
 - [Operators](/guide/fundamentals/operators)
 - [Operator composition](/guide/extending/operator-composition)
 - [Running algorithms](/guide/execution/running-algorithms)

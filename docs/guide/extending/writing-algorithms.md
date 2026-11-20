@@ -1,6 +1,6 @@
 # Writing algorithms
 
-Create an algorithm only when the state transition or control flow is new. Put domain evaluation in a problem and local search policies in operators whenever those existing extension points are sufficient.
+Create an algorithm only when the state transition or control flow is new. Put domain evaluation in a problem and local search policies in operators whenever those existing extension points are sufficient. This page assumes [Write an operator](/guide/extending/writing-operators): an algorithm resolves operators that you or the library wrote and runs them.
 
 ## Configuration and execution
 
@@ -9,9 +9,9 @@ An algorithm has two parts:
 1. An immutable configuration record that holds operators and settings.
 2. An executor bound to resolved operators and the interceptor, with private fields and references to any run-bound results it uses.
 
-Each call to `RunStreaming` or `RunToCompletionAsync` starts an independent root execution. Each scope keeps one executor per configuration/problem reference pair for algorithms and operators, and per configuration reference for configurations whose executor needs no problem, such as counters. Child scopes construct their own executors unless an ancestor explicitly shares a configuration through `Sharing`.
+Each call to `RunStreaming` or `RunToCompletionAsync` starts an independent root execution. A scope keeps one executor per configuration and problem; [Configurations](/guide/fundamentals/configurations#sharing-executors) explains when a child scope builds its own and how `Sharing` keeps one.
 
-For custom streaming control flow, derive the executor from `AlgorithmExecutor<TSearchState>`. Keep the search space or problem in the executor constructor when it reads that contract. A wrapper can use `WrappingAlgorithmExecutor<TSearchState>` to retain its resolved `ChildAlgorithm`.
+For custom streaming control flow, derive the executor from `AlgorithmExecutor<TSearchState>` and write it as a private nested `Executor` class. Keep the search space or problem in the executor constructor when it reads that contract. A wrapper can use `WrappingAlgorithmExecutor<TSearchState>` to retain its resolved `ChildAlgorithm`.
 
 ## Implement an iterative algorithm
 
@@ -37,7 +37,7 @@ Resolution calls this protected hook for every build. The hook returns `Iterativ
 
 ### When to name the search space and problem instead
 
-An algorithm that reads something only one problem has — a distance matrix, a dataset, a domain-specific bound — cannot work that way, and derives from the five-argument base:
+An algorithm that reads something only one problem has — a distance matrix, a dataset, a domain-specific bound — cannot work that way, and derives from the five-argument base. This declaration excerpt shows only the base type arguments; the parameters, `CreateExecutor` and executor follow as in the previous example:
 
 ```csharp
 public sealed record MatrixAwareAlgorithm
@@ -53,11 +53,29 @@ Its protected `CreateExecutor` takes no method type arguments and receives a sco
 
 Use `.TerminatedAfterIterations(count)` or another terminator when the algorithm does not stop itself.
 
-## Share state and bind children
+## Bind children and keep state
 
 Resolve the optional interceptor and every other configured child operator through the scope that `CreateExecutor` receives. Retain the resolved children on the executor. Do not call operator configurations directly from `ExecuteStep` or resolve children on every iteration.
 
-Keep private counters and adaptation data in executor fields. Keep caches in their executors; use `Sharing` to retain the executor across child scopes. Resolve a counter or duration with `scope.Resolve(counter)`, and use `scope.Results.Result(analyzer)` for an analysis result. Keep iteration position, previous search state and invocation local values in the operation or iterator. A paused iterator retains its children, interceptor and run-bound results when another context constructs an executor. Never mutate the configuration record.
+Keep private counters and adaptation data in executor fields. An executor that should outlive a child scope, such as a cache, is kept by sharing its configuration: [Sharing executors](/guide/fundamentals/configurations#sharing-executors) states who owns it and which scopes reuse it, and [Evaluations of a refined candidate](/guide/extending/operator-composition#evaluations-of-a-refined-candidate) shows it for a cache. Resolve a counter or duration with `scope.Resolve(counter)`, and use `scope.Results.Result(analyzer)` for an analysis result. Keep iteration position, previous search state and invocation local values in the operation or iterator. A paused iterator retains its children, interceptor and run-bound results when another context constructs an executor. Never mutate the configuration record.
+
+## An objective that changes during a run
+
+A problem's objective is fixed for the lifetime of the problem object, and a selector or replacer reads it from the problem it is bound to. An algorithm whose ranking changes while it runs does not pass that objective to a selector or a replacer. MOEA/D, for example, compares under a scalarization whose ideal point moves after every evaluation. That ranking is the algorithm's own value strategy over objective vectors: an immutable value that holds what is configured, such as the weights of the scalarization, while what changes, such as the ideal point, is executor state. MOEA/D is not in the library, so this sketch shows only the pattern:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/VaryingObjectiveDocumentationSpecs.cs#varying-objective-imports{csharp}
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/VaryingObjectiveDocumentationSpecs.cs#varying-objective-strategy{csharp}
+
+The static selection helpers take an objective for this case. `TournamentSelector.Select(population, objective, count, random, tournamentSize)` ranks under the `ObjectiveDirections` it is given, so the executor builds one from its current state whenever it selects. The example's inputs are a scalarization with two weights, an ideal point over two objectives, a random number generator and a neighbourhood of two evaluated candidates, `a` and `b`:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/VaryingObjectiveDocumentationSpecs.cs#varying-objective-inputs{csharp}
+
+The helper then ranks under the scalarization of whatever the ideal point is at the call:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/VaryingObjectiveDocumentationSpecs.cs#varying-objective-usage{csharp}
+
+In the example `b` wins while the ideal point sits where the two candidates put it, and `a` wins once an evaluation has moved the ideal point. The operators the algorithm resolves through its scope keep ranking under the problem's objective. To give an operator another fixed objective instead, [resolve it under a problem with that objective](/guide/extending/writing-operators#resolve-an-operator-under-another-objective).
 
 ## Preserve run behavior
 
@@ -69,6 +87,6 @@ A custom algorithm should:
 4. Keep simultaneous runs independent.
 5. Work with interceptors when it derives from `IterativeAlgorithm`.
 
-Read [Running algorithms](/guide/execution/running-algorithms) for the consumer model and [Configuration vs executors](/contributing/architecture/execution-nodes) for the internal ownership rules.
+Read [Running algorithms](/guide/execution/running-algorithms) for the consumer model and [Execution nodes](/contributing/architecture/execution-nodes) for the internal ownership rules.
 
 To write an algorithm that coordinates other algorithms rather than operators, continue with [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).

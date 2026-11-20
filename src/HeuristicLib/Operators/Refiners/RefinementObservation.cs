@@ -20,8 +20,9 @@ public sealed record RefinementObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Refinement, TCandidate> source, Action<RefinementObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Refinement, TCandidate, RefinementObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Refinement, TCandidate> source, Action<RefinementObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((IRefinementExecutor<TCandidate>)executor, source, record, problem);
 
     private sealed class Executor(IRefinementExecutor<TCandidate> executor,

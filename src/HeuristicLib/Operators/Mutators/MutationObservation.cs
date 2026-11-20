@@ -20,8 +20,9 @@ public sealed record MutationObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Mutation, TCandidate> source, Action<MutationObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Mutation, TCandidate, MutationObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Mutation, TCandidate> source, Action<MutationObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((IMutationExecutor<TCandidate>)executor, source, record, problem);
 
     private sealed class Executor(IMutationExecutor<TCandidate> executor,

@@ -32,11 +32,17 @@ Experimental can contain content, hosting or analysis at the corresponding layer
 
 ## Layers and execution phases
 
-Configuration and executor are phases within these responsibilities. Configurations describe reusable settings, children and analyzer definitions. Executors hold mutable fields and resolved children. `Substitute` places analyzers and other wrappers in a new configuration before resolution. `CreateRun` can place a `substitutions` list for one run before validation.
+Configuration and executor are phases within these responsibilities. Configurations describe reusable settings, children and analyzers. Executors hold mutable fields and resolved children. [Execution nodes](/contributing/architecture/execution-nodes) defines what each phase owns. Substitutions rewrite a configuration before resolution, and `CreateRun` can place a list of them for one run before validation ([Substitution and ordering](/contributing/architecture/execution-resolution#substitution-and-ordering)).
 
 ## Run ownership
 
-`AlgorithmRun` owns its lifecycle and retained execution enumerator together: a paused run retains the enumerator for resumption, and a running stream has exclusive access to it. `ExecutionStream` adapts synchronous and asynchronous enumeration and enforces single consumption. `ExperimentRun` owns trial scheduling and its terminal lifecycle; it rejects starting an experiment whose trial has already been started directly.
+`AlgorithmRun`, `ExecutionStream` and `RunLifecycleState` belong to the `HEAL.HeuristicLib.Execution` namespace, with their source files grouped under `Execution/Runs`. Experiment runs remain in `HEAL.HeuristicLib.Experiments` and share `RunLifecycleState`.
+
+Create each run from its configured algorithm; there is no separate setup or supply phase. `AlgorithmRun` owns its lifecycle and retained execution enumerator together. It is returned in `Ready`, resolves its executor graph on first start and retains that graph and its iterator across pauses: a paused run retains the enumerator for resumption, and a running stream has exclusive access to it. Completion or failure is terminal, and results remain readable. See [running algorithms](/guide/execution/running-algorithms) for the lifecycle contract.
+
+`ExecutionStream` adapts synchronous and asynchronous enumeration and enforces single consumption: each returned stream has one consumer, and a run permits only one active stream. Stream cancellation is cooperative at root-algorithm yield boundaries. It pauses the run instead of interrupting a partially executed iteration.
+
+`ExperimentRun` owns trial scheduling and its terminal lifecycle; it rejects starting an experiment whose trial has already been started directly.
 
 The runs share lifecycle state names but have different transition rules. Keep those rules and diagnostics with the run that owns the execution or scheduling. Extract a shared component only when it can own a concrete shared responsibility; grouping composition fields or moving state transitions behind a configurable host does not establish one.
 
@@ -44,4 +50,4 @@ The runs share lifecycle state names but have different transition rules. Keep t
 
 Namespaces group concepts that users work with together, even when their types belong to different layers. `SearchSpaces` keeps `IOperatorContract` beside its composition, verification and compatibility helpers. `Data` serves symbolic expression interpretation, machine learning and Python integration, so it remains independent of `MachineLearning`. `Collections` remains the home of shared collection vocabulary even with a single public type.
 
-The main benchmark functions share `Problems.TestFunctions`; `SingleObjectives`, `ZDT` and `MetaFunctions` are grouping folders. Experimental's `Problems.TestFunctions.BBoB` is a distinct benchmark suite with different implementations, including types whose names overlap the main functions. Python integration uses the single `HEAL.HeuristicLib.PythonInterop` namespace with `SymbolicRegression`, `Experiments` and `Analysis` grouping folders. These follow the [namespace and folder rules](/contributing/developer-guidelines#Â§-9-5-match-namespaces-and-folders-by-audience).
+The main benchmark functions share `Problems.TestFunctions`; `SingleObjectives`, `ZDT` and `MetaFunctions` are grouping folders. Experimental's `Problems.TestFunctions.BBoB` is a distinct benchmark suite with different implementations, including types whose names overlap the main functions. Python integration uses the single `HEAL.HeuristicLib.PythonInterop` namespace with `SymbolicRegression`, `Experiments` and `Analysis` grouping folders. These follow the [namespace and folder rules](/contributing/developer-guidelines#§-9-5-match-namespaces-and-folders-by-audience).

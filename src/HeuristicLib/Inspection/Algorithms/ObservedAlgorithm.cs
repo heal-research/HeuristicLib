@@ -29,5 +29,5 @@ public sealed record ObservedAlgorithm<TCandidate, TSearchState, TObservation> :
 
     protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        TObservation.Wrap<TSearchSpace, TProblem>(scope.Resolve(ChildAlgorithm), ChildAlgorithm, Receiver.CreateRecorder(scope.Results), scope.Problem);
+        TObservation.Wrap(scope.Resolve(ChildAlgorithm), ChildAlgorithm, Receiver.CreateRecorder(scope.Results), scope.Problem);
 }

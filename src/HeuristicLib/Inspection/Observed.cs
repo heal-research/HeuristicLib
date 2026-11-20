@@ -29,5 +29,5 @@ public sealed record Observed<TOperation, TCandidate, TObservation> : WrappingOp
     public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
-        TObservation.Wrap<TSearchSpace, TProblem, TSearchState>(scope.ResolveOperator(ChildOperator), ChildOperator, Receiver.CreateRecorder(scope.Results), scope.Problem);
+        TObservation.Wrap<TSearchState>(scope.ResolveOperator(ChildOperator), ChildOperator, Receiver.CreateRecorder(scope.Results), scope.Problem);
 }

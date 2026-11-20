@@ -16,17 +16,17 @@ public sealed record ChecksumObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Checksum, TCandidate, ChecksumObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Checksum, TCandidate, ChecksumObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Checksum, TCandidate> source, Action<ChecksumObservation<TCandidate>> record, TProblem problem) =>
-        new Executor<TSearchSpace, TProblem>((IChecksumExecutor)executor, source, record, problem);
+    static IExecutor IInvocationObservation<Checksum, TCandidate, ChecksumObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Checksum, TCandidate> source, Action<ChecksumObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
+        new Executor((IChecksumExecutor)executor, source, record, problem);
 
-    private sealed class Executor<TSearchSpace, TProblem>(IChecksumExecutor executor,
-        IOperator<Checksum, TCandidate> checksum, Action<ChecksumObservation<TCandidate>> observe, TProblem problem)
+    private sealed class Executor(IChecksumExecutor executor,
+        IOperator<Checksum, TCandidate> checksum, Action<ChecksumObservation<TCandidate>> observe,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
         : IChecksumExecutor
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        private readonly TSearchSpace searchSpace = problem.SearchSpace;
+        private readonly ISearchSpace<TCandidate> searchSpace = problem.SearchSpace;
 
         public int Read(IRandomNumberGenerator random)
         {

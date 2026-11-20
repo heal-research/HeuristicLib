@@ -1,6 +1,6 @@
 # Writing operators
 
-Create an operator when your candidate representation or problem needs a search step that the built-in operators do not provide. Most applications should configure or compose existing operators first.
+Create an operator when your candidate representation or problem needs a search step that the built-in operators do not provide. Most applications should configure or compose existing operators first. This page starts the extending path: [compose operators](/guide/extending/operator-composition), [write wrappers](/guide/extending/writing-wrappers), [write an algorithm](/guide/extending/writing-algorithms) and [write a meta-algorithm](/guide/extending/writing-meta-algorithms) build on it.
 
 ## Choose the operator role
 
@@ -59,17 +59,36 @@ Reduced arity bases such as `SingleCandidateMutator<Permutation>` omit inputs th
 
 Operator records are reusable configuration. Do not store counters, caches or other changing run data in their properties.
 
-Author an executor with fields for mutable counters, cursors and adaptation values. Each separate construction starts with independent fields. Share a configuration explicitly with `Sharing` when its executor must outlive a child scope. Configurations such as analyzers, counters and durations create run results; their definitions contain no live result.
-
-The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), executors and repository analyzer rules.
-
-Derive a composition from `WrappingOperator<TOperation, TCandidate>` or `MultiOperator<TOperation, TCandidate>`. Override the protected `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds the executor for the run's types, resolves children through its scope and reads run results through `scope.Results.Result(configuration)`. A fixed-signature leaf using an explicit executor instead overrides `CreateExecutor` with a typed scope exposing its bound `Problem` and `SearchSpace`.
-
-A wrapper for one operation derives from `WrappingOperator<TOperation, TCandidate>` for that operation. Its explicit executor derives from the role's executor base and wraps the resolved child. A wrapper for every operation stays generic in its operation and passes a struct `IInvocationWrapper` to the operation's `Wrap`. Place either with `Substitute`. See [Write wrappers](/guide/extending/writing-wrappers) for complete examples.
+Author an executor for mutable counters, cursors and adaptation values. A leaf operator with an explicit executor overrides `CreateExecutor`, which receives a typed scope exposing its bound `Problem` and `SearchSpace`, and returns a private nested `Executor` that derives from the role's executor base, such as `MutationExecutor<TCandidate>`. The executor keeps what it reads, such as the problem or the search space, in its own constructor parameters, and its mutable data in fields. Each separate construction starts with independent fields. [Configurations](/guide/fundamentals/configurations#sharing-executors) explains how `Sharing` keeps one executor across child scopes.
 
 An operator you write is observed through its operation's `Invocations` source, such as `mutator.Invocations`, exactly like a built-in one. See [Observability and analysis](/guide/execution/observability-and-analysis).
 
-The [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) implements a complete round-robin mutator and follows its cursor through a new inspection context and an independent root execution.
+The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), explicit executors and the repository analyzer rules.
+
+## Resolve an operator under another objective
+
+A selector or a replacer ranks candidates by the objective of the problem it is bound to, and a run binds every operator to the run's problem. An algorithm that needs an operator to rank by another objective than its problem's does not pass the objective to the operator. It resolves the operator under a problem that has that objective.
+
+The example algorithm creates a sample of candidates and keeps the sample's best candidate under a maximizing objective with the `BestSelector` it holds, which it resolves under a problem that maximizes. In the example's run, whose problem minimizes, that is the sample's worst candidate. The algorithm is written for real vectors in a `BoundedRealVectorSearchSpace`, because the signature it declares for its selector names the search space. Use these imports in a C# project with implicit system usings enabled:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/OperatorObjectiveDocumentationSpecs.cs#operator-objective-imports{csharp}
+
+The delegating problem forwards the evaluation and the search space of the problem of the run and states the objective it was given. It forwards nothing else, so it does not preserve capability interfaces of the run's problem, such as a known optimum, and an operator that reads one of them cannot be resolved under it:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/OperatorObjectiveDocumentationSpecs.cs#operator-objective-problem{csharp}
+
+The algorithm's `CreateExecutor` creates that problem once and resolves the selector through a typed view of its scope. The selector parameter declares, with `ChildExecution`, that its child runs under the delegating problem instead of the problem of the run. Preflight validation reads that declaration, so it checks the selector against the problem it is resolved under. Without it, preflight asks the selector about the algorithm's own signature, and a selector written for the delegating problem, one that reads something only that problem has, is rejected before the run starts; a selector such as `BestSelector`, which accepts any problem, would hide the mismatch. State the same types the hook resolves the child under. The rest of `WorstOfSampleAlgorithm` is an ordinary [iterative algorithm](/guide/extending/writing-algorithms#implement-an-iterative-algorithm).
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/OperatorObjectiveDocumentationSpecs.cs#operator-objective-resolution{csharp}
+
+Four rules carry the design:
+
+- **One problem object is the single source of the objective** for everything resolved under it: the operator, its child operators, refiners and observation records all read the objective of that problem.
+- **Create the problem once per `CreateExecutor`**, not per call. A scope keeps one executor for each configuration and problem object, so every new problem object gets new executors that the scope retains. See [Sharing executors](/guide/fundamentals/configurations#sharing-executors).
+- **The view is the same scope, not a child scope.** Executors resolved through it sit beside the executors of the run's problem, and sharing and run results behave as before.
+- **Declare the signature of the child on its parameter.** The resolution is typed by the delegating problem, so the parameter's `ChildExecution` names the same types.
+
+This binds an operator to one fixed objective. An objective that changes during a run is not an argument of an operator: see [an objective that changes during a run](/guide/extending/writing-algorithms#an-objective-that-changes-during-a-run).
 
 ## Test the contract
 
@@ -80,4 +99,8 @@ Test the operator directly before placing it in an algorithm. Check these proper
 3. The input candidate remains unchanged.
 4. Concurrent calls safely coordinate access to shared mutable execution data.
 
-Use [operator composition](/guide/extending/operator-composition) when several existing operators already express the required behavior.
+## Next steps
+
+- [Compose operators](/guide/extending/operator-composition) when several existing operators already express the required behavior. Its [stateful composition walkthrough](/guide/extending/operator-composition#a-complete-stateful-composition) implements a complete round-robin mutator with a cursor in its executor.
+- [Write wrappers](/guide/extending/writing-wrappers) for runtime policies around the executors of selected operators.
+- [Write an algorithm](/guide/extending/writing-algorithms) when the state transition or control flow is new.

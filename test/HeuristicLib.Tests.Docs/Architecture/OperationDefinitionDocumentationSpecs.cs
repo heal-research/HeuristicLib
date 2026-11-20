@@ -86,8 +86,9 @@ public sealed record EstimationObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Estimation, TCandidate> source, Action<EstimationObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Estimation, TCandidate> source, Action<EstimationObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((IEstimationExecutor<TCandidate>)executor, source, record, problem);
 
     private sealed class Executor(IEstimationExecutor<TCandidate> executor,

@@ -21,8 +21,9 @@ public sealed record TerminationObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Termination, TCandidate> source, Action<TerminationObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Termination, TCandidate, TerminationObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Termination, TCandidate> source, Action<TerminationObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor<TSearchState>((ITerminationExecutor<TSearchState>)executor, source, record, problem);
 
     private sealed class Executor<TSearchState>(ITerminationExecutor<TSearchState> executor,

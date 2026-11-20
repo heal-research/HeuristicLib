@@ -87,8 +87,9 @@ public sealed partial class OperatorPreparationSpecs
 
     private sealed record ReadObservation : IInvocationObservation<ReadValue, RealVector, ReadObservation>
     {
-        static IExecutor IInvocationObservation<ReadValue, RealVector, ReadObservation>.Wrap<TSearchSpace, TProblem, TSearchState>(
-            IExecutor executor, IOperator<ReadValue, RealVector> source, Action<ReadObservation> record, TProblem problem) =>
+        static IExecutor IInvocationObservation<ReadValue, RealVector, ReadObservation>.Wrap<TSearchState>(
+            IExecutor executor, IOperator<ReadValue, RealVector> source, Action<ReadObservation> record,
+            IProblem<RealVector, ISearchSpace<RealVector>> problem) =>
             OperationInfo.For<ReadValue, RealVector, TSearchState>().Wrap(executor, new Reporter(record));
 
         private readonly struct Reporter(Action<ReadObservation> record) : IInvocationWrapper

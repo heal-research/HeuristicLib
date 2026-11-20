@@ -155,7 +155,7 @@ See [execution resolution](/contributing/architecture/execution-resolution) for 
 
 ### § 4.1 Separate reusable configurations from executors
 
-Configurations own immutable settings, child configurations and analyzer definitions. Executors own private mutable data. Share an executor explicitly with `Sharing`; analyzer results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
+Configurations own immutable settings, child configurations and analyzers. Executors own private mutable data. Share an executor explicitly with `Sharing`; analyzer results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
@@ -204,20 +204,22 @@ Analyzer result creation must not depend on a requesting executor or its childre
 
 ### § 4.8 Represent configured behavior with value strategies
 
-Configurations are data. Represent configured behavior with a strategy interface whose implementations are immutable values. Do not store delegates or live objects on a configuration, because a delegate's equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs. Construction hooks are runtime machinery and are not persisted configuration strategies.
+Configurations are data: by convention they compare by value and can be serialized. Represent configured behavior with a strategy interface whose implementations are immutable values.
 
-This guideline is held very highly but is not absolute. A special case with a technical need, such as Python interoperability, may be an exception if it is documented here. A configuration that contains an exception is not persistable. Machinery that only runs over configurations, and is not stored on them, may use delegates.
+A configuration may hold a delegate or another live object, such as a host callback. It is not forbidden, but the configuration then leaves the convention: it cannot be serialized, nor can any graph that contains it; its equality depends on the delegate's method and target; and captured state is not part of the configuration. Whether that matters is the author's decision, and many users never serialize a configuration. Document such a type as holding a runtime value, and link the [user-facing explanation](/guide/fundamentals/configurations#configurations-that-hold-delegates).
 
-Current exceptions:
+Library configurations hold runtime values only when there is a technical need, such as Python interoperability, and are listed below. Construction hooks and other machinery that only runs over configurations, and is not stored on them, may use delegates.
 
-- Analysis definitions and `Observing` may retain value functions and runtime callbacks, including Python callbacks, and `CreateRun` or `Substitute` may place them in a configuration. The source of a role of your own retains the function that places its wrapper, and a trace over it reaches that function. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
+Library configurations that hold runtime values:
+
+- Analyzers and `Observing` may retain value functions and runtime callbacks, including Python callbacks, and `CreateRun` or `Substitute` may place them in a configuration. The source of a role of your own retains the function that places its wrapper, and a trace over it reaches that function. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
 - `HeuristicLib.PythonInterop` operators such as `VisualizationCallbackEvaluator` hold Python-facing callbacks.
 - `EpochClock` in `HeuristicLib.Experimental` holds its live dynamic problem, so a configuration holding it is not serializable.
 - `DynamicRacingAlgorithm` and `DelegatingRacingStateMerger` in `HeuristicLib.Experimental` hold delegates that build, inspect and merge contenders.
 
 ### § 4.9 Use records only for value semantics
 
-Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry. Analyzer definitions use reference identity, including when compared as properties of configuration records. Record copies retain those references.
+Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry. Analyzers use reference identity, including when compared as properties of configuration records. Record copies retain those references.
 
 ### § 4.10 Validate operation inputs before side effects
 
@@ -248,15 +250,15 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 
 - Use a stateless base for configuration data without mutable run data.
 - Author an executor for private mutable fields, child executors or custom execution structure.
-- Use a single item base for independent per item work.
-- Keep mutable data in executors or run results; definitions contain no live result or executor.
+- Use a single-candidate base when each item of a batch is processed independently.
+- Keep mutable data in executors or run results; configurations contain no live result or executor.
 - Coordinate concurrent access across every executor sharing a resource. An executor local lock cannot protect a shared resource.
 
-Stateless leaf bases hide executor construction. Other authors keep private mutable data in executor fields. Configurations contain immutable settings, children and analyzer definitions. Share configurations explicitly when their executors should retain data across child scopes. There is no automatic disposal contract.
+Stateless leaf bases hide executor construction. There is no automatic disposal contract.
 
-### § 4.15 Keep single item batching explicit and deterministic
+### § 4.15 Keep single-candidate batching explicit and deterministic
 
-A single item base seals the batch operation and exposes `ExecutionConcurrency Concurrency`. Fork each item RNG from its batch position so concurrency does not change results. `SingleCandidateMutator` is the reference.
+A single-candidate base seals the batch operation and exposes `ExecutionConcurrency Concurrency`. Fork each item RNG from its batch position so concurrency does not change results. `SingleCandidateMutator` is the reference.
 
 ### § 4.16 Keep operator scaffolding out of the build
 
@@ -276,7 +278,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executors expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation, or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Generic invocation wrappers reach no other call argument; a typed wrapper of one operation receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `CountCandidateWork` defaults to throwing, and operations with candidate work implement it, so it does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation, or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Generic invocation wrappers reach no other call argument; a typed wrapper of one operation receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `IOperation<TSelf>.SupportsCandidateWork` defaults to false and the invocation's `CountCandidateWork` defaults to throwing. An operation without candidate work implements neither, and one with candidate work implements both, so `CountCandidateWork` does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
 
 A wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>`. A routed executor derives from `RoutingExecutor<TExecutor>`.
 
@@ -520,7 +522,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Each operation supplies one invocation over its named method. General wrappers reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper or run signature. Candidate-work semantics are supplied by the invocation and evaluated only by wrappers needing that metric. `SupportsCandidateWork` defaults to false and `CountCandidateWork` throws by default, so an operation without candidate work implements neither, and one with candidate work implements both. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`.
+Each operation supplies one invocation over its named method. General wrappers reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper or run signature. Candidate-work semantics are supplied by the invocation (§ 4.19) and evaluated only by wrappers needing that metric. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family
@@ -567,6 +569,12 @@ Name an interface for what it is about, not only for its role in a system: `ICan
 which thing the invariant constrains, and `IOperatorContract<TCandidate>` says whose contract it is. Verify the verb
 covers every implementer: `Ensures` includes creators that establish an invariant as well as operators that preserve it.
 
+### § 8.14 Say item for a split call and candidate for the candidates
+
+A name says item when it belongs to splitting or routing a call, which any item operation can use, such as `IItemOperation<TSelf>` and `ChoosePerItem`. A name says candidate when it is about candidates themselves: an operation's candidate inputs and outputs (`SingleCandidateMutator`, `MutateCandidate`), candidate work (`SupportsCandidateWork`, `CountCandidateWork`, `CountingCandidates`, `LimitedToCandidates`). Rate helpers such as `AppliedAtRate` return `ChoosePerItem` and describe each operation's own unit in their documentation, such as each parent, parent group or candidate.
+
+An item does not always yield a candidate: evaluation yields an objective vector for each candidate, and a crossover item is a group of parents. That is why a name that works for every item operation says item.
+
 ## § 9 Documentation and source organization
 
 ### § 9.1 Document nonobvious public contracts
@@ -579,7 +587,7 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 
 ### § 9.2 Keep policy and public documentation in their assigned documents
 
-- Use glossary terms instead of legacy or ad hoc alternatives.
+- Use glossary terms instead of ad hoc alternatives.
 - Keep user facing namespaces focused on concepts. Folders may be more detailed.
 - Do not assume that one folder must map to one namespace.
 - Keep public behavioral explanations in topic documentation.
@@ -591,6 +599,8 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem.
 
 Place a type with the concept it implements, not with the representation that binds it. A problem, including an authoring base bound to one representation such as `RealVectorProblem`, belongs in `Problems`; an operator authoring base belongs in its role namespace. An encoding holds its representation's candidate types, search spaces and the operators that work with any problem over that representation. Put an operator that requires one problem beside that problem, as `NumericParameterFittingRefiner` sits in `Problems.MachineLearning`.
+
+Name a role-specific configuration interface for its role, without a `Node` suffix. `IOperator<Mutation, TCandidate>`, `IAlgorithm<TCandidate>` and `IClock` are configuration nodes by deriving from `IConfigurationNode`, and the `IConfigurationNode` interfaces are the only configuration interfaces named for the graph concept.
 
 ### § 9.4 Allow authoring dependencies required by construction
 

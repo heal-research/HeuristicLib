@@ -71,13 +71,13 @@ Create an explicit run when you want to process trials as they finish. Import `H
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-concurrency{csharp}
 
-Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
+`ExecutionConcurrency` states how much independent work may overlap, such as the trials of an experiment or the candidates of an operator batch. `Sequential()` finishes each item in input order before it starts the next. `Concurrent()` allows all items to overlap, and `Concurrent(max)` caps how many are active at once without guaranteeing any order. None of them reserves or creates dedicated threads; they only limit overlap, and the runtime decides which threads run the work. Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
 
 ## Run lifecycle
 
 An experiment run is returned in `Ready` with one independent algorithm run per trial and starts once. Start the experiment to schedule all trials. Starting a trial run directly prevents scheduling through the experiment.
 
-`CreateRun` decodes the parameter candidates and applies the supplied substitutions once per parameter candidate. It validates the resulting configurations on each problem and checks that each trial's run can hold the supplied analysis definitions. A decoding failure throws `InvalidOperationException` with the parameter candidate index. A substitution, validation or analysis check failure identifies the problem, parameter candidate and repetition in `ExperimentTrialException`. When several trials share the failed operation, the exception identifies the first affected trial. Pass `validate: false` to `CreateRun`, `RunStreaming`, `RunTrials`, `RunToCompletionAsync` or `RunToCompletion` to skip configuration validation. Executors are constructed when execution starts. During execution, a failed trial leaves the other trials available to finish.
+`CreateRun` decodes the parameter candidates and applies the supplied substitutions once per parameter candidate. It validates the resulting configurations on each problem and checks that each trial's run can hold the supplied analyzers. A decoding failure throws `InvalidOperationException` with the parameter candidate index. A substitution, validation or analysis check failure identifies the problem, parameter candidate and repetition in `ExperimentTrialException`. When several trials share the failed operation, the exception identifies the first affected trial. Pass `validate: false` to `CreateRun`, `RunStreaming`, `RunTrials`, `RunToCompletionAsync` or `RunToCompletion` to skip configuration validation. Executors are constructed when execution starts. During execution, a failed trial leaves the other trials available to finish.
 
 An experiment moves from `Running` to `Completed`, `Failed` or `Canceled`. Disposing its stream before completion stops scheduling, cancels active work and leaves the experiment `Stopped`. These states are terminal. Create a new experiment run to execute again. Pause and resume apply to individual algorithm runs.
 
@@ -93,14 +93,14 @@ Parameter search can overfit benchmark instances. Keep separate instances for fi
 
 ## Add analysis
 
-Pass analyzers in the substitutions list of `experiment.CreateRun(problem, random, [analyzer])`. Substitutions apply after variation, so a default-selecting analyzer can observe whichever evaluator each parameter candidate configures. `trial.Algorithm` is the configuration produced by the grid. `trial.Run.Algorithm` includes the changes from substitutions, and `trial.Run.Result(analyzer)` reads the trial's own result.
+The analyzers of [Observability and analysis](/guide/execution/observability-and-analysis) work in an experiment. Pass them in the substitutions list of `experiment.CreateRun(problem, random, [analyzer])`. They apply after variation, so a default-selecting analyzer observes whichever evaluator each parameter candidate configures. `trial.Algorithm` is the configuration produced by the grid, `trial.Run.Algorithm` adds the substitutions, and `trial.Run.Result(analyzer)` reads the trial's own result.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-analyzed-grid{csharp}
 
 The update count reports how many best-so-far values the analyzer recorded in a trial. Use the recorded objective values to compare solution quality across trials.
 
-A source named on the prototype root, such as `algorithm.Iterations`, matches the original in `algorithm.Repeat(n)`. Grid variation creates new configurations. A source named on the prototype or on a child the grid replaces fails placement when its target is absent. Use default selections on grids or name a child shared by the parameter candidates.
+Grid variation creates new configurations, so a source named on the prototype matches only a parameter candidate that retains its target. A source named on the prototype root, such as `algorithm.Iterations`, matches the original in `algorithm.Repeat(n)`. A source named on the prototype or on a child the grid replaces fails placement when its target is absent. Use default selections on grids or name a child shared by the parameter candidates.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-experiment-setup{csharp}
 
-Analysis already attached to a configuration remains available when a parameter candidate keeps the observing wrapper. See [Observability and analysis](/guide/execution/observability-and-analysis) for available analyzers and how to read their results.
+Analysis already attached to a configuration remains available when a parameter candidate keeps the observing wrapper.

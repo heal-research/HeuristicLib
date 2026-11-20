@@ -49,7 +49,7 @@ Numeric terminals come in two kinds:
   an evolvable constant with a zero-width distribution.
 - `Symbols.Constant(initialDistribution, perturbation)` is an evolvable constant,
   sampled from its initial distribution when created and changed by local mutation
-  afterwards. These are the values numeric parameter fitting optimizes.
+  afterwards. These are the values numeric parameter fitting adjusts.
 
 Creation and local change are deliberately separate: an initial distribution samples
 new values, a perturbation transforms an existing one. **Neither is a bound.** An
@@ -145,7 +145,7 @@ one search space. The simple constructor defaults to `Metrics.MSE`:
 var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
 ```
 
-Two metric families are available. **Prediction metrics** (`IRegressionMetric`)
+Two metric families are available. **Regression metrics** (`IRegressionMetric`)
 compare predictions with the target; **expression metrics** (`IExpressionMetric`)
 inspect the genotype without predicting anything:
 
@@ -159,7 +159,22 @@ var problem = new SymbolicRegressionProblem(
 
 The objective vector is then `[MSE, Length]`, with both directions minimizing.
 
-Prediction metrics are calculated once from one shared prediction vector and appear
+A regression metric is an `IPredictionMetric<double>`, as
+[data and machine learning](/guide/domains/data-and-machine-learning#metrics)
+explains, and the problem keeps its regression metrics in `PredictionMetrics`.
+The static class `ExpressionMetrics` offers `Length`, `VariableCount`, the number of
+variable occurrences, and `Complexity`. All three are minimized. `Complexity` scores
+the tree recursively, from its leaves to its root:
+
+- A variable scores 2 and any other terminal, such as a constant, scores 1.
+- Negation keeps the score of its operand.
+- Addition and subtraction add the scores of their operands.
+- Multiplication and division score `(1 + left) * (1 + right)`.
+- Exponential and logarithm score 2 raised to the score of their operand, and square
+  root scores the cube of its operand's score.
+- Any other operation scores 1 plus the scores of its operands.
+
+Regression metrics are calculated once from one shared prediction vector and appear
 before expression metrics in the objective vector. Either collection may be empty,
 but not both. Multiple objectives use lexicographic total order by default while
 their individual directions still govern dominance. The problem evaluates only its
@@ -193,7 +208,15 @@ var finalState = await algorithm.RunToCompletionAsync(problem, RandomNumberGener
 Evolutionary search finds structure well and numeric constants poorly. A refiner
 fits the evolvable constants of a candidate with Levenberg-Marquardt, using
 automatic differentiation over the expression, and returns a **new** expression with
-the fitted values applied:
+the fitted values applied. The fitted values are constants in the genotype and
+parameters in the numerics.
+
+Other tools call this constant optimization, as PySR and HeuristicLab do, or
+parameter identification or parameter optimization. Those names help you find related
+material, but API names here say numeric parameter fitting. Avoid calling it
+coefficient optimization: a coefficient is a multiplicative factor, and
+[linear scaling](/guide/domains/data-and-machine-learning#linear-scaling) is what fits
+coefficients.
 
 ```csharp
 Refiner = new NumericParameterFittingRefiner { MaximumIterations = 10 }

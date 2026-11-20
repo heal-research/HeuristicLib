@@ -20,8 +20,9 @@ public sealed record CrossoverObservation<TCandidate>(
     IProblem<TCandidate, ISearchSpace<TCandidate>> Problem)
     : IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>
 {
-    static IExecutor IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>.Wrap<TSearchSpace, TProblem, TSearchState>(
-        IExecutor executor, IOperator<Crossover, TCandidate> source, Action<CrossoverObservation<TCandidate>> record, TProblem problem) =>
+    static IExecutor IInvocationObservation<Crossover, TCandidate, CrossoverObservation<TCandidate>>.Wrap<TSearchState>(
+        IExecutor executor, IOperator<Crossover, TCandidate> source, Action<CrossoverObservation<TCandidate>> record,
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
         new Executor((ICrossoverExecutor<TCandidate>)executor, source, record, problem);
 
     private sealed class Executor(ICrossoverExecutor<TCandidate> executor,

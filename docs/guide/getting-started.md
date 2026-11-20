@@ -146,9 +146,9 @@ You can pass `sphereProblem` to a compatible algorithm just like the built-in be
 
 ## Next steps
 
-- [Understand how the components fit together](/guide/fundamentals/core-concepts)
-- [Choose completion, progress or explicit run control](/guide/execution/running-algorithms)
-- [Compose existing operators](/guide/extending/operator-composition)
+- [Understand how the components fit together](/guide/fundamentals/core-concepts), the first page of the Fundamentals path
 - [Model a custom problem](/guide/fundamentals/problems)
 - [Choose search spaces](/guide/fundamentals/search-spaces)
+- [Choose completion, progress or explicit run control](/guide/execution/running-algorithms)
+- [Compose existing operators](/guide/extending/operator-composition)
 - [Run repeated experiments](/guide/execution/experiments)
