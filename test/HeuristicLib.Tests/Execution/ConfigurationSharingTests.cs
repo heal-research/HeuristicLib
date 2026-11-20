@@ -8,10 +8,11 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 namespace HEAL.HeuristicLib.Tests.Execution;
 
 // A scope holds one executor per configuration reference, and sharing lets child scopes, such as Cycle turns, use the
-// executor of the scope that shares it. See plans/operator-state-lifetimes.md.
+// executor of the scope that shares it. See docs/guide/fundamentals/configurations.md#sharing-executors.
 public class ConfigurationSharingTests
 {
-    // Shared fixture notation from the system spec: A makes three calls to M per state, B makes two calls and yields once.
+    // Shared fixture notation of SubstitutionFixture: A makes three calls to M per state, B makes two calls and yields
+    // once.
 
     [Fact]
     public void WithoutSharing_EveryTurnConstructsItsOwnExecutor()

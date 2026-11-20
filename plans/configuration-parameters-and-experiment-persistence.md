@@ -1,14 +1,14 @@
 # Serializable parameter grids for experiments
 
-Status: design proposal. The intended direction is runtime parameter metadata over ordinary typed configuration properties. The concrete API, serialization format and graph-update semantics need to be settled before implementation.
+Status: design proposal for the parameter-grid part of [configuration serialization](developer-backlog.md#runs-execution-and-experiments). The runtime parameter metadata it proposed exists as declared parameters. The serialization format, construction from data and graph-update semantics need to be settled before implementation.
 
-Update on 2026-11-05: the developer selected declared parameters without reflection as a core contract of the [core simplification plan](core-simplification-plan.md), which also uses them for walks and substitution in the configuration graph. That plan builds the parameter system and in-process experiment setup. String-based configuration, including the JSON recipes below, is a [later separate task](developer-backlog.md#runs-execution-and-experiments).
+Update on 2026-11-05: the developer selected declared parameters without reflection as a core contract. Declared parameters exist and are used for walks and substitution in the configuration graph and for in-process parameter grids. String-based configuration, including the JSON recipes below, is a [later separate task](developer-backlog.md#runs-execution-and-experiments).
 
 ## Problem
 
 Experiments need to be definable as data received through a REST API, loaded from a file or supplied by another integration. A caller must be able to describe which algorithm parameters to vary and which values to try without providing executable C# callbacks.
 
-The existing [`Grid<T>.VaryBy`](../src/HeuristicLib/Experiments/Grid.cs) supports Cartesian expansion through typed update lambdas. It applies each callback immediately and retains the resulting configurations. This supports constructing cases in C#, but does not retain the grid recipe: the parameter paths, candidate values and relationships between alternatives. Serialization of the expanded configurations is also not a verified round-trip contract.
+`ParameterGrid` supports Cartesian expansion in C#. `VaryBy(name, values)` names a top-level declared parameter of the prototype and retains its descriptor and values; `VaryBy(values, configurator)` takes a typed lambda, which is a delegate and cannot be serialized. The grid retains its dimensions and decodes each parameter candidate on demand, but it has no data form: there is no format, no path below the prototype's top-level parameters and no alternatives with their own dimensions. Serialization of grids and of the configurations they produce is not a verified round-trip contract.
 
 Nested parameters depend on the selected component. `Selector__TournamentSize` is meaningful for a tournament selector, but not for roulette-wheel selection. An experiment must be able to vary both the concrete selector and parameters specific to each selector alternative.
 
@@ -26,21 +26,19 @@ Nested parameters depend on the selected component. `Selector__TournamentSize` i
 
 ### Runtime parameter metadata
 
-Declare metadata for each configuration type that identifies its configurable properties and provides typed read and immutable replacement operations. For example:
+Implemented as declared parameters: each configuration type declares one static parameter per configurable property, with typed read and immutable replacement operations, and lists them through `IConfigurationNode.GetParameters()`. For example:
 
 ```csharp
-// Illustrative API.
-Parameter.Define<TournamentSelector<TCandidate>, int>(
-    nameof(TournamentSize),
-    read: static selector => selector.TournamentSize,
-    replace: static (selector, size) => selector with { TournamentSize = size });
+public static Parameter<EvolutionStrategy<TCandidate>, int> PopulationSizeParameter { get; } =
+    new(nameof(PopulationSize), static algorithm => algorithm.PopulationSize,
+        static (algorithm, value) => algorithm with { PopulationSize = value });
 ```
 
-Share this metadata per configuration type. Accessors operate on the supplied instance rather than capturing one configuration. Ordinary properties remain the source of configuration values; no dictionary backing is needed. Stateless operators that serve as their own executors continue to read their ordinary typed properties.
+The metadata is shared per configuration type. Accessors operate on the supplied instance rather than capturing one configuration. Ordinary properties remain the source of configuration values; no dictionary backing is needed. Stateless operators that serve as their own executors continue to read their ordinary typed properties.
 
 Metadata must distinguish settings from child configurations, nullable children and child collections sufficiently to support traversal. A nested path uses the actual child configuration's type. Required and inherited settings also need to be discoverable and replaceable. Missing declarations must be detectable rather than silently making a setting unavailable to experiments.
 
-Compare handwritten declarations with focused completeness checks before deciding whether a source generator is justified. The exact metadata contract and its exposure through `IConfigurationNode` or a separate service remain open.
+Declarations are handwritten. Nothing yet checks that a configuration declares all its parameters; a completeness check or a source generator is tracked in the backlog.
 
 ### Experiment recipes and alternatives
 
@@ -111,23 +109,23 @@ Define the boundary for problem and dataset references, termination, random seed
 
 ### Graph identity and immutable updates
 
-Configurations form a graph and may share children. Their reference identity affects execution sharing, pointcut selection, observation sources and run-bound results. Serialization must preserve intentional shared references.
+Configurations form a graph and may share children. Their reference identity affects execution sharing, substitution by reference, observation sources and run-bound results. Serialization must preserve intentional shared references.
 
-Specify whether updating a path replaces only that occurrence or every reference to the selected node. Branch-local replacement is the proposed default; replacement everywhere would be explicit. Both need a defined treatment of pointcuts, sharing declarations and other references to replaced nodes. References outside the rewritten graph need an attachment or rebinding contract.
+Specify whether updating a path replaces only that occurrence or every reference to the selected node. Branch-local replacement is the proposed default; replacement everywhere would be explicit. Both need a defined treatment of substitutions by reference, sharing declarations and other references to replaced nodes. References outside the rewritten graph need an attachment or rebinding contract.
 
-Configuration `Name` labels are not unique and cannot automatically serve as unambiguous collection addresses. Parameter updates configure future execution; they do not replace adaptive executor controls.
+Configuration `Name` labels are not unique and cannot automatically serve as unambiguous collection addresses. Parameter updates configure future execution; they do not replace adaptation, which changes a value during a run.
 
 ### Diagnostics and reproducibility
 
-Resolve recipe paths and check value types, alternative compatibility and finite sequence descriptions before trial execution. Coordinate addressing with the property and collection paths reported by [`SearchConfigurationValidation`](../src/HeuristicLib/Execution/SearchConfigurationValidation.cs). The declared child metadata could also replace that validator's reflection-based graph walk.
+Resolve recipe paths and check value types, alternative compatibility and finite sequence descriptions before trial execution. Coordinate addressing with the property and collection paths reported by [`SearchConfigurationValidation`](../src/HeuristicLib/Execution/SearchConfigurationValidation.cs), which already walks the graph through declared parameters.
 
 Semantic configuration validation remains in executor construction under developer guidelines section 4.7. Suggested UI choices and experiment ranges must not silently become new validity constraints.
 
-Define deterministic ordering of dimensions, alternatives and generated values so expansion preserves case keys and random fork paths. Consider retaining the recipe together with each trial's resolved parameter assignments. A flattened result table must identify the concrete alternative and distinguish inactive parameters from explicitly null values.
+Define deterministic ordering of dimensions, alternatives and generated values so expansion preserves parameter candidate indices and the random streams derived from them. Consider retaining the recipe together with each trial's resolved parameter assignments. A flattened result table must identify the concrete alternative and distinguish inactive parameters from explicitly null values.
 
 ## Open decisions
 
-1. What is the metadata API, how is it discovered, and how are missing or inherited settings handled?
+1. How are missing declarations detected? (The metadata API itself exists as declared parameters, including inherited ones.)
 2. Does configuration construction share the parameter schema or remain a serializer responsibility? Must the first implementation accept complete configurations, registered prototypes or both?
 3. What are the path syntax, collection addressing rules and conflict rules for overlapping updates?
 4. How do branch-local and node-wide replacement preserve or rebind graph references?
@@ -140,11 +138,12 @@ Define deterministic ordering of dimensions, alternatives and generated values s
 
 - [ ] Demonstrate a serialize-deserialize-expand round trip for the selector example, producing the expected 24 configurations without caller-supplied C# update lambdas.
 - [ ] Run repeated trials from the expanded configurations through the experiment execution model.
-- [ ] Discover, read and replace scalar, required, inherited and nested settings, including those on a consumer-defined configuration.
+- [x] Discover, read and replace scalar, required and inherited settings through declared parameters, including those on a consumer-defined configuration.
+- [ ] Discover, read and replace nested settings by path.
 - [ ] Verify that typed property updates and metadata-based updates produce equivalent configurations without changing the originals or configuration equality.
-- [ ] Verify the chosen graph-reference behavior through serialization and updates, including sharing and reference-based observation or pointcut selection.
+- [ ] Verify the chosen graph-reference behavior through serialization and updates, including sharing and reference-based observation or substitution.
 - [ ] Report unknown paths, incompatible values and malformed sequences with actionable locations before trial execution.
-- [ ] Verify deterministic expansion, case keys and random fork paths across round trips, including an explicit value list equivalent to a generated numeric sequence.
+- [ ] Verify deterministic expansion, parameter candidate indices and random streams across round trips, including an explicit value list equivalent to a generated numeric sequence.
 - [ ] Demonstrate the chosen persistence boundary for problem inputs and analysis, and report unsupported runtime-only values explicitly.
 - [ ] Keep metadata delegates out of serialized data and parameter lookups out of operator execution.
 - [ ] Add API usage specs and published examples for the supported workflow, with focused behavioral coverage following the [test suite guide](../test/README.md).

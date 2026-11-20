@@ -14,8 +14,8 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.Analysis;
 
-// Analyzers placed through their substitutions, against the scenarios of plans/operator-unification-system-spec.md and the
-// evidence table of plans/aspects-as-automatic-composition.md. A theory runs both paths where the old one exists.
+// Analyzers placed through their substitutions, over the shared fixture of SubstitutionFixture, in which A and B call
+// the shared configuration M. A theory runs both paths where the old one exists.
 public class SubstitutedAnalysisTests
 {
     [Fact]
@@ -46,8 +46,8 @@ public class SubstitutedAnalysisTests
         States(observed, problem).ShouldBe(States(ga, problem));
     }
 
-    // S8 and the aspects table, deferred construction: one trace records every selected call across fresh executors, and
-    // each run has its own result.
+    // Deferred construction: one trace records every selected call across fresh executors, and each run has its own
+    // result.
     [Fact]
     public void Trace_RecordsEveryCallAcrossFreshExecutorsAndPerRun()
     {
@@ -65,7 +65,7 @@ public class SubstitutedAnalysisTests
         second.Result(trace).SampleCount.ShouldBe(10);
     }
 
-    // Q2: only A's calls, whether the substitution runs on A or the wrapper is written in A's slot.
+    // Only A's calls, whether the substitution runs on A or the wrapper is written in A's slot.
     [Fact]
     public void TraceOnOneCaller_SeesOnlyThatCallersCallsOfTheSharedConfiguration()
     {
@@ -84,7 +84,7 @@ public class SubstitutedAnalysisTests
         second.Result(inSlot).SampleCount.ShouldBe(3);
     }
 
-    // Q3: a wrapper is an algorithm like every other node, as a selection of every algorithm shows.
+    // A wrapper is an algorithm like every other node, as a selection of every algorithm shows.
     [Fact]
     public void CountingEveryAlgorithmByType_CountsWrappersLikeEveryOtherNode()
     {
@@ -109,7 +109,7 @@ public class SubstitutedAnalysisTests
         }
     }
 
-    // Q4: one substitution applies once, two count separately, and a wrapper written twice does what is written.
+    // One substitution applies once, two count separately, and a wrapper written twice does what is written.
     [Fact]
     public void AttachingCountingTwice_FollowsTheSubstitutionsThatWereWritten()
     {
@@ -138,7 +138,7 @@ public class SubstitutedAnalysisTests
         Should.Throw<InvalidOperationException>(() => a.Substitute(Substitution.Of(other, node => node.Counted(once))));
     }
 
-    // Q5: a trace inside A's turns continues across turns as one result.
+    // A trace inside A's turns continues across turns as one result.
     [Fact]
     public void TraceInsideACycleChild_ContinuesAcrossTurns()
     {
@@ -152,7 +152,7 @@ public class SubstitutedAnalysisTests
         run.Result(trace).SampleCount.ShouldBe(6);
     }
 
-    // Q6: a failure in the middle of a run surfaces, ends the run, and leaves results readable.
+    // A failure in the middle of a run surfaces, ends the run, and leaves results readable.
     [Fact]
     public void ConstructionFailureInALaterTurn_EndsTheRunAndLeavesResultsReadable()
     {

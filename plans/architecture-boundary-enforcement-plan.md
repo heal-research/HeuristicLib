@@ -1,6 +1,6 @@
 # Architecture boundary enforcement plan
 
-Status: planned on 2026-11-05. Start after the [core simplification rework](core-simplification-plan.md) is complete, including its documentation and validation. No implementation has started under this plan. The goal and sequencing are agreed; the detailed dependency policy, test tooling and any assembly or package changes remain proposals requiring acceptance before implementation.
+Status: planned on 2026-11-05. Start after the core simplification branch is merged. No implementation has started under this plan. The goal and sequencing are agreed; the detailed dependency policy, test tooling and any assembly or package changes remain proposals requiring acceptance before implementation.
 
 ## Problem and intended outcome
 
@@ -69,7 +69,7 @@ That investigation rejected reorganizing namespaces, folders or assemblies mecha
 
 ### Simplification changes the baseline
 
-The simplification plan changes configuration introspection, automatic placement, resolution responsibilities, executor construction and analysis. It also records the retirement of `Instrument` while retaining `Analyzer`. Current names and current placements are evidence for the investigation, not a specification to preserve after those changes.
+The core simplification changed configuration introspection, placement, resolution responsibilities, executor construction and analysis. It also retired `Instrument` while retaining `Analyzer`. Current names and current placements are evidence for the investigation, not a specification to preserve after those changes.
 
 ## Proposed dependency model
 
@@ -92,7 +92,7 @@ Do not require arbitrary concrete features to be independent of one another. A p
 
 ### Phase 1: refresh the inventory and accept the dependency policy
 
-1. Record the commit at which simplification is complete. Read its final plans, glossary and architecture guidance before classifying the resulting code.
+1. Record the commit at which simplification is complete. Read its final glossary and architecture guidance before classifying the resulting code.
 2. Inventory types and dependencies in main, Experimental and PythonInterop, including internal types, nested types, generic constraints, public signatures and implementation references. Identify generated or conditional code and how the actual build supplies it. Keep test and analyzer tooling outside the runtime module graph.
 3. Map types to responsibilities, with explicit treatment of mixed namespaces and higher-level convenience extensions. Record project references and external package ownership separately from internal type dependencies.
 4. Find cycles and dependencies that contradict the proposed direction. Distinguish a coherent module with internal collaboration from a dependency that crosses an intended boundary.

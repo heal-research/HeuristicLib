@@ -61,7 +61,7 @@ public class AutoEcPaperScenarioTests
         var concordePath = FindLocalFile("for_Agent", "Concorde", "executablescygwin", "concorde.exe");
         if (tspFile is null || concordePath is null)
         {
-            return;
+            Assert.Skip("Needs the local files tsp/eil51.tsp and for_Agent/Concorde/executablescygwin/concorde.exe in a parent directory of the test output.");
         }
 
         const int targetEpochChanges = 50;
@@ -80,9 +80,16 @@ public class AutoEcPaperScenarioTests
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
+        IOperator<Evaluation, Permutation> evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
             new ActivatedTravelingSalesmanExactBestKnownProvider(
                 new ConcordeTravelingSalesmanExactSolver(concordePath)));
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
+                ActivatedTravelingSalesmanProblem>(
+                [evaluator]);
+        var analyzed = evaluator.Substitute(qualityCurve, bbcp);
 
         var racing = new DynamicRacingAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem,
             PopulationState<Permutation>,
@@ -91,7 +98,7 @@ public class AutoEcPaperScenarioTests
             metaCreator,
             metaMutator,
             new BestPopulationStateMerger<Permutation>(),
-            candidate => CreatePermutationGa(problem, evaluator, candidate),
+            candidate => CreatePermutationGa(problem, analyzed, candidate),
             algorithm => algorithm.Evaluator)
         {
             NoRacers = 2,
@@ -100,14 +107,8 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var epoch = Clock.FromEpoch(problem);
-        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
-        var bbcp =
-            new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
-                ActivatedTravelingSalesmanProblem>(
-                [evaluator]);
 
-        var run = racing.Substitute(qualityCurve).CreateRun(problem, RandomNumberGenerator.Create(123), [bbcp]);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),

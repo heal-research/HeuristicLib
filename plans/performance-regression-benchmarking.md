@@ -41,8 +41,8 @@ Add a console project at `benchmark/HeuristicLib.Benchmarks` and include it in `
 
 The project references:
 
-* BenchmarkDotNet as the measurement engine
-* Spectre.Console.Cli for command parsing and interactive selection
+- BenchmarkDotNet as the measurement engine
+- Spectre.Console.Cli for command parsing and interactive selection
 
 The project sets `IsTestProject=false`. It does not reference `Microsoft.NET.Test.Sdk` or `BenchmarkDotNet.TestAdapter`.
 
@@ -58,37 +58,37 @@ HeuristicLib requires `dotnet test` to remain a correctness test command. IDE us
 
 The console application provides these commands:
 
-| Command | Behavior |
-| --- | --- |
-| `list` | Lists benchmark cases, categories, profiles and declared parameters without running measurements. |
-| `run` | Runs selected benchmarks for the current candidate. |
-| `compare` | Measures a base Git revision and the current candidate, then evaluates regressions. |
-| `interactive` | Opens Spectre.Console menus for choosing categories, filters, parameters and profiles. |
-| `bdn` | Passes advanced arguments directly to BenchmarkDotNet. |
+| Command       | Behavior                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `list`        | Lists benchmark cases, categories, profiles and declared parameters without running measurements. |
+| `run`         | Runs selected benchmarks for the current candidate.                                               |
+| `compare`     | Measures a base Git revision and the current candidate, then evaluates regressions.               |
+| `interactive` | Opens Spectre.Console menus for choosing categories, filters, parameters and profiles.            |
+| `bdn`         | Passes advanced arguments directly to BenchmarkDotNet.                                            |
 
 No arguments display help. They do not start an interactive session and do not run the complete suite.
 
 Both `run` and `compare` require one of these selectors:
 
-* `--all`
-* One or more `--category <name>` options
-* One or more `--filter <pattern>` options
+- `--all`
+- One or more `--category <name>` options
+- One or more `--filter <pattern>` options
 
 Common options are:
 
-* `--profile dry|quick|full`
-* Repeatable `--category <name>`
-* Repeatable `--filter <pattern>`
-* Repeatable `--parameter <name=value>`
-* `--artifacts <path>`
-* `--export json|markdown|csv`
+- `--profile dry|quick|full`
+- Repeatable `--category <name>`
+- Repeatable `--filter <pattern>`
+- Repeatable `--parameter <name=value>`
+- `--artifacts <path>`
+- `--export json|markdown|csv`
 
 The comparison command also accepts:
 
-* `--base-ref <git-ref>`, which defaults to `dev`
-* `--threshold <percentage>`, which defaults to 10
-* `--fail-on-inconclusive`
-* An output path for the comparison report
+- `--base-ref <git-ref>`, which defaults to `dev`
+- `--threshold <percentage>`, which defaults to 10
+- `--fail-on-inconclusive`
+- An output path for the comparison report
 
 Parameter arguments select only values declared by `[Params]` or `[ParamsSource]`. The CLI rejects unknown parameter names and undeclared values before starting BenchmarkDotNet. It prints the allowed values in the error message.
 
@@ -114,11 +114,11 @@ The `full` profile uses the normal statistically meaningful configuration. It is
 
 All profiles:
 
-* Build and execute Release code
-* Run without a debugger
-* Use BenchmarkDotNet process isolation
-* Record runtime and managed allocation information
-* Record the exact runtime, operating system, processor and BenchmarkDotNet configuration
+- Build and execute Release code
+- Run without a debugger
+- Use BenchmarkDotNet process isolation
+- Record runtime and managed allocation information
+- Record the exact runtime, operating system, processor and BenchmarkDotNet configuration
 
 A complete `full` run should remain near 30 to 60 minutes per revision. Category and filter selection must make focused runs much shorter. If growth pushes the suite beyond that range, split slow or specialized workloads into explicit opt in categories rather than weakening every measurement.
 
@@ -126,16 +126,16 @@ A complete `full` run should remain near 30 to 60 minutes per revision. Category
 
 Categories are stable selection names. Filters provide more specific control within a category.
 
-* `OperatorInfrastructure`
-* `VectorGenotypes`
-* `SelectionAndReplacement`
-* `MultiObjective`
-* `SymbolicExpressionGenotype`
-* `SymbolicExpressionExecution`
-* `AutomaticDifferentiation`
-* `NumericParameterFitting`
-* `AlgorithmRuns`
-* `SymbolicRegression` as an umbrella category
+- `OperatorInfrastructure`
+- `VectorGenotypes`
+- `SelectionAndReplacement`
+- `MultiObjective`
+- `SymbolicExpressionGenotype`
+- `SymbolicExpressionExecution`
+- `AutomaticDifferentiation`
+- `NumericParameterFitting`
+- `AlgorithmRuns`
+- `SymbolicRegression` as an umbrella category
 
 The first implementation prefers a small set of representative benchmarks over broad shallow coverage.
 
@@ -175,12 +175,12 @@ Measure short deterministic runs of `GeneticAlgorithm`, `EvolutionStrategy` and 
 
 Each benchmark:
 
-* Uses deterministic input generation and explicit random seeds
-* Prepares candidates, populations and data outside the measured method
-* Consumes results so BenchmarkDotNet cannot remove measured work
-* Parameterizes input sizes when scaling behavior matters
-* Avoids file access, logging and unrelated setup inside the measured operation
-* Includes a short comment when the measured boundary is not obvious
+- Uses deterministic input generation and explicit random seeds
+- Prepares candidates, populations and data outside the measured method
+- Consumes results so BenchmarkDotNet cannot remove measured work
+- Parameterizes input sizes when scaling behavior matters
+- Avoids file access, logging and unrelated setup inside the measured operation
+- Includes a short comment when the measured boundary is not obvious
 
 Benchmark cases should use public APIs when the measured behavior is public. An internal hot path may be measured through `InternalsVisibleTo` only when public composition would add unrelated work and the internal boundary is itself a deliberate performance concern.
 
@@ -190,21 +190,21 @@ The `compare` command measures the selected cases once for the base revision and
 
 Results match on:
 
-* Benchmark type and method
-* Category
-* Parameter names and values
-* Runtime and job identity
+- Benchmark type and method
+- Category
+- Parameter names and values
+- Runtime and job identity
 
 The report includes:
 
-* Base and candidate mean
-* Base and candidate median
-* Ratio and percentage change
-* Error and standard deviation
-* Sample counts
-* Allocated bytes per operation
-* Statistical comparison result
-* Final status of improvement, unchanged, regression or inconclusive
+- Base and candidate mean
+- Base and candidate median
+- Ratio and percentage change
+- Error and standard deviation
+- Sample counts
+- Allocated bytes per operation
+- Statistical comparison result
+- Final status of improvement, unchanged, regression or inconclusive
 
 ### Regression decision
 
@@ -221,10 +221,10 @@ Allocation changes appear in the report. Initial automated gating focuses on run
 
 ### Exit codes and incompatible results
 
-* Exit code `0` means no confirmed regression.
-* Exit code `1` means at least one confirmed regression exceeded policy.
-* Exit code `2` means configuration, build or benchmark execution failed.
-* Inconclusive results produce warnings and exit code `0` unless `--fail-on-inconclusive` is set.
+- Exit code `0` means no confirmed regression.
+- Exit code `1` means at least one confirmed regression exceeded policy.
+- Exit code `2` means configuration, build or benchmark execution failed.
+- Inconclusive results produce warnings and exit code `0` unless `--fail-on-inconclusive` is set.
 
 If a benchmark exists on only one revision or its parameters changed, the report marks it incompatible rather than comparing unrelated cases. If the base revision lacks compatible benchmark infrastructure, the command stops with an explanatory error. Historical comparison begins once the suite exists on both revisions.
 
@@ -234,13 +234,13 @@ The comparison always attempts to clean its temporary files after success or fai
 
 Meaningful comparisons require the same machine under stable conditions:
 
-* Use a fixed runtime and SDK.
-* Keep the machine on a performance power profile.
-* Avoid debugger attachment and competing CPU intensive processes.
-* Avoid comparing results across different processor models.
-* Record operating system and runtime updates.
-* Confirm a borderline result with another run before treating it as a regression.
-* Investigate thermal throttling, frequency scaling and background activity when many unrelated cases move together.
+- Use a fixed runtime and SDK.
+- Keep the machine on a performance power profile.
+- Avoid debugger attachment and competing CPU intensive processes.
+- Avoid comparing results across different processor models.
+- Record operating system and runtime updates.
+- Confirm a borderline result with another run before treating it as a regression.
+- Investigate thermal throttling, frequency scaling and background activity when many unrelated cases move together.
 
 BenchmarkDotNet reduces common measurement errors but cannot make an unstable machine reliable. Absolute numbers from different machines belong in separate histories. The comparison report should reject known environment mismatches and display other differences prominently.
 
@@ -264,9 +264,9 @@ The dedicated runner should record its identity and relevant software versions w
 
 Provide launch profiles for:
 
-* Interactive selection
-* Listing available benchmarks
-* A representative quick category run
+- Interactive selection
+- Listing available benchmarks
+- A representative quick category run
 
 Contributor documentation explains how Rider and Visual Studio users start the console project and edit command arguments. Benchmarks do not appear in Test Explorer. IDE launches used for measurement must not attach a debugger.
 
@@ -297,32 +297,32 @@ Each phase should leave the project buildable. Comparison and CI work begins onl
 
 The implementation is complete when:
 
-* The main solution restores and builds the benchmark project in Release.
-* `dotnet test` executes no benchmarks.
-* `list` reports every benchmark, category and parameter.
-* `run` rejects an accidental unfiltered full suite invocation.
-* `dry` validates representative benchmarks from each implemented category.
-* Interactive selection produces the same command configuration as noninteractive arguments.
-* Identical selections produce compatible base and candidate result sets.
-* A controlled slowdown beyond 10 percent produces exit code `1`.
-* An improvement produces exit code `0`.
-* Noisy or incompatible measurements are reported as inconclusive.
-* Candidate source files remain untouched during comparison.
-* Temporary comparison files are cleaned after success and failure.
-* Reports contain enough environment data to reproduce the run.
-* Full suite runtime stays within the documented target.
-* Contributor documentation explains local, IDE and CI use.
+- The main solution restores and builds the benchmark project in Release.
+- `dotnet test` executes no benchmarks.
+- `list` reports every benchmark, category and parameter.
+- `run` rejects an accidental unfiltered full suite invocation.
+- `dry` validates representative benchmarks from each implemented category.
+- Interactive selection produces the same command configuration as noninteractive arguments.
+- Identical selections produce compatible base and candidate result sets.
+- A controlled slowdown beyond 10 percent produces exit code `1`.
+- An improvement produces exit code `0`.
+- Noisy or incompatible measurements are reported as inconclusive.
+- Candidate source files remain untouched during comparison.
+- Temporary comparison files are cleaned after success and failure.
+- Reports contain enough environment data to reproduce the run.
+- Full suite runtime stays within the documented target.
+- Contributor documentation explains local, IDE and CI use.
 
 ## Research and examples
 
 The design combines established benchmark methodology with repository specific constraints.
 
-* [BenchmarkDotNet documentation](https://benchmarkdotnet.org/) describes process isolation, jobs, diagnostics, filtering, parameterization and exports. It supports the decision to use BenchmarkDotNet as the measurement engine rather than write timing loops.
-* [BenchmarkDotNet VSTest integration](https://benchmarkdotnet.org/articles/features/vstest.html) describes IDE discovery and warns that the VSTest host or IDE may affect measurements. It supports the decision to keep benchmarks outside ordinary test discovery.
-* [dotnet/performance](https://github.com/dotnet/performance) is a large .NET benchmark suite with filtered execution, standalone processes and result artifacts. It demonstrates that benchmark selection and automation can remain separate from unit tests.
-* [Statistically Rigorous Java Performance Evaluation](https://doi.org/10.1145/1297027.1297033) by Georges, Buytaert and Eeckhout explains why warmup, repeated execution and statistical treatment matter for managed runtimes.
-* [Rigorous Benchmarking in Reasonable Time](https://doi.org/10.1145/2464157.2464160) by Kalibera and Jones addresses experimental design, sources of variance and the cost of obtaining useful confidence.
-* [Criterion.rs](https://bheisler.github.io/criterion.rs/book/) demonstrates saved baselines, filtering and statistically informed comparison in another library ecosystem.
-* [Google Benchmark](https://google.github.io/benchmark/user_guide.html) demonstrates benchmark registration, filtering, repetitions and machine readable output in a mature native library ecosystem.
+- [BenchmarkDotNet documentation](https://benchmarkdotnet.org/) describes process isolation, jobs, diagnostics, filtering, parameterization and exports. It supports the decision to use BenchmarkDotNet as the measurement engine rather than write timing loops.
+- [BenchmarkDotNet VSTest integration](https://benchmarkdotnet.org/articles/features/vstest.html) describes IDE discovery and warns that the VSTest host or IDE may affect measurements. It supports the decision to keep benchmarks outside ordinary test discovery.
+- [dotnet/performance](https://github.com/dotnet/performance) is a large .NET benchmark suite with filtered execution, standalone processes and result artifacts. It demonstrates that benchmark selection and automation can remain separate from unit tests.
+- [Statistically Rigorous Java Performance Evaluation](https://doi.org/10.1145/1297027.1297033) by Georges, Buytaert and Eeckhout explains why warmup, repeated execution and statistical treatment matter for managed runtimes.
+- [Rigorous Benchmarking in Reasonable Time](https://doi.org/10.1145/2464157.2464160) by Kalibera and Jones addresses experimental design, sources of variance and the cost of obtaining useful confidence.
+- [Criterion.rs](https://bheisler.github.io/criterion.rs/book/) demonstrates saved baselines, filtering and statistically informed comparison in another library ecosystem.
+- [Google Benchmark](https://google.github.io/benchmark/user_guide.html) demonstrates benchmark registration, filtering, repetitions and machine readable output in a mature native library ecosystem.
 
 These sources inform measurement practice. HeuristicLib specific decisions include the category model, CLI commands, default 10 percent practical threshold, separation from VSTest and staged use of a dedicated CI machine.

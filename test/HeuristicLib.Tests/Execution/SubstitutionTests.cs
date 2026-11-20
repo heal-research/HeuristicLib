@@ -3,7 +3,7 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.Execution;
 
-// A substitution rewrites a configuration graph eagerly. See plans/core-simplification-plan.md, D17, D26, D28, D32, D33.
+// A substitution rewrites a configuration graph eagerly.
 public class SubstitutionTests
 {
     private static readonly IOperator<Creation, int> Creator = new Stub<Creation>("creator");
@@ -268,7 +268,7 @@ public class SubstitutionTests
         substituted.Mutator.ShouldBe(Mutator.Named("a"));
     }
 
-    // D10: a slot or receiver that cannot hold the replacement.
+    // A slot or receiver that cannot hold the replacement is an error naming it, and is never silently changed in type.
 
     [Fact]
     public void AConcretelyTypedSlot_ThatCannotHoldTheReplacement_IsAnErrorNamingTheSlot()
@@ -306,7 +306,7 @@ public class SubstitutionTests
         typedByInterface.Substitute(typedByInterface, algorithm => algorithm.Named("a")).ShouldBe(ga.Named("a"));
     }
 
-    // D3: a substitution reaches declared children only.
+    // A substitution reaches declared children only.
 
     [Fact]
     public void ChildrenAConsumerDoesNotDeclare_StayOutOfReach()
@@ -329,7 +329,8 @@ public class SubstitutionTests
         error.Message.ShouldContain("Build");
     }
 
-    // D26: multi-operation nodes.
+    // A node that performs several operations is one node: replacing it for one operation leaves a slot typed for
+    // another operation with its reference.
 
     [Fact]
     public void ASlotTypedForAnotherOperation_KeepsItsReference()
@@ -386,7 +387,7 @@ public class SubstitutionTests
         Should.Throw<InvalidOperationException>(() => ga.Sharing(other).Substitute(other, mutator => mutator.Named("a")));
     }
 
-    // D33: leaving out the comparer means reference equality.
+    // Leaving out the comparer means reference equality.
 
     [Fact]
     public void Target_MatchesByReferenceByDefault()
@@ -432,7 +433,8 @@ public class SubstitutionTests
             .ShouldBe(ga.Substitute(ga.Mutator, mutator => mutator.Named("a")));
     }
 
-    // D32: which references an earlier call leaves in place.
+    // A substitution copies only the path from the root to what it changes, so a sibling, the replaced node itself and
+    // the nodes beneath it still match after an earlier call.
 
     [Fact]
     public void ReferenceOfASibling_StillMatchesAfterAnEarlierCall()

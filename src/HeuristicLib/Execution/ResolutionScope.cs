@@ -136,7 +136,9 @@ public partial class ResolutionScope
     }
 
     // The scope whose table holds the configuration's execution node: the nearest one sharing it, otherwise the root for a run
-    // result and this one for every other execution node.
+    // result and this one for every other execution node. Decided from the configuration's own type, not the requested one:
+    // IConfigurationNode is covariant, so a counter requested as IConfigurationNode<IExecutionNode> would otherwise get a
+    // count per scope.
     private Node Owner(IConfigurationNode configuration)
     {
         var root = node;

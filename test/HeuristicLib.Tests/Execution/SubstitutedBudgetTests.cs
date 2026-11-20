@@ -13,9 +13,8 @@ using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.Unifor
 
 namespace HEAL.HeuristicLib.Tests.Execution;
 
-// Counting and budgets placed by substitution, with the fixture notation of the system spec: A makes three calls to M per
-// state, B makes two calls and yields once. See plans/core-simplification-plan.md, D29, D30 and D31, and the S6 and S9
-// tables of plans/operator-unification-system-spec.md.
+// Counting and budgets placed by substitution, with the fixture notation of SubstitutionFixture: A makes three calls to
+// M per state, B makes two calls and yields once.
 public class SubstitutedBudgetTests
 {
     [Fact]
@@ -41,7 +40,7 @@ public class SubstitutedBudgetTests
         counted.ShouldBe(a with { Mutator = m.Counted(calls) });
     }
 
-    // S6, version 1: the inner budget restarts each turn.
+    // A budget around A inside the cycle restarts each turn.
     [Fact]
     public void BudgetAroundAInsideTheCycle_RestartsEachTurn()
     {
@@ -54,7 +53,7 @@ public class SubstitutedBudgetTests
         box.Calls.ShouldBe(16);
     }
 
-    // S6, version 2: one budget counts A's and B's calls across turns.
+    // One budget around the cycle counts A's and B's calls across turns.
     [Fact]
     public void BudgetAroundTheCycle_CountsEveryCallBeneathIt()
     {
@@ -67,7 +66,7 @@ public class SubstitutedBudgetTests
         box.Calls.ShouldBe(11);
     }
 
-    // S6, version 3: both budgets count the same calls independently.
+    // A budget inside the cycle and a budget around it count the same calls independently.
     [Fact]
     public void BudgetsInsideAndAroundTheCycle_CountIndependently()
     {
@@ -80,7 +79,7 @@ public class SubstitutedBudgetTests
         box.Calls.ShouldBe(11);
     }
 
-    // S9, part 1: a budget stops between states.
+    // A budget stops between states.
     [Fact]
     public void Budget_StopsAtTheFirstStateAfterItsLimit()
     {
@@ -92,7 +91,7 @@ public class SubstitutedBudgetTests
         box.Calls.ShouldBe(8);
     }
 
-    // S9, part 2: a failed attempt is not an invocation.
+    // A failed attempt is not an invocation.
     [Fact]
     public void Counting_DoesNotCountFailedAttempts()
     {
@@ -134,7 +133,7 @@ public class SubstitutedBudgetTests
             .Message.ShouldContain("Counting candidates");
     }
 
-    // D29: a budget's shared counter does not stop another budget from sharing its own.
+    // A budget's shared counter does not stop another budget from sharing its own.
     [Fact]
     public void TwoBudgetsWithDistinctTargets_ResolveInOneScopeInEitherOrder()
     {
@@ -169,7 +168,7 @@ public class SubstitutedBudgetTests
         box.Yields.ShouldBe("A1");
     }
 
-    // D26: the budget's wrapper is built per scope around the shared executor.
+    // The budget's wrapper is built per scope around the shared executor.
     [Fact]
     public void SharedOperator_StillReceivesEachRequestersBudget()
     {
@@ -196,7 +195,7 @@ public class SubstitutedBudgetTests
         box.Calls.ShouldBe(2);
     }
 
-    // D9: a target inside a shared configuration produces a private copy of what surrounds it, so this cache is not shared.
+    // A target inside a shared configuration produces a private copy of what surrounds it, so this cache is not shared.
     [Fact]
     public void BudgetInsideASharedCache_GivesItsCallerAPrivateCopy()
     {
@@ -224,7 +223,7 @@ public class SubstitutedBudgetTests
         box.Builds.ShouldBe(1);
     }
 
-    // D1: the budget holds a copy, so a direct request for the original neither counts nor shares that executor.
+    // The budget holds a copy, so a direct request for the original neither counts nor shares that executor.
     [Fact]
     public void Budget_DoesNotReachADirectRequestForTheOriginalAlgorithm()
     {
@@ -238,7 +237,7 @@ public class SubstitutedBudgetTests
         box.Log.ShouldBe("build A build A");
     }
 
-    // D26: one configuration performing two operations keeps one executor when only one operation is wrapped.
+    // One configuration performing two operations keeps one executor when only one operation is wrapped.
     [Fact]
     public void MultiOperationOperator_KeepsOneExecutorWhenOneOperationIsCounted()
     {
@@ -274,7 +273,7 @@ public class SubstitutedBudgetTests
         counted.Shared[0].ShouldBeSameAs(both);
     }
 
-    // D30: the count spans the run across fresh executors, without a budget.
+    // The count spans the run across fresh executors, without a budget.
     [Fact]
     public void Counter_SpansTheRunAcrossFreshExecutors()
     {
@@ -368,7 +367,8 @@ public class SubstitutedBudgetTests
         States((strategy.LimitedToInvocations(mutator, 1_000_000) as IAlgorithm<RealVector, PopulationState<RealVector>>).Sharing(mutator), problem).ShouldBe(plain);
     }
 
-    // D32 for the shortcuts: the routes the error names are enough for these compositions.
+    // A reference an earlier call copied stays an error, and the routes the error names are enough for the shortcuts:
+    // counting after a budget still finds a hook in the budget's copy.
     [Fact]
     public void Counting_AfterABudget_FindsAHookThatIsStillInTheCopy()
     {

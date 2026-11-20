@@ -4,7 +4,7 @@ HeuristicLib can run inside Python through [pythonnet](https://pythonnet.github.
 
 ## Requirements
 
-- .NET 10 SDK
+- .NET 10 SDK or later
 - Python 3.10 or newer
 - A local clone of HeuristicLib
 

@@ -7,7 +7,6 @@ using HEAL.HeuristicLib.SearchSpaces;
 namespace HEAL.HeuristicLib.Tests.Execution;
 
 // Which configurations are asked whether they support a run, and about which run.
-// See plans/core-simplification-plan.md, D47 and D48.
 public class ExecutionSupportTests
 {
     private static readonly ExecutionSignature Run = For<RunSpace>();

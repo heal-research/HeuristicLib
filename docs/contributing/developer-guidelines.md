@@ -112,6 +112,12 @@ The following settled decisions rest on this rule.
   Problems and search spaces implement only the recommendations they make. See
   [Algorithms](/guide/fundamentals/algorithms#use-operator-recommendations).
 
+Built-in components follow the same rule from the other side. A built-in operator, wrapper, analyzer or clock uses only
+members that an external author can use the same way, which is why `OperationInfo.For`, `RunResults.TimeProvider`,
+`BestSoFarAnalyzer.Evaluations` and `RankAnalyzer.Genealogy` are public. An automatic path has no capability the explicit
+one lacks: whatever `CreateRun` or `Substitute` places for an analyzer, a caller can place by hand with the same result.
+When a built-in component needs an internal member, make that member public or change the design.
+
 ### § 3.4 Separate membership, invariants and recommendations
 
 A search space describes which candidates belong to it and which invariants all its members satisfy. Split search
@@ -148,6 +154,15 @@ Use these values when designing, implementing and reviewing code. Each must expl
 | Information hiding and least astonishment                | Expose necessary capabilities and predictable costs, defaults and side effects. Keep construction details and private execution state behind the responsible boundary.                                                                      |
 | Tell, don't ask and the Law of Demeter                   | Put invariant-preserving behavior with its owner and avoid callers navigating another object's internals. Value-oriented candidate and search-state data remains appropriate; do not add forwarding layers merely to shorten access chains. |
 | Component orientation and implementation reflects design | Give components coherent contracts and explicit dependencies. Organize code by the existing responsibility layers; a framework pattern or folder layout is not a design goal by itself.                                                     |
+
+### § 3.7 Introspect through declarations, not reflection
+
+Avoid reflection in library logic and tests. A walk over a configuration graph reads the declared parameters through
+`GetParameters`, and a question about a configuration is a member it answers, such as `Supports`; the declared parameter
+walk is not reflection. Comparing types with `typeof` and `IsAssignableTo` is ordinary type checking. Reflection that
+only words an exception message is acceptable. Architecture and arity tests read source through the Roslyn compilation
+the architecture tests build, and reading assembly references from metadata remains acceptable. A check that must see
+undeclared members belongs in a Roslyn analyzer, because only source shows what a declaration omits.
 
 ## § 4 Configuration and execution ownership
 
@@ -319,7 +334,7 @@ A record never implements `IEnumerable`, generic or not: a record is a value, no
 
 A record has value semantics, so what it holds has value semantics too, and its declared type says so. A sequence in a record's stored state or in any of its instance properties, positional, stored or computed, is typed as a concrete type with ordered structural equality: `ValueArray<T>`, or a domain vector such as `RealVector`, `IntegerVector`, `BoolVector`, `Permutation` or `ObjectiveVector`. It is never typed as an interface such as `IEnumerable<double>` or `IReadOnlyList<T>`, whose equality is unknown. Method parameters, method returns and static members follow the general collection guidance. A record may keep private lookup caches derived from its value members when it defines its equality over those value members only, and it does not hand those caches out mutably.
 
-This member rule covers every public or protected record and every record whose equality, hashing or serialization is used. A private or internal record that nothing compares, hashes or serializes and that only carries values as a named tuple is exempt. Executors keep `ImmutableArray<T>`.
+This member rule covers every public or protected record and every record whose equality, hashing or serialization is used. A private or internal record that nothing compares, hashes or serializes and that only carries values as a named tuple is exempt. Executors keep `ImmutableArray<T>`. Experimental code may keep arrays and mutable data in records until it is promoted (§ 9.6); the BBoB test-function data does.
 
 ### § 5.5 Construct value arrays without accidental nesting
 
@@ -558,6 +573,11 @@ so the name has to carry that distinction on its own.
 
 This was applied across the library after `With*` was found covering three different semantics at once, one of which
 genuinely modified its receiver while reading exactly like the other two.
+
+A configuration that is not yet a run names its execution methods with `Run`: algorithms and experiments offer
+`RunStreaming`, `RunToCompletion` and `RunToCompletionAsync`, and experiments also offer `RunTrials`. Each is exactly
+`CreateRun(…)` followed by the run's method. A run uses the bare verb: `Stream`, `Complete`, `CompleteAsync`, and
+`StartTrials`, which returns before the trials finish.
 
 ### § 8.13 Name a contract member for the question it answers
 

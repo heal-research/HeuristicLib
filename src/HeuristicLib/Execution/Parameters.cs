@@ -4,7 +4,10 @@ namespace HEAL.HeuristicLib.Execution;
 /// <remarks>
 /// A parameter holds metadata per type and no instance data; the configuration's properties stay the source of values.
 /// Declare one static member per parameter, list them in a static <c>Parameters</c> collection and override
-/// <see cref="IConfigurationNode.GetParameters"/> to add the inherited ones.
+/// <see cref="IConfigurationNode.GetParameters"/> to add the inherited ones. List the <c>Parameters</c> collection after the
+/// parameter members it holds, because static initializers run in textual order; a derived record hides its base's
+/// <c>Parameters</c> with <c>new</c>. Parameters serve walks over configurations, such as validation, substitution and
+/// parameter grids; executors keep typed fields and look nothing up by parameter during execution.
 /// </remarks>
 public interface IParameter
 {

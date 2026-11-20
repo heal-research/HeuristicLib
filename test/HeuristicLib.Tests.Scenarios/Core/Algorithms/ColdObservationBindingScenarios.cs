@@ -21,7 +21,7 @@ public sealed class ColdObservationBindingScenarios(ITestOutputHelper output)
     [Fact]
     public async Task ObservationHooksBindConcurrentlyOnFirstUse()
     {
-        // D182/D183: the runtime raced when concurrently binding the old constrained static abstract Wrap hooks.
+        // The runtime raced when concurrently binding the old constrained static abstract Wrap hooks.
         // Only a fresh process per attempt keeps both hooks cold, regardless of the rest of the test suite.
         if (Environment.GetEnvironmentVariable(ChildMode) == "1")
         {

@@ -199,7 +199,7 @@ dotnet add package HEAL.HeuristicLib.Experimental --prerelease
 
 ## Build the repository
 
-Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then run:
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later, then run:
 
 ```console
 dotnet restore

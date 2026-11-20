@@ -283,10 +283,10 @@ public sealed class DeferredAlgorithmResolutionTests
     }
 
     /// <summary>
-    /// The budget allows two calls and holds a copy of the algorithm with its wrapper in place (D1 of the core
-    /// simplification plan). A direct run of the original algorithm, in the budget's scope or a child scope, uses an
-    /// executor of its own, and its four calls do not count against the budget. Building the original first changes
-    /// nothing either, because the budget does not change how the original is built.
+    /// The budget allows two calls and holds a copy of the algorithm with its wrapper in place. A direct run of the
+    /// original algorithm, in the budget's scope or a child scope, uses an executor of its own, and its four calls do
+    /// not count against the budget. Building the original first changes nothing either, because the budget does not
+    /// change how the original is built.
     /// </summary>
     [Theory]
     [InlineData(false)]

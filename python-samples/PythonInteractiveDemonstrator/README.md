@@ -26,7 +26,7 @@ This example is part of the [HeuristicLib](../../README.md) project. It uses the
 
 **Manual way**:
 
-- _.NET 10.0 SDK_ — required to build the HeuristicLib .NET libraries.
+- _.NET 10.0 SDK_ or later — required to build the HeuristicLib .NET libraries.
 - _Python 3.10+_ — with the packages listed in `requirements.txt`.
 
 ### Build HeuristicLib

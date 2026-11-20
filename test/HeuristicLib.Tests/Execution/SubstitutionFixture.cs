@@ -6,8 +6,7 @@ using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Execution;
 
-// The fixture notation of the system spec: A and B call the shared configuration M and yield states, and a recording shows
-// what ran. See plans/operator-unification-system-spec.md.
+// The fixture notation: A and B call the shared configuration M and yield states, and a recording shows what ran.
 internal static class SubstitutionFixture
 {
     internal static IProblem<int, DummySearchSpace<int>> Problem { get; } = MetaAlgorithmTestHelpers.CreateIntegerProblem();

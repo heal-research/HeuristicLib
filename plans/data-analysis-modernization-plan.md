@@ -5,7 +5,7 @@ immutable columnar model.
 
 What already exists — `Series<T>`, `DataFrame`, `SupervisedData<T>`, `RegressionData`,
 the predictor and metric contracts, statistics, feature importance, and linear scaling
-— is documented in [`docs/guide/domains/data-analysis.md`](../docs/guide/domains/data-analysis.md). Symbolic
+— is documented in `docs/guide/domains/data-analysis.md`. Symbolic
 regression's use of it is in [`docs/guide/domains/symbolic-regression.md`](../docs/guide/domains/symbolic-regression.md).
 
 This is a replacement program, not a compatibility wrapper. Legacy components stay

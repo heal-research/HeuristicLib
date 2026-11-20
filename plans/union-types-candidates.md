@@ -8,7 +8,7 @@ Investigate algorithm and operator configuration first. Prioritize alternatives 
 
 Examples are proposed configuration fragments, not implemented APIs or complete C# programs. Names introduced in examples are placeholders. Existing members and behavior are evidence, not requirements to preserve every current design choice.
 
-Read this inventory with the [developer guidelines](../docs/contributing/developer-guidelines.md), [glossary](../docs/guide/glossary.md), [operator unification system spec](operator-unification-system-spec.md), [lifetime plan](operator-state-lifetimes.md) and [aspects as automatic composition](aspects-as-automatic-composition.md). Architectural changes still require a concrete design and explicit acceptance before implementation.
+Read this inventory with the [developer guidelines](../docs/contributing/developer-guidelines.md) and [glossary](../docs/guide/glossary.md). Architectural changes still require a concrete design and explicit acceptance before implementation.
 
 ## First candidates
 
@@ -99,31 +99,13 @@ Decisions to resolve:
 
 Recommendation: start by comparing the existing two convenience methods with a stored union setting. Method overloads may be sufficient if no configuration needs to retain the alternatives. Do not merge all stopping mechanisms solely to use unions.
 
-### U4. A concrete configuration reference or a pointcut
+### U4. A concrete configuration reference or a broader selection
 
-Priority: first evaluation alongside U1. Proposed alternatives: a configuration reference and a pointcut compatible with its role.
+Priority: low; current budgets need no union. Proposed alternatives: a configuration reference and a selection of several configurations.
 
-Current [operator count budgets](../src/HeuristicLib/Algorithms/Control/OperatorCountBudgetAlgorithm.cs) and [operator duration budgets](../src/HeuristicLib/Algorithms/Control/OperatorDurationBudgetAlgorithm.cs) accept operator references and build pointcuts internally. [Aspect.Create](../src/HeuristicLib/Execution/Aspects/Aspect.cs) accepts a typed pointcut.
+Operator budgets take a reference for the common case, such as `algorithm.LimitedToInvocations(evaluator, 1_000)` on [operator count budgets](../src/HeuristicLib/Algorithms/Control/OperatorCountBudgetAlgorithm.cs) and `LimitedToDuration(evaluator, …)` on [operator duration budgets](../src/HeuristicLib/Algorithms/Control/OperatorDurationBudgetAlgorithm.cs). A broader selection is a placement: `LimitedToCount(maximum, (algorithm, counter) => algorithm.Substitute(…))` counts whatever the placement wraps, selected by reference, type or predicate, and states each wrapper's metric. Pointcuts and aspects no longer exist.
 
-Proposed budget target fragments:
-
-```csharp
-Target = evaluator
-Target = Pointcut.OfType<IOperator<Evaluation, RealVector>>()
-Target = Pointcut.Reference(evaluatorA) | Pointcut.Reference(evaluatorB)
-```
-
-An aspect convenience could also accept either `Aspect.Create(evaluator, advice)` or `Aspect.Create(pointcut, advice)`.
-
-Benefit: both alternatives answer whose work belongs to a budget or receives a behavior. A specific reference is the short path while a pointcut supports broader selection without another budget family.
-
-Decisions to resolve:
-
-1. Preserve static compatibility between the selected role and its advice or metric. Do not replace the typed relationship with an untyped union merely to shorten calls.
-2. Retain configuration reference identity and account for one configuration supporting several operations.
-3. Specify unmatched selections, duplicate references and ordering consistently with the aspect system.
-4. Compare a stored union with accepting only a pointcut and offering reference overloads. The union has a stronger case for a stored configuration property than for method syntax alone.
-5. Establish how lifetime binding and shared executors affect the target boundaries. A pointcut does not imply ownership or sharing.
+Reconsider a union only if a stored configuration property must hold either a reference or a selection. The placement is not stored, so today no property needs the alternatives. An untyped operator list as the target stays rejected (see the backlog's "Budget targets as an untyped operator list, and a metric-bound counter handle").
 
 ### U5. A mutator or a refiner for candidate postprocessing
 
@@ -145,7 +127,7 @@ Decisions to resolve:
 
 1. Keep mutation and refinement as separate roles. This proposal applies only to a composition whose purpose makes both alternatives meaningful, not to every algorithm slot.
 2. Define required batch size and ordering guarantees and how candidate contracts compose through each branch.
-3. Preserve ordinary child resolution, advice, compatibility checks and role specific observations.
+3. Preserve ordinary child resolution, wrappers, compatibility checks and role specific observations.
 4. Handle an operator that supports both roles without relying on switch order to choose the operation. Callers may need an explicit role choice.
 5. Compare a union property with two construction overloads that produce a clear existing composition. Matching method signatures alone do not establish a useful shared responsibility.
 
@@ -172,24 +154,24 @@ Decisions to resolve:
 3. Keep custom replacers visible as ordinary configured children. If presets remain algorithm owned behavior, state how their observation boundaries differ from explicitly configured operators.
 4. Preserve custom operator support rather than enumerating only shipped replacer types.
 
-### U7. Aspect attachment or explicit configuration composition
+### U7. Substitution or explicit configuration composition
 
-Priority: coordinate with the accepted aspect direction before choosing an API. No particular union is recommended yet.
+Priority: coordinate with substitution, which replaced aspect attachment, before choosing an API. No particular union is recommended yet.
 
 The original discussion considered whether a configuration input could accept an aspect or a configured wrapper. At the time of the initial code review these had different construction and graph responsibilities.
 
-The subsequent [accepted aspect direction](aspects-as-automatic-composition.md) establishes that aspects automate placement of ordinary execution wrappers. Equivalent selected boundaries, composition order and runtime dependencies must preserve execution behavior and state lifetime through both paths. The attachment API remains open.
+Substitution now places ordinary wrappers into the configuration, and aspects are gone. Equivalent selected boundaries, composition order and runtime dependencies must preserve execution behavior and state lifetime whether a wrapper is written into a configuration or placed by substitution. The attachment API remains open.
 
 A conceptual input could distinguish applying a behavior directly at one boundary from applying it automatically at selected boundaries. A union might express these alternatives, but it does not itself establish scope, attachment order, data ownership or a public composition API.
 
 Decisions to resolve:
 
-1. First establish the explicit composition and automatic placement APIs required by the accepted aspect plan.
+1. First establish the explicit composition and substitution APIs.
 2. Identify a concrete configuration input where callers need to store either alternative. Do not create a mixed list solely to accept unrelated objects through one method.
-3. Compare a union with separate explicit composition and aspect attachment entry points over the same execution behavior.
+3. Compare a union with separate explicit composition and substitution entry points over the same execution behavior.
 4. Define placement scope, ordering, duplicate attachment, internal observation boundaries and lifetime equivalence.
 
-The earlier recommendation against combining the forms is not a rejection of the accepted aspect direction. Historical rejected implementations in the [backlog](developer-backlog.md#advice-expressed-as-wrapper-configurations) are evidence about their mechanisms, not a prohibition on the newly accepted contract.
+The earlier recommendation against combining the forms is not a rejection of substitution. Historical rejected implementations in the [backlog](developer-backlog.md#advice-expressed-as-wrapper-configurations) are evidence about their mechanisms, not a prohibition on the current contract.
 
 ## Deferred ideas from the earlier discussion
 
@@ -233,9 +215,9 @@ The parser's [SyntaxNode family](../src/HeuristicLib/Encodings/SymbolicExpressio
 ## Resumption checklist
 
 - [ ] Confirm released language and repository support.
-- [ ] Evaluate U1 and U4 first.
+- [ ] Evaluate U1 first.
 - [ ] Decide whether U2 and U3 justify the additional behavior and configuration choices.
 - [ ] Evaluate U5 and U6 against smaller overload or operator based alternatives.
-- [ ] Revisit U7 with the accepted aspect and lifetime plans.
+- [ ] Revisit U7 against substitution and the sharing rules.
 - [ ] Keep U8 through U11 deferred until the configuration work has been addressed.
 - [ ] Record accepted designs and validation results here as candidates are implemented or declined.

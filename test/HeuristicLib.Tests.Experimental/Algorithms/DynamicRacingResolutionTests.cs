@@ -152,7 +152,7 @@ public sealed class DynamicRacingResolutionTests
 
         var evaluations = new CountAccumulator();
         var interceptions = new CountAccumulator();
-        // D3: the builder's contenders are out of the substitution's reach, so the builder observes their evaluator.
+        // A substitution does not reach what the builder creates, so the builder observes the contenders' evaluator.
         var observedContender = contender.Substitute(contender.Evaluator.Invocations.Observing(_ => evaluations.IncrementBy(1)));
         var observedRacing = (racing with { AlgBuilder = (_, source) => { sources.Add(source); return observedContender; } })
             .Substitute(creatorObservation, mutatorObservation, interceptor.Invocations.Observing(_ => interceptions.IncrementBy(1)));
@@ -181,8 +181,8 @@ public sealed class DynamicRacingResolutionTests
         mutations.CurrentCount.ShouldBe(racers - 1);
     }
 
-    // D3: a substitution stops at the delegate, so an outer one reports it, and whoever writes the delegate places the trace
-    // inside it, where every contender then records into the run's one trace.
+    // A substitution stops at the delegate, so an outer one reports it, and whoever writes the delegate places the
+    // trace inside it, where every contender then records into the run's one trace.
     [Fact]
     public async Task ATraceOfContenders_IsPlacedInTheBuilder()
     {
