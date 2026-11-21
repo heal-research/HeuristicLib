@@ -1,8 +1,43 @@
 # Move development planning to GitHub Issues
 
-Status: decision accepted on 2026-10-13; migration safeguards below accepted on 2026-10-23; migration not started. Existing planning sources remain authoritative until their batch handover is recorded.
+Status: migration in progress on `backlog-to-issue-migration`. The issues listed below own their migrated topics. Remaining backlog entries and plans stay authoritative until individually reviewed and migrated.
 
 Canonical repository: [heal-research/HeuristicLib](https://github.com/heal-research/HeuristicLib).
+
+## Current migration record
+
+The branch started from `0674ddca3a7260addec913f8d826062ab767ea99`. The source removals and reference updates below are tracked on this branch. The remote branch exists, and integration into `dev` remains pending.
+
+| Issue                                                                                                     | State               | Migrated material and disposition                                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [#7 — Migrate development planning](https://github.com/heal-research/HeuristicLib/issues/7)               | Open                | Overall migration outcome. Keep this local file as the temporary migration record until the cutover is complete.                                                                                                                                                                                      |
+| [#8 — Cooperative cancellation](https://github.com/heal-research/HeuristicLib/issues/8)                   | Open                | Removed the operator-cancellation backlog entry and its duplicate symbolic-regression follow-up. Related execution-policy and rejected-context entries point to the issue.                                                                                                                            |
+| [#9 — Configuration and experiment persistence](https://github.com/heal-research/HeuristicLib/issues/9)   | Open                | Removed the configuration-serialization and epoch-clock persistence entries and `configuration-parameters-and-experiment-persistence.md`.                                                                                                                                                             |
+| [#10 — Symbolic-regression extensions](https://github.com/heal-research/HeuristicLib/issues/10)           | Open                | Removed `symbolic-regression-extension-roadmap.md`. The issue owns the extension scope and legacy migration dependencies.                                                                                                                                                                             |
+| [#11 — Authoring and architecture enforcement](https://github.com/heal-research/HeuristicLib/issues/11)   | Open                | Removed `architecture-boundary-enforcement-plan.md` and the authoring-rule, analyzer-shipping, parameter-completeness, and parameter-generation entries. The issue includes the explicit dependency model.                                                                                            |
+| [#12 — Performance regression benchmarking](https://github.com/heal-research/HeuristicLib/issues/12)      | Open                | Removed `performance-regression-benchmarking.md` and the observation, batching, and resolver-performance entries. Storage, baseline management, and comparison across machines remain design decisions.                                                                                               |
+| [#13 — Symbolic-regression foundation decisions](https://github.com/heal-research/HeuristicLib/issues/13) | Closed as completed | Preserved selected designs, rejected alternatives, and rationale. Removed `symbolic-regression-decisions.md`; retained its four open foundation follow-ups in one backlog entry. Problem-dependent validation already has its own entry. Completed history and additional legacy detail were retired. |
+| [#14 — Data-analysis modernization](https://github.com/heal-research/HeuristicLib/issues/14)              | Open                | Removed `data-analysis-modernization-plan.md`. The related optional-dependency-extraction entry points to the issue.                                                                                                                                                                                  |
+
+`run-cancellation.md` was also removed as completed history. Its fix, guide updates, acceptance record, and regression tests are preserved in the branch's starting commit.
+
+### Agreed working procedure
+
+- Select and discuss one topic at a time. Draft the issue in chat, including relevant design detail, open questions, and completion criteria.
+- Obtain explicit approval for every public change, including issue creation, edits, comments, closure, and PR actions. Approval applies to the specific action and text discussed.
+- Keep useful plan content in the issue itself. Preserve significant decisions and rejected alternatives, with proposal and acceptance status clear. Omit decision dates and links to backlog or plan files from issue descriptions.
+- After an approved issue is created and verified, remove its migrated source content in this branch and repair local references. Record its disposition here.
+- Use closed issues for completed decision work. A closed decision record preserves rationale and does not claim that separate follow-up work is implemented.
+
+This individually reviewed procedure replaces the original fixed pilot selection and temporary-pointer handover. The migration issue retains its approved concise description; this file holds the temporary source mapping.
+
+### Remaining migration work
+
+- Review the remaining developer backlog, including conditional ideas and rejected approaches, and give each item an issue destination or explicit disposition.
+- Review `racing-migration-notes.md`, `mating-contract.md`, `heuristiclab_operator_migration_overview.md`, and `union-types-candidates.md`.
+- Update contributor guidance and repository-specific skill overrides for issue-based planning and discovery of open and closed decisions.
+- Finish reference repairs, validate the final cutover, commit and publish the branch changes when authorized, and integrate into `dev`.
+- Retire this file with the emptied backlog once the migration record has served its purpose and the cutover is complete.
 
 ## Accepted decision
 
@@ -44,7 +79,7 @@ An actionable issue should explain its problem, desired outcome, approach or unr
 
 An open issue or label does not by itself approve implementation. Preserve the distinction between proposed and accepted approaches, and record review checkpoints explicitly. A design investigation may finish with an accepted decision and concrete follow-up work rather than an implementation.
 
-For architectural work, record the accepted scope, acceptance date, supporting source or decision comment, remaining unaccepted questions and next review checkpoint. If acceptance evidence is missing or conflicting, mark it as uncertain rather than inferring approval. Editing the description does not extend an earlier approval; a material scope or design change requires explicit acceptance and a new decision record.
+For architectural work, record the accepted scope, acceptance evidence, remaining unaccepted questions and next review checkpoint. If acceptance evidence is missing or conflicting, mark it as uncertain rather than inferring approval. Editing the description does not extend an earlier approval; a material scope or design change requires explicit acceptance and a new decision record.
 
 Use one consistent `decision` label, reusing an equivalent existing label if available, for issues carrying durable decisions. State each decision's outcome explicitly, such as accepted, rejected or superseded. Link relevant active issues to these records, including the specific decision comment when needed. Keep rejected alternatives with their owning work unless they warrant independent discovery and discussion. The contributor guidance must explain how to find decision records across both open and closed issues before revisiting a design.
 
@@ -66,18 +101,18 @@ First evaluate whether issue descriptions, labels and open/closed states provide
 
 ## Source evidence and batch handover
 
-The migration issue records each source section, its inspected commit revision, destination or disposition, and handover status. Identify any staged or unstaged changes separately from the committed source and preserve their relevant content in the destination before retirement. A commit permalink does not capture uncommitted content. This migration does not itself authorize staging, committing or other Git actions.
+This file records source material, its inspected revision, destination or disposition, and handover status. Identify any staged or unstaged changes separately from the committed source and preserve their relevant content in the destination before retirement. Git history captures committed content. This migration does not itself authorize staging, committing or other Git actions.
 
-Convert relative repository links when transferring text to issues. Use commit permalinks for historical evidence, acceptance records and retired source sections; use maintained repository links for current artifacts. Verify that linked revisions and artifacts are accessible to issue readers. Keep executable prototypes and reproducibility scripts discoverable without relying on a retired plan. Migrate sanitized evidence summaries; raw benchmark reports, result snapshots and host-identifying output remain local unless sanitized publication is explicitly requested.
+Issue descriptions preserve the relevant source content directly. Remove links to backlog entries and plan files, including historical permalinks. Convert useful links to maintained code, tests, documentation, or artifacts into accessible repository links. Keep executable prototypes and reproducibility scripts discoverable. Migrate sanitized evidence summaries; raw benchmark reports, result snapshots and host-identifying output remain local unless sanitized publication is explicitly requested.
 
 Each batch follows this handover:
 
 1. Create or update its destination issues and record their URLs in the migration mapping. Until handover, identify them as migration drafts and keep the local sources authoritative.
 2. Verify coverage, acceptance evidence, links and completion criteria. Reconcile source changes made since inventory, including staged and unstaged edits; retain unresolved discrepancies explicitly and defer handover of affected items.
-3. After the pilot review has been accepted, replace the migrated local planning content with temporary pointers to its issues and record the completed handover in the migration issue. From that point, the issues are authoritative for those items; the local pointers contain no competing plan. Keep unaffected sections authoritative locally until their own handover.
-4. Reuse the recorded destinations when resuming interrupted work. Check the source pointers and destination contents before completing a partially recorded handover; do not create duplicate issues or retire unchecked content.
+3. After the selected topic and its source removal have been approved, remove its migrated local planning content and record the completed handover here. From that point, its issue is authoritative. Keep unaffected sections authoritative locally until their own handover.
+4. Reuse the recorded destinations when resuming interrupted work. Check source changes and destination contents before completing a partially recorded handover; do not create duplicate issues or retire unchecked content.
 
-Package 3 removes the temporary pointers once repository guidance and inbound references have been updated. The pilot review gate remains in force: no handover or source retirement occurs before it is accepted.
+Package 3 finishes the repository guidance and reference updates. Each topic requires review before its issue is published or its source retired.
 
 ## Migration packages
 
@@ -86,17 +121,17 @@ Package 3 removes the temporary pointers once repository guidance and inbound re
 1. Make `gh` available in the executing environment and authenticate if needed. Verify installation with `gh --version`, authentication with `gh auth status`, and repository access with `gh repo view heal-research/HeuristicLib --json hasIssuesEnabled,viewerPermission,defaultBranchRef`. Confirm Issues are enabled and the account has the permissions needed to manage them. Use `--repo heal-research/HeuristicLib` explicitly for GitHub operations.
 2. Read existing issues, including closed ones, before creating anything. Reuse or update relevant issues rather than introducing duplicates.
 3. Inventory `plans/`, the developer backlog and references to them. Classify active work, unresolved questions, rejected approaches, completed history and repository artifacts. Check enough source and history to identify stale or completed work; retain uncertainties explicitly.
-4. Create one migration issue carrying this accepted decision and execution checklist. Use its description to maintain the temporary source-to-destination mapping defined above, including reasons for retaining repository artifacts. This is migration evidence, not a permanent second backlog.
-5. Pilot one focused backlog item, the separate user-documentation/glossary work item and a small representative slice of a complex plan such as operator unification. The focused item should be small enough to judge whether its issue supplies sufficient context on its own. The documentation issue should state that structure and scope need agreement before broad rewriting. The complex slice must exercise mixed completion states, accepted constraints, rejected alternatives and retained artifacts, with links to any necessary parent or dependency context.
-6. Verify the issue descriptions, labels and links. Have the reviewer identify the next authorized action, its constraints, acceptance evidence and next checkpoint using only the issues and their linked context. Present this pilot and proposed remaining batches for review. Stop at this checkpoint before bulk conversion, batch handover or retiring source files.
+4. Create the approved migration issue and maintain the temporary source-to-destination mapping in this file, including reasons for retaining repository artifacts.
+5. Select topics individually with the developer. Preserve mixed completion states, accepted constraints, rejected alternatives and retained artifacts where relevant.
+6. Review each draft and proposed source removal before publication. Verify the resulting description and links before handover. The issue must identify scope, constraints, completion criteria and remaining decisions on its own.
 
 ### 2. Migrate the remaining planning content
 
-After explicit acceptance of the pilot review, migrate coherent batches of related work using the batch handover above, including the pilot items. For each source item, record its destination in the migration issue before retiring it. Carry accepted decisions, significant alternatives, completion criteria and review boundaries across explicitly.
+Continue migrating individually approved topics using the handover above. For each source item, record its destination here before retiring it. Carry accepted decisions, significant alternatives, completion criteria and review boundaries across explicitly.
 
 Use the shapes demonstrated by the existing material:
 
-- A focused fix such as rejecting a competing `AlgorithmRun.Stream()` call belongs in one issue with the reported behavior and a regression-test outcome. Recheck its relevance before presenting it as a current defect.
+- A focused fix belongs in one issue with the reported behavior and a regression-test outcome. The competing `AlgorithmRun.Stream()` example from the original plan is already covered by the current implementation and tests.
 - The experiment serialization boundary belongs in a design-question issue until its intended contract is accepted.
 - Performance regression benchmarking can use a parent issue with independently reviewable runner, comparison and CI deliverables. Preserve the accepted constraints from its existing plan.
 - A rejected shared `RunHost` belongs in a closed issue preserving what was tried, why it failed to simplify ownership and what evidence would justify reconsideration.
@@ -108,8 +143,8 @@ This package migrates planning content. It does not implement the underlying fix
 1. Update `AGENTS.md` so planned work starts from the assigned issue, with relevant parent, dependency and decision context. Update its decision-recording and review-source skill overrides as well, including acceptance evidence, discovery of rejected decisions and issue completion rules.
 2. Update planning-role references in the developer guidelines, contributing index, requirements and other affected files. Keep these edits limited to the organization change; their architectural and product rules remain the source of current contracts.
 3. Preserve the upstream skill copies. Adapt their repository-specific behavior through the existing overrides rather than adding a parallel issue-tracker framework.
-4. Remove temporary pointers and retire migrated plan files and backlog sections only after checking their coverage and repairing references. Verify historical permalinks and preservation of relevant formerly uncommitted content; Git history alone preserves only committed documents. Useful current rules and repository artifacts must remain discoverable.
-5. Preserve this accepted decision in the migration issue, then retire this transitional plan when the migration is complete.
+4. Retire migrated plan files and backlog sections after checking their coverage and repairing references. Preserve relevant formerly uncommitted content. Useful current rules and repository artifacts must remain discoverable.
+5. Verify the migration issue's completion criteria, obtain approval for any final public update, and retire this transitional plan when the migration is complete.
 
 ## Validation and completion
 
@@ -118,16 +153,16 @@ The migration is complete when:
 - Each inventoried source item has a checked issue destination, a retained artifact with a reason, or an explicit disposition as obsolete/completed history. Source sections and revisions, relevant uncommitted changes and completed handovers are accounted for.
 - Open work and rejected decisions are discoverable through issues, with proposal and acceptance status, acceptance evidence and superseded decisions clear.
 - An issue supplies enough context to identify scope, relevant decisions, completion criteria and the next review checkpoint without reconstructing a long discussion.
-- The pilot demonstrates this for focused work, the documentation proposal and a complex plan slice; its review has been explicitly accepted.
+- Each migrated topic's description and source disposition have been explicitly reviewed and approved.
 - Implementation issues identify their integration destination, and closed issues satisfy the applicable implementation, investigation or parent completion rule.
 - Repository guidance points to the adopted workflow and no replaced local tracker remains active.
-- Historical links identify accessible revisions, current artifact links resolve, and migrated evidence summaries preserve the boundary around local raw output.
+- Issues contain their planning context directly, current artifact links resolve, and migrated evidence summaries preserve the boundary around local raw output.
 - Repository links, changed Markdown formatting and the published documentation build pass the applicable checks in `AGENTS.md`.
 - No underlying feature implementation or broad documentation rework has been included merely because its plan was migrated.
 
 ## References
 
-Repository sources: [agent contract](../AGENTS.md), [developer guidelines](../docs/contributing/developer-guidelines.md), [developer backlog](developer-backlog.md) and [benchmarking plan](performance-regression-benchmarking.md).
+Repository sources: [agent contract](../AGENTS.md), [developer guidelines](../docs/contributing/developer-guidelines.md), [developer backlog](developer-backlog.md) and [benchmarking issue](https://github.com/heal-research/HeuristicLib/issues/12).
 
 - [GitHub Issues overview](https://docs.github.com/en/issues/tracking-your-work-with-issues/learning-about-issues/about-issues)
 - [GitHub Projects overview](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/about-projects)
