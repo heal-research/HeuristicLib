@@ -180,9 +180,15 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         }
         finally
         {
-            await stopSource.CancelAsync();
-            await scheduledExecution.WorkersCompletion.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
-            TransitionFromRunning(RunLifecycleState.Stopped);
+            try
+            {
+                await stopSource.CancelAsync();
+            }
+            finally
+            {
+                await scheduledExecution.WorkersCompletion.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                TransitionFromRunning(RunLifecycleState.Stopped);
+            }
         }
     }
 
@@ -285,7 +291,7 @@ public sealed class ExperimentRun<TCandidate, TSearchSpace, TProblem, TSearchSta
         if (cancellationToken.IsCancellationRequested)
         {
             foreach (var trial in Trials)
-                await trial.Run.CancelAsync();
+                await trial.Run.CancelAsync().AsTask().ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
         }
 
         foreach (var completionSource in completionSources)

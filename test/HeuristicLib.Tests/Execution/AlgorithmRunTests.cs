@@ -160,6 +160,35 @@ public class AlgorithmRunTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
+    public async Task IteratorFailure_IsTerminalAndDisposesOnce(bool executorCanceled)
+    {
+        Exception failure = executorCanceled ? new OperationCanceledException() : new InvalidOperationException("Execution failed.");
+        var disposalCount = 0;
+        var algorithm = new DisposalTrackingAlgorithm(
+            Dispose: () =>
+            {
+                disposalCount++;
+                return ValueTask.FromException(new InvalidOperationException("Disposal failed."));
+            },
+            MoveAfterFirstYield: _ => ValueTask.FromException<bool>(failure));
+        var run = algorithm.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var enumerator = run.Stream(cancellationToken: cancellationToken).GetAsyncEnumerator(cancellationToken);
+        (await enumerator.MoveNextAsync()).ShouldBeTrue();
+
+        var thrown = await Record.ExceptionAsync(async () => _ = await enumerator.MoveNextAsync());
+
+        thrown.ShouldBeSameAs(failure);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
+        disposalCount.ShouldBe(1);
+        Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: cancellationToken));
+        await run.CancelAsync();
+        disposalCount.ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
     public async Task CompletionDisposalFailure_IsTerminalAndPreservesTheException(bool canceled)
     {
         Exception failure = canceled ? new OperationCanceledException() : new InvalidOperationException("Disposal failed.");
@@ -246,37 +275,6 @@ public class AlgorithmRunTests
 
     private static int StateValue(PopulationState<int> state) =>
         state.Population.EvaluatedCandidates.Single().Candidate;
-
-    private sealed record DisposalTrackingAlgorithm(Func<ValueTask> Dispose)
-        : Algorithm<DisposalTrackingAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
-    {
-        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor(
-            ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> scope) =>
-            new Executor(Dispose);
-
-        private sealed class Executor(Func<ValueTask> dispose)
-            : AlgorithmExecutor<PopulationState<int>>,
-              IAsyncEnumerable<PopulationState<int>>, IAsyncEnumerator<PopulationState<int>>
-        {
-            private bool yielded;
-
-            public PopulationState<int> Current => Population.From([1.ToEvaluated(1)]).ToPopulationState();
-
-            public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
-                IRandomNumberGenerator random, PopulationState<int>? initialState = null, CancellationToken ct = default) => this;
-
-            public IAsyncEnumerator<PopulationState<int>> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
-
-            public ValueTask<bool> MoveNextAsync()
-            {
-                var hasNext = !yielded;
-                yielded = true;
-                return ValueTask.FromResult(hasNext);
-            }
-
-            public ValueTask DisposeAsync() => dispose();
-        }
-    }
 
     private sealed record SequenceAlgorithm
         : Algorithm<SequenceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
