@@ -153,22 +153,28 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
         if (scope is null)
             return new(AsyncEnumerable.Empty<TSearchState>());
 
-        try
+        if (execution is { } current)
         {
-            if (execution is null)
-            {
-                var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, Problem);
-                var executionCancellation = cancellationTerminatesRun ? cancellationToken : CancellationToken.None;
-                execution = algorithmExecutor.RunStreamingAsync(Random, initialState, executionCancellation)
-                                             .GetAsyncEnumerator(executionCancellation);
-            }
-            else if (initialState is not null)
+            if (initialState is not null)
             {
                 ExecutionPaused();
                 throw new InvalidOperationException("An initial state can only be supplied when a run starts.");
             }
 
-            return new(Track(execution, scope.Results, cancellationToken, cancellationTerminatesRun), cancellationToken);
+            return new(Track(_ => current, scope.Results, cancellationToken, cancellationTerminatesRun), cancellationToken);
+        }
+
+        try
+        {
+            var algorithmExecutor = scope.Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm, Problem);
+            if (cancellationTerminatesRun)
+                return new(Track(StartIterator, scope.Results, cancellationToken, cancellationTerminatesRun), cancellationToken);
+
+            var iterator = StartIterator(CancellationToken.None);
+            return new(Track(_ => iterator, scope.Results, cancellationToken, cancellationTerminatesRun), cancellationToken);
+
+            IAsyncEnumerator<TSearchState> StartIterator(CancellationToken token) =>
+                execution = algorithmExecutor.RunStreamingAsync(Random, initialState, token).GetAsyncEnumerator(token);
         }
         catch (OperationCanceledException)
         {
@@ -193,32 +199,60 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
 
     internal async ValueTask CancelAsync()
     {
+        ExecutionCanceled();
+        await DisposeIteratorAsync();
+    }
+
+    private async ValueTask DisposeIteratorAsync()
+    {
         var currentExecution = execution;
         execution = null;
-        ExecutionCanceled();
         if (currentExecution is not null)
             await currentExecution.DisposeAsync();
     }
 
     private async IAsyncEnumerable<TSearchState> Track(
-        IAsyncEnumerator<TSearchState> iterator,
+        Func<CancellationToken, IAsyncEnumerator<TSearchState>> getIterator,
         RunResults results,
         CancellationToken streamCancellation,
         bool cancellationTerminatesRun,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken enumerationCancellation = default)
     {
-        using var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(
-            streamCancellation, enumerationCancellation);
-        var cancellationToken = cancellationSource.Token;
-        var ended = false;
         try
         {
+            using var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(streamCancellation, enumerationCancellation);
+            var cancellationToken = cancellationSource.Token;
+            IAsyncEnumerator<TSearchState> iterator;
+            try
+            {
+                if (cancellationTerminatesRun)
+                    cancellationToken.ThrowIfCancellationRequested();
+                iterator = getIterator(cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                ExecutionCanceled();
+                throw;
+            }
+            catch
+            {
+                ExecutionFailed();
+                throw;
+            }
+
             while (true)
             {
-                bool hasNext;
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    if (cancellationTerminatesRun)
+                        ExecutionCanceled();
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                TSearchState state;
                 try
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
+                    bool hasNext;
                     results.EnterCall();
                     try
                     {
@@ -228,44 +262,38 @@ public sealed class AlgorithmRun<TCandidate, TSearchSpace, TProblem, TSearchStat
                     {
                         results.ExitCall();
                     }
+
+                    if (!hasNext)
+                        break;
+                    state = iterator.Current;
                 }
-                catch (OperationCanceledException)
+                catch (Exception exception)
                 {
-                    if (cancellationTerminatesRun)
+                    if (cancellationTerminatesRun && exception is OperationCanceledException)
                         ExecutionCanceled();
                     else
-                        ExecutionPaused();
-                    throw;
-                }
-                catch
-                {
-                    ExecutionFailed();
-                    throw;
-                }
-
-                if (!hasNext)
-                {
-                    ended = true;
-                    execution = null;
-                    try
-                    {
-                        await iterator.DisposeAsync();
-                    }
-                    catch
-                    {
                         ExecutionFailed();
-                        throw;
-                    }
-                    ExecutionCompleted();
-                    yield break;
+                    await DisposeIteratorAsync().AsTask().ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+                    throw;
                 }
 
-                yield return iterator.Current;
+                yield return state;
             }
+
+            try
+            {
+                await DisposeIteratorAsync();
+            }
+            catch
+            {
+                ExecutionFailed();
+                throw;
+            }
+            ExecutionCompleted();
         }
         finally
         {
-            if (!ended && !cancellationTerminatesRun)
+            if (!cancellationTerminatesRun)
                 ExecutionPaused();
         }
     }

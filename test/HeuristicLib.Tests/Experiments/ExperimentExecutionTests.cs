@@ -134,6 +134,50 @@ public class ExperimentExecutionTests
     }
 
     [Fact]
+    public async Task DisposingStream_CancelsATrialWaitingOnItsToken()
+    {
+        var enteredWait = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var disposalCount = 0;
+        var algorithm = new DisposalTrackingAlgorithm(
+            Dispose: () =>
+            {
+                disposalCount++;
+                return ValueTask.CompletedTask;
+            },
+            MoveAfterFirstYield: async token =>
+            {
+                enteredWait.SetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return false;
+            });
+        var run = ExperimentTestSupport.CreateRun(algorithm.Repeat(2));
+        var testToken = TestContext.Current.CancellationToken;
+        using var callerCancellation = CancellationTokenSource.CreateLinkedTokenSource(testToken);
+        var stream = run.Stream(cancellationToken: callerCancellation.Token).GetAsyncEnumerator(testToken);
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        await enteredWait.Task.WaitAsync(testToken);
+
+        var disposal = stream.DisposeAsync().AsTask();
+        try
+        {
+            await disposal.WaitAsync(TimeSpan.FromSeconds(5), testToken);
+        }
+        finally
+        {
+            if (!disposal.IsCompleted)
+            {
+                await callerCancellation.CancelAsync();
+                await disposal.WaitAsync(TimeSpan.FromSeconds(5), testToken);
+            }
+        }
+
+        callerCancellation.IsCancellationRequested.ShouldBeFalse();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Stopped);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Canceled);
+        disposalCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task StartTrials_CancellationSettlesActiveAndPendingTasks()
     {
         var probe = new ExecutionProbe();
@@ -153,6 +197,41 @@ public class ExperimentExecutionTests
         trialTasks.ShouldAllBe(task => task.IsCompleted);
         probe.ExecutionCount.ShouldBe(2);
         probe.ActiveExecutions.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task StartTrials_CancellationSettlesPendingTasksWhenCleanupThrows()
+    {
+        var enteredWait = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishMove = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var disposalCount = 0;
+        var algorithm = new DisposalTrackingAlgorithm(
+            Dispose: () =>
+            {
+                disposalCount++;
+                return ValueTask.FromException(new InvalidOperationException("Disposal failed."));
+            },
+            MoveAfterFirstYield: async _ =>
+            {
+                enteredWait.SetResult();
+                await finishMove.Task;
+                return true;
+            });
+        var run = ExperimentTestSupport.CreateRun(algorithm.Repeat(2));
+        var testToken = TestContext.Current.CancellationToken;
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(testToken);
+        var tasks = run.StartTrials(cancellationToken: cancellation.Token);
+        await enteredWait.Task.WaitAsync(testToken);
+
+        await cancellation.CancelAsync();
+        finishMove.SetResult();
+        await Should.ThrowAsync<OperationCanceledException>(() => Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(5), testToken));
+        await run.ExecutionCompletion.WaitAsync(testToken);
+
+        tasks.ShouldAllBe(task => task.IsCanceled);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Canceled);
+        disposalCount.ShouldBe(1);
     }
 
     [Fact]

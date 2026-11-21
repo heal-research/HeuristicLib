@@ -116,7 +116,7 @@ An explicit `AlgorithmRun` is returned in `Ready` without constructing the execu
 
 Ending enumeration early, including disposing the stream, leaves the run `Paused`. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained iterator, executors and run-bound results. The root algorithm is resolved only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
 
-Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup failure sets `Failed` and propagates the original exception, including an `OperationCanceledException` thrown during cleanup. Execution-graph setup or execution failures are terminal; cancellation thrown during graph setup sets `Canceled`. A failed or canceled run cannot resume. A construction failure also ends its resolution scope tree.
+Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup failure sets `Failed` and propagates the exception. If the executor throws during iteration, including an `OperationCanceledException`, the explicit run sets `Failed`, disposes the iterator and propagates the execution exception. Cancellation thrown during execution-graph setup sets `Canceled`. A failed or canceled run cannot resume. A construction failure also ends its resolution scope tree.
 
 [Experiment runs](/guide/execution/experiments#run-lifecycle) use terminal cancellation and do not support pause and resume. Terminal cancellation of a trial records `Canceled` before iterator cleanup, so that trial remains canceled even if cleanup throws.
 

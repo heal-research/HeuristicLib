@@ -70,6 +70,42 @@ internal sealed record ProbeAlgorithm(
     }
 }
 
+internal sealed record DisposalTrackingAlgorithm(Func<ValueTask> Dispose, Func<CancellationToken, ValueTask<bool>>? MoveAfterFirstYield = null)
+    : Algorithm<DisposalTrackingAlgorithm, int, PopulationState<int>>
+{
+    protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) => new Executor(Dispose, MoveAfterFirstYield);
+
+    private sealed class Executor(Func<ValueTask> dispose, Func<CancellationToken, ValueTask<bool>>? moveAfterFirstYield)
+        : AlgorithmExecutor<PopulationState<int>>, IAsyncEnumerable<PopulationState<int>>, IAsyncEnumerator<PopulationState<int>>
+    {
+        private bool yielded;
+        private CancellationToken executionCancellation;
+
+        public PopulationState<int> Current => ExperimentTestSupport.CreateState(1);
+
+        public override IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(
+            IRandomNumberGenerator random, PopulationState<int>? initialState = null, CancellationToken ct = default)
+        {
+            executionCancellation = ct;
+            return this;
+        }
+
+        public IAsyncEnumerator<PopulationState<int>> GetAsyncEnumerator(CancellationToken cancellationToken = default) => this;
+
+        public ValueTask<bool> MoveNextAsync()
+        {
+            if (yielded)
+                return moveAfterFirstYield?.Invoke(executionCancellation) ?? ValueTask.FromResult(false);
+
+            yielded = true;
+            return ValueTask.FromResult(true);
+        }
+
+        public ValueTask DisposeAsync() => dispose();
+    }
+}
+
 internal sealed class ExecutionProbe
 {
     private int activeExecutions;
