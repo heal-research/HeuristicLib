@@ -17,7 +17,6 @@ Each steering document has one responsibility:
 | [Developer guidelines](/contributing/developer-guidelines) | How contributors implement those requirements and goals                                             |
 | [Glossary](/guide/glossary)                                | Which terminology is canonical                                                                      |
 | GitHub Issues                                              | Concrete problems, feature requests and design repairs, with the decisions belonging to that work   |
-| `plans/developer-backlog.md`                               | Remaining concrete work awaiting migration                                                          |
 | `AGENTS.md`                                                | How contributors navigate and validate the repository and which design changes agents discuss first |
 
 Topic pages must not become alternative policy documents.

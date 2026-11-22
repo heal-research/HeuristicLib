@@ -18,7 +18,7 @@ Follow the developer guidelines for implementation, public APIs and documentatio
 | Test placement, API usage specs and suite selection                | [Test suite guide](test/README.md)                                                                                                                                         |
 | Planned work or a continuation                                     | The assigned issue, its parent/dependencies and relevant decisions; use a retained plan for unmigrated work. Identify scope rather than inferring it from the branch name. |
 
-Concrete problems, feature requests and necessary design repairs belong in GitHub Issues. The [developer backlog](plans/developer-backlog.md) holds only remaining unmigrated concrete work. Do not refill it with speculative audits, optional ideas or settled design history. Check relevant open and closed issues and current contributor/architecture guidance before revisiting a design.
+Concrete problems, feature requests and necessary design repairs belong in GitHub Issues. Keep active branch-specific handovers with their owning branches. Do not create a local backlog for speculative audits, optional ideas or settled design history. Check relevant open and closed issues and current contributor/architecture guidance before revisiting a design.
 
 Obtain explicit approval for every public GitHub change and push. Draft issue descriptions in chat first; keep them very concise and concrete, with only indispensable context and a short completion outcome.
 
@@ -48,7 +48,7 @@ Return to the discussion when implementation deviates from the accepted design, 
 - `src/HeuristicLib.PythonInterop`: Python integration and adapters.
 - `test`: core, Experimental, scenario, API usage and documentation suites; see `test/README.md` for ownership and placement.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
-- `docs`: published VitePress documentation. `plans`: temporary migration tracking and retained concrete handovers.
+- `docs`: published VitePress documentation. `plans`: temporary migration tracking; active handovers stay with their owning branches.
 - `samples`: runnable C# applications included in the solution and referencing `src` projects.
 - `python-samples`: Python demonstrations and notebooks outside the solution; solution validation does not validate them. See [their README](python-samples/README.md).
 - `.agents/skills` and `.claude`: shared skills and agent-specific configuration; see [the skill inventory](.agents/skills/README.md).
