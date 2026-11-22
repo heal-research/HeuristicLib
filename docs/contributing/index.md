@@ -15,4 +15,4 @@ Start with the repository `AGENTS.md` file for validation commands and test plac
 | [Operator implementation](/contributing/architecture/operator-implementation) | Authoring paths, arities and executors for operators, new operations and Roslyn guardrails |
 | [Analyzers](/contributing/architecture/analyzers)                             | Observation boundaries, clocks, traces and the ownership of analyzer results               |
 
-Open work and unresolved decisions live in `plans/developer-backlog.md`, outside the published documentation source.
+Concrete problems, feature requests and design repairs live in [GitHub Issues](https://github.com/heal-research/HeuristicLib/issues). Remaining unmigrated work and deferred handovers stay in `plans/` during the migration.

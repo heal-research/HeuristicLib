@@ -10,18 +10,19 @@ Cite a section as `§ 4` and a rule as `§ 4.2`. Rule numbers are stable. Add ru
 
 Each steering document has one responsibility:
 
-| Document                                                   | Responsibility                                                                                           |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [Requirements](/contributing/requirements)                 | What the library must support and which capability boundaries matter                                     |
-| [Design goals and principles](/contributing/design-goals)  | Which durable qualities the resulting library should have                                                |
-| [Developer guidelines](/contributing/developer-guidelines) | How contributors implement those requirements and goals                                                  |
-| [Glossary](/guide/glossary)                                | Which terminology is canonical                                                                           |
-| `plans/developer-backlog.md`                               | Which follow up work and design decisions remain unresolved and which approaches were tried and rejected |
-| `AGENTS.md`                                                | How contributors navigate and validate the repository and which design changes agents discuss first      |
+| Document                                                   | Responsibility                                                                                      |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [Requirements](/contributing/requirements)                 | What the library must support and which capability boundaries matter                                |
+| [Design goals and principles](/contributing/design-goals)  | Which durable qualities the resulting library should have                                           |
+| [Developer guidelines](/contributing/developer-guidelines) | How contributors implement those requirements and goals                                             |
+| [Glossary](/guide/glossary)                                | Which terminology is canonical                                                                      |
+| GitHub Issues                                              | Concrete problems, feature requests and design repairs, with the decisions belonging to that work   |
+| `plans/developer-backlog.md`                               | Remaining concrete work awaiting migration                                                          |
+| `AGENTS.md`                                                | How contributors navigate and validate the repository and which design changes agents discuss first |
 
 Topic pages must not become alternative policy documents.
 
-User-facing documentation describes current behavior and contracts. Keep library history, migration status, review checkpoints and proposed changes in `plans/`. Describe how the library works without announcing that it "now" works that way.
+User-facing documentation describes current behavior and contracts. Keep active planning, review checkpoints and significant decisions with the owning issue, or a retained plan for unmigrated work. Describe how the library works without announcing that it "now" works that way.
 
 ## § 1 Project posture
 
@@ -227,7 +228,7 @@ Library configurations hold runtime values only when there is a technical need, 
 
 Library configurations that hold runtime values:
 
-- Analyzers and `Observing` may retain value functions and runtime callbacks, including Python callbacks, and `CreateRun` or `Substitute` may place them in a configuration. The source of a role of your own retains the function that places its wrapper, and a trace over it reaches that function. See the [analysis delegate backlog item](https://github.com/heal-research/HeuristicLib/blob/main/plans/developer-backlog.md#runs-execution-and-experiments).
+- Analyzers and `Observing` may retain value functions and runtime callbacks, including Python callbacks, and `CreateRun` or `Substitute` may place them in a configuration. The source of a role of your own retains the function that places its wrapper, and a trace over it reaches that function.
 - `HeuristicLib.PythonInterop` operators such as `VisualizationCallbackEvaluator` hold Python-facing callbacks.
 - `EpochClock` in `HeuristicLib.Experimental` holds its live dynamic problem, so a configuration holding it is not serializable.
 - `DynamicRacingAlgorithm` and `DelegatingRacingStateMerger` in `HeuristicLib.Experimental` hold delegates that build, inspect and merge contenders.
@@ -612,7 +613,7 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 - Do not assume that one folder must map to one namespace.
 - Keep public behavioral explanations in topic documentation.
 - Keep contributor implementation rules in this document.
-- Keep unresolved decisions in `plans/developer-backlog.md`. Move settled decisions here or into the relevant public documentation.
+- Keep concrete pending work and its decisions with the owning issue, or a retained plan for unmigrated work. Keep current contracts in the relevant documentation; do not use the backlog for speculative ideas or settled history.
 
 ### § 9.3 Name types for what binds them, place them by what they are
 
