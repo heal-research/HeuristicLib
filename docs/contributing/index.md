@@ -2,7 +2,7 @@
 
 This section records the rules and architecture used when changing HeuristicLib itself. Library users do not need these pages to configure or run an optimizer.
 
-Start with the repository `AGENTS.md` file for validation commands and test placement. Then use the topic that matches the change:
+Start with the repository `AGENTS.md` file for workflow and validation commands. Then use the topic that matches the change:
 
 | Topic                                                                         | Use it for                                                                                 |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
@@ -14,5 +14,3 @@ Start with the repository `AGENTS.md` file for validation commands and test plac
 | [Execution resolution](/contributing/architecture/execution-resolution)       | How a scope builds, keeps and shares execution nodes, and how substitutions order wrappers |
 | [Operator implementation](/contributing/architecture/operator-implementation) | Authoring paths, arities and executors for operators, new operations and Roslyn guardrails |
 | [Analyzers](/contributing/architecture/analyzers)                             | Observation boundaries, clocks, traces and the ownership of analyzer results               |
-
-Concrete problems, feature requests and design repairs live in [GitHub Issues](https://github.com/heal-research/HeuristicLib/issues). Active branch-specific handovers stay with their owning branches.

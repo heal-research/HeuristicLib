@@ -21,7 +21,7 @@ Each steering document has one responsibility:
 
 Topic pages must not become alternative policy documents.
 
-User-facing documentation describes current behavior and contracts. Keep active planning, review checkpoints and significant decisions with the owning issue. Describe how the library works without announcing that it "now" works that way.
+User-facing documentation describes current behavior and contracts. Describe how the library works without announcing that it "now" works that way.
 
 ## § 1 Project posture
 
@@ -612,7 +612,6 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 - Do not assume that one folder must map to one namespace.
 - Keep public behavioral explanations in topic documentation.
 - Keep contributor implementation rules in this document.
-- Keep concrete pending work and its decisions with the owning issue. Keep current contracts in the relevant documentation. Do not record speculative ideas or settled history as pending work.
 
 ### § 9.3 Name types for what binds them, place them by what they are
 
@@ -690,7 +689,7 @@ Question an interface that has a single implementation and will likely keep it. 
 
 ### § 10.2 Follow repository validation and test placement guidance
 
-Follow `AGENTS.md` for validation order and `test/README.md` for test placement.
+Follow `test/README.md` for test placement and validation order, and `AGENTS.md` for validation commands.
 
 ### § 10.3 Use expression bodies for value producing members
 
