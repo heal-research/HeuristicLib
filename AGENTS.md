@@ -6,19 +6,21 @@ Contributor contract shared by coding agents. `CLAUDE.md` imports this file.
 
 Follow the developer guidelines for implementation, public APIs and documentation responsibilities, and the glossary for terminology. Read the sections and topic pages relevant to the task.
 
-| Task                                                               | Guidance                                                                                                                                                                   |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implementation and public API conventions                          | [Developer guidelines](docs/contributing/developer-guidelines.md)                                                                                                          |
-| Capability boundaries and architectural tradeoffs                  | [Requirements](docs/contributing/requirements.md) and [design goals](docs/contributing/design-goals.md)                                                                    |
-| Naming and domain language in code, docs, tests, examples or plans | [Glossary](docs/guide/glossary.md); prefer canonical terms unless a local context explicitly defines a narrower meaning                                                    |
-| Adding or moving types and dependencies                            | [Layering](docs/contributing/architecture/layering.md)                                                                                                                     |
-| Scoped state, resolution, sharing or wrappers                      | [Execution nodes](docs/contributing/architecture/execution-nodes.md) and [execution resolution](docs/contributing/architecture/execution-resolution.md)                    |
-| Authoring or changing operators                                    | [Operator implementation](docs/contributing/architecture/operator-implementation.md)                                                                                       |
-| Analyzers, observations and result ownership                       | [Analyzer architecture](docs/contributing/architecture/analyzers.md)                                                                                                       |
-| Test placement, API usage specs and suite selection                | [Test suite guide](test/README.md)                                                                                                                                         |
-| Planned work or a continuation                                     | The assigned issue, its parent/dependencies and relevant decisions; use a retained plan for unmigrated work. Identify scope rather than inferring it from the branch name. |
+| Task                                                                | Guidance                                                                                                                                                                |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation and public API conventions                           | [Developer guidelines](docs/contributing/developer-guidelines.md)                                                                                                       |
+| Capability boundaries and architectural tradeoffs                   | [Requirements](docs/contributing/requirements.md) and [design goals](docs/contributing/design-goals.md)                                                                 |
+| Naming and domain language in code, docs, tests, examples or issues | [Glossary](docs/guide/glossary.md); prefer canonical terms unless a local context explicitly defines a narrower meaning                                                 |
+| Adding or moving types and dependencies                             | [Layering](docs/contributing/architecture/layering.md)                                                                                                                  |
+| Scoped state, resolution, sharing or wrappers                       | [Execution nodes](docs/contributing/architecture/execution-nodes.md) and [execution resolution](docs/contributing/architecture/execution-resolution.md)                 |
+| Authoring or changing operators                                     | [Operator implementation](docs/contributing/architecture/operator-implementation.md)                                                                                    |
+| Analyzers, observations and result ownership                        | [Analyzer architecture](docs/contributing/architecture/analyzers.md)                                                                                                    |
+| Test placement, API usage specs and suite selection                 | [Test suite guide](test/README.md)                                                                                                                                      |
+| Planned work or a continuation                                      | The assigned issue, its parent/dependencies and relevant decisions, or the handover on its owning branch. Identify scope rather than inferring it from the branch name. |
 
 Concrete problems, feature requests and necessary design repairs belong in GitHub Issues. Keep active branch-specific handovers with their owning branches. Do not create a local backlog for speculative audits, optional ideas or settled design history. Check relevant open and closed issues and current contributor/architecture guidance before revisiting a design.
+
+A parent issue owns a shared outcome; create sub-issues when deliverables need independent review or completion. An issue does not by itself approve implementation. An implementation issue closes when its completion criteria are met on its integration branch; an investigation issue closes once its decision and follow-up issues are recorded.
 
 Obtain explicit approval for every public GitHub change and push. Draft issue descriptions in chat first; keep them very concise and concrete, with only indispensable context and a short completion outcome.
 
@@ -35,7 +37,7 @@ Routine changes that follow established patterns may proceed. Before editing cod
 
 Before seeking agreement, inspect the relevant code and guidance yourself, and try to express the scenario with existing mechanisms as developer guidelines § 2.5 requires. Present the design as § 2.1 describes, together with unresolved risks or assumptions and a recommendation.
 
-Ask only about requirements and tradeoffs, recommend an answer to each question, and challenge weak designs, including the developer's own suggestions. For designs with several open decisions, use the `grilling` skill. Resolve material objections before implementing. Record accepted decisions with the owning issue, or in the retained plan for unmigrated work, subject to the public-change approval rule above. Accepted decisions need no repeated design approval.
+Ask only about requirements and tradeoffs, recommend an answer to each question, and challenge weak designs, including the developer's own suggestions. For designs with several open decisions, use the `grilling` skill. Resolve material objections before implementing. Record accepted decisions with the owning issue, subject to the public-change approval rule above. Accepted decisions need no repeated design approval.
 
 A general implementation or refactoring request does not approve an agent-invented redesign. List unrequested architectural improvements as suggestions in the final reply instead of implementing them.
 
@@ -48,7 +50,7 @@ Return to the discussion when implementation deviates from the accepted design, 
 - `src/HeuristicLib.PythonInterop`: Python integration and adapters.
 - `test`: core, Experimental, scenario, API usage and documentation suites; see `test/README.md` for ownership and placement.
 - `analyzers`: Roslyn analyzers and code fixes for repository-specific API usage rules.
-- `docs`: published VitePress documentation. `plans`: temporary migration tracking; active handovers stay with their owning branches.
+- `docs`: published VitePress documentation.
 - `samples`: runnable C# applications included in the solution and referencing `src` projects.
 - `python-samples`: Python demonstrations and notebooks outside the solution; solution validation does not validate them. See [their README](python-samples/README.md).
 - `.agents/skills` and `.claude`: shared skills and agent-specific configuration; see [the skill inventory](.agents/skills/README.md).
@@ -81,9 +83,9 @@ The repository ships general-purpose agent skills, copied verbatim from their so
 
 - Composition, for `grill-with-docs`: apply both `grilling` and `domain-modeling`. If the runtime has no `Skill` invocation tool, read both skills from its skill inventory and follow their workflows directly.
 - Glossary, for `domain-modeling` and `grill-with-docs`: `docs/guide/glossary.md` is the domain glossary. Challenge terms against it and record resolved terms there, using its status labels and entry format. Entries may name the type that represents a concept. Do not create `CONTEXT.md` or `CONTEXT-MAP.md`.
-- Decisions, for `domain-modeling` and `grill-with-docs`: do not create ADRs or `docs/adr/`. Record significant accepted decisions and rejected alternatives with the owning issue, or in the retained plan for unmigrated work, subject to public-change approval. Do not maintain a separate historical-design backlog. Contributor and architecture docs describe current contracts, not decision history.
+- Decisions, for `domain-modeling` and `grill-with-docs`: do not create ADRs or `docs/adr/`. Record significant accepted decisions and rejected alternatives with the owning issue, subject to public-change approval. Do not maintain a separate historical-design backlog. Contributor and architecture docs describe current contracts, not decision history.
 - Review scope, for `two-axis-review`: for reviews of the current working tree, compare against the fixed point with `git diff $(git merge-base <fixed-point> HEAD)` and include untracked files from `git status --short`.
-- Review sources, for `two-axis-review`: skip the generic `docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills` prerequisite. Use the assigned issue and relevant parent, dependency and decision context, or the retained plan for unmigrated work, rather than assuming a branch-named plan. The standards are this file, the developer guidelines, the design goals, the glossary and, for tests, `test/README.md`.
+- Review sources, for `two-axis-review`: skip the generic `docs/agents/issue-tracker.md` and `/setup-matt-pocock-skills` prerequisite. Use the assigned issue and relevant parent, dependency and decision context, or the handover on the owning branch, rather than assuming a branch-named plan. The standards are this file, the developer guidelines, the design goals, the glossary and, for tests, `test/README.md`.
 - Review remedies, for `two-axis-review`: apply developer guidelines § 2.4 and § 3.6 when assessing smells. Extraction, new types and polymorphism are alternatives to justify, not automatic fixes; consider removing or inlining machinery and retaining limited duplication when it keeps responsibilities clearer.
 - Compatibility, for `csharp-refactoring`: backward compatibility is not a design goal (developer guidelines § 1.1). A requested public rename, move or removal is an authorized breaking change. Migrate every in-repository caller, including tests, samples and documentation snippets, and add no `[Obsolete]` shims, forwarding members or `[TypeForwardedTo]` attributes.
 - Validation, for all skills: use the validation commands and test execution strategy above instead of a skill's generic build and test commands.

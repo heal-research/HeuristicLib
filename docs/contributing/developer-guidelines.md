@@ -21,7 +21,7 @@ Each steering document has one responsibility:
 
 Topic pages must not become alternative policy documents.
 
-User-facing documentation describes current behavior and contracts. Keep active planning, review checkpoints and significant decisions with the owning issue, or a retained plan for unmigrated work. Describe how the library works without announcing that it "now" works that way.
+User-facing documentation describes current behavior and contracts. Keep active planning, review checkpoints and significant decisions with the owning issue. Describe how the library works without announcing that it "now" works that way.
 
 ## § 1 Project posture
 
@@ -612,7 +612,7 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 - Do not assume that one folder must map to one namespace.
 - Keep public behavioral explanations in topic documentation.
 - Keep contributor implementation rules in this document.
-- Keep concrete pending work and its decisions with the owning issue, or a retained plan for unmigrated work. Keep current contracts in the relevant documentation; do not use the backlog for speculative ideas or settled history.
+- Keep concrete pending work and its decisions with the owning issue. Keep current contracts in the relevant documentation. Do not record speculative ideas or settled history as pending work.
 
 ### § 9.3 Name types for what binds them, place them by what they are
 
