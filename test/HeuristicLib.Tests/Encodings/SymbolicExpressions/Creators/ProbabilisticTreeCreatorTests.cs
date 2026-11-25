@@ -106,7 +106,7 @@ public sealed class ProbabilisticTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_UsesTheConfiguredRequestedLengthDistribution()
+    public void CreatorExecution_UsesTheConfiguredRequestedLengthDistribution()
     {
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 7,
@@ -123,7 +123,7 @@ public sealed class ProbabilisticTreeCreatorTests
     }
 
     [Fact]
-    public void CreatorInstance_UsesUniformRequestedLengthsByDefault()
+    public void CreatorExecution_UsesUniformRequestedLengthsByDefault()
     {
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 7,

@@ -17,7 +17,7 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
     }
 
     public FactorVariableTreeNode(FactorVariable variableSymbol)
-      : base(variableSymbol)
+        : base(variableSymbol)
     {
     }
     public new FactorVariable Symbol => (FactorVariable)base.Symbol;
@@ -78,6 +78,6 @@ public sealed class FactorVariableTreeNode : SymbolicExpressionTreeNode
           Symbol.GetVariableValues(VariableName).Select(value => value + ": " + GetValue(value).ToString("E4")));
 
         return VariableName + " (factor) "
-          + "[" + weightStr + "]";
+            + "[" + weightStr + "]";
     }
 }

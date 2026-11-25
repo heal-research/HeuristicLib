@@ -98,7 +98,6 @@ public class VariableBase : Symbol
         get => variableNames;
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
             variableNames.Clear();
             variableNames.AddRange(value);
         }
@@ -111,7 +110,6 @@ public class VariableBase : Symbol
         get => allVariableNames;
         set
         {
-            ArgumentNullException.ThrowIfNull(value);
             allVariableNames.Clear();
             allVariableNames.AddRange(value);
         }

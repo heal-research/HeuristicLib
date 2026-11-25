@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Crossovers;
@@ -15,9 +16,9 @@ public class CrossoverConfigurationEqualityTests
     {
         var childCrossover = new OffsetCrossover(1);
 
-        var crossover = childCrossover.CountCrossoverCalls(new ObservationCounter());
+        var crossover = new IdentityCrossover(childCrossover);
 
-        crossover.ChildCrossover.ShouldBeSameAs(childCrossover);
+        crossover.ChildOperator.ShouldBeSameAs(childCrossover);
     }
 
     [Fact]
@@ -26,9 +27,9 @@ public class CrossoverConfigurationEqualityTests
         var first = new OffsetCrossover(1);
         var second = new OffsetCrossover(2);
 
-        var crossover = ChooseOneCrossover.Create(first, second);
+        var crossover = ChoosePerItem.Create(first, second);
 
-        crossover.ChildCrossovers.ShouldBe([first, second]);
+        crossover.ChildOperators.ShouldBe([first, second]);
     }
 
     [Fact]
@@ -36,19 +37,19 @@ public class CrossoverConfigurationEqualityTests
     {
         var first = new OffsetCrossover(1);
         var second = new OffsetCrossover(2);
-        var childCrossovers = new List<ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childCrossovers = new List<IOperator<Crossover, int>> { first, second };
         var crossover = new FirstOfCrossover(childCrossovers);
 
         childCrossovers.Clear();
 
-        crossover.ChildCrossovers.ShouldBe([first, second]);
+        crossover.ChildOperators.ShouldBe([first, second]);
     }
 
     [Fact]
     public void MultiCrossover_WithSeparatelyBuiltEqualChildCollections_IsEqual()
     {
-        var left = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -57,8 +58,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossover_WithDifferentChildCrossovers_IsNotEqual()
     {
-        var left = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(3));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(3));
 
         left.ShouldNotBe(right);
     }
@@ -66,8 +67,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossover_WithReorderedChildCrossovers_IsNotEqual()
     {
-        var left = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChooseOneCrossover.Create(new OffsetCrossover(2), new OffsetCrossover(1));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(2), new OffsetCrossover(1));
 
         left.ShouldNotBe(right);
     }
@@ -75,18 +76,18 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossover_WithDifferentChildCount_IsNotEqual()
     {
-        var left = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(2));
-        var right = ChooseOneCrossover.Create(new OffsetCrossover(1));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1));
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChooseOneCrossover_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerItemCrossover_WithDifferentWeights_IsNotEqual()
     {
-        ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
-        var left = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers) { Weights = [1.0, 2.0] };
-        var right = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers) { Weights = [2.0, 1.0] };
+        IOperator<Crossover, int>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
+        var left = new ChoosePerItem<Crossover, int>(childCrossovers) { Weights = [1.0, 2.0] };
+        var right = new ChoosePerItem<Crossover, int>(childCrossovers) { Weights = [2.0, 1.0] };
 
         left.ShouldNotBe(right);
     }
@@ -96,11 +97,11 @@ public class CrossoverConfigurationEqualityTests
     /// configuration stays distinguishable from an unweighted one.
     /// </summary>
     [Fact]
-    public void ChooseOneCrossover_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
+    public void ChoosePerItemCrossover_WithOmittedWeights_IsNotEqualToExplicitUniformWeights()
     {
-        ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
-        var omitted = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers);
-        var explicitUniform = new ChooseOneCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers) { Weights = [0.5, 0.5] };
+        IOperator<Crossover, int>[] childCrossovers = [new OffsetCrossover(1), new OffsetCrossover(2)];
+        var omitted = new ChoosePerItem<Crossover, int>(childCrossovers);
+        var explicitUniform = new ChoosePerItem<Crossover, int>(childCrossovers) { Weights = [0.5, 0.5] };
 
         omitted.Weights.ShouldBeEmpty();
         omitted.ShouldNotBe(explicitUniform);
@@ -109,7 +110,7 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void MultiCrossoverTopologies_WithEqualChildCrossovers_AreNotEqualAcrossTypes()
     {
-        var chooseOne = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var chooseOne = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
         var firstOf = new FirstOfCrossover([new OffsetCrossover(1), new OffsetCrossover(2)]);
 
         chooseOne.ShouldNotBe<object>(firstOf);
@@ -141,105 +142,15 @@ public class CrossoverConfigurationEqualityTests
         crossover.TransformationMutator.ShouldBeSameAs(transformation);
     }
 
-    [Fact]
-    public void CountingCrossover_WithSameCounterAndMetric_IsEqual()
-    {
-        var counter = new ObservationCounter();
-        var left = new OffsetCrossover(1).CountCrossoverCalls(counter);
-        var right = new OffsetCrossover(1).CountCrossoverCalls(counter);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void CountingCrossover_WithDifferentMetric_IsNotEqual()
-    {
-        var counter = new ObservationCounter();
-        var left = new OffsetCrossover(1).CountCrossoverCalls(counter);
-        var right = new OffsetCrossover(1).CountCrossedCandidates(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingCrossover_WithDifferentCounter_IsNotEqual()
-    {
-        var left = new OffsetCrossover(1).CountCrossoverCalls(new ObservationCounter());
-        var right = new OffsetCrossover(1).CountCrossoverCalls(new ObservationCounter());
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingCrossover_WithDifferentChildCrossover_IsNotEqual()
-    {
-        var counter = new ObservationCounter();
-        var left = new OffsetCrossover(1).CountCrossoverCalls(counter);
-        var right = new OffsetCrossover(2).CountCrossoverCalls(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void DurationMeasuringCrossover_WithSameDurationAndTimeProvider_IsEqual()
-    {
-        var duration = new ObservationDuration();
-        var left = new OffsetCrossover(1).MeasureCrossoverDuration(duration, TimeProvider.System);
-        var right = new OffsetCrossover(1).MeasureCrossoverDuration(duration, TimeProvider.System);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void DurationMeasuringCrossover_WithDifferentDuration_IsNotEqual()
-    {
-        var left = new OffsetCrossover(1).MeasureCrossoverDuration(new ObservationDuration(), TimeProvider.System);
-        var right = new OffsetCrossover(1).MeasureCrossoverDuration(new ObservationDuration(), TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringCrossover_WithDifferentChildCrossover_IsNotEqual()
-    {
-        var duration = new ObservationDuration();
-        var left = new OffsetCrossover(1).MeasureCrossoverDuration(duration, TimeProvider.System);
-        var right = new OffsetCrossover(2).MeasureCrossoverDuration(duration, TimeProvider.System);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void ObservableCrossover_WithSameObserverInstance_IsEqual()
-    {
-        var observer = new ActionCrossoverObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new OffsetCrossover(1).ObserveWith(observer);
-        var right = new OffsetCrossover(1).ObserveWith(observer);
-
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void ObservableCrossover_WithDifferentChildCrossover_IsNotEqual()
-    {
-        var observer = new ActionCrossoverObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new OffsetCrossover(1).ObserveWith(observer);
-        var right = new OffsetCrossover(2).ObserveWith(observer);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void ObservableCrossover_WithSeparatelyConstructedActionObservers_IsNotEqual()
-    {
-        var left = new OffsetCrossover(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new OffsetCrossover(1).ObserveWith((IReadOnlyList<int> _) => { });
-
-        left.ShouldNotBe(right);
-    }
 
     /// <summary>
     /// Required values are constructor parameters so a configuration cannot be created incomplete, but their
@@ -248,14 +159,13 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void RequiredChild_CanBeReplacedWithAWithExpression()
     {
-        var original = new OffsetCrossover(1).CountCrossoverCalls(new ObservationCounter());
+        var original = new IdentityCrossover(new OffsetCrossover(1));
         var replacement = new OffsetCrossover(2);
 
-        var reconfigured = original with { ChildCrossover = replacement };
+        var reconfigured = original with { ChildOperator = replacement };
 
-        reconfigured.ChildCrossover.ShouldBeSameAs(replacement);
-        reconfigured.Counter.ShouldBeSameAs(original.Counter);
-        original.ChildCrossover.ShouldNotBeSameAs(replacement);
+        reconfigured.ChildOperator.ShouldBeSameAs(replacement);
+        original.ChildOperator.ShouldNotBeSameAs(replacement);
     }
 
     /// <summary>
@@ -264,13 +174,13 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void RequiredChildCollection_CanBeReplacedWithAWithExpression()
     {
-        var original = ChooseOneCrossover.Create(new OffsetCrossover(1), new OffsetCrossover(2));
+        var original = ChoosePerItem.Create(new OffsetCrossover(1), new OffsetCrossover(2));
 
-        var reconfigured = original with { ChildCrossovers = [new OffsetCrossover(3)], Weights = [1.0] };
+        var reconfigured = original with { ChildOperators = [new OffsetCrossover(3)], Weights = [1.0] };
 
-        reconfigured.ChildCrossovers.Count.ShouldBe(1);
+        reconfigured.ChildOperators.Count.ShouldBe(1);
         reconfigured.Weights.ShouldBe([1.0]);
-        original.ChildCrossovers.Count.ShouldBe(2);
+        original.ChildOperators.Count.ShouldBe(2);
     }
 
     [Fact]
@@ -285,8 +195,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void NestedCrossoverComposition_WithEqualParts_IsEqual()
     {
-        var left = ChooseOneCrossover.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
-        var right = ChooseOneCrossover.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -295,8 +205,8 @@ public class CrossoverConfigurationEqualityTests
     [Fact]
     public void NestedCrossoverComposition_WithDifferentNestedChildCrossover_IsNotEqual()
     {
-        var left = ChooseOneCrossover.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
-        var right = ChooseOneCrossover.Create(new OffsetCrossover(9).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var left = ChoosePerItem.Create(new OffsetCrossover(1).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
+        var right = ChoosePerItem.Create(new OffsetCrossover(9).TransformWith(new AddOneMutator()), new OffsetCrossover(2));
 
         left.ShouldNotBe(right);
     }
@@ -313,21 +223,35 @@ public class CrossoverConfigurationEqualityTests
     }
 
     private sealed record FirstOfCrossover
-        : MultiCrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiOperator<Crossover, int>
     {
-        public FirstOfCrossover(IReadOnlyList<ICrossover<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers)
+        public FirstOfCrossover(IReadOnlyList<IOperator<Crossover, int>> childCrossovers)
             : base(childCrossovers)
         {
         }
 
-        protected override MultiCrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<ICrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers) =>
-            new Instance(childCrossovers);
-
-        private sealed class Instance(ImmutableArray<ICrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childCrossovers)
-            : MultiCrossoverInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childCrossovers)
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
-                ChildCrossovers[0].Cross(parents, random, searchSpace, problem);
+            ImmutableArray<ICrossoverExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<ICrossoverExecutor<int>> childCrossovers)
+            : CrossoverExecutor<int>
+        {
+            public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) =>
+                childCrossovers[0].Cross(parents, random);
         }
     }
+    private sealed record IdentityCrossover : WrappingOperator<Crossover, int>
+    {
+        public IdentityCrossover(IOperator<Crossover, int> child) : base(child)
+        {
+        }
+
+        protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+            ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) => scope.ResolveOperator(ChildOperator);
+    }
+
 }

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Random;
 
@@ -22,6 +23,13 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
     /// available the other kind is used.
     /// </remarks>
     public double InternalCrossoverPointProbability { get; init; } = 0.9;
+
+    public static Parameter<SubtreeCrossover, double> InternalCrossoverPointProbabilityParameter { get; } =
+        new(nameof(InternalCrossoverPointProbability), static crossover => crossover.InternalCrossoverPointProbability, static (crossover, value) => crossover with { InternalCrossoverPointProbability = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [InternalCrossoverPointProbabilityParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override SymbolicExpressionTree CrossParents(Parents<SymbolicExpressionTree> parents, IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, InternalCrossoverPointProbability, searchSpace);
 
@@ -131,10 +139,8 @@ public record SubtreeCrossover : SymbolicExpressionTreeCrossover
             // select from internal node if possible
             // select internal crossover point or leaf
             crossoverPoint = internalCrossoverPoints.Count > 0
-              ? internalCrossoverPoints[random.NextInt(internalCrossoverPoints.Count)]
-              :
-              // otherwise select external node
-              leafCrossoverPoints[random.NextInt(leafCrossoverPoints.Count)];
+                ? internalCrossoverPoints[random.NextInt(internalCrossoverPoints.Count)]
+                : leafCrossoverPoints[random.NextInt(leafCrossoverPoints.Count)]; // otherwise select external node
         }
         else if (leafCrossoverPoints.Count > 0)
         {

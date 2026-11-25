@@ -13,10 +13,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\HeuristicLib.Contracts\HeuristicLib.Contracts.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
         <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers\HeuristicLib.Analyzers.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
         <ProjectReference Include="..\..\analyzers\HeuristicLib.Analyzers.CodeFixes\HeuristicLib.Analyzers.CodeFixes.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" PrivateAssets="all" />
     </ItemGroup>
@@ -24,10 +20,10 @@
     <ItemGroup>
         <PackageReference Include="CsvHelper" Version="33.1.0" />
         <PackageReference Include="MathNet.Numerics" Version="6.0.0-beta2" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.2" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.11" />
         <PackageReference Include="morelinq" Version="4.4.0" />
-        <PackageReference Include="Parlot" Version="1.5.7" />
-        <PackageReference Include="System.Linq.Async" Version="7.0.0" />
-        <PackageReference Include="System.Numerics.Tensors" Version="10.0.8" />
+        <PackageReference Include="Parlot" Version="1.5.8" />
+        <PackageReference Include="System.Linq.Async" Version="7.0.1" />
+        <PackageReference Include="System.Numerics.Tensors" Version="10.0.11" />
     </ItemGroup>
 </Project>

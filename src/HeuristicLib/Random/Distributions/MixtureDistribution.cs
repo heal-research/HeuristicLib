@@ -28,7 +28,7 @@ public sealed record MixtureDistribution<T> : IDistribution<T>
         sampler = new WeightedItemSampler<IDistribution<T>>(distributions, weights);
     }
 
-    public MixtureDistribution(params IEnumerable<(IDistribution<T> Distribution, double Weight)> distributions)
+    public MixtureDistribution(params IReadOnlyList<(IDistribution<T> Distribution, double Weight)> distributions)
     {
         var entries = distributions.ToArray();
         if (entries.Length == 0)

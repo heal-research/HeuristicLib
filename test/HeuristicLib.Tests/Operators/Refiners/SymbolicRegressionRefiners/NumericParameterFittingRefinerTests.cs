@@ -45,7 +45,7 @@ public sealed class NumericParameterFittingRefinerTests
         Refine(new NumericParameterFittingRefiner { MaximumIterations = 0 }, problem, expression).ShouldBeSameAs(expression);
     }
 
-    // A stateless refiner seals the execution-instance factory, so a negative iteration count is rejected by the role
+    // A stateless refiner seals the execution-node factory, so a negative iteration count is rejected by the role
     // method rather than at configuration time.
     [Fact]
     public void RefineCandidate_WithNegativeIterations_Throws()
@@ -152,11 +152,10 @@ public sealed class NumericParameterFittingRefinerTests
         var problem = CreateProblem(useLinearScaling: true);
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .WithImprovementCheck()
-            .CreateExecutionInstance(new ExecutionInstanceRegistry());
+        var refiner = new NumericParameterFittingRefiner { MaximumIterations = 100 }.CheckedForImprovement();
+        var executor = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner, problem);
 
-        var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var refined = executor.Refine([expression], RandomNumberGenerator.Create(42));
 
         refined.ShouldHaveSingleItem().ShouldBeSameAs(expression);
     }
@@ -167,11 +166,10 @@ public sealed class NumericParameterFittingRefinerTests
         var problem = CreateProblem();
         var expression = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var instance = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .WithImprovementCheck()
-            .CreateExecutionInstance(new ExecutionInstanceRegistry());
+        var refiner = new NumericParameterFittingRefiner { MaximumIterations = 100 }.CheckedForImprovement();
+        var executor = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(refiner, problem);
 
-        var refined = instance.Refine([expression], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var refined = executor.Refine([expression], RandomNumberGenerator.Create(42));
 
         Predictions(refined.ShouldHaveSingleItem(), problem).ShouldBe(Targets, tolerance: 1e-8);
     }
@@ -184,9 +182,8 @@ public sealed class NumericParameterFittingRefinerTests
         var unsolvable = (FixedConstant(1.0) / Constant(0.0)).Build();
         var fittable = (Constant(0.25) * Variable("x") + Constant(-0.5)).Build();
 
-        var refined = new NumericParameterFittingRefiner { MaximumIterations = 100 }
-            .CreateExecutionInstance(new ExecutionInstanceRegistry())
-            .Refine([unsolvable, fittable], RandomNumberGenerator.Create(42), problem.SearchSpace, problem);
+        var refined = ResolutionScope.Create().Resolve<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>(new NumericParameterFittingRefiner { MaximumIterations = 100 }, problem)
+            .Refine([unsolvable, fittable], RandomNumberGenerator.Create(42));
 
         refined[0].ShouldBeSameAs(unsolvable);
         Predictions(refined[1], problem).ShouldBe(Targets, tolerance: 1e-8);
@@ -223,7 +220,7 @@ public sealed class NumericParameterFittingRefinerTests
         var fittingData = new RegressionData(
             new DataFrame([Series<double>.FromOwnedArray("other", [.. Inputs])]),
             Series<double>.FromOwnedArray("y", [.. Targets]));
-        var algorithm = new GeneticAlgorithm<ExpressionTree, ExpressionTreeSearchSpace, SymbolicRegressionProblem>
+        var algorithm = new GeneticAlgorithm<ExpressionTree>
         {
             PopulationSize = 4,
             Creator = new GrowTreeCreator(),
@@ -234,7 +231,7 @@ public sealed class NumericParameterFittingRefinerTests
             Refiner = new NumericParameterFittingRefiner { MaximumIterations = 5, FittingData = fittingData }
         };
 
-        Should.Throw<ArgumentException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<ArgumentException>(() => algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
     }
 
     private static readonly double[] Inputs = [-2.0, -1.0, 0.0, 1.0, 2.0];

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -16,7 +17,8 @@ public class RefinerBatchSemanticsTests
 
         foreach (var (name, topology) in PassThroughTopologies())
         {
-            var refined = topology.CreateExecutionInstance().Refine(population, RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+            var refinedScope = ResolutionScope.Create();
+            var refined = refinedScope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(topology, Problem).Refine(population, RandomNumberGenerator.Create(42));
 
             refined.Count.ShouldBe(population.Length, name);
             for (var index = 0; index < population.Length; index++)
@@ -30,75 +32,64 @@ public class RefinerBatchSemanticsTests
     [Fact]
     public void PipelineRefiner_PassesAResizedPopulationToTheNextStage()
     {
-        var instance = PipelineRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner(), new AddOffsetRefiner(1))
-            .CreateExecutionInstance();
+        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(PipelineRefiner.Create(new DropLastRefiner(), new AddOffsetRefiner(1)), Problem);
 
-        Refine(instance, 1, 2, 3).Select(individual => individual.Value).ShouldBe([2, 3]);
+        Refine(executor, 1, 2, 3).Select(individual => individual.Value).ShouldBe([2, 3]);
     }
 
     [Fact]
     public void IteratedRefiner_ResizesThePopulationOncePerIteration()
     {
-        var instance = new DropLastRefiner().AsIterated(2).CreateExecutionInstance();
+        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner().AsIterated(2), Problem);
 
-        Refine(instance, 1, 2, 3, 4).Select(individual => individual.Value).ShouldBe([1, 2]);
+        Refine(executor, 1, 2, 3, 4).Select(individual => individual.Value).ShouldBe([1, 2]);
     }
 
     [Fact]
-    public void InstrumentationRefiners_ReportThePopulationTheRefinerActuallyReturned()
+    public void InspectionRefiners_ReportThePopulationTheRefinerActuallyReturned()
     {
-        var counter = new ObservationCounter();
-        IReadOnlyList<Individual>? observedRefined = null;
-        IReadOnlyList<Individual>? observedCandidates = null;
-        var instance = new DropLastRefiner()
-            .CountRefinedCandidates(counter)
-            .ObserveWith((refined, candidates, _, _) =>
-            {
-                observedRefined = refined;
-                observedCandidates = candidates;
-            })
-            .CreateExecutionInstance();
+        var counter = new Counter();
+        var observed = new DropLastRefiner();
+        var scope = ResolutionScope.Create();
+        var executor = scope.Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(
+            observed.Counted(counter, OperatorCountMetric.Candidates), Problem);
 
-        Refine(instance, 1, 2, 3);
+        Refine(executor, 1, 2, 3);
 
-        counter.CurrentCount.ShouldBe(2);
-        observedRefined!.Count.ShouldBe(2);
-        observedCandidates!.Count.ShouldBe(3);
+        scope.Results.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     // This topology assigns each candidate to a child and restores input order, which needs one result per assigned
     // candidate.
     [Fact]
-    public void ChooseOneRefiner_RequiresOneResultPerCandidateAssignedToAChild()
+    public void ChoosePerItemRefinement_RequiresOneResultPerCandidateAssignedToAChild()
     {
-        var instance = ChooseOneRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(new DropLastRefiner())
-            .CreateExecutionInstance();
+        var executor = ResolutionScope.Create().Resolve<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(ChoosePerItem.Create(new DropLastRefiner()), Problem);
 
-        Should.Throw<InvalidOperationException>(() => Refine(instance, 1, 2, 3));
+        Should.Throw<InvalidOperationException>(() => Refine(executor, 1, 2, 3));
     }
 
-    private static IEnumerable<(string Name, IRefiner<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> Topology)> PassThroughTopologies()
+    private static IEnumerable<(string Name, IOperator<Refinement, Individual> Topology)> PassThroughTopologies()
     {
         var noChange = NoChangeRefiner<Individual>.Instance;
 
         yield return ("no change", noChange);
-        yield return ("pipeline", PipelineRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(noChange, noChange));
-        yield return ("empty pipeline", PipelineRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>());
+        yield return ("pipeline", PipelineRefiner.Create(noChange, noChange));
+        yield return ("empty pipeline", PipelineRefiner.Create<Individual>());
         yield return ("iterated", noChange.AsIterated(3));
-        yield return ("choose one", ChooseOneRefiner.Create<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>>(noChange));
-        yield return ("rate limited", new AddOffsetRefiner(1).WithRate(0.0));
-        yield return ("counting", noChange.CountRefinedCandidates(new ObservationCounter()));
-        yield return ("duration measuring", noChange.MeasureRefinerDuration(new ObservationDuration()));
-        yield return ("observable", noChange.ObserveWith((IReadOnlyList<Individual> _) => { }));
-        yield return ("improvement checking", noChange.WithImprovementCheck());
+        yield return ("choose one", ChoosePerItem.Create(noChange));
+        yield return ("rate limited", new AddOffsetRefiner(1).AppliedAtRate(0.0));
+        yield return ("counting", noChange.Counted(new Counter(), OperatorCountMetric.Candidates));
+        yield return ("duration measuring", noChange.Timed(new Duration()));
+        yield return ("improvement checking", noChange.CheckedForImprovement());
         yield return ("single candidate", new IdentityRefiner());
     }
 
-    private static IReadOnlyList<Individual> Refine(IRefinerInstance<Individual, DummySearchSpace<Individual>, FuncProblem<Individual, DummySearchSpace<Individual>>> instance, params int[] values) =>
-        instance.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42), Problem.SearchSpace, Problem);
+    private static IReadOnlyList<Individual> Refine(IRefinementExecutor<Individual> executor, params int[] values) =>
+        executor.Refine([.. values.Select(value => new Individual(value))], RandomNumberGenerator.Create(42));
 
     private static readonly FuncProblem<Individual, DummySearchSpace<Individual>> Problem =
-        FuncProblem.Create(static (Individual individual) => (double)individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);
+        FuncProblem.Create(static (Individual individual) => individual.Value, DummySearchSpace<Individual>.Instance, SingleObjective.Minimize);
 
     private sealed record Individual(int Value);
 

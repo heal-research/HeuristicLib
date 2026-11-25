@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions;
@@ -5,6 +6,13 @@ namespace HEAL.HeuristicLib.Encodings.LegacySymbolicExpressions;
 public record BalancedTreeCreator : SymbolicExpressionTreeCreator
 {
     public double IrregularityBias { get; init; }
+
+    public static Parameter<BalancedTreeCreator, double> IrregularityBiasParameter { get; } =
+        new(nameof(IrregularityBias), static creator => creator.IrregularityBias, static (creator, value) => creator with { IrregularityBias = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [IrregularityBiasParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override SymbolicExpressionTree CreateCandidate(IRandomNumberGenerator random, SymbolicExpressionTreeSearchSpace searchSpace) =>
         Create(random, searchSpace, IrregularityBias);

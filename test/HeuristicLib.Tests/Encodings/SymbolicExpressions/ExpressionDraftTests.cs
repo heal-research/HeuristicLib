@@ -87,6 +87,6 @@ public sealed class ExpressionDraftTests
     [Fact]
     public void Apply_RejectsAnIncorrectNumberOfChildren()
     {
-        Should.Throw<ArgumentException>(() => ExpressionDraft.Apply(Symbols.Addition, Variable("x0")));
+        Should.Throw<ArgumentException>(() => Apply(Symbols.Addition, Variable("x0")));
     }
 }

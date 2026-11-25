@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
@@ -11,19 +12,25 @@ public sealed record ParetoCrowdingReplacer<TCandidate>
 {
     public bool DominateOnEqualities { get; init; }
 
+    public static Parameter<ParetoCrowdingReplacer<TCandidate>, bool> DominateOnEqualitiesParameter { get; } =
+        new(nameof(DominateOnEqualities), static replacer => replacer.DominateOnEqualities, static (replacer, value) => replacer with { DominateOnEqualities = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [DominateOnEqualitiesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public ParetoCrowdingReplacer(bool dominateOnEqualities)
     {
         DominateOnEqualities = dominateOnEqualities;
     }
 
-    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random)
-        => ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, DominateOnEqualities);
+    public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
+        ParetoCrowdingReplacer.Replace(previousPopulation, offspringPopulation, objective, count, DominateOnEqualities);
 }
 
 public static class ParetoCrowdingReplacer
 {
-    public static ParetoCrowdingReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities);
+    public static ParetoCrowdingReplacer<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, bool dominateOnEqualities) => new(dominateOnEqualities);
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
         IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,

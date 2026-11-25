@@ -13,7 +13,7 @@ public class DynamicTSPTests
         var file = Path.Combine("TestData", "berlin52.tsp");
         var data = TsplibTspInstanceProvider.LoadData(file);
         var cdata = data.ToCoordinatesData();
-        var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochLength: 10000);
+        var prob = new ActivatedTravelingSalesmanProblem(cdata, RandomNumberGenerator.Create(0), epochSchedule: new EvaluationCountSchedule(10000));
 
         //GA
         //ga.Terminator = new AfterIterationsTerminator<Permutation>(1000);
@@ -31,11 +31,11 @@ public class DynamicTSPTests
         //prob.AttachTo(ga);
 
         //execute
-        var resGa = (ga with { MaximumGenerations = 1000 }).Complete(prob, RandomNumberGenerator.Create(42),
+        var resGa = (ga with { MaximumGenerations = 1000 }).RunToCompletion(prob, RandomNumberGenerator.Create(42),
             ct: TestContext.Current.CancellationToken);
 
         //look at results
-        var objGa = resGa.Population
+        var objGa = resGa.Population.EvaluatedCandidates
                          .OrderBy(x => x.ObjectiveVector[0])
                          .First();
 

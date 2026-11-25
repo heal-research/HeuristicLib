@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -11,9 +12,9 @@ public class RepeatedEvaluatorTests
     {
         var problem = CreateProblem();
         var evaluator = new StatefulObjectiveEvaluator().AsRepeated(repetitions: 3);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var objectiveVectors = instance.Evaluate([7], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate([7], RandomNumberGenerator.Create(1));
 
         objectiveVectors.Single().ShouldBe(new ObjectiveVector(2.0));
     }
@@ -22,11 +23,11 @@ public class RepeatedEvaluatorTests
     public void RepeatedEvaluator_AggregatesEachCandidatePositionally()
     {
         var problem = CreateProblem();
-        var evaluator = new ProblemEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>()
+        var evaluator = new ProblemEvaluator<int>()
             .AsRepeated(repetitions: 2);
-        var instance = new ExecutionInstanceRegistry().Resolve(evaluator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(evaluator, problem);
 
-        var objectiveVectors = instance.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1), problem.SearchSpace, problem);
+        var objectiveVectors = executor.Evaluate([3, 5, 8], RandomNumberGenerator.Create(1));
 
         objectiveVectors.ShouldBe([new ObjectiveVector(3.0), new ObjectiveVector(5.0), new ObjectiveVector(8.0)]);
     }
@@ -40,19 +41,22 @@ public class RepeatedEvaluatorTests
     }
 
     private sealed record StatefulObjectiveEvaluator
-        : StatefulEvaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, StatefulObjectiveEvaluator.ExecutionState>
+        : Evaluator<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>
     {
-        public sealed class ExecutionState
-        {
-            public int Calls;
-        }
 
-        protected override ExecutionState CreateInitialState() => new();
+        protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, TRunSearchState> scope) =>
+        new Executor(scope.Problem);
 
-        protected override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, ExecutionState executionState, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, FuncProblem<int, DummySearchSpace<int>> problem)
+        private sealed class Executor(FuncProblem<int, DummySearchSpace<int>> problem)
+            : EvaluationExecutor<int>
         {
-            var calls = Interlocked.Increment(ref executionState.Calls);
-            return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
+            private int invocations;
+
+            public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random)
+            {
+                var calls = Interlocked.Increment(ref invocations);
+                return candidates.Select(_ => problem.Evaluate(calls, random)).ToArray();
+            }
         }
     }
 }

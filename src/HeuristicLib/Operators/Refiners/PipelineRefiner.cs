@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
@@ -5,28 +6,30 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
-public sealed record PipelineRefiner<TCandidate, TSearchSpace, TProblem>
-    : MultiRefiner<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record PipelineRefiner<TCandidate>
+    : MultiOperator<Refinement, TCandidate>
 {
-    public PipelineRefiner(IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> childRefiners)
+    public PipelineRefiner(IReadOnlyList<IOperator<Refinement, TCandidate>> childRefiners)
         : base(childRefiners)
     {
     }
 
-    protected override MultiRefinerInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners) =>
-        new Instance(childRefiners);
-
-    private sealed class Instance(ImmutableArray<IRefinerInstance<TCandidate, TSearchSpace, TProblem>> childRefiners)
-        : MultiRefinerInstance<TCandidate, TSearchSpace, TProblem>(childRefiners)
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        ImmutableArray<IRefinementExecutor<TCandidate>> children = [.. ChildOperators.Select(child => scope.Resolve(child))];
+        return new Executor(children);
+    }
+
+    private sealed class Executor(ImmutableArray<IRefinementExecutor<TCandidate>> childRefiners)
+        : RefinementExecutor<TCandidate>
+    {
+        public override IReadOnlyList<TCandidate> Refine(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var current = candidates;
-            foreach (var refiner in ChildRefiners)
+            foreach (var refiner in childRefiners)
             {
-                current = refiner.Refine(current, random, searchSpace, problem);
+                current = refiner.Refine(current, random);
             }
 
             return current;
@@ -36,18 +39,14 @@ public sealed record PipelineRefiner<TCandidate, TSearchSpace, TProblem>
 
 public static class PipelineRefiner
 {
-    public static PipelineRefiner<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(params IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> childRefiners)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(childRefiners);
+    public static PipelineRefiner<TCandidate> Create<TCandidate>(params IReadOnlyList<IOperator<Refinement, TCandidate>> childRefiners) => new(childRefiners);
 }
 
 public static class PipelineRefinerExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IRefiner<TCandidate, TSearchSpace, TProblem> refiner)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IOperator<Refinement, TCandidate> refiner)
     {
-        public PipelineRefiner<TCandidate, TSearchSpace, TProblem> Then(params IReadOnlyList<IRefiner<TCandidate, TSearchSpace, TProblem>> followingRefiners) =>
+        public PipelineRefiner<TCandidate> Then(params IReadOnlyList<IOperator<Refinement, TCandidate>> followingRefiners) =>
             PipelineRefiner.Create([refiner, .. followingRefiners]);
     }
 }

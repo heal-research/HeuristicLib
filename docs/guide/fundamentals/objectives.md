@@ -31,6 +31,8 @@ Do not invent a total ordering unless your domain supplies a real preference, su
 
 `MultiObjective.Create` builds directions for several objectives, and multiobjective directions carry no total order comparer, so `TotalOrderComparer` is unavailable by design. Use `ParetoFront.ExtractFrom` to reduce a population to its nondominated members. [Multiobjective optimization](/examples/multi-objective) works through a complete NSGA-II run and shows how to read and use the resulting front.
 
+When dimension priority is deliberate, `LexicographicComparer` compares objectives in the supplied `order`, or ascending index order when it is omitted. A supplied order must contain every objective index exactly once. Duplicate, missing or out-of-range indices, including an order of the wrong length, are rejected at construction. The comparer snapshots both the directions and order. Supplying this comparer to analysis changes that analysis's ordering, not the problem's optimization objective.
+
 ## Evaluated candidates
 
 An evaluated candidate contains:
@@ -45,3 +47,8 @@ Treat the pair as one result. If a candidate changes, it must be evaluated again
 For a single objective run, report at least the best candidate, objective value, seed and algorithm configuration. For a multiobjective run, report the nondominated set and keep every objective label and unit visible.
 
 Repeated experiments should summarize distributions across runs. A median and spread are more informative than the best value from one lucky seed.
+
+## Next steps
+
+- [Operators](/guide/fundamentals/operators) continues the Fundamentals path with the roles that produce and change candidates.
+- [Experiments](/guide/execution/experiments) summarizes repeated runs.

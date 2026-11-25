@@ -2,7 +2,6 @@ using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.QuadraticAssignment;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 
 namespace HEAL.HeuristicLib.Tests.Usage;
 
@@ -25,7 +24,7 @@ public sealed class ExperimentalUsageSpecs
     public void ResearchAlgorithm_IsConfiguredFromExperimental()
     {
         var problem = new TestFunctionProblem(new RastriginFunction(4));
-        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector>
         {
             PopulationSize = 20,
             Creator = new UniformDistributedCreator(problem.SearchSpace),

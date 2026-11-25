@@ -30,11 +30,6 @@ public static class SymbolicRegressionParameterOptimization
             throw new NotSupportedException("Could not optimize parameters of symbolic expression tree due to not supported symbols used in the tree.");
         }
 
-        ArgumentNullException.ThrowIfNull(parameters);
-        ArgumentNullException.ThrowIfNull(initialParameters);
-        ArgumentNullException.ThrowIfNull(func);
-        ArgumentNullException.ThrowIfNull(funcGrad);
-
         if (parameters.Count == 0)
             return 0.0; // constant expressions always have an R� of 0.0 
 
@@ -236,10 +231,10 @@ public static class SymbolicRegressionParameterOptimization
                       $"funcGrad failed at row {i}.", ex);
                 }
 
-                if (gradArr == null || gradArr.Length != p.Count)
+                if (gradArr.Length != p.Count)
                 {
                     throw new InvalidModelEvaluationException(
-                      $"funcGrad returned invalid gradient length at row {i}: got {gradArr?.Length}, expected {p.Count}.");
+                      $"funcGrad returned invalid gradient length at row {i}: got {gradArr.Length}, expected {p.Count}.");
                 }
 
                 for (var q = 0; q < p.Count; q++)

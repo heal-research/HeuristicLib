@@ -14,7 +14,7 @@ public class ExtendedSymbolicRegressionProblemTest
 
         //take the original r2 and add 4 dummy objectives that we will ignore in this test, but could be used for other things in a real scenario
         Func<ExpressionTree, ObjectiveVector, double[]>? individualCallback = null;
-        Func<ExpressionTree[], ObjectiveVector[], double[][]> populationCallback = (ts, os) => os.Select(o => new double[] { o[0], 0, 0, 0, 0 }).ToArray();
+        Func<ExpressionTree[], ObjectiveVector[], double[][]> populationCallback = (ts, os) => os.Select(o => new[] { o[0], 0, 0, 0, 0 }).ToArray();
 
         var pop = ExtendedSymbolicRegressionProblem.RunDefault(
             file,

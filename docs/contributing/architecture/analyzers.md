@@ -1,373 +1,91 @@
 # Analyzer architecture
 
-This page explains the analyzer system in HeuristicLib.
+An analyzer is an immutable configuration node that creates one typed result per run and names the substitutions that place its collector. Traces use `TraceAnalyzer<TObservation, TValue> : Analyzer<Trace<TValue>>`. Accumulating analyses derive directly from `Analyzer<TResult>` and create their graphs, fronts or histories per run. [Observability and analysis](/guide/execution/observability-and-analysis) shows users how to pass analyzers to `CreateRun` and read their results.
 
-It builds on [Observability and analysis](/guide/execution/observability-and-analysis) and [Configuration vs execution instances](/contributing/architecture/execution-instances), but adds one concept:
+`CreateRun` applies the whole substitution list in one call and validates the resulting graph unless the caller passes `validate: false`. It then checks the placement of each supplied configuration node whose expansion is not empty, such as an analyzer or a clock that observes. `AlgorithmRun.RequireHeld` fails a node unless a declared parameter reachable from the root holds it, or a reachable declared delegate could have placed it unseen. The placement check does not depend on graph validation, and `AlgorithmRun.Result` repeats it when a result is read. The same analyzer serves independent runs, including concurrent ones, each with independent state. Results belong to the root scope and span every Cycle turn, and a `Share` does not narrow an analyzer result ([Shared configurations](/contributing/architecture/execution-resolution#shared-configurations) states how recording and lookup treat it).
 
-> Analyzer state belongs to the **run**, not to the algorithm/operator configuration and not to a short-lived operator execution instance.
+## Observation boundaries
 
-## Why analyzers need their own architecture
+Algorithms and operators remain unaware of analysis. Each operation declares its observation record and its `Invocations` source in files beside the operation. `AlgorithmObservation`, the algorithm's `Iterations` source, `ObservationSource<TObservation>` and `Observing` live in `HEAL.HeuristicLib.Inspection`. `Observing` passes observations to a callback and publishes no result, so content such as a meta-algorithm tracking its contenders can use it.
 
-Analyzer data has a different lifetime from normal operator or algorithm configuration.
+A source's observed algorithm or operator, which it receives on construction and matches by reference, identifies what it observes. Every operation and every algorithm offers a source; an operator implementing several operations offers each through a view typed to that operation. Operator observations follow successful invocations. Algorithm observations follow each yielded state, after interceptors have transformed it. Each observation names the observed configuration. Sources create the same observation wrapper for explicit `Observed` placement and for an analyzer's automatic placement.
 
-- **Configurations** are declarative and reusable.
-  - They should contain configuration and graph structure only.
-  - They must stay safe to reuse across multiple runs.
-- **Execution instances** are stateful execution objects.
-  - They may hold temporary state while something executes.
-  - Their lifetime is controlled by `ExecutionInstanceRegistry` and by meta-algorithms such as `CycleAlgorithm`.
-- **Analyzer state** is usually meaningful at the **run** level.
-  - quality curves
-  - genealogy graphs
-  - per-iteration statistics
-  - accumulated counters and traces
+Algorithm `Calls` observes the start and outcome of each executor call, including a call that yields no state. A Cycle turn is such a call of an inner algorithm, so that algorithm's `Calls` observe the turn. There is no separate observation-point mechanism.
 
-If analysis state were stored directly on a configuration, rerunning the same configuration would mix old and new results.
-If analysis state were stored only inside an observer/decorator execution instance, results would be tied to registry mechanics rather than to the logical run.
+Each operation's observation record keeps its domain names, such as `Parents` and `Offspring` in `MutationObservation<TCandidate>`. Observing executors snapshot each batch as a `ValueArray<T>`. The record reads the search space and problem at `ISearchSpace<TCandidate>` and `IProblem<TCandidate, ISearchSpace<TCandidate>>`, so it fits every run over the candidate. An algorithm observation is an `AlgorithmObservation<TCandidate, TSearchState>`, and an interceptor's observation reads the states at the search state its operation names. The observation wrapper therefore checks no run types; resolving an observed operator for a run it was not written for still fails, and the failure names that operator. Every operator and algorithm observation carries the search space and problem its executor was bound to, so a trace's function can rank by that problem's objective. A source of any other configuration may deliver any value; its trace reads it through a function like any other.
 
-That is why HeuristicLib models analyzers as **analyzer configurations + run-scoped analyzer states + run-owned analyzer result lookup**.
+The trace machinery names no operation; population traces extend algorithm iteration sources, while `Analyzer.BestSoFar` selects evaluator boundaries. An external operation declares the same observation record and source and is observed and traced exactly like a built-in one.
 
-## The three layers of the analyzer system
+An operation's observation record makes an executor report it through `IInvocationObservation.Wrap<TSearchState>`. An algorithm observation uses `IAlgorithmObservation.Wrap`, whose interface already names the search-state type. Both hooks receive the bound problem as `IProblem<TCandidate, ISearchSpace<TCandidate>>`. External operations construct boundary sources through `ObservationSource.Create`; source inheritance is limited to the library. The wrapper keeps no further state, and an algorithm's observation wrapper keeps no counter. Each executor numbers the iterations of its own call from 1, so `Iteration` restarts in each call, including every activation by a meta-algorithm, whether its executor is fresh or reused. Invocation-local previous states stay in the iterator.
 
-### 1) Analyzer configuration
+Observation reads inputs, outputs and progress while preserving the observed computation. An algorithm that adapts to measured work uses inspection data in its explicit control flow rather than reading an analyzer's result. Wrappers of your own may change behavior; the observation contract applies to inspection and analysis.
 
-An analyzer configuration is a reusable object that describes:
+## Clocks
 
-- what the analyzer observes
-- which operators it needs references to
-- how to create its analyzer run state and result for a run
+Counters and durations are configuration nodes that place nothing. Their `Clock` properties create `CounterClock` and `DurationClock` records that read the root accumulators, even when `Share` narrows ordinary resolution. The placement substitutions are `Counting` on operator, iteration and call sources, `CountingCandidates` on operator sources and `Timing` on operator and iteration sources; the explicit wrappers `Counted`, `CountedAlgorithm`, `Timed` and `TimedAlgorithm` state what is counted or measured. The caller lists a clock's placement after every analyzer that reads it, and rank lists genealogy after its iteration recording, so shared parts update once and before what reads them. [Choose a boundary and a clock](/guide/execution/observability-and-analysis#choose-a-boundary-and-a-clock) shows users how to select, place and read clocks.
 
-The contracts are:
+`Clock.Elapsed` needs no placement. `AlgorithmRun` measures each call that advances its retained iterator in `try`/`finally`, so a call that fails or is canceled counts too, and `RunResults` retains the elapsed value and stopwatch state for live reads. Resolution measures no time, so direct scope execution leaves `scope.Results.Elapsed` and `Clock.Elapsed` at zero.
 
-```csharp
-public interface IAnalyzer
-{
-  IAnalyzerRunState CreateAnalyzerState();
-}
+A custom clock implements `IClock<TTime>` and writes only the typed `CreateExecutionNode(ResolutionScope)`; the boxed construction delegates to it. Because `IClock<TTime>` has two configuration-node constructions, `results.Result` needs an explicit result type through it. Each instance has one root-owned reading per run, whose `Read()` may be called concurrently and must preserve the observed computation. A clock only reads. A clock that needs placement also implements `ISubstitution`, and the caller lists it after the analyzers that read it. A clock observing calls derives from `SubstitutionGroup`, places an `Observed` wrapper for itself and holds a private `Counter`. Its recorder increments the run's counter accumulator, and its reading reads that root accumulator.
 
-public interface IAnalyzer<out TResult> : IAnalyzer
-  where TResult : class
-{
-  new IAnalyzerRunState<TResult> CreateAnalyzerState();
-}
-```
+Equal clocks identify one trace axis and are deduplicated: two clocks of one counter or duration are equal, repeated `counter.Clock` reads are equal, as are `new ElapsedClock()` and `Clock.Elapsed`. A class clock without an equality override, such as the epoch clock, matches by reference.
 
-An analyzer configuration is still part of the **configuration graph**.
-It is reusable configuration information, not mutable execution state.
+## Trace analyzers
 
-### 2) Observation requirements
+`TraceAnalyzer<TObservation, TValue>` defines tracing over one or several sources of one observation type. Its per-run `Trace<TValue>` owns entries, retention progress, the value function and synchronization. Source extensions such as `evaluator.Invocations.Trace(value)` and multi-source `Analyzer.Trace(sources, value)` construct analyzers. A stateful value uses `Trace(createState, value)`, which creates one class state per run. A repeated boundary is observed once by configuration reference and observation type; separate operations remain separate boundaries.
 
-Analyzers do not mutate the configuration graph directly.
-Instead, analyzer states declare observation requirements through `RegisterObservations(ObservationPlan)`.
+A general trace composes sources, a function, retention and explicit clocks. It records no clock it was not given.
 
-An observation is registered at an **anchor**, which may be an operator or an algorithm.
+Trace functions are runtime delegates; they are neither comparable nor serializable values. A caller's delegate may deliberately capture shared mutable state, as developer guidelines § 4.8 allows; that state remains the caller's responsibility. Public trace construction never exposes an execution scope.
 
-Typical operator anchors are:
+Retention is an immutable policy that creates a per-result decider. Best-so-far state is created by the trace's per-run state factory. Neither is an execution configuration, and neither is resolved as a child through a scope.
 
-- `IEvaluator<...>`
-- `IInterceptor<...>`
-- `IMutator<...>`
-- `IRefiner<...>`
-- `ICrossover<...>`
-- `ISelector<...>`
-- `IReplacer<...>`
-- `ITerminator<...>`
-- `ICreator<...>`
+A best-so-far object keeps the running best across observations: `BestSoFar` the best objective vector, and `BestSoFar<T>` any other value, ranked by the objective vector its selector reads. The first directions it receives fix it; other directions or another dimensionality throw. Accumulation is an analyzer concern, not an operator role: summaries and accumulation are functions of the observation, and accumulation keeps its state in an object the function captures or in an `Aggregate` ([Accumulating analyzers](#accumulating-analyzers)).
 
-`IAlgorithm<...>` is also an anchor. It observes every search state the algorithm yields, that is, the end of each iteration after any interceptor has transformed it. Prefer it for analyses that only read the produced state, so users do not have to configure a placeholder interceptor to create an observation point. Anchor on an operator when the observation is about what that operator did — selection pressure, evaluation counts, crossover statistics — which cannot be derived from search states.
+A per-result `RetentionDecider<TValue>.Decide` returns `Append`, `ReplaceLatest` or `Skip`. Retention runs after the value function and never skips its computation; an unknown decision fails at collection.
 
-The concrete observable wrappers still do the actual callback work:
+## Accumulating analyzers
 
-- `ObservableAlgorithm<...>`
-- `ObservableEvaluator<...>`
-- `ObservableInterceptor<...>`
-- `ObservableMutator<...>`
-- `ObservableRefiner<...>`
-- `ObservableCrossover<...>`
-- `ObservableSelector<...>`
-- `ObservableReplacer<...>`
-- `ObservableTerminator<...>`
-- `ObservableCreator<...>`
+A trace keeps a history of immutable values. A mutable summary over one observation type uses `source.Aggregate(create, update)` or `Analyzer.Aggregate(sources, create, update)`. Each run owns an `Aggregate<TState>` whose `Value` is the plain state created by the factory. The result serializes updates, so the update function needs no synchronization. Reading live state during execution is the state type's concern. Retention and clocks do not apply to it: one current state has no moment of its own. These analyzers hold delegates, making configurations that hold them nonserializable. [Accumulating analyzers](/guide/execution/observability-and-analysis#accumulating-analyzers) shows an example.
 
-What analyzers contribute is the **declarative registration** of which anchor should be observed and with which callback.
+An `Observed` or `ObservedAlgorithm` wrapper holds its `Receiver`, an `IObservationReceiver<TObservation>`, and binds the recorder during construction. An analyzer implements this interface for every observation type it accepts; other placed nodes, such as clocks that observe, implement it too. A callback-only receiver may publish no result.
 
-### 3) Run-scoped analyzer state
+An analyzer over several observation types derives from `Analyzer<TResult>` and implements `IObservationReceiver<T>` for each type. Its `CreateExecutionNode(ResolutionScope)` creates an empty result implementing `IRunResult`, and each `CreateRecorder(RunResults)` looks it up with `results.Result(this)`. Experimental's `GenealogyAnalyzer` combines crossover, mutation and algorithm iteration observations to build a `GenealogyGraph`. Rank composes that analyzer, placing genealogy after its own iteration hook so the generation closes before ranks are read. Synchronization belongs to the run-created result or collector. Read a live front, genealogy graph, rank state or performance summary after execution has stopped; copying it on each read is not part of the contract.
 
-During execution, every analyzer gets **one analyzer run state per run**.
+## Objective comparison and publication
 
-That instance:
+Ranking uses the observed problem's objective unless the trace was given an `IComparer<ObjectiveVector>`. Comparers and `RequireTotalOrder` belong to the objective system. No implicit lexicographic fallback is supplied.
 
-- receives callbacks from all hook points that belong to that analyzer
-- owns observation registration
-- exposes the user-facing analyzer result
+An observation carries the problem because each observed executor is bound to it during construction. It does not carry the objective or a comparer: what the run optimizes is not part of what happened at the boundary, and a trace handed an objective when it is composed could rank by one the run does not use.
 
-The run-scoped contract is:
+Each trace result serializes value computation, retention and publication. A result collecting several concurrent boundaries must synchronize its updates.
 
-```csharp
-public interface IAnalyzerRunState
-{
-  void RegisterObservations(ObservationPlan observations);
-}
+The result lock protects concurrent collection and live reads. Trace storage is an ordinary list, copied when a snapshot or projection is requested. Clock readings are obtained once per result in a fixed column layout shared by every entry; each retained entry stores one row of boxed times.
 
-public interface IAnalyzerRunState<out TResult> : IAnalyzerRunState
-  where TResult : class
-{
-  TResult Result { get; }
-}
-```
+Entries contain immutable values. Stopping, canceling or failing a run leaves its results available.
 
-The usual authoring base combines analyzer configuration and run state setup:
+Analyzers, results and resolution scopes have no automatic disposal contract. Deferred execution can retain its scope and result table. Dependencies requiring cleanup need an explicit lifecycle owner.
 
-```csharp
-public abstract record Analyzer<TResult> : IAnalyzer<TResult>
-    where TResult : class
-{
-    public abstract TResult CreateInitialResult();
-    public abstract void RegisterObservations(ObservationPlan observations, TResult result);
-}
-```
+## Naming and placement
 
-Derive from `Analyzer<TResult>` for the common case where one result object holds all mutable analysis data. The base creates that result once when execution starts and registers observations against it. Implement `IAnalyzer<TResult>` directly only when custom run state behavior is required.
+An analyzer is named `...Analyzer`; its result is a trace, summary or domain accumulator, never another analyzer. Analyzers are immutable identity-bearing classes; result objects own collected data.
 
-## Ownership and lifetimes
+Ready-made analyzers are factories on `Analyzer`. Population traces remain source extensions. Keep the analyzer as the key for `run.Result(analyzer)`.
 
-### Analyzer owns reusable configuration
+The main package ships general-purpose traces. Specialized analysis belongs beside the concept it measures, following the package placement rules in § 9.6 of the [developer guidelines](/contributing/developer-guidelines).
 
-The analyzer configuration owns:
+## Placement, budgets and persistence
 
-- configuration
-- identity
-- references to operators it wants to observe
-- the logic for creating analyzer run state and result
+`CreateRun` places analyzers after budgets into the configuration it receives. A budget holds a copy of its algorithm ([Inspection and budgets](/contributing/architecture/execution-resolution#inspection-and-budgets)), so a source matches only what that configuration holds, and [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) states how users name the target. Ready-made default selections need no named target.
 
-It does **not** own mutable run results.
+An experiment trial does the same. It applies the substitutions once per parameter candidate, validates the result for each problem and parameter candidate unless validation is off, and runs the placement check for each trial. The trial retains the decoded configuration, and its algorithm run uses the resulting graph and owns the results. Reference-based sources must match nodes in the decoded graph. See [Experiments](/guide/execution/experiments#add-analysis).
 
-### Analyzer result owns mutable analysis data
+A substitution is never stored or serialized; what persists is the configuration it produced, an ordinary graph containing the placed nodes. What is placed must be data for persistence: delegates in traces, aggregates and callbacks prevent it (developer guidelines § 4.8). A substitution cannot be undone, so persist the configuration without the placed nodes before substituting if it is also needed. [Configurations](/guide/fundamentals/configurations#what-substitute-guarantees) states what this means for users.
 
-The analyzer result owns things like:
+## Best so far
 
-- current counters
-- in-progress aggregation for the current iteration
-- temporary buffers
-- best-so-far values while evaluations happen
-- a mutable genealogy graph being built during execution
+`Analyzer.BestSoFar<TCandidate>()` selects evaluators of that candidate type with no such evaluator anywhere among their declared descendants. It walks declared children only, never settings or delegates. With `Cached(E)` it observes `E` and counts actual evaluations, including evaluators within refiners. The group places observations, then its own candidate counter, and places no clocks. In one list a later part sits closer to its target, so a clock listed after the group includes the call; placed before it, a clock reads before the call. Each point includes its own batch and exposes `Evaluations`. Retention compares the running best candidate, recording improvements only by default. The analyzer's `Evaluations` counter is public, so an explicit placement can count inside the observer and a terminator can read the same count. The curve enumerates a snapshot, as does every general trace. [Best-so-far selection and placement](/guide/execution/observability-and-analysis#best-so-far-selection-and-placement) shows users how to name an evaluator, place the count explicitly and read the points.
 
-This result exists only for the current run.
+## Next
 
-### Run owns analyzer result lookup
-
-The `AlgorithmRun` creates one analyzer run state per analyzer configuration and stores that mapping.
-Users retrieve analyzer results through the run:
-
-```csharp
-var result = run.GetResult(analyzer);
-```
-
-`GetResult(...)` and `TryGetResult(...)` perform the typed state lookup.
-
-This makes analyzer retrieval:
-
-- independent of individual operator instances
-- independent of `ExecutionInstanceRegistry` reuse details
-- available through a stable run-level API
-
-## Execution flow
-
-### Run setup
-
-1. Create analyzer configurations.
-2. Create a run and attach the analyzers:
-
-```csharp
-var run = algorithm.CreateRun(problem, random)
-    .WithAnalyzer(analyzer1)
-    .WithAnalyzer(analyzer2);
-```
-
-3. The first call to `Stream()`, `Complete()` or `CompleteAsync()` starts execution and freezes analyzer setup.
-4. `AlgorithmRun` creates one analyzer state for each analyzer.
-5. Each analyzer state calls `RegisterObservations(...)`.
-6. `AlgorithmRun` collects those observation requests in an `ObservationPlan`.
-7. When the root registry or a child registry is created, `AlgorithmRun` installs the merged observation registrations into that registry. Child registries inherit those replacements from their parent registry.
-
-An algorithm run can be executed only once. Attaching an analyzer after execution has started throws.
-
-### Observation installation
-
-The observation plan stores merged observation entries.
-Those entries:
-
-- identify the original anchor they belong to, by reference
-- merge multiple analyzer subscriptions for the same anchor
-- register one observable replacement into an `ExecutionInstanceRegistry`
-
-This keeps analyzer registration declarative while avoiding deep wrapper chains when several analyzers observe the same anchor.
-
-Because an anchor is matched by reference, a copy produced by `with` is a different anchor. An analyzer registered against a configuration that is then copied observes nothing, which is why the run-level `TrackBestMedianWorst(out var analyzer)` form resolves its anchor from the run instead.
-
-Replacements only take effect where children are obtained through `ExecutionInstanceRegistry.Resolve`. A meta-algorithm that calls `CreateExecutionInstance` on a child algorithm itself bypasses the registry, and every analyzer anchored inside that child silently records nothing. See [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).
-
-### During execution
-
-1. The operator or algorithm performs its normal work.
-2. The observable wrapper invokes the analyzer callback.
-3. The analyzer callback updates its analyzer result.
-4. Users can inspect that result through `AlgorithmRun.GetResult(...)` during or after execution has started.
-
-There is currently **no separate publish step**. The analyzer run state exposes the result object directly through `IAnalyzerRunState<TResult>.Result`, and `AlgorithmRun.GetResult(...)` returns that result.
-
-## Why the run is the right scope
-
-`ExecutionInstanceRegistry` still matters, but it is not the right place to _own_ analysis data.
-
-A registry controls the lifetime of operator and algorithm execution instances.
-This is useful for:
-
-- shared sub-graphs
-- stateful operators
-- meta-algorithm decisions about reuse or reset
-
-But analyzers are usually intended to describe the full logical run.
-
-For example, with `CycleAlgorithm`:
-
-- operator execution instances may reset per cycle
-- or may persist per inner algorithm
-- but the analyzer result should still describe the whole run
-
-Because analyzer run states are created by `AlgorithmRun` and then registered into every relevant registry, analyzer scope stays stable even when execution registries change.
-
-## Configuration-side hooks vs execution-side logic
-
-An analyzer usually has two responsibilities that should stay separate.
-
-### Configuration side: what to observe
-
-This side answers:
-
-- Is the produced search state enough, so the algorithm itself is the anchor?
-- Which evaluator should I observe?
-- Which interceptor should I observe?
-- Do I need crossover, mutation, selector, replacer, creator, or terminator hooks?
-
-This is handled by the analyzer configuration holding references to the relevant anchors.
-
-### Execution side: what to do with the data
-
-This side answers:
-
-- What mutable result do I accumulate?
-- How do I combine several hook points into one analysis result?
-- What shape should users retrieve from the run?
-
-This is handled by the analyzer result.
-
-## Example patterns
-
-### Best quality
-
-`Analyzer.BestQuality(...)` observes evaluator events and stores the best evaluated candidate found during the run.
-
-Its analyzer result stores:
-
-- current best evaluated candidate
-
-### `BestMedianWorstAnalysis<T, ...>`
-
-This analyzer accepts both anchor kinds. It observes the search states an algorithm yields, an interceptor, or both, and stores one entry per observed iteration:
-
-- best evaluated candidate
-- median evaluated candidate
-- worst evaluated candidate
-
-### `GenealogyAnalysis<T, ...>`
-
-This analyzer combines several hook types:
-
-- crossover hooks
-- mutator hooks
-- interceptor hooks
-
-Its analyzer result builds a genealogy graph over time.
-
-## Retrieval model
-
-Consumers retrieve analyzer results from the run.
-
-Preferred pattern:
-
-```csharp
-var run = algorithm.CreateRun(problem, random)
-    .WithAnalyzer(
-        Analyzer.BestQuality(algorithm.Evaluator),
-        out var bestQuality);
-
-var finalState = run.Complete();
-var result = run.GetResult(bestQuality);
-```
-
-Avoid treating observable wrapper instances or execution registries as the result container.
-The registry is an execution detail; the run is the public analyzer-result scope.
-
-## Design rules for analyzer authors
-
-### Do
-
-- keep analyzer configurations reusable and configuration-only
-- put mutable analysis data into the analyzer result
-- register observation needs through `RegisterObservations(...)`
-- retrieve analyzer results through `AlgorithmRun.GetResult(...)`
-- rely on observable wrappers as the callback mechanism
-- anchor on the algorithm when the analysis only reads the produced search state
-
-### Do not
-
-- store mutable analysis results directly on configurations
-- treat observable wrapper instances as the permanent home of results
-- rely on registry reuse details for analyzer lifetime
-- mutate algorithm outcomes from analyzer callbacks
-
-## Relationship to observable wrappers
-
-The analyzer system does **not** replace observable wrappers.
-Instead:
-
-- observable wrappers are the **hooking mechanism**
-- analyzer run states connect observations to **run-scoped result objects**
-- `ObservationPlan` is the **bridge** between declarative analyzer registration and registry-specific wrapper installation
-
-This keeps concerns separate:
-
-- wrappers define _where_ callbacks happen
-- analyzers define _which_ callbacks they want
-- analyzer results define _how_ data is accumulated
-
-## When to use analyzers vs plain observable operators
-
-The distinction is:
-
-- an **observable operator or algorithm** is a callback hook on one wrapped configuration
-- an **analyzer** is a run-scoped analysis object that uses those hooks
-
-In practice:
-
-- choose **observable operators** when you want quick, local instrumentation
-  - logging
-  - counters
-  - ad-hoc diagnostics
-  - integration with an external sink that already owns the collected data
-- choose **analyzers** when you want reusable analysis that conceptually belongs to the whole run
-  - quality curves
-  - genealogy
-  - traces spanning several hook points
-  - analysis that must stay stable across registry recreation in meta-algorithms
-
-If you only need a callback, `ObserveWith(...)` is often enough.
-If you want users to retrieve a coherent result object from `AlgorithmRun`, prefer an analyzer.
-
-## Related pages
-
-- [Observability and analysis](/guide/execution/observability-and-analysis)
-- [Configuration vs execution instances](/contributing/architecture/execution-instances)
-- [Running algorithms](/guide/execution/running-algorithms)
-- [Write a meta-algorithm](/guide/extending/writing-meta-algorithms)
+[Observability and analysis](/guide/execution/observability-and-analysis) gives user examples. [Layering](/contributing/architecture/layering#run-ownership) describes the run lifecycle that analyzers read from.

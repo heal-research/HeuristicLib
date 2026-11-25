@@ -18,7 +18,6 @@ using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 
 var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
 
@@ -36,7 +35,7 @@ var algorithm = GeneticAlgorithm.Create(
 var random = RandomNumberGenerator.Create(seed: 123);
 var generation = 0;
 
-await foreach (var state in algorithm.Stream(problem, random))
+await foreach (var state in algorithm.RunStreaming(problem, random))
 {
     generation++;
     if (generation % 50 != 0) continue;
@@ -73,7 +72,7 @@ A heuristic search does not guarantee the optimum in one run. Across twenty seed
 
 ## Why these components fit
 
-`RealVectorSearchSpace` provides the bounds defined by `RastriginFunction`. `UniformDistributedCreator` samples the initial population inside those bounds. Blend crossover combines real valued parents while Gaussian mutation makes local numeric changes.
+`BoundedRealVectorSearchSpace` provides the bounds defined by `RastriginFunction`. `UniformDistributedCreator` samples the initial population inside those bounds. Blend crossover combines real valued parents while Gaussian mutation makes local numeric changes.
 
 Tournament selection adds selection pressure without requiring objective values to be transformed into probabilities. One elite preserves the best candidate found so far.
 

@@ -5,9 +5,7 @@ namespace HEAL.HeuristicLib.Numerics;
 /// </summary>
 /// <remarks>
 /// An operation declares how many it needs through <see cref="IUnaryOperationDefinition.ScratchSpanCount"/> or
-/// <see cref="IBinaryOperationDefinition.ScratchSpanCount"/>, and whoever runs it reserves that many. Passing them as a
-/// counted collection rather than as one span is what makes the declared count real: a single span parameter
-/// silently ignores any operation that asks for two.
+/// <see cref="IBinaryOperationDefinition.ScratchSpanCount"/>, and whoever runs it reserves that many.
 /// </remarks>
 internal readonly ref struct ScratchSpans
 {

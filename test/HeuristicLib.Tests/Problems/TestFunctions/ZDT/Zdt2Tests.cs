@@ -1,5 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
-using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+using HEAL.HeuristicLib.Problems.TestFunctions;
 
 namespace HEAL.HeuristicLib.Tests.Problems.TestFunctions.ZDT;
 

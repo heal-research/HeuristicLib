@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class RosenbrockFunction(int dimension) : IGradientTestFunction
 {

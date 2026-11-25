@@ -1,81 +1,129 @@
-using System.Collections.Concurrent;
-using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
-using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-// ToDo: A DynamicProblem should be, foremost, a Problem. It "being" also an Observer, is an interesting way of implementing about it, but we have to think if this is really what we want.
-public abstract class DynamicProblem<TCandidate, TSearchSpace> :
-    SingleSolutionProblem<TCandidate, TSearchSpace>,
+/// <summary>
+/// A problem whose environment changes while the run searches it.
+/// </summary>
+/// <remarks>
+/// The environment advances in epochs its <see cref="IEpochSchedule"/> decides, and <see cref="UpdatePolicy"/> decides how
+/// much work finishes before a due update is applied. Batching a problem's own evaluation is what gives it those boundaries, which
+/// is why this does not inherit the batching of <see cref="SingleSolutionProblem{TSelf, TCandidate, TSearchSpace}"/>. One
+/// evaluation is always scored by exactly one environment: an update waits behind the evaluations in flight, and the
+/// ones that follow wait behind it.
+/// </remarks>
+public abstract class DynamicProblem<TSelf, TCandidate, TSearchSpace> :
+    Problem<TSelf, TCandidate, TSearchSpace>,
     IDynamicProblem<TCandidate, TSearchSpace>,
-    IEvaluatorObserver<TCandidate, TSearchSpace, DynamicProblem<TCandidate, TSearchSpace>>,
-    IInterceptorObserver<TCandidate, TSearchSpace, DynamicProblem<TCandidate, TSearchSpace>, ISearchState>,
+    IUpdateRequestable,
+    IIterationUpdatable,
     IDisposable
+    where TSelf : Problem<TSelf, TCandidate, TSearchSpace>
     where TSearchSpace : class, ISearchSpace<TCandidate>
 {
-    private readonly ConcurrentBag<(TCandidate candidate, ObjectiveVector objective, EvaluationTiming timing)> evaluationLog = [];
     private readonly ReaderWriterLockSlim rwLock = new();
+    private readonly Lock epochLock = new();
     private readonly UpdatePolicy updatePolicy;
+    private int pendingUpdates;
     private bool disposed;
 
-    protected DynamicProblem(ObjectiveDirections objective, TSearchSpace searchSpace, IRandomNumberGenerator environmentRandom, UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation, int epochLength = int.MaxValue) : base(objective, searchSpace)
+    protected DynamicProblem(ObjectiveDirections objective, TSearchSpace searchSpace, IRandomNumberGenerator environmentRandom, IEpochSchedule epochSchedule, UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation) : base(objective, searchSpace)
     {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochLength);
         this.updatePolicy = updatePolicy;
-        EpochClock = new EvaluationClock(epochLength);
+        EpochSchedule = epochSchedule;
         EnvironmentRandom = environmentRandom;
     }
 
-    public EvaluationClock EpochClock { get; }
+    public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
+
+    public IEpochSchedule EpochSchedule { get; }
+
+    /// <summary>
+    /// The environment version currently in effect, which is the number of updates that have been applied.
+    /// </summary>
+    private int currentEpoch;
+
+    public int CurrentEpoch => Volatile.Read(ref currentEpoch);
+
     protected IRandomNumberGenerator EnvironmentRandom { get; }
 
-    public event EventHandler<IReadOnlyList<(TCandidate, ObjectiveVector, EvaluationTiming)>>? OnEvaluation;
-
-    // this method will be called in parallel
-    public override ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random)
+    /// <summary>
+    /// Evaluates one batch of candidates.
+    /// </summary>
+    public sealed override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-        // PredictAndTrain in parallel read lock
-        var timing = EpochClock.IncreaseCount();
 
+        // Reads as the wrong end, but this is what "after each batch" means: the update is postponed past the batch
+        // and everything following it, and here is the last moment it can still be postponed to. Applying it here
+        // rather than when the previous batch ended leaves that batch readable against the environment that scored it.
+        ApplyUpdatesDueAt(UpdatePolicy.AfterEachBatchEvaluation);
+
+        return BatchExecution.Execute(candidates, Evaluate, random, Concurrency);
+    }
+
+    /// <summary>
+    /// Evaluates one candidate of a batch. Private, because evaluating outside a batch would skip the boundaries the
+    /// update policy applies its updates at.
+    /// </summary>
+    // this method will be called in parallel
+    private ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random)
+    {
+        ApplyUpdatesDueAt(UpdatePolicy.AfterEachEvaluation);
+
+        // Counted under the read lock, so the recorded environment version is the one that scores this candidate. An
+        // update taking the write lock cannot interleave between counting and scoring.
         rwLock.EnterReadLock();
-        ObjectiveVector r;
         try
         {
-            r = Evaluate(candidate, random, timing);
+            return Evaluate(candidate, random, ReportEvaluation());
         }
-        finally { rwLock.ExitReadLock(); }
-
-        evaluationLog.Add((candidate, r, timing));
-
-        if (updatePolicy == UpdatePolicy.Asynchronous)
+        finally
         {
-            ResolvePendingUpdates();
-        }
-
-        return r;
-    }
-
-    public abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, EvaluationTiming timing);
-
-    public void AfterEvaluation(IReadOnlyList<ObjectiveVector> objectiveVectors, IReadOnlyList<TCandidate> candidates, TSearchSpace searchSpace, DynamicProblem<TCandidate, TSearchSpace> problem)
-    {
-        OnEvaluation?.Invoke(this, evaluationLog.OrderBy(x => x.timing.EpochCount).ToArray());
-        evaluationLog.Clear();
-        if (updatePolicy == UpdatePolicy.AfterEvaluation)
-        {
-            ResolvePendingUpdates();
+            rwLock.ExitReadLock();
         }
     }
 
-    public void AfterInterception(ISearchState newState, ISearchState currentState, ISearchState? previousState, TSearchSpace searchSpace, DynamicProblem<TCandidate, TSearchSpace> problem)
+    /// <summary>
+    /// Asks the schedule whether an epoch has ended, and applies what is due when this boundary is the one the update
+    /// policy waits for.
+    /// </summary>
+    /// <remarks>
+    /// Asking here rather than only where work is reported is what lets a schedule end an epoch on something other than
+    /// the work itself, such as elapsed time: nothing has to be evaluated for the problem to notice.
+    /// </remarks>
+    private void ApplyUpdatesDueAt(UpdatePolicy boundary)
     {
-        if (updatePolicy == UpdatePolicy.AfterInterception)
+        lock (epochLock)
         {
-            ResolvePendingUpdates();
+            TakeDueEpochs();
+        }
+
+        if (updatePolicy == boundary)
+        {
+            ApplyPendingUpdates();
+        }
+    }
+
+    /// <summary>
+    /// Turns the epochs the schedule says have ended into pending updates.
+    /// </summary>
+    private void TakeDueEpochs() => pendingUpdates += EpochSchedule.TakeDueEpochs();
+
+    /// <summary>
+    /// Scores one candidate against the environment version <paramref name="epoch"/> names. Protected, because calling
+    /// it from outside would score a candidate the epoch schedule never counted.
+    /// </summary>
+    protected abstract ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, int epoch);
+
+    void IIterationUpdatable.CompleteIteration()
+    {
+        if (updatePolicy == UpdatePolicy.AfterEachIteration)
+        {
+            ApplyPendingUpdates();
         }
     }
 
@@ -97,16 +145,38 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
 
     protected abstract void Update();
 
-    public void UpdateOnce()
+    /// <summary>
+    /// Makes an update due regardless of what the schedule would have decided, and starts a new epoch.
+    /// </summary>
+    /// <remarks>
+    /// The update policy still decides when it is applied. Use <see cref="UpdateOnce"/> to advance and apply in one go.
+    /// </remarks>
+    internal void RequestUpdate()
     {
-        EpochClock.AdvanceEpoch();
-        ResolvePendingUpdates();
+        lock (epochLock)
+        {
+            pendingUpdates++;
+            EpochSchedule.Restart();
+        }
     }
 
-    private void ResolvePendingUpdates()
+    void IUpdateRequestable.RequestUpdate(int expectedEpoch)
+    {
+        lock (epochLock)
+        {
+            if (CurrentEpoch == expectedEpoch)
+                RequestUpdate();
+        }
+    }
+
+
+    /// <summary>
+    /// Applies the updates that are due, advancing <see cref="CurrentEpoch"/> once for each applied update.
+    /// </summary>
+    internal void ApplyPendingUpdates()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-        if (EpochClock.PendingEpochs == 0)
+        if (pendingUpdates == 0)
         {
             return; // pre-check
         }
@@ -114,8 +184,71 @@ public abstract class DynamicProblem<TCandidate, TSearchSpace> :
         rwLock.EnterWriteLock();
         try
         {
-            EpochClock.ResolvePendingEpochs(Update);
+            lock (epochLock)
+            {
+                while (pendingUpdates > 0)
+                {
+                    Update();
+                    pendingUpdates--;
+                    Interlocked.Increment(ref currentEpoch);
+                }
+            }
         }
-        finally { rwLock.ExitWriteLock(); }
+        finally
+        {
+            rwLock.ExitWriteLock();
+        }
     }
+
+    /// <summary>
+    /// Advances the environment and applies the update immediately, bypassing the schedule.
+    /// </summary>
+    /// <remarks>
+    /// Internal, because when the environment advances is the schedule's decision. This exists for driving a problem
+    /// deterministically in a test, which the schedule cannot express: it is asked whether an epoch has ended only when
+    /// work is reported, so it has no way to say "now" while nothing is being evaluated.
+    /// </remarks>
+    internal void UpdateOnce()
+    {
+        RequestUpdate();
+        ApplyPendingUpdates();
+    }
+
+    /// <summary>
+    /// Reports one evaluation to the schedule and returns the environment version scoring it.
+    /// </summary>
+    private int ReportEvaluation()
+    {
+        lock (epochLock)
+        {
+            EpochSchedule.RecordProgress();
+            TakeDueEpochs();
+
+            return CurrentEpoch;
+        }
+    }
+}
+
+/// <summary>
+/// Lets this assembly make an update due on a dynamic problem it knows only through <see cref="IDynamicProblem{TCandidate, TSearchSpace}"/>.
+/// </summary>
+/// <remarks>
+/// Internal for the reason <c>RequestUpdate</c> is: when the environment advances is the schedule's decision.
+/// </remarks>
+internal interface IUpdateRequestable
+{
+    void RequestUpdate(int expectedEpoch);
+}
+
+/// <summary>
+/// Lets <see cref="IterationUpdatingAlgorithm{TCandidate, TSearchState}"/> end an iteration on the dynamic problem of the
+/// call it wraps, which it knows only by the run's problem type.
+/// </summary>
+/// <remarks>
+/// Internal, because an iteration ends when the algorithm yields a state, not when a caller says so.
+/// </remarks>
+internal interface IIterationUpdatable
+{
+    /// <summary>Applies the pending updates if the update policy waits for the end of an iteration.</summary>
+    void CompleteIteration();
 }

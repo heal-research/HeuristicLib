@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Encodings.Vectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Random;
 
@@ -12,6 +13,13 @@ public record RoundedNormalOnePositionMutator
     /// Standard deviations per dimension. A scalar is broadcast to every dimension.
     /// </summary>
     public RealVector Sigma { get; init; } = new(1.0);
+
+    public static Parameter<RoundedNormalOnePositionMutator, RealVector> SigmaParameter { get; } =
+        new(nameof(Sigma), static mutator => mutator.Sigma, static (mutator, value) => mutator with { Sigma = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [SigmaParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override IntegerVector MutateCandidate(IntegerVector parent, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
         Mutate(parent, random, searchSpace, Sigma);

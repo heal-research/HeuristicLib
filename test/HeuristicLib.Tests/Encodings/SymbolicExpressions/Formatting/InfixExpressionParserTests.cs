@@ -166,7 +166,7 @@ public sealed class InfixExpressionParserTests
     public void TryParse_ReturnsTheParsedExpressionOrFalse()
     {
         InfixExpressionParser.TryParse("x + 2", out var expression).ShouldBeTrue();
-        expression.ToInfixString().ShouldBe("(x + 2)");
+        expression.ShouldNotBeNull().ToInfixString().ShouldBe("(x + 2)");
 
         InfixExpressionParser.TryParse("x +", out expression).ShouldBeFalse();
         expression.ShouldBeNull();
@@ -202,7 +202,7 @@ public sealed class InfixExpressionParserTests
     public void TryParseDraft_ReturnsTheDraftOrFalse()
     {
         InfixExpressionParser.TryParseDraft("x + 2", out var draft).ShouldBeTrue();
-        draft.Build().ToInfixString().ShouldBe("(x + 2)");
+        draft.ShouldNotBeNull().Build().ToInfixString().ShouldBe("(x + 2)");
 
         InfixExpressionParser.TryParseDraft("x +", out draft).ShouldBeFalse();
         draft.ShouldBeNull();

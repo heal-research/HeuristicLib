@@ -51,7 +51,7 @@ The search space limits tree size and specifies which symbols may occur. The pro
 var algorithm = GeneticAlgorithm.Create(
     new RampedHalfAndHalfTreeCreator(),
     new SubtreeCrossover(),
-    ChooseOneMutator.Create(
+    ChoosePerItem.Create(
         new NodeReplacementMutator(),
         new LocalPerturbationMutator(),
         new SubtreeMutator()),
@@ -70,7 +70,7 @@ The creator generates trees of different shapes and depths. Crossover exchanges 
 ## Run and use the best model
 
 ```csharp
-var finalState = await algorithm.CompleteAsync(
+var finalState = await algorithm.RunToCompletionAsync(
     problem,
     RandomNumberGenerator.Create(seed: 42));
 

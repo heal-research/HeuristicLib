@@ -121,8 +121,6 @@ public class CrowdingDistanceTests
     };
 
         var replacer = new ParetoCrowdingReplacer<int>(true);
-
-        // Adjust this "objective" creation to your codebase (min/min assumed here)
         var objective = MultiObjective.Create(false, false);
 
         var result = replacer.Replace(previous, offspring, objective, previous.Length, null!).ToList();

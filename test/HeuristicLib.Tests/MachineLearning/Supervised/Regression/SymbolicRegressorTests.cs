@@ -25,7 +25,7 @@ public sealed class SymbolicRegressorTests
         var regressor = new SymbolicRegressor(expression, "estimate");
         var inputs = DataFrame.FromMatrix(
             ["x0"],
-            new double[,]
+            new[,]
             {
                 { 1.0 },
                 { 2.0 }
@@ -46,14 +46,14 @@ public sealed class SymbolicRegressorTests
             (Variable("x0") + FixedConstant(2.0) * Variable("x1")).Build());
         var x0ThenX1 = DataFrame.FromMatrix(
             ["x0", "x1"],
-            new double[,]
+            new[,]
             {
                 { 1.0, 3.0 },
                 { 2.0, 4.0 }
             });
         var x1ThenX0 = DataFrame.FromMatrix(
             ["x1", "x0"],
-            new double[,]
+            new[,]
             {
                 { 3.0, 1.0 },
                 { 4.0, 2.0 }
@@ -69,7 +69,7 @@ public sealed class SymbolicRegressorTests
         var regressor = new SymbolicRegressor(Variable("x0").Build());
         var inputs = DataFrame.FromMatrix(
             ["x0"],
-            new double[,]
+            new[,]
             {
                 { -2.0 },
                 { 0.0 },
@@ -86,7 +86,7 @@ public sealed class SymbolicRegressorTests
     public void Predict_RejectsMismatchedDestinationLength()
     {
         var regressor = new SymbolicRegressor(Variable("x0").Build());
-        var inputs = DataFrame.FromMatrix(["x0"], new double[,] { { 1.0 } });
+        var inputs = DataFrame.FromMatrix(["x0"], new[,] { { 1.0 } });
 
         Should.Throw<ArgumentException>(() => regressor.Predict(inputs, new double[2]));
     }
@@ -97,7 +97,7 @@ public sealed class SymbolicRegressorTests
         var symbol = new CountingConstantSymbol();
         var expression = new ExpressionTree(new PayloadlessTerminalExpressionNode(symbol));
         var regressor = new SymbolicRegressor(expression);
-        var inputs = DataFrame.FromMatrix(["x"], new double[,] { { 0.0 }, { 0.0 } });
+        var inputs = DataFrame.FromMatrix(["x"], new[,] { { 0.0 }, { 0.0 } });
 
         regressor.Predict(inputs);
         regressor.Predict(inputs);

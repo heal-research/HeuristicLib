@@ -1,4 +1,4 @@
-using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -12,6 +12,13 @@ public record TournamentSelector<TCandidate>
 {
     public int TournamentSize { get; init; }
 
+    public static Parameter<TournamentSelector<TCandidate>, int> TournamentSizeParameter { get; } =
+        new(nameof(TournamentSize), static selector => selector.TournamentSize, static (selector, value) => selector with { TournamentSize = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [TournamentSizeParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public TournamentSelector(int tournamentSize)
     {
         TournamentSize = tournamentSize;
@@ -23,21 +30,18 @@ public record TournamentSelector<TCandidate>
 
 public static class TournamentSelector
 {
-    public static TournamentSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int tournamentSize)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(tournamentSize);
+    public static TournamentSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, int tournamentSize) => new(tournamentSize);
 
-    public static TournamentSelector<TCandidate> For<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm, int tournamentSize)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState => new(tournamentSize);
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, int tournamentSize)
     {
         return Enumerable
-               .Range(0, count)
-               .Select(_ => random.NextInts(tournamentSize, population.Count)
-                                  .Select(i1 => population[i1])
-                                  .MinBy(participant => participant.ObjectiveVector, objective.TotalOrderComparer)!)
-               .ToArray();
+            .Range(0, count)
+            .Select(_ => random
+                .NextInts(tournamentSize, population.Count)
+                .Select(i1 => population[i1])
+                .MinBy(participant => participant.ObjectiveVector, objective.TotalOrderComparer)!
+            )
+            .ToArray();
     }
 }

@@ -23,12 +23,12 @@ A container using less material and holding more is strictly better, so it domin
 Two decisions, radius and height, so a candidate is a `RealVector` of length two. Evaluation returns two values instead of one.
 
 ```csharp
-var searchSpace = new RealVectorSearchSpace(
+var searchSpace = new BoundedRealVectorSearchSpace(
     length: 2,
     minimum: [2.0, 2.0],
     maximum: [12.0, 25.0]);
 
-var problem = new FuncProblem<RealVector, RealVectorSearchSpace>(
+var problem = new FuncProblem<RealVector, BoundedRealVectorSearchSpace>(
     (RealVector candidate) =>
     {
         var radius = candidate[0];
@@ -67,7 +67,7 @@ The population size is also the resolution of your answer. A hundred candidates 
 ## Run and read the front
 
 ```csharp
-var finalState = await algorithm.CompleteAsync(problem, RandomNumberGenerator.Create(seed: 5));
+var finalState = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(seed: 5));
 
 var front = ParetoFront.ExtractFrom(finalState.Population.EvaluatedCandidates, problem.Objective)
     .OrderBy(candidate => candidate.ObjectiveVector[0])

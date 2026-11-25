@@ -2,7 +2,7 @@
 
 This page records the high level capability baseline for HeuristicLib. It states what the library must support without defining the architecture or repeating individual system contracts.
 
-Use the [Glossary](/guide/glossary) for terminology, [Core concepts](/guide/fundamentals/core-concepts) for the public model and the focused topic pages for detailed behavior. Incomplete work and unresolved decisions belong in `plans/developer-backlog.md`.
+Use the [Glossary](/guide/glossary) for terminology, [Core concepts](/guide/fundamentals/core-concepts) for the public model and the focused topic pages for detailed behavior.
 
 ## Purpose and scope
 
@@ -31,7 +31,7 @@ Use the [Glossary](/guide/glossary) for terminology, [Core concepts](/guide/fund
 - Support algorithm and operator composition where the combined semantics are clear.
 - Support multi population and layered workflows.
 - Preserve static compatibility between candidates, search spaces, problems, algorithms and operators where practical.
-- Treat evaluator output as the authoritative evaluated candidate, so evaluator driven repair, refinement, caching and dynamic problem behavior can be expressed without mutating input candidates.
+- Treat evaluator output as the objective vectors of the candidates it received, so caching, retry and dynamic problem behavior can be expressed without mutating input candidates. Candidates change only through explicit operators such as refiners.
 
 ### Execution
 
@@ -92,5 +92,3 @@ The requirements should be validated through representative workflows rather tha
 - grids and repeated experiments
 - domain workflows such as symbolic regression
 - external language and evaluation integration
-
-Detailed implementation gaps and open design decisions are tracked in `plans/developer-backlog.md`.

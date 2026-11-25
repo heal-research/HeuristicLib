@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
@@ -21,45 +22,55 @@ public static class MetaAlgorithmTestHelpers
 
 public sealed record CountingResolutionEvaluator : Evaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
 {
-    public int InstanceCount { get; private set; }
+    public int ExecutionCount { get; private set; }
 
-    public override IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    // Counts private data construction for each executor.
+    protected override IEvaluationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, TRunSearchState> scope)
     {
-        InstanceCount++;
-        return new Instance();
+        ExecutionCount++;
+        return new Executor(scope.Problem);
     }
 
-    private sealed class Instance : EvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+    private sealed class Executor(IProblem<int, DummySearchSpace<int>> problem) : EvaluationExecutor<int>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
             problem.Evaluate(candidates, random).ToArray();
     }
+
 }
 
-public sealed record CountingInstanceAlgorithm(int Increment, IEvaluator<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> Evaluator)
-    : Algorithm<CountingInstanceAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+public sealed record CountingExecutionAlgorithm(int Increment, IOperator<Evaluation, int> Evaluator)
+    : Algorithm<CountingExecutionAlgorithm, int, PopulationState<int>>
 {
-    public int InstanceCount { get; private set; }
+    public int ExecutionCount { get; private set; }
 
-    public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+    public static Parameter<CountingExecutionAlgorithm, IOperator<Evaluation, int>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), EvaluatorParameter];
+
+    // Counts private data construction for each executor.
+    protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
     {
-        InstanceCount++;
-        return new Instance(Increment, instanceRegistry.Resolve(Evaluator));
+        ExecutionCount++;
+        return new Executor(Increment, scope.Resolve(Evaluator));
     }
 
-    private sealed class Instance(int increment, IEvaluatorInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> evaluator)
-        : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+    private sealed class Executor(int increment, IEvaluationExecutor<int> evaluator)
+        : AlgorithmExecutor<PopulationState<int>>
     {
-        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
 
             var current = initialState?.Population.EvaluatedCandidates.Single().Candidate ?? 0;
             var next = current + increment;
-            var objectiveVector = evaluator.Evaluate([next], random, problem.SearchSpace, problem).Single();
+            var objectiveVector = evaluator.Evaluate([next], random).Single();
 
             yield return Population.From([next.ToEvaluated(objectiveVector)]).ToPopulationState();
             await Task.CompletedTask;
         }
     }
+
 }

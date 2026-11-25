@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -12,6 +13,16 @@ public record ParetoCrowdingTournamentSelector<TCandidate>
     public int TournamentSize { get; init; } = 2;
     public bool DominateOnEqualities { get; init; }
 
+    public static Parameter<ParetoCrowdingTournamentSelector<TCandidate>, int> TournamentSizeParameter { get; } =
+        new(nameof(TournamentSize), static selector => selector.TournamentSize, static (selector, value) => selector with { TournamentSize = value });
+
+    public static Parameter<ParetoCrowdingTournamentSelector<TCandidate>, bool> DominateOnEqualitiesParameter { get; } =
+        new(nameof(DominateOnEqualities), static selector => selector.DominateOnEqualities, static (selector, value) => selector with { DominateOnEqualities = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [TournamentSizeParameter, DominateOnEqualitiesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public ParetoCrowdingTournamentSelector(bool dominateOnEqualities)
     {
         DominateOnEqualities = dominateOnEqualities;
@@ -23,8 +34,7 @@ public record ParetoCrowdingTournamentSelector<TCandidate>
 
 public static class ParetoCrowdingTournamentSelector
 {
-    public static ParetoCrowdingTournamentSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool dominateOnEqualities, int tournamentSize = 2)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(dominateOnEqualities) { TournamentSize = tournamentSize };
+    public static ParetoCrowdingTournamentSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, bool dominateOnEqualities, int tournamentSize = 2) => new(dominateOnEqualities) { TournamentSize = tournamentSize };
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, bool dominateOnEqualities, int tournamentSize = 2)
     {

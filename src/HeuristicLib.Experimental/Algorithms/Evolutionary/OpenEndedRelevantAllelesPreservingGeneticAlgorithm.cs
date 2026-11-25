@@ -7,61 +7,103 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>
-    : IterativeAlgorithm<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSearchSpace, TProblem>, TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>
+    : IterativeAlgorithm<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, TCandidate, PopulationState<TCandidate>>
 {
     private double Strictness { get; } = 1.0;
 
     public required int PopulationSize { get; init; }
-    public required ICreator<TCandidate, TSearchSpace, TProblem> Creator { get; init; }
-    public required ICrossover<TCandidate, TSearchSpace, TProblem> Crossover { get; init; }
-    public required IMutator<TCandidate, TSearchSpace, TProblem> Mutator { get; init; }
-    public required ISelector<TCandidate, TSearchSpace, TProblem> Selector { get; init; }
-    public IEvaluator<TCandidate, TSearchSpace, TProblem> Evaluator { get; init; } = new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>();
+    public required IOperator<Creation, TCandidate> Creator { get; init; }
+    public required IOperator<Crossover, TCandidate> Crossover { get; init; }
+    public required IOperator<Mutation, TCandidate> Mutator { get; init; }
+    public required IOperator<Selection, TCandidate> Selector { get; init; }
+    public IOperator<Evaluation, TCandidate> Evaluator { get; init; } = new ProblemEvaluator<TCandidate>();
     public int Elites { get; init; } = 1;
     public required int MaxEffort { get; init; }
-    public IRefiner<TCandidate, TSearchSpace, TProblem>? Refiner { get; init; }
-
+    public IOperator<Refinement, TCandidate>? Refiner { get; init; }
     /// <summary>
     /// Gets the generation limit, or <see langword="null"/> for no limit. The expected value is positive.
     /// </summary>
     /// <remarks>A nonpositive limit completes before the first generation is produced.</remarks>
     public int? MaximumGenerations { get; init; }
 
-    protected override IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry, IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? resolvedInterceptor) =>
-        new Instance(resolvedInterceptor, instanceRegistry.Resolve(Evaluator), instanceRegistry.Resolve(Creator), instanceRegistry.Resolve(Crossover), instanceRegistry.Resolve(Mutator), instanceRegistry.Resolve(Selector), instanceRegistry.ResolveOptional(Refiner), PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness);
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, int> PopulationSizeParameter { get; } =
+        new(nameof(PopulationSize), static algorithm => algorithm.PopulationSize, static (algorithm, value) => algorithm with { PopulationSize = value });
 
-    private sealed class Instance(
-        IInterceptorInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>? interceptor,
-        IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> evaluator,
-        ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator,
-        ICrossoverInstance<TCandidate, TSearchSpace, TProblem> crossover,
-        IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator,
-        ISelectorInstance<TCandidate, TSearchSpace, TProblem> selector,
-        IRefinerInstance<TCandidate, TSearchSpace, TProblem>? refiner,
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, IOperator<Creation, TCandidate>> CreatorParameter { get; } =
+        new(nameof(Creator), static algorithm => algorithm.Creator, static (algorithm, value) => algorithm with { Creator = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, IOperator<Crossover, TCandidate>> CrossoverParameter { get; } =
+        new(nameof(Crossover), static algorithm => algorithm.Crossover, static (algorithm, value) => algorithm with { Crossover = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, IOperator<Mutation, TCandidate>> MutatorParameter { get; } =
+        new(nameof(Mutator), static algorithm => algorithm.Mutator, static (algorithm, value) => algorithm with { Mutator = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, IOperator<Selection, TCandidate>> SelectorParameter { get; } =
+        new(nameof(Selector), static algorithm => algorithm.Selector, static (algorithm, value) => algorithm with { Selector = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, IOperator<Evaluation, TCandidate>> EvaluatorParameter { get; } =
+        new(nameof(Evaluator), static algorithm => algorithm.Evaluator, static (algorithm, value) => algorithm with { Evaluator = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, int> ElitesParameter { get; } =
+        new(nameof(Elites), static algorithm => algorithm.Elites, static (algorithm, value) => algorithm with { Elites = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, int> MaxEffortParameter { get; } =
+        new(nameof(MaxEffort), static algorithm => algorithm.MaxEffort, static (algorithm, value) => algorithm with { MaxEffort = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, IOperator<Refinement, TCandidate>?> RefinerParameter { get; } =
+        new(nameof(Refiner), static algorithm => algorithm.Refiner, static (algorithm, value) => algorithm with { Refiner = value });
+
+    public static Parameter<OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate>, int?> MaximumGenerationsParameter { get; } =
+        new(nameof(MaximumGenerations), static algorithm => algorithm.MaximumGenerations, static (algorithm, value) => algorithm with { MaximumGenerations = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [PopulationSizeParameter, CreatorParameter, CrossoverParameter, MutatorParameter, SelectorParameter, EvaluatorParameter, ElitesParameter, MaxEffortParameter, RefinerParameter, MaximumGenerationsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IterativeAlgorithmExecutor<PopulationState<TCandidate>> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>> scope)
+    {
+        var interceptor = scope.ResolveOptional(Interceptor);
+        var evaluator = scope.Resolve(Evaluator);
+        var creator = scope.Resolve(Creator);
+        var crossover = scope.Resolve(Crossover);
+        var mutator = scope.Resolve(Mutator);
+        var selector = scope.Resolve(Selector);
+        var refiner = scope.ResolveOptional(Refiner);
+        return new Executor(interceptor, evaluator, creator, crossover, mutator, selector, refiner,
+            PopulationSize, Elites, MaxEffort, MaximumGenerations, Strictness, scope.Problem);
+    }
+
+    private sealed class Executor(
+        IInterceptionExecutor<PopulationState<TCandidate>>? interceptor,
+        IEvaluationExecutor<TCandidate> evaluator,
+        ICreationExecutor<TCandidate> creator,
+        ICrossoverExecutor<TCandidate> crossover,
+        IMutationExecutor<TCandidate> mutator,
+        ISelectionExecutor<TCandidate> selector,
+        IRefinementExecutor<TCandidate>? refiner,
         int populationSize,
         int elites,
         int maxEffort,
         int? maximumGenerations,
-        double strictness)
-        : IterativeAlgorithmInstance<TCandidate, TSearchSpace, TProblem, PopulationState<TCandidate>>(interceptor)
+        double strictness, IProblem problem)
+        : IterativeAlgorithmExecutor<PopulationState<TCandidate>>(interceptor)
     {
-        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState, TProblem problem) =>
+        protected override bool HasCompleted(int yieldedStateCount, PopulationState<TCandidate>? previousState) =>
             maximumGenerations is not null && yieldedStateCount >= maximumGenerations.Value;
 
-        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, TProblem problem, IRandomNumberGenerator random)
+        protected override PopulationState<TCandidate> ExecuteStep(PopulationState<TCandidate>? previousState, IRandomNumberGenerator random)
         {
             if (previousState is null)
             {
-                var initialSolutions = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialSolutions = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialSolutions = refiner.Refine(initialSolutions, random, problem.SearchSpace, problem);
+                    initialSolutions = refiner.Refine(initialSolutions, random);
                 }
 
-                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random, problem.SearchSpace, problem));
+                var initialPopulation = initialSolutions.ToEvaluated(evaluator.Evaluate(initialSolutions, random));
                 return Population.From(initialPopulation).ToPopulationState();
             }
 
@@ -70,25 +112,25 @@ public record OpenEndedRelevantAllelesPreservingGeneticAlgorithm<TCandidate, TSe
 
             if (oldPopulation.Count <= 0)
             {
-                var initialCandidates = creator.Create(populationSize, random, problem.SearchSpace, problem);
+                var initialCandidates = creator.Create(populationSize, random);
                 if (refiner is not null)
                 {
-                    initialCandidates = refiner.Refine(initialCandidates, random, problem.SearchSpace, problem);
+                    initialCandidates = refiner.Refine(initialCandidates, random);
                 }
 
-                newPop = initialCandidates.ToEvaluated(evaluator.Evaluate(initialCandidates, random, problem.SearchSpace, problem));
+                newPop = initialCandidates.ToEvaluated(evaluator.Evaluate(initialCandidates, random));
             }
             else
             {
-                var selected = selector.Select(oldPopulation, problem.Objective, maxEffort * 2, random, problem.SearchSpace, problem);
-                var population = crossover.Cross(selected.ToParents(problem.Objective), random, problem.SearchSpace, problem);
-                population = mutator.Mutate(population, random, problem.SearchSpace, problem);
+                var selected = selector.Select(oldPopulation, maxEffort * 2, random);
+                var population = crossover.Cross(selected.ToParents(problem.Objective), random);
+                population = mutator.Mutate(population, random);
                 if (refiner is not null)
                 {
-                    population = refiner.Refine(population, random, problem.SearchSpace, problem);
+                    population = refiner.Refine(population, random);
                 }
 
-                newPop = population.ToEvaluated(evaluator.Evaluate(population, random, problem.SearchSpace, problem)).Zip(selected.ToEvaluatedCandidatesPairs())
+                newPop = population.ToEvaluated(evaluator.Evaluate(population, random)).Zip(selected.ToEvaluatedCandidatesPairs())
                     .Where(pair => pair.Item1.ObjectiveVector.Dominates(Combine(pair.Item2, problem.Objective, strictness), problem.Objective))
                     .Select(pair => pair.Item1).ToArray();
             }

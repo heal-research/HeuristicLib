@@ -1,9 +1,7 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
@@ -14,33 +12,46 @@ namespace HEAL.HeuristicLib.Operators;
 /// The result order is female 0, male 0, female 1, male 1 and so on. For an odd requested count, the final
 /// candidate is selected by the female selector.
 /// </remarks>
-public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
-    : Selector<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record GenderSpecificSelector<TCandidate>
+    : Operator<Selection, TCandidate>
 {
-    public GenderSpecificSelector(ISelector<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelector<TCandidate, TSearchSpace, TProblem> maleSelector)
+    public GenderSpecificSelector(IOperator<Selection, TCandidate> femaleSelector, IOperator<Selection, TCandidate> maleSelector)
     {
         FemaleSelector = femaleSelector;
         MaleSelector = maleSelector;
     }
 
-    public ISelector<TCandidate, TSearchSpace, TProblem> FemaleSelector { get; init; }
+    public IOperator<Selection, TCandidate> FemaleSelector { get; init; }
 
-    public ISelector<TCandidate, TSearchSpace, TProblem> MaleSelector { get; init; }
+    public IOperator<Selection, TCandidate> MaleSelector { get; init; }
 
-    public override SelectorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(FemaleSelector), instanceRegistry.Resolve(MaleSelector));
+    public static Parameter<GenderSpecificSelector<TCandidate>, IOperator<Selection, TCandidate>> FemaleSelectorParameter { get; } =
+        new(nameof(FemaleSelector), static selector => selector.FemaleSelector, static (selector, value) => selector with { FemaleSelector = value });
 
-    private sealed class Instance(ISelectorInstance<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelectorInstance<TCandidate, TSearchSpace, TProblem> maleSelector)
-        : SelectorInstance<TCandidate, TSearchSpace, TProblem>
+    public static Parameter<GenderSpecificSelector<TCandidate>, IOperator<Selection, TCandidate>> MaleSelectorParameter { get; } =
+        new(nameof(MaleSelector), static selector => selector.MaleSelector, static (selector, value) => selector with { MaleSelector = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [FemaleSelectorParameter, MaleSelectorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        var femaleSelector = scope.Resolve(FemaleSelector);
+        var maleSelector = scope.Resolve(MaleSelector);
+        return new Executor(femaleSelector, maleSelector);
+    }
+
+    private sealed class Executor(ISelectionExecutor<TCandidate> femaleSelector, ISelectionExecutor<TCandidate> maleSelector)
+        : SelectionExecutor<TCandidate>
+    {
+        public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, int count, IRandomNumberGenerator random)
         {
             var pairCount = count / 2;
             var femaleCount = count - pairCount;
-            var females = femaleSelector.Select(population, objective, femaleCount, random, searchSpace, problem);
-            var males = maleSelector.Select(population, objective, pairCount, random, searchSpace, problem);
+            var females = femaleSelector.Select(population, femaleCount, random);
+            var males = maleSelector.Select(population, pairCount, random);
 
             var result = new EvaluatedCandidate<TCandidate>[count];
             for (var i = 0; i < pairCount; i++)
@@ -59,19 +70,15 @@ public record GenderSpecificSelector<TCandidate, TSearchSpace, TProblem>
 
 public static class GenderSpecificSelector
 {
-    public static GenderSpecificSelector<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(
-        ISelector<TCandidate, TSearchSpace, TProblem> femaleSelector, ISelector<TCandidate, TSearchSpace, TProblem> maleSelector)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(femaleSelector, maleSelector);
+    public static GenderSpecificSelector<TCandidate> Create<TCandidate>(
+        IOperator<Selection, TCandidate> femaleSelector, IOperator<Selection, TCandidate> maleSelector) => new(femaleSelector, maleSelector);
 }
 
 public static class GenderSpecificSelectorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ISelector<TCandidate, TSearchSpace, TProblem> femaleSelector)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IOperator<Selection, TCandidate> femaleSelector)
     {
-        public GenderSpecificSelector<TCandidate, TSearchSpace, TProblem> PairWith(ISelector<TCandidate, TSearchSpace, TProblem> maleSelector) =>
+        public GenderSpecificSelector<TCandidate> PairWith(IOperator<Selection, TCandidate> maleSelector) =>
             GenderSpecificSelector.Create(femaleSelector, maleSelector);
     }
 }

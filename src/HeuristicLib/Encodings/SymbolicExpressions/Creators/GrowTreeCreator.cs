@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 
@@ -11,6 +12,13 @@ public sealed record GrowTreeCreator
     /// An explicit maximum must be positive and must not exceed the search-space depth limit.
     /// </summary>
     public int? MaximumDepth { get; init; }
+
+    public static Parameter<GrowTreeCreator, int?> MaximumDepthParameter { get; } =
+        new(nameof(MaximumDepth), static creator => creator.MaximumDepth, static (creator, value) => creator with { MaximumDepth = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [MaximumDepthParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
         GrowTreeCreation.Create(random, searchSpace, MaximumDepth);

@@ -12,7 +12,7 @@ public class CandidateTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchSt
     public CandidateTreeSearchState(T genotype, TreeSearchContext context) : base(context)
     {
         Genotype = genotype;
-        Bound = BoundsEvaluator.Evaluate(genotype, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        Bound = BoundsEvaluator.Evaluate(genotype, RandomHelpers.NoRandom);
         var t = IsTerminal = Problem.IsTerminal(genotype, RandomHelpers.NoRandom);
         if (!t)
             return;
@@ -22,16 +22,14 @@ public class CandidateTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchSt
 
     public CandidateTreeSearchState(CandidateTreeSearchState<T, TS, TP, TM> parent, TM move) : base(parent.Context)
     {
-        var g = Genotype = Applier.Apply(parent.Genotype, move, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
-        Bound = BoundsEvaluator.Evaluate(parent.Bound, parent.Genotype, move, RandomHelpers.NoRandom,
-            Problem.SearchSpace, Problem);
+        var g = Genotype = Applier.Apply(parent.Genotype, move, RandomHelpers.NoRandom);
+        Bound = BoundsEvaluator.Evaluate(parent.Bound, parent.Genotype, move, RandomHelpers.NoRandom);
         var t = IsTerminal = Problem.IsTerminal(g, RandomHelpers.NoRandom);
         if (!t)
             return;
 
         if (parent.Quality != null)
-            Quality = Evaluator.Evaluate(parent.Quality, parent.Genotype, move, RandomHelpers.NoRandom,
-                Problem.SearchSpace, Problem);
+            Quality = Evaluator.Evaluate(parent.Quality, parent.Genotype, move, RandomHelpers.NoRandom);
         else
             Quality = Problem.Evaluate([g], RandomHelpers.NoRandom)[0];
     }
@@ -52,7 +50,7 @@ public class CandidateTreeSearchState<T, TS, TP, TM> : GenotypeAwareTreeSearchSt
     protected override CandidateTreeSearchState<T, TS, TP, TM> Copy() => new(this);
 
     protected override IEnumerable<TM> Branches() =>
-        Creator.Moves(Genotype, RandomHelpers.NoRandom, Problem.SearchSpace, Problem);
+        Creator.Moves(Genotype, RandomHelpers.NoRandom);
 
     protected override CandidateTreeSearchState<T, TS, TP, TM> Branch(TM move) => new(this, move);
 

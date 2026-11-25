@@ -6,16 +6,24 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Algorithms;
 
-public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Algorithm<PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+/// <remarks>
+/// Every stage resolves its algorithm in a new child scope, so stages share no executors unless the pipeline shares
+/// them through <c>Sharing</c>.
+/// </remarks>
+public record PipelineAlgorithm<TCandidate, TSearchState>
+    : Algorithm<PipelineAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
 {
-    public ValueArray<TAlgorithm> Algorithms { get; }
+    public ValueArray<IAlgorithm<TCandidate, TSearchState>> Algorithms { get; init; }
 
-    public PipelineAlgorithm(IReadOnlyList<TAlgorithm> algorithms)
+    public static ListParameter<PipelineAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> AlgorithmsParameter { get; } =
+        new(nameof(Algorithms), static pipeline => pipeline.Algorithms, static (pipeline, value) => pipeline with { Algorithms = value.ToValueArray() });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [AlgorithmsParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public PipelineAlgorithm(IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
     {
         if (algorithms.Count == 0)
             throw new ArgumentException("At least one algorithm must be provided.", nameof(algorithms));
@@ -23,80 +31,59 @@ public record PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, 
         Algorithms = algorithms.ToValueArray();
     }
 
-    public override PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new(instanceRegistry, Algorithms);
+    protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) =>
+        new Executor<TSearchSpace, TProblem>(scope, Algorithms, scope.Problem);
+
+    private sealed class Executor<TSearchSpace, TProblem>
+        : AlgorithmExecutor<TSearchState>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
+        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    {
+        private readonly ResolutionScope scope;
+        private readonly TProblem problem;
+        private ImmutableArray<IAlgorithm<TCandidate, TSearchState>> Algorithms { get; }
+
+        public Executor(ResolutionScope scope, IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms, TProblem problem)
+        {
+            this.scope = scope;
+            this.problem = problem;
+            Algorithms = algorithms.ToImmutableArray();
+        }
+
+        public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var state = initialState;
+
+            foreach (var (algorithm, index) in Algorithms.Select((a, i) => (a, i)))
+            {
+                ct.ThrowIfCancellationRequested();
+                var algRng = random.Fork(index);
+                var algorithmExecutor = scope.CreateChildScope().Resolve<TCandidate, TSearchSpace, TProblem, TSearchState>(algorithm, problem);
+
+                await foreach (var newState in algorithmExecutor.RunStreamingAsync(algRng, state, ct))
+                {
+                    state = newState;
+                    yield return newState;
+                }
+            }
+        }
+    }
 }
 
 public static class PipelineAlgorithm
 {
-    public static PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(
-        Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> firstAlgorithm, params IReadOnlyList<TAlgorithm> followingAlgorithms)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState => new([firstAlgorithm.Self, .. followingAlgorithms]);
-
-    public static PipelineAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Create<TCandidate, TSearchSpace, TProblem, TSearchState>(
-        params IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> algorithms)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    public static PipelineAlgorithm<TCandidate, TSearchState> Create<TCandidate, TSearchState>(
+        params IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> algorithms)
         where TSearchState : class, ISearchState => new([.. algorithms]);
 }
 
 public static class PipelineAlgorithmExtensions
 {
-    extension<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>(Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TAlgorithm : Algorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate, TSearchState>(IAlgorithm<TCandidate, TSearchState> algorithm)
         where TSearchState : class, ISearchState
     {
-        public PipelineAlgorithm<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IReadOnlyList<TAlgorithm> followingAlgorithms) =>
-            PipelineAlgorithm.Create(algorithm, followingAlgorithms);
-    }
-
-    extension<TCandidate, TSearchSpace, TProblem, TSearchState>(IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState> algorithm)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
-        where TSearchState : class, ISearchState
-    {
-        public PipelineAlgorithm<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>, TCandidate, TSearchSpace, TProblem, TSearchState> Then(params IReadOnlyList<IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>> followingAlgorithms) =>
-            PipelineAlgorithm.Create([algorithm, .. followingAlgorithms]);
-    }
-}
-
-public class PipelineAlgorithmInstance<TAlgorithm, TCandidate, TSearchSpace, TProblem, TSearchState>
-    : AlgorithmInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
-    where TSearchState : class, ISearchState
-    where TAlgorithm : IAlgorithm<TCandidate, TSearchSpace, TProblem, TSearchState>
-{
-    private readonly ExecutionInstanceRegistry registry;
-    protected readonly ImmutableArray<TAlgorithm> Algorithms;
-
-    public PipelineAlgorithmInstance(ExecutionInstanceRegistry registry, IReadOnlyList<TAlgorithm> algorithms)
-    {
-        this.registry = registry;
-        Algorithms = algorithms.ToImmutableArray();
-    }
-
-    public override async IAsyncEnumerable<TSearchState> RunStreamingAsync(TProblem problem, IRandomNumberGenerator random, TSearchState? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
-    {
-        var state = initialState;
-
-        foreach (var (algorithm, index) in Algorithms.Select((a, i) => (a, i)))
-        {
-            ct.ThrowIfCancellationRequested();
-            var algRng = random.Fork(index);
-            var childRegistry = registry.CreateChildRegistry();
-            var algorithmInstance = childRegistry.Resolve(algorithm);
-
-            await foreach (var newState in algorithmInstance.RunStreamingAsync(problem, algRng, state, ct))
-            {
-                state = newState;
-                yield return newState;
-            }
-        }
+        public PipelineAlgorithm<TCandidate, TSearchState> Then(params IReadOnlyList<IAlgorithm<TCandidate, TSearchState>> followingAlgorithms) =>
+            PipelineAlgorithm.Create<TCandidate, TSearchState>([algorithm, .. followingAlgorithms]);
     }
 }

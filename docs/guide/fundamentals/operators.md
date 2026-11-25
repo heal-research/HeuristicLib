@@ -34,7 +34,7 @@ Start with the candidate representation:
 
 - Real vectors use numerical crossover and mutation.
 - Integer vectors need changes that preserve integral values and bounds.
-- Boolean vectors use bit based variation.
+- Boolean vectors use bit based variation: `RandomBoolVectorCreator`, `BitUniformCrossover` and `BitFlipMutator`. Use `BitSwapMutator` instead of `BitFlipMutator` over `FixedCardinalityBoolVectorSearchSpace`, since a single flip changes the number of set bits and leaves that space.
 - Permutations need order aware operators that preserve every element exactly once.
 
 Then consider how useful solutions differ from nearby solutions. Small Gaussian changes suit local refinement in continuous spaces. Swap or inversion mutation can preserve useful subsequences in routes. Tournament pressure affects how quickly a population concentrates around good candidates.
@@ -43,10 +43,13 @@ Change one policy at a time when comparing configurations and repeat each config
 
 ## Call an operator directly
 
-Operators can also be useful outside a complete algorithm. Direct calls are helpful in tests and when assembling a custom workflow. Supply the same search space and random source that the run uses, so validity and reproducibility remain explicit.
+Operators can also be useful outside a complete algorithm. Direct calls are helpful in tests and when assembling a custom workflow. Resolve the operator with the problem it should use and pass an explicit random source when calling the executor.
 
-## Related guides
+A selection executor takes `Select(population, count, random)`. A replacement executor takes `Replace(previousPopulation, offspringPopulation, count, random)`. Both use the objective of their bound problem. Static selector and replacer helpers that take an objective can be called directly with that objective.
 
+## Next steps
+
+- [Algorithms](/guide/fundamentals/algorithms) continues the Fundamentals path and shows how algorithms run operators.
+- [Use operator recommendations](/guide/fundamentals/algorithms#use-operator-recommendations)
 - [Compose several operators](/guide/extending/operator-composition)
 - [Write an operator](/guide/extending/writing-operators)
-- [See how algorithms run them](/guide/fundamentals/algorithms)

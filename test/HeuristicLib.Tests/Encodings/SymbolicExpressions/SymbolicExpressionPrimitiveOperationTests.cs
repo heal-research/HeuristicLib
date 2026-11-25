@@ -10,7 +10,7 @@ public sealed class SymbolicExpressionPrimitiveOperationTests
         var expression = Variable("x0").Build();
         var data = DataFrame.FromMatrix(
           ["x0"],
-          new double[,]
+          new[,]
           {
               { 1.0 },
               { 2.0 },
@@ -73,7 +73,7 @@ public sealed class SymbolicExpressionPrimitiveOperationTests
         var expression = Log(Variable("x0")).Build();
         var data = DataFrame.FromMatrix(
           ["x0"],
-          new double[,]
+          new[,]
           {
               { 1.0 },
               { Math.E },
@@ -89,7 +89,7 @@ public sealed class SymbolicExpressionPrimitiveOperationTests
         var expression = Sqrt(Variable("x0")).Build();
         var data = DataFrame.FromMatrix(
           ["x0"],
-          new double[,]
+          new[,]
           {
               { 1.0 },
               { 4.0 },
@@ -244,7 +244,7 @@ public sealed class SymbolicExpressionPrimitiveOperationTests
     private static DataFrame CreateTwoColumnData() =>
       DataFrame.FromMatrix(
         ["x0", "x1"],
-        new double[,]
+        new[,]
         {
             { 1.0, 4.0 },
             { 2.0, 5.0 },

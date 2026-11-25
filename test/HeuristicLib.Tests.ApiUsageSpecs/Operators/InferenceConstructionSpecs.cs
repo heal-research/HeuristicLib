@@ -1,13 +1,17 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Operators.Terminators;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+using HEAL.HeuristicLib.Random;
+using HEAL.HeuristicLib.SearchSpaces;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.ApiUsageSpecs.Operators;
@@ -21,9 +25,9 @@ public class InferenceConstructionSpecs
         var algorithm = CreateAlgorithm(problem);
 
         var problemDirectEvaluator = ProblemEvaluator.For(problem);
-        var directEvaluator = ProblemEvaluator.For(algorithm);
+        var directEvaluator = ProblemEvaluator.For(problem);
         var problemTournamentSelector = TournamentSelector.For(problem, tournamentSize: 3);
-        var tournamentSelector = TournamentSelector.For(algorithm, tournamentSize: 4);
+        var tournamentSelector = TournamentSelector.For(problem, tournamentSize: 4);
         var randomSelector = RandomSelector.For(problem);
         var bestSelector = BestSelector.For(problem);
         var worstSelector = WorstSelector.For(problem);
@@ -36,7 +40,7 @@ public class InferenceConstructionSpecs
         var elitismReplacer = ElitismReplacer.For(problem, elites: 2);
         var paretoReplacer = ParetoCrowdingReplacer.For(problem, dominateOnEqualities: true);
         var randomCrossover = RandomCrossover.For(problem, bias: 0.75);
-        var identityInterceptor = IdentityInterceptor.For(algorithm);
+        IOperator<Interception<PopulationState<RealVector>>, RealVector> identityInterceptor = new IdentityInterceptor<RealVector, PopulationState<RealVector>>();
         var reconfiguredAlgorithm = algorithm with
         {
             Evaluator = directEvaluator,
@@ -52,17 +56,16 @@ public class InferenceConstructionSpecs
         var fluentTransformedCrossover = algorithm.Crossover.TransformWith(algorithm.Mutator);
         var pipelineInterceptor = PipelineInterceptor.Create(identityInterceptor, identityInterceptor);
         var fluentPipelineInterceptor = identityInterceptor.Then(identityInterceptor);
-        var observableInterceptor = ObservableInterceptor.Create(identityInterceptor, (PopulationState<RealVector> _) => { });
-        var countingInterceptor = CountingInterceptor.Create(identityInterceptor, new ObservationCounter());
-        var measuredInterceptor = DurationMeasuringInterceptor.Create(identityInterceptor, new ObservationDuration());
+        var countingInterceptor = new Counter();
+        var measuredInterceptor = new Duration();
         var eliteSelector = EliteSelector.Create(algorithm.Selector, elites: 1);
-        var fluentEliteSelector = algorithm.Selector.WithElites(elites: 1);
+        var fluentEliteSelector = algorithm.Selector.CombinedWithElites(elites: 1);
         var genderSpecificSelector = GenderSpecificSelector.Create(algorithm.Selector, algorithm.Selector);
         var fluentGenderSpecificSelector = algorithm.Selector.PairWith(algorithm.Selector);
         var noSameMatesSelector = NoSameMatesSelector.Create(algorithm.Selector, maximumAttempts: 3);
         var fluentNoSameMatesSelector = algorithm.Selector.AvoidSameMates(maximumAttempts: 3);
         var predefinedCreator = PredefinedCandidatesCreator.Create([RealVector.Create(0.0)], algorithm.Creator);
-        var fluentPredefinedCreator = algorithm.Creator.WithPredefinedCandidates([RealVector.Create(0.0)]);
+        var fluentPredefinedCreator = algorithm.Creator.SeededWith([RealVector.Create(0.0)]);
         var unchangedMutator = NoChangeMutator.For(problem);
         var firstParentCrossover = SelectFirstParentCrossover.For(problem);
         var secondParentCrossover = SelectSecondParentCrossover.For(problem);
@@ -71,20 +74,19 @@ public class InferenceConstructionSpecs
         var targetTerminator = TargetTerminator.For(problem, new ObjectiveVector(0.0));
         var neverTerminator = NeverTerminator.For(problem);
 
-        var firstTerminator = algorithm.WithMaxIterations(2).Terminator;
-        var secondTerminator = algorithm.WithMaxIterations(3).Terminator;
+        var firstTerminator = algorithm.TerminatedAfterIterations(2).Terminator;
+        var secondTerminator = algorithm.TerminatedAfterIterations(3).Terminator;
         var anyTerminator = AnyTerminator.Create(firstTerminator, secondTerminator);
         var fluentAnyTerminator = firstTerminator.Or(secondTerminator);
         var allTerminator = AllTerminator.Create(firstTerminator, secondTerminator);
         var fluentAllTerminator = firstTerminator.And(secondTerminator);
-        var observableTerminator = ObservableTerminator.Create(firstTerminator, (bool _) => { });
-        var countingTerminator = CountingTerminator.Create(firstTerminator, new ObservationCounter());
-        var measuredTerminator = DurationMeasuringTerminator.Create(firstTerminator, new ObservationDuration());
+        var countingTerminator = new Counter();
+        var measuredTerminator = new Duration();
         var terminatedAlgorithm = StateTerminatedAlgorithm.Create(algorithm, firstTerminator);
-        var fluentTerminatedAlgorithm = algorithm.WithTerminator(firstTerminator);
+        var fluentTerminatedAlgorithm = algorithm.TerminatedBy(firstTerminator);
 
-        var firstStage = algorithm.WithMaxIterations(2);
-        var secondStage = algorithm.WithMaxIterations(3);
+        var firstStage = algorithm.TerminatedAfterIterations(2);
+        var secondStage = algorithm.TerminatedAfterIterations(3);
         var pipelineAlgorithm = PipelineAlgorithm.Create(firstStage, secondStage);
         var fluentPipelineAlgorithm = firstStage.Then(secondStage);
         var cycleAlgorithm = CycleAlgorithm.Create(firstStage, secondStage);
@@ -114,17 +116,16 @@ public class InferenceConstructionSpecs
         reconfiguredAlgorithm.Evaluator.ShouldBeSameAs(directEvaluator);
         reconfiguredAlgorithm.Selector.ShouldBeSameAs(tournamentSelector);
         reconfiguredAlgorithm.Interceptor.ShouldBeSameAs(identityInterceptor);
-        pipelineMutator.ChildMutators.Count.ShouldBe(2);
-        fluentPipelineMutator.ChildMutators.Count.ShouldBe(2);
+        pipelineMutator.ChildOperators.Count.ShouldBe(2);
+        fluentPipelineMutator.ChildOperators.Count.ShouldBe(2);
         transformedCreator.SourceCreator.ShouldBeSameAs(algorithm.Creator);
         fluentTransformedCreator.SourceCreator.ShouldBeSameAs(algorithm.Creator);
         transformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
         fluentTransformedCrossover.SourceCrossover.ShouldBeSameAs(algorithm.Crossover);
-        pipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
-        fluentPipelineInterceptor.ChildInterceptors.Count.ShouldBe(2);
-        observableInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
-        countingInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
-        measuredInterceptor.ChildInterceptor.ShouldBeSameAs(identityInterceptor);
+        pipelineInterceptor.ChildOperators.Count.ShouldBe(2);
+        fluentPipelineInterceptor.ChildOperators.Count.ShouldBe(2);
+        identityInterceptor.Substitute(identityInterceptor.Invocations.Counting(countingInterceptor)).ShouldNotBeSameAs(identityInterceptor);
+        identityInterceptor.Substitute(identityInterceptor.Invocations.Timing(measuredInterceptor)).ShouldNotBeSameAs(identityInterceptor);
         eliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
         fluentEliteSelector.SelectorForRemaining.ShouldBeSameAs(algorithm.Selector);
         genderSpecificSelector.FemaleSelector.ShouldBeSameAs(algorithm.Selector);
@@ -144,19 +145,18 @@ public class InferenceConstructionSpecs
         fluentAnyTerminator.ShouldNotBeNull();
         allTerminator.ShouldNotBeNull();
         fluentAllTerminator.ShouldNotBeNull();
-        observableTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
-        countingTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
-        measuredTerminator.ChildTerminator.ShouldBeSameAs(firstTerminator);
+        firstTerminator.Substitute(firstTerminator.Invocations.Counting(countingTerminator)).ShouldNotBeSameAs(firstTerminator);
+        firstTerminator.Substitute(firstTerminator.Invocations.Timing(measuredTerminator)).ShouldNotBeSameAs(firstTerminator);
         terminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         fluentTerminatedAlgorithm.Algorithm.ShouldBeSameAs(algorithm);
         pipelineAlgorithm.Algorithms.Count.ShouldBe(2);
-        pipelineAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        pipelineAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         fluentPipelineAlgorithm.Algorithms.Count.ShouldBe(2);
-        fluentPipelineAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        fluentPipelineAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         cycleAlgorithm.Algorithms.Count.ShouldBe(2);
-        cycleAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        cycleAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         fluentCycleAlgorithm.Algorithms.Count.ShouldBe(2);
-        fluentCycleAlgorithm.Algorithms[0].Terminator.ShouldBeSameAs(firstStage.Terminator);
+        fluentCycleAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage);
         interfacePipelineAlgorithm.Algorithms[0].ShouldBeSameAs(firstStage.Algorithm);
     }
 
@@ -174,8 +174,10 @@ public class InferenceConstructionSpecs
         var populationState = PopulationState.From(population);
         var fluentPopulationState = population.ToPopulationState();
         var bestMedianWorst = BestMedianWorstEntry.From(evaluatedCandidate, evaluatedCandidate, evaluatedCandidate);
-        var experimentCase = ExperimentCase.From("algorithm", "configuration", [1, 2]);
-        var streamEntry = ExperimentStreamEntry.From(experimentCase, populationState);
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
+        var run = CreateAlgorithm(problem).Repeat(1).CreateRun(problem, RandomNumberGenerator.Create(42));
+        var trial = run.Trials[0];
+        var streamEntry = ExperimentStreamEntry.From(trial, populationState);
 
         parents.Parent1.ShouldBeSameAs(first);
         fluentParents.Parent2.ShouldBeSameAs(second);
@@ -184,13 +186,12 @@ public class InferenceConstructionSpecs
         populationState.Population.ShouldBeSameAs(population);
         fluentPopulationState.Population.ShouldBeSameAs(population);
         bestMedianWorst.Best.ShouldBeSameAs(evaluatedCandidate);
-        experimentCase.RandomForkPath.ShouldBe([1, 2]);
-        streamEntry.Trial.ShouldBeSameAs(experimentCase);
+        streamEntry.Trial.ShouldBeSameAs(trial);
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem)
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 10,
             MaximumGenerations = 2,
@@ -200,4 +201,37 @@ public class InferenceConstructionSpecs
             Selector = TournamentSelector.For(problem, tournamentSize: 2)
         };
     }
+
+    /// <summary>
+    /// One problem argument yields the problem, the candidate and the search space, all inferred.
+    /// </summary>
+    /// <remarks>
+    /// This is the mechanism the algorithm arity reduction stands on. Once an algorithm names only its candidate,
+    /// nothing on the receiver says what search space a run uses, and a plain <c>TProblem problem</c> parameter
+    /// cannot supply it: the search space sits in constraint position, where C# inference does not reach. Naming the
+    /// problem's own type on <see cref="Problem{TSelf,TCandidate,TSearchSpace}"/> is what makes all three
+    /// inferable from the single argument a user already passes.
+    /// <para>
+    /// Every problem declares it, so this holds for problems that state no operator recommendations at all, which is what
+    /// the anchor being a problem contract rather than a defaults one is about.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void OneProblemArgument_InfersTheProblemTheCandidateAndTheSearchSpace()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 3));
+
+        var (problemType, candidate, searchSpace) = DescribeRun(problem);
+
+        problemType.ShouldBe(typeof(TestFunctionProblem));
+        candidate.ShouldBe(typeof(RealVector));
+        searchSpace.ShouldBe(typeof(BoundedRealVectorSearchSpace));
+    }
+
+    /// <summary>Shaped like the run methods the algorithm package will declare, and nothing is named at the call.</summary>
+    private static (Type Problem, Type Candidate, Type SearchSpace) DescribeRun<TProblem, TCandidate, TSearchSpace>(
+        Problem<TProblem, TCandidate, TSearchSpace> problem)
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate> =>
+        (typeof(TProblem), typeof(TCandidate), typeof(TSearchSpace));
 }

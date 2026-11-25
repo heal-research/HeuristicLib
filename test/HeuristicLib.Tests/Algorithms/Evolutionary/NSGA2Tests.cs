@@ -1,6 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using SinglePointCrossover = HEAL.HeuristicLib.Encodings.RealVectors.SinglePointCrossover;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
@@ -9,10 +8,10 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 public class NSGA2Tests
 {
     [Fact]
-    public void Complete_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
+    public void RunToCompletion_ReturnsMultiObjectivePopulationWithinProblemSearchSpace()
     {
         var problem = new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
-        var algorithm = new NSGA2<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        var algorithm = new NSGA2<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SinglePointCrossover(),
@@ -22,7 +21,7 @@ public class NSGA2Tests
             MaximumGenerations = 5
         };
 
-        var result = algorithm.Complete(
+        var result = algorithm.RunToCompletion(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken);

@@ -18,6 +18,7 @@ Download [`berlin52.tsp`](https://github.com/heal-research/HeuristicLib/blob/mai
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
@@ -35,16 +36,16 @@ var algorithm = GeneticAlgorithm.For(
     maximumGenerations: 1000,
     mutationRate: 0.25);
 
-var run = algorithm
-    .CreateRun(problem, RandomNumberGenerator.Create(seed: 42))
-    .TrackBestMedianWorst(out var qualityAnalyzer);
+var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
+var run = algorithm.CreateRun(
+    problem, RandomNumberGenerator.Create(seed: 42), [qualityAnalyzer]);
 
 await run.CompleteAsync();
 
-var qualityCurve = run.GetResult(qualityAnalyzer);
-var best = qualityCurve[^1].Best;
+var qualityCurve = run.Result(qualityAnalyzer).Snapshot().Values;
+var best = run.Result(qualityAnalyzer).RequireLatestValue().Best;
 
-Console.WriteLine($"Instance: {instance.Name}");
+Console.WriteLine($"Execution: {instance.Name}");
 Console.WriteLine($"Best tour length: {best.ObjectiveVector[0]:F0}");
 
 foreach (var (entry, generation) in
@@ -63,7 +64,7 @@ foreach (var (entry, generation) in
 Run it with `dotnet run`. The search takes a few seconds:
 
 ```
-Instance: berlin52
+Execution: berlin52
 Best tour length: 7797
  100: best     8283  median     9686  worst    14004
  200: best     7798  median     7926  worst    10318
@@ -77,11 +78,13 @@ Best tour length: 7797
 1000: best     7797  median     7797  worst    10181
 ```
 
-## Defaults and the explicit crossover
+## Recommendations and the explicit crossover
 
 A valid tour contains each city once. Permutation creators and variation operators preserve that invariant. A real or integer vector operator could introduce duplicate cities and omit others.
 
-`GeneticAlgorithm.For(problem, ...)` gets random creation and inversion mutation from `PermutationSearchSpace`. `TravelingSalesmanProblem` normally suggests order crossover. This example overrides only that role with edge recombination so the remaining defaults stay visible.
+`GeneticAlgorithm.For(problem, ...)` gets recommended random creation and inversion mutation from `PermutationSearchSpace`. `TravelingSalesmanProblem` recommends order crossover. This example overrides only that role with edge recombination so the remaining recommendations stay visible.
+
+See [Use operator recommendations](/guide/fundamentals/algorithms#use-operator-recommendations) for the lookup order and the complete list of current built in recommendations.
 
 Edge recombination tries to retain city adjacencies from both parents. Inversion mutation reverses a segment of the route and often produces a meaningful local change. Neither is a tuned choice for every instance. Keep the operators explicit when comparing search policies.
 

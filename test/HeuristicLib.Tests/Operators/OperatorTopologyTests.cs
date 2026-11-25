@@ -21,30 +21,41 @@ public class OperatorTopologyTests
         "HEAL.HeuristicLib.Operators.Terminators"
     ];
 
+    /// <summary>
+    /// The configuration contract names the operation and the candidate alone. The search space, problem and search
+    /// state the run supplies arrive as method type arguments when the executor is created, so they are not part of
+    /// the type an author stores in a field, passes as a parameter or reuses across problems.
+    /// </summary>
+    [Fact]
+    public void OperatorConfigurationContract_OmitsRunTypes()
+    {
+        var typeParameters = typeof(IOperator<,>).GetGenericArguments();
+        typeParameters.Length.ShouldBe(2);
+        foreach (var parameter in typeParameters)
+            Variance(parameter).ShouldBe(GenericParameterAttributes.None);
+    }
+
+    /// <summary>
+    /// An executor is created for one run and runs over that run's search space and problem, so it names
+    /// both and stays contravariant in them. Every configuration contract has migrated, so only instance contracts
+    /// remain here.
+    /// </summary>
     [Theory]
-    [InlineData(typeof(ICreator<,,>))]
-    [InlineData(typeof(ICreatorInstance<,,>))]
-    [InlineData(typeof(ICrossover<,,>))]
-    [InlineData(typeof(ICrossoverInstance<,,>))]
-    [InlineData(typeof(IEvaluator<,,>))]
-    [InlineData(typeof(IEvaluatorInstance<,,>))]
-    [InlineData(typeof(IMutator<,,>))]
-    [InlineData(typeof(IMutatorInstance<,,>))]
-    [InlineData(typeof(IReplacer<,,>))]
-    [InlineData(typeof(IReplacerInstance<,,>))]
-    [InlineData(typeof(ISelector<,,>))]
-    [InlineData(typeof(ISelectorInstance<,,>))]
-    [InlineData(typeof(IInterceptor<,,,>))]
-    [InlineData(typeof(IInterceptorInstance<,,,>))]
-    [InlineData(typeof(ITerminator<,,,>))]
-    [InlineData(typeof(ITerminatorInstance<,,,>))]
-    public void OperatorRoleContracts_PreserveCandidateAndUseContravariantContext(Type roleContract)
+    [InlineData(typeof(ICreationExecutor<>))]
+    [InlineData(typeof(ICrossoverExecutor<>))]
+    [InlineData(typeof(IRefinementExecutor<>))]
+    [InlineData(typeof(IEvaluationExecutor<>))]
+    [InlineData(typeof(IMutationExecutor<>))]
+    [InlineData(typeof(IReplacementExecutor<>))]
+    [InlineData(typeof(ISelectionExecutor<>))]
+    [InlineData(typeof(IInterceptionExecutor<>))]
+    [InlineData(typeof(ITerminationExecutor<>))]
+    public void OperatorRoleContracts_OmitTheBoundContext(Type roleContract)
     {
         var typeParameters = roleContract.GetGenericArguments();
 
-        Variance(typeParameters[0]).ShouldBe(GenericParameterAttributes.None);
-        Variance(typeParameters[1]).ShouldBe(GenericParameterAttributes.Contravariant);
-        Variance(typeParameters[2]).ShouldBe(GenericParameterAttributes.Contravariant);
+        typeParameters.ShouldHaveSingleItem();
+        typeParameters[0].Name.ShouldBeOneOf("TCandidate", "TSearchState");
     }
 
     /// <summary>
@@ -52,13 +63,11 @@ public class OperatorTopologyTests
     /// an interceptor returns it and therefore cannot be contravariant in it.
     /// </summary>
     [Theory]
-    [InlineData(typeof(IInterceptor<,,,>), GenericParameterAttributes.None)]
-    [InlineData(typeof(IInterceptorInstance<,,,>), GenericParameterAttributes.None)]
-    [InlineData(typeof(ITerminator<,,,>), GenericParameterAttributes.Contravariant)]
-    [InlineData(typeof(ITerminatorInstance<,,,>), GenericParameterAttributes.Contravariant)]
+    [InlineData(typeof(IInterceptionExecutor<>), GenericParameterAttributes.None)]
+    [InlineData(typeof(ITerminationExecutor<>), GenericParameterAttributes.Contravariant)]
     public void SearchStateAwareRoleContracts_DeclareExpectedSearchStateVariance(Type roleContract, GenericParameterAttributes expectedVariance)
     {
-        var searchState = roleContract.GetGenericArguments()[3];
+        var searchState = roleContract.GetGenericArguments()[0];
 
         Variance(searchState).ShouldBe(expectedVariance);
     }
@@ -84,10 +93,10 @@ public class OperatorTopologyTests
 
     [Theory]
     [MemberData(nameof(RoleNamespaces))]
-    public void OperatorExecutionInstances_DoNotPubliclyExposeChildMachinery(string roleNamespace)
+    public void OperatorExecutions_DoNotPubliclyExposeChildMachinery(string roleNamespace)
     {
         var publicChildProperties = OperatorTypesIn(roleNamespace)
-            .Where(type => typeof(IOperatorInstance).IsAssignableFrom(type))
+            .Where(type => typeof(IOperatorExecutor).IsAssignableFrom(type))
             .SelectMany(type => type.GetProperties(BindingFlags.Instance | BindingFlags.Public))
             .Where(property => property.Name.StartsWith("Child", StringComparison.Ordinal))
             .Select(property => $"{property.DeclaringType}.{property.Name}")

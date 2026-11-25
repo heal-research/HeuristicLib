@@ -2,29 +2,30 @@ namespace HEAL.HeuristicLib.Collections;
 
 public static class EnumerableExtensions
 {
-    public static IEnumerable<TResult> SelectCircularPairs<T, TResult>(
-        this IEnumerable<T> source,
-        Func<T, T, TResult> selector)
+    extension<T>(IEnumerable<T> source)
     {
-        T first = default!;
-        var count = 0;
-        T last = default!;
-        foreach (var item in source)
+        public IEnumerable<TResult> SelectCircularPairs<TResult>(Func<T, T, TResult> selector)
         {
-            if (count == 0)
+            T first = default!;
+            var count = 0;
+            T last = default!;
+            foreach (var item in source)
             {
-                first = item;
-            }
-            else
-            {
-                yield return selector(last, item);
+                if (count == 0)
+                {
+                    first = item;
+                }
+                else
+                {
+                    yield return selector(last, item);
+                }
+
+                last = item;
+                count++;
             }
 
-            last = item;
-            count++;
+            if (count > 1)
+                yield return selector(last, first);
         }
-
-        if (count > 1)
-            yield return selector(last, first);
     }
 }

@@ -5,20 +5,18 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
-public abstract record StatelessMoveApplier<TGenotype, TSearchSpace, TProblem, TMove>
-    : IMoveApplier<TGenotype, TSearchSpace, TProblem, TMove>,
-      IMoveApplierInstance<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+/// <summary>A stateless move operator whose executor retains its bound problem.</summary>
+public abstract record StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveApplication<TMove>, TCandidate, TSearchSpace, TProblem, IMoveApplicationExecutor<TCandidate, TMove>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public virtual IMoveApplierInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
-        => this;
+    protected sealed override IMoveApplicationExecutor<TCandidate, TMove> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
-    public abstract TGenotype Apply(
-        TGenotype genotype,
-        TMove move,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem);
+    public abstract TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessMoveApplier<TCandidate, TSearchSpace, TProblem, TMove> configuration, TProblem problem) : IMoveApplicationExecutor<TCandidate, TMove>
+    {
+        public TCandidate Apply(TCandidate candidate, TMove move, IRandomNumberGenerator random) => configuration.Apply(candidate, move, random, problem.SearchSpace, problem);
+    }
 }

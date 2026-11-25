@@ -1,7 +1,6 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
@@ -14,11 +13,11 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2);
-        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(3);
+        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).TerminatedAfterIterations(2);
+        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).TerminatedAfterIterations(3);
         var pipeline = firstStage.Then(secondStage);
 
-        var finalState = await pipeline.CompleteAsync(
+        var finalState = await pipeline.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(111),
           ct: TestContext.Current.CancellationToken);
@@ -31,11 +30,11 @@ public class CompositionSpecs
     {
         var problem = CreateRastriginProblem(dimension: 4);
 
-        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).WithMaxIterations(2);
-        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).WithMaxIterations(2);
+        var firstStage = CreateSimpleHillClimber(problem, batchSize: 4, maxNeighbors: 8).TerminatedAfterIterations(2);
+        var secondStage = CreateSimpleHillClimber(problem, batchSize: 6, maxNeighbors: 10).TerminatedAfterIterations(2);
         var cycle = firstStage.CycleWith(secondStage, maximumCycles: 2);
 
-        var finalState = await cycle.CompleteAsync(
+        var finalState = await cycle.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(222),
           ct: TestContext.Current.CancellationToken);
@@ -48,12 +47,12 @@ public class CompositionSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleHillClimber(
+    private static HillClimber<RealVector> CreateSimpleHillClimber(
       TestFunctionProblem problem,
       int batchSize,
       int maxNeighbors)
     {
-        return new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),

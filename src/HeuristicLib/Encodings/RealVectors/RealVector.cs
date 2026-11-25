@@ -81,23 +81,23 @@ public sealed class RealVector : Vector<double>, IEquatable<RealVector>
 
     public double RoundAt(int dimension) => RoundAt(this, dimension);
 
-    public IntegerVector FloorToIntegerVector(IntegerVector minimum, IntegerVector maximum)
-      => FloorToIntegerVector(this, minimum, maximum);
+    public IntegerVector FloorToIntegerVector(IntegerVector minimum, IntegerVector maximum) =>
+        FloorToIntegerVector(this, minimum, maximum);
 
-    public IntegerVector CeilToIntegerVector(IntegerVector minimum, IntegerVector maximum)
-      => CeilToIntegerVector(this, minimum, maximum);
+    public IntegerVector CeilToIntegerVector(IntegerVector minimum, IntegerVector maximum) =>
+        CeilToIntegerVector(this, minimum, maximum);
 
-    public IntegerVector RoundToIntegerVector(IntegerVector minimum, IntegerVector maximum)
-      => RoundToIntegerVector(this, minimum, maximum);
+    public IntegerVector RoundToIntegerVector(IntegerVector minimum, IntegerVector maximum) =>
+        RoundToIntegerVector(this, minimum, maximum);
 
-    public int FloorToIntegerAt(IntegerVector minimum, IntegerVector maximum, int dimension)
-      => FloorToIntegerAt(this, minimum, maximum, dimension);
+    public int FloorToIntegerAt(IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        FloorToIntegerAt(this, minimum, maximum, dimension);
 
-    public int CeilToIntegerAt(IntegerVector minimum, IntegerVector maximum, int dimension)
-      => CeilToIntegerAt(this, minimum, maximum, dimension);
+    public int CeilToIntegerAt(IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        CeilToIntegerAt(this, minimum, maximum, dimension);
 
-    public int RoundToIntegerAt(IntegerVector minimum, IntegerVector maximum, int dimension)
-      => RoundToIntegerAt(this, minimum, maximum, dimension);
+    public int RoundToIntegerAt(IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        RoundToIntegerAt(this, minimum, maximum, dimension);
 
     public IntegerVector AsIntegerVector()
     {
@@ -129,11 +129,11 @@ public sealed class RealVector : Vector<double>, IEquatable<RealVector>
         return FromOwnedArray(elements);
     }
 
-    public static RealVector CreateNormal(int length, RealVector mean, RealVector std, IRandomNumberGenerator random)
-      => random.NextRealVectorNormal(mean, std, length);
+    public static RealVector CreateNormal(int length, RealVector mean, RealVector std, IRandomNumberGenerator random) =>
+        random.NextRealVectorNormal(mean, std, length);
 
-    public static RealVector CreateUniform(int length, RealVector low, RealVector high, IRandomNumberGenerator random)
-      => random.NextRealVectorUniform(low, high, length);
+    public static RealVector CreateUniform(int length, RealVector low, RealVector high, IRandomNumberGenerator random) =>
+        random.NextRealVectorUniform(low, high, length);
 
     public static RealVector Add(RealVector a, RealVector b)
     {
@@ -433,23 +433,23 @@ public sealed class RealVector : Vector<double>, IEquatable<RealVector>
         return (int)Math.Clamp(Math.Round(value, MidpointRounding.AwayFromZero), minimum, maximum);
     }
 
-    private static int FloorToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
-      => FloorToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+    private static int FloorToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        FloorToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
 
-    private static int FloorToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
-      => FloorToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
+    private static int FloorToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        FloorToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
 
-    private static int CeilToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
-      => CeilToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+    private static int CeilToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        CeilToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
 
-    private static int CeilToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
-      => CeilToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
+    private static int CeilToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        CeilToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
 
-    private static int RoundToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension)
-      => RoundToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
+    private static int RoundToIntegerAtUnchecked(double value, IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        RoundToInteger(value, minimum.Count == 1 ? minimum[0] : minimum[dimension], maximum.Count == 1 ? maximum[0] : maximum[dimension]);
 
-    private static int RoundToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension)
-      => RoundToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
+    private static int RoundToIntegerAtUnchecked(RealVector input, IntegerVector minimum, IntegerVector maximum, int dimension) =>
+        RoundToIntegerAtUnchecked(input[dimension], minimum, maximum, dimension);
 
     private static void ValidateBounds(RealVector? minimum, RealVector? maximum, int? length = null, int? dimension = null)
     {

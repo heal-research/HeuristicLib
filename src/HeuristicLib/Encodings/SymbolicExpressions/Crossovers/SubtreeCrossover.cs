@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Random;
@@ -17,6 +18,13 @@ public sealed record SubtreeCrossover
     /// at or above one and positive infinity always do.
     /// </remarks>
     public double? InternalNodeProbability { get; init; }
+
+    public static Parameter<SubtreeCrossover, double?> InternalNodeProbabilityParameter { get; } =
+        new(nameof(InternalNodeProbability), static crossover => crossover.InternalNodeProbability, static (crossover, value) => crossover with { InternalNodeProbability = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [InternalNodeProbabilityParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override ExpressionTree CrossParents(Parents<ExpressionTree> parents, IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
         Cross(parents.Parent1, parents.Parent2, random, searchSpace, InternalNodeProbability);

@@ -1,0 +1,326 @@
+using HEAL.HeuristicLib.Analyzers;
+using HEAL.HeuristicLib.Operators.Crossovers;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
+
+namespace HEAL.HeuristicLib.Tests.Operators;
+
+/// <summary>Compile real construction contracts before checking that building a child cannot silently bypass resolution.</summary>
+public class ChildResolutionAnalyzerTests
+{
+    private const string Preamble = """
+        using System.Collections.Generic;
+        using HEAL.HeuristicLib.Algorithms;
+        using HEAL.HeuristicLib.Execution;
+        using HEAL.HeuristicLib.Operators;
+        using HEAL.HeuristicLib.Operators.Crossovers;
+        using HEAL.HeuristicLib.Problems;
+        using HEAL.HeuristicLib.Random;
+        using HEAL.HeuristicLib.SearchSpaces;
+        using SS = HEAL.HeuristicLib.SearchSpaces.ISearchSpace<int>;
+        using P = HEAL.HeuristicLib.Problems.IProblem<int, HEAL.HeuristicLib.SearchSpaces.ISearchSpace<int>>;
+
+        file record ChildCrossover : Crossover<int>
+        {
+            protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => new Executor();
+            private sealed class Executor : CrossoverExecutor<int>
+            {
+                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) => [];
+            }
+        }
+
+        file interface ICustomExecutor : IExecutor;
+
+        """;
+
+    [Theory]
+    [InlineData("IOperator<Crossover, int>", "(ICrossoverExecutor<int>)Child.CreateExecutor(scope.For<int, SS, P, ISearchState>(scope.Problem))")]
+    [InlineData("ChildCrossover", "(ICrossoverExecutor<int>)((IOperator<Crossover, int>)Child).CreateExecutor(scope.For<int, SS, P, ISearchState>(scope.Problem))")]
+    public async Task Reports_WhenALeafHookCreatesItsChildDirectly(string childType, string construction)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+            file sealed record BypassingCrossover : Crossover<int>
+            {
+                public required {{childType}} Child { get; init; }
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => {{construction}};
+            }
+            """);
+
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Theory]
+    [InlineData("Child.CreateExecutor(scope)")]
+    [InlineData("Build(); IExecutor Build() => Child.CreateExecutor(scope)")]
+    public async Task Reports_WhenARunGenericHookCreatesItsChildDirectly(string construction)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+            file sealed record BypassingCrossover : Operator<Crossover, int>
+            {
+                public required IOperator<Crossover, int> Child { get; init; }
+                protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
+                {
+                    return {{construction}};
+                }
+            }
+            """);
+
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Theory]
+    [InlineData("Algorithm<BypassingAlgorithm, int, PopulationState<int>>", "<TSearchSpace, TProblem>", "TSearchSpace, TProblem")]
+    [InlineData("Algorithm<BypassingAlgorithm, int, SS, P, PopulationState<int>>", "", "SS, P")]
+    public async Task Reports_WhenAnAlgorithmBuildsItsChildAlgorithmDirectly(string algorithmBase, string hookParameters, string runTypes)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+            file sealed record BypassingAlgorithm : {{algorithmBase}}
+            {
+                public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
+                protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor{{hookParameters}}(ResolutionScope<int, {{runTypes}}, PopulationState<int>> scope) =>
+                    Child.CreateExecutor(scope);
+            }
+            """);
+
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task DoesNotReport_WhenAnAlgorithmResolvesItsChildThroughTheScope()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record ResolvingAlgorithm : Algorithm<ResolvingAlgorithm, int, PopulationState<int>>
+            {
+                public required IAlgorithm<int, PopulationState<int>> Child { get; init; }
+                protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope) =>
+                    scope.Resolve(Child);
+            }
+            """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task DoesNotReport_WhenTheChildIsResolvedThroughTheScope()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record ResolvingCrossover : Crossover<int>
+            {
+                public required IOperator<Crossover, int> Child { get; init; }
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => scope.Resolve(Child);
+            }
+            """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task DoesNotReport_WhenTheCallSiteIsOutsideExecutionConstruction()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file static class DeliberateCaller
+            {
+                public static ICrossoverExecutor<int> Create(IOperator<Crossover, int> crossover, P problem) => (ICrossoverExecutor<int>)crossover.CreateExecutor(ResolutionScope.Create().For<int, SS, P, ISearchState>(problem));
+            }
+            """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("CreateExecutor(scope, 1)")]
+    [InlineData("this.CreateExecutor(scope, 1)")]
+    [InlineData("base.CreateExecutor(scope)")]
+    public async Task DoesNotReport_WhenAHookDelegatesToItselfOrItsBase(string construction)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+            file sealed record DelegatingCrossover : ChildCrossover
+            {
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) => {{construction}};
+                private ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope, int unused) where TRunSearchState : class, ISearchState => base.CreateExecutor(scope);
+            }
+            """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Reports_WhenTheBypassIsInsideAnExplicitInterfaceImplementation()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record BridgingCrossover : IOperator<Crossover, int>
+            {
+                public required IOperator<Crossover, int> Child { get; init; }
+                IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                    Child.CreateExecutor(scope);
+            }
+            """);
+
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task DoesNotReport_WhenAnExplicitBridgeCallsItsOwnHook()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record BridgingCrossover : ChildCrossover, IOperator<Crossover, int>
+            {
+                IExecutor IOperator<int>.CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope) =>
+                    CreateExecutor(scope);
+            }
+            """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Reports_WhenTheChildSharesItsHolderType()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record RecursiveCrossover : ChildCrossover
+            {
+                public RecursiveCrossover? Child { get; init; }
+                protected override ICrossoverExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) =>
+                    Child is null ? base.CreateExecutor(scope) : Child.CreateExecutor(scope);
+            }
+            """);
+
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_WhenTheConstructionIsDeferredToAnExecutionMethod()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed class DeferredExecutor(IOperator<Crossover, int> child, ResolutionScope<int, SS, P> scope) : CrossoverExecutor<int>
+            {
+                public override IReadOnlyList<int> Cross(IReadOnlyList<Parents<int>> parents, IRandomNumberGenerator random) =>
+                    Activate().Cross(parents, random);
+                private ICrossoverExecutor<int> Activate() => (ICrossoverExecutor<int>)child.CreateExecutor(scope.For<int, SS, P, ISearchState>(scope.Problem));
+            }
+            """);
+
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_WhenACustomResolverBuildsTheConfigurationItself()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file static class CustomResolution
+            {
+                public static ICustomExecutor Resolve(ResolutionScope scope, IConfigurationNode<ICustomExecutor> configuration) =>
+                    configuration.CreateExecutionNode(scope);
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_WhenAWrapperCreatesItsChildDirectly()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record CustomWrapper(IOperator<Crossover, int> Child) : WrappingOperator<Crossover, int>(Child)
+            {
+                protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(ResolutionScope<int, TSearchSpace, TProblem, TSearchState> scope)
+                {
+                    _ = Child.CreateExecutor(scope);
+                    return scope.ResolveOperator(ChildOperator);
+                }
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_ForAConsumerDefinedRole()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record CustomConfiguration : IConfigurationNode<ICustomExecutor>
+            {
+                public required IConfigurationNode<ICustomExecutor> Child { get; init; }
+                public ICustomExecutor CreateExecutionNode(ResolutionScope scope) => Child.CreateExecutionNode(scope);
+            }
+            """);
+
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task DoesNotReport_UnrelatedMethodsWithMatchingNames()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed class UnrelatedChild
+            {
+                public int CreateExecutionNode(ResolutionScope scope) => 0;
+            }
+            file sealed class DeliberateCaller
+            {
+                public int Build(ResolutionScope scope) => new UnrelatedChild().CreateExecutionNode(scope);
+            }
+            """);
+
+        diagnostics.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Reports_WhenASameTypeChildBypassesResolutionThroughTheProtectedHook()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed record RecursiveLeaf : HEAL.HeuristicLib.Operators.Mutators.Mutator<int>
+            {
+                public RecursiveLeaf? Child { get; init; }
+                protected override IMutationExecutor<int> CreateExecutor<TRunSearchState>(ResolutionScope<int, SS, P, TRunSearchState> scope) =>
+                    Child is null ? throw new System.InvalidOperationException() : Child.CreateExecutor(scope);
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Theory]
+    [InlineData("IExecutionNode")]
+    [InlineData("IExecutor")]
+    public async Task Reports_WhenANodeHookBuildsItsChildDirectly(string contract)
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + $$"""
+            file sealed class Value : {{contract}};
+            file sealed record Configuration(IConfigurationNode<Value> Child) : IConfigurationNode<Value>
+            {
+                public Value CreateExecutionNode(ResolutionScope scope) => Child.CreateExecutionNode(scope);
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    [Fact]
+    public async Task Reports_WhenANonExecutingNodeDefersChildConstruction()
+    {
+        var diagnostics = await AnalyzeAsync(Preamble + """
+            file sealed class Value(IConfigurationNode<IExecutionNode> child, ResolutionScope scope) : IExecutionNode
+            {
+                public IExecutionNode Read() => child.CreateExecutionNode(scope);
+            }
+            """);
+        diagnostics.ShouldHaveSingleItem().Id.ShouldBe(ChildResolutionAnalyzer.DiagnosticId);
+    }
+
+    private static async Task<ImmutableArray<Diagnostic>> AnalyzeAsync(string source)
+    {
+        var platformAssemblies = ((string?)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES"))
+            ?.Split(Path.PathSeparator)
+            .Select(static path => MetadataReference.CreateFromFile(path))
+            ?? [];
+
+        var compilation = CSharpCompilation.Create(
+            assemblyName: "ExecutionFactoryAnalyzerTest",
+            syntaxTrees: [CSharpSyntaxTree.ParseText(source, CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Preview))],
+            references: platformAssemblies.Append(MetadataReference.CreateFromFile(typeof(Crossover<>).Assembly.Location)),
+            options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+
+        compilation.GetDiagnostics().Where(static diagnostic => diagnostic.Severity == DiagnosticSeverity.Error).ShouldBeEmpty();
+        var diagnostics = await compilation.WithAnalyzers([new ChildResolutionAnalyzer()]).GetAnalyzerDiagnosticsAsync();
+        diagnostics.ShouldNotContain(static diagnostic => diagnostic.Id == "AD0001");
+        return [.. diagnostics.Where(static diagnostic => diagnostic.Id == ChildResolutionAnalyzer.DiagnosticId)];
+    }
+}

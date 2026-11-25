@@ -73,7 +73,7 @@ public sealed class LinearScalingTests
         var trainingData = new RegressionData(
             DataFrame.FromMatrix(
                 ["x"],
-                new double[,]
+                new[,]
                 {
                     { 1.0 },
                     { 2.0 },
@@ -82,7 +82,7 @@ public sealed class LinearScalingTests
             new Series<double>("y", [5.0, 8.0, 11.0]));
         var inputs = DataFrame.FromMatrix(
             ["x"],
-            new double[,]
+            new[,]
             {
                 { 4.0 },
                 { 5.0 }
@@ -105,7 +105,7 @@ public sealed class LinearScalingTests
         var regressor = new LinearlyScaledRegressor(
             new InputRegressor("x", "prediction"),
             new LinearScalingParameters(2.0, 1.0));
-        var inputs = DataFrame.FromMatrix(["x"], new double[,] { { 1.0 } });
+        var inputs = DataFrame.FromMatrix(["x"], new[,] { { 1.0 } });
 
         Should.Throw<ArgumentException>(() => regressor.Predict(inputs, new double[2]));
     }

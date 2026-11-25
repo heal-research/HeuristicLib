@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public class Zdt1(int dimension) : Zdt(dimension)
 {

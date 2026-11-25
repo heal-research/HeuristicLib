@@ -1,0 +1,129 @@
+using HEAL.HeuristicLib.Operators.MoveAppliers;
+using HEAL.HeuristicLib.Operators.MoveCreators;
+using HEAL.HeuristicLib.Operators.MoveEvaluators;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Problems.MetaOptimization;
+using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
+
+namespace HEAL.HeuristicLib.Tests.Experimental.Operators;
+
+public class MoveResolutionTests
+{
+    private static readonly UnrestrictedSearchSpace<int> SearchSpace = UnrestrictedSearchSpace<int>.Instance;
+    private static readonly IProblem<int, UnrestrictedSearchSpace<int>> Problem = new NoProblem<int, UnrestrictedSearchSpace<int>>(SearchSpace);
+    private static readonly IRandomNumberGenerator Random = RandomNumberGenerator.Create(1);
+
+    [Theory]
+    [InlineData("creator")]
+    [InlineData("applier")]
+    [InlineData("evaluator")]
+    public void StatefulMoveRoles_CreatePrivateDataOncePerScope(string role)
+    {
+        var preparations = new Preparations();
+        IOperator source = role switch
+        {
+            "creator" => new CountingCreator(preparations),
+            "applier" => new CountingApplier(preparations),
+            "evaluator" => new CountingEvaluator(preparations),
+            _ => throw new ArgumentOutOfRangeException(nameof(role))
+        };
+        var root = ResolutionScope.Create();
+        Next(root).ShouldBe(1);
+        Next(root.CreateChildScope()).ShouldBe(1);
+        Next(root).ShouldBe(2);
+        preparations.Value.ShouldBe(2);
+        Next(ResolutionScope.Create()).ShouldBe(1);
+        preparations.Value.ShouldBe(3);
+
+        int Next(ResolutionScope scope) => source switch
+        {
+            IOperator<MoveCreation<int>, int> creator => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(creator, Problem)
+                .Moves(0, Random).Single(),
+            IOperator<MoveApplication<int>, int> applier => scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(applier, Problem)
+                .Apply(0, 0, Random),
+            IOperator<MoveEvaluation<int>, int> evaluator => (int)scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(evaluator, Problem)
+                .Evaluate(new ObjectiveVector(0), 0, 0, Random)[0],
+            _ => throw new InvalidOperationException()
+        };
+    }
+
+    /// <summary>A move evaluation evaluates one candidate per call, so candidate counting counts its calls.</summary>
+    [Fact]
+    public void MoveEvaluation_ReportsOneCandidatePerCall()
+    {
+        IOperator<MoveEvaluation<int>, int> evaluator = new CountingEvaluator(new Preparations());
+        var candidates = new Counter();
+        var scope = ResolutionScope.Create();
+        var executor = scope.Resolve<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>(
+            evaluator.Counted(candidates, OperatorCountMetric.Candidates), Problem);
+
+        executor.Evaluate(new ObjectiveVector(0), 0, 0, Random);
+        executor.Evaluate(new ObjectiveVector(0), 0, 1, Random);
+
+        scope.Results.Result(candidates).CurrentCount.ShouldBe(2);
+    }
+
+    private sealed class Preparations
+    {
+        public int Value { get; set; }
+    }
+
+    private sealed record CountingCreator(Preparations Preparations) : MoveCreator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+    {
+
+        protected override IMoveCreationExecutor<int, int> CreateExecutor<TRunSearchState>(ResolutionScope<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, TRunSearchState> scope)
+        {
+            Preparations.Value++;
+            return new Executor();
+        }
+
+        private sealed class Executor
+            : IMoveCreationExecutor<int, int>
+        {
+            private int value;
+
+            public IEnumerable<int> Moves(int candidate, IRandomNumberGenerator random)
+            {
+                yield return ++value;
+            }
+        }
+    }
+
+    private sealed record CountingApplier(Preparations Preparations) : MoveApplier<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+    {
+
+        protected override IMoveApplicationExecutor<int, int> CreateExecutor<TRunSearchState>(ResolutionScope<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, TRunSearchState> scope)
+        {
+            Preparations.Value++;
+            return new Executor();
+        }
+
+        private sealed class Executor
+            : IMoveApplicationExecutor<int, int>
+        {
+            private int value;
+
+            public int Apply(int candidate, int move, IRandomNumberGenerator random) => ++value;
+        }
+    }
+
+    private sealed record CountingEvaluator(Preparations Preparations) : MoveEvaluator<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, int>
+    {
+
+        protected override IMoveEvaluationExecutor<int, int> CreateExecutor<TRunSearchState>(ResolutionScope<int, UnrestrictedSearchSpace<int>, IProblem<int, UnrestrictedSearchSpace<int>>, TRunSearchState> scope)
+        {
+            Preparations.Value++;
+            return new Executor();
+        }
+
+        private sealed class Executor
+            : IMoveEvaluationExecutor<int, int>
+        {
+            private int value;
+
+            public ObjectiveVector Evaluate(ObjectiveVector oldQuality, int candidate, int move, IRandomNumberGenerator random) => new(++value);
+
+            public ObjectiveVector Evaluate(int candidate, IRandomNumberGenerator random) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
+        }
+    }
+}

@@ -4,7 +4,7 @@ namespace HEAL.HeuristicLib.Algorithms;
 
 public record SingleSolutionState<T> : PopulationState<T>
 {
-    public EvaluatedCandidate<T> EvaluatedCandidate => Population.Single();
+    public EvaluatedCandidate<T> EvaluatedCandidate => Population.EvaluatedCandidates.Single();
 }
 
 public static class SingleSolutionState

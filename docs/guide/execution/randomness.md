@@ -4,7 +4,7 @@ Every HeuristicLib run receives an `IRandomNumberGenerator`. Create it from a re
 
 ```csharp
 var random = RandomNumberGenerator.Create(seed: 123);
-var finalState = await algorithm.CompleteAsync(problem, random);
+var finalState = await algorithm.RunToCompletionAsync(problem, random);
 ```
 
 Keep the seed with the algorithm configuration, package version and problem data. The same inputs reproduce the same random sequence.
@@ -64,6 +64,12 @@ Use stable keys such as a trial index, iteration number, operator index or candi
 
 Do not derive fork keys from task completion order, thread IDs or timestamps. Those values change when scheduling changes.
 
+## Streams that algorithms pass to operators
+
+Iterative algorithms fork the run's generator once per iteration, keyed by the iteration index, and pass that fork to the step's operators, the interceptor and their own terminator. A terminator added with `TerminatedBy` receives a separate stream, forked from the run's generator under a dedicated key and then once per yielded state. In both placements a terminator that draws leaves the algorithm's random sequence unchanged.
+
+The two placements give the same terminator different random numbers. A terminator that draws can therefore stop the same seeded run at a different state when it moves between an algorithm's `Terminator` setting and `TerminatedBy`. The built-in terminators draw nothing and behave identically in both placements.
+
 ## Parallel work
 
 Give each independent unit of work its own child generator. Results then stay stable when the degree of parallelism changes:
@@ -88,12 +94,12 @@ var rootRandom = RandomNumberGenerator.Create(seed: 123);
 for (ulong runIndex = 0; runIndex < 20; runIndex++)
 {
     var runRandom = rootRandom.Fork(runIndex);
-    var state = await algorithm.CompleteAsync(problem, runRandom);
+    var state = await algorithm.RunToCompletionAsync(problem, runRandom);
     Save(runIndex, state);
 }
 ```
 
-The [experiments API](/guide/execution/experiments) handles trial keys, independent runs and concurrency when you need repetitions or parameter grids.
+The [experiments API](/guide/execution/experiments#compare-problems-and-control-random-streams) assigns random streams by problem and repetition. An experiment can also fork an independent starting stream for each parameter candidate.
 
 ## Rules to keep
 
@@ -103,4 +109,7 @@ The [experiments API](/guide/execution/experiments) handles trial keys, independ
 - Use `Fork` with stable keys for independent work.
 - Record the root seed with every reported result.
 
-See [Running algorithms](/guide/execution/running-algorithms) for run creation and cancellation.
+## Next steps
+
+- [Observability and analysis](/guide/execution/observability-and-analysis) continues the Execution path with what a run records.
+- [Running algorithms](/guide/execution/running-algorithms) covers run creation and cancellation.

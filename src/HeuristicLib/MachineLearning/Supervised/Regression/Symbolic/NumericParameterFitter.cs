@@ -70,7 +70,7 @@ internal static class NumericParameterFitter
                 return false;
             }
 
-            fittedExpression = differentiableExpression.WithParameterValues(result.Parameters);
+            fittedExpression = differentiableExpression.WithParameterValues(result.Parameters.AsSpan());
             failure = null;
             return true;
         }

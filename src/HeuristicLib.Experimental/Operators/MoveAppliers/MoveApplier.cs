@@ -5,36 +5,15 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveAppliers;
 
-public abstract record MoveApplier<TGenotype, TSearchSpace, TProblem, TMove, TState>
-    : IMoveApplier<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
-{
-    private sealed record Instance(
-        MoveApplier<TGenotype, TSearchSpace, TProblem, TMove, TState> MoveApplier,
-        TState State)
-        : IMoveApplierInstance<TGenotype, TSearchSpace, TProblem, TMove>
-    {
-        public TGenotype Apply(
-            TGenotype genotype,
-            TMove move,
-            IRandomNumberGenerator random,
-            TSearchSpace searchSpace,
-            TProblem problem)
-            => MoveApplier.Apply(genotype, move, State, searchSpace, problem, random);
-    }
-
-    protected abstract TGenotype Apply(
-        TGenotype genotype,
-        TMove move,
-        TState state,
-        TSearchSpace searchSpace,
-        TProblem problem,
-        IRandomNumberGenerator random);
-
-    public virtual IMoveApplierInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
-        => new Instance(this, InitialState());
-
-    protected abstract TState InitialState();
-}
+/// <remarks>
+/// Derive directly from this base when the move applier needs mutable execution data. Use
+/// <see cref="StatelessMoveApplier{TCandidate,TSearchSpace,TProblem,TMove}"/> when it does not.
+/// <para>
+/// The type arguments are the search space and problem this move applier is written for. The base bridges to whatever a
+/// run requests, and a request the move applier was not written for is reported when the execution graph is built.
+/// </para>
+/// </remarks>
+public abstract record MoveApplier<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveApplication<TMove>, TCandidate, TSearchSpace, TProblem, IMoveApplicationExecutor<TCandidate, TMove>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>;

@@ -17,8 +17,7 @@ public sealed record PlusSelectionReplacer<TCandidate>
 
 public static class PlusSelectionReplacer
 {
-    public static PlusSelectionReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new();
+    public static PlusSelectionReplacer<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem) => new();
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(
         IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation,

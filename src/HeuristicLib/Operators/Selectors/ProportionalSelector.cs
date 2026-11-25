@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Selectors;
 using HEAL.HeuristicLib.Problems;
@@ -11,14 +12,20 @@ public record ProportionalSelector<TCandidate>
 {
     public bool Windowing { get; init; } = true;
 
+    public static Parameter<ProportionalSelector<TCandidate>, bool> WindowingParameter { get; } =
+        new(nameof(Windowing), static selector => selector.Windowing, static (selector, value) => selector with { Windowing = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [WindowingParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public override IReadOnlyList<EvaluatedCandidate<TCandidate>> Select(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random) =>
         ProportionalSelector.Select(population, objective, count, random, Windowing);
 }
 
 public static class ProportionalSelector
 {
-    public static ProportionalSelector<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, bool windowing = true)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new() { Windowing = windowing };
+    public static ProportionalSelector<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, bool windowing = true) => new() { Windowing = windowing };
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Select<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> population, ObjectiveDirections objective, int count, IRandomNumberGenerator random, bool windowing = true)
     {

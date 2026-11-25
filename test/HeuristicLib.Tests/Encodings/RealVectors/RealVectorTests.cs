@@ -966,7 +966,7 @@ public sealed class RealVectorTests
     public void BroadcastLength_VectorAndEnumerable_WithScalarAndEmptyVector_ReturnsZero()
     {
         RealVector scalar = 1.0;
-        var others = new[] { RealVector.Create(), (RealVector)2.0 };
+        var others = new[] { RealVector.Create(), 2.0 };
 
         Vector.BroadcastLength(scalar, others).ShouldBe(0);
     }

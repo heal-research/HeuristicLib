@@ -1,4 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Random;
@@ -32,6 +33,16 @@ public record RoundedBlendAlphaBetaCrossover : SingleCandidateCrossover<IntegerV
     /// fall back to the nearest feasible integer rather than failing.
     /// </remarks>
     public double Beta { get; init; } = 0.25;
+
+    public static Parameter<RoundedBlendAlphaBetaCrossover, double> AlphaParameter { get; } =
+        new(nameof(Alpha), static crossover => crossover.Alpha, static (crossover, value) => crossover with { Alpha = value });
+
+    public static Parameter<RoundedBlendAlphaBetaCrossover, double> BetaParameter { get; } =
+        new(nameof(Beta), static crossover => crossover.Beta, static (crossover, value) => crossover with { Beta = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [AlphaParameter, BetaParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override IntegerVector CrossParents(Parents<IntegerVector> parents, IRandomNumberGenerator random, IntegerVectorSearchSpace searchSpace) =>
         Cross(random, parents.Parent1, parents.Parent2, searchSpace, Alpha, Beta);

@@ -1,47 +1,55 @@
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
-using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Creates a candidate batch and then always applies one mutator to the created batch.
 /// </summary>
-public record TransformedCreator<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> SourceCreator, IMutator<TCandidate, TSearchSpace, TProblem> TransformationMutator)
-    : Creator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public record TransformedCreator<TCandidate>(IOperator<Creation, TCandidate> SourceCreator, IOperator<Mutation, TCandidate> TransformationMutator)
+    : Operator<Creation, TCandidate>
 {
-    public override CreatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-        new Instance(instanceRegistry.Resolve(SourceCreator), instanceRegistry.Resolve(TransformationMutator));
+    public static Parameter<TransformedCreator<TCandidate>, IOperator<Creation, TCandidate>> SourceCreatorParameter { get; } =
+        new(nameof(SourceCreator), static creator => creator.SourceCreator, static (creator, value) => creator with { SourceCreator = value });
 
-    private sealed class Instance(ICreatorInstance<TCandidate, TSearchSpace, TProblem> creator, IMutatorInstance<TCandidate, TSearchSpace, TProblem> mutator)
-        : CreatorInstance<TCandidate, TSearchSpace, TProblem>
+    public static Parameter<TransformedCreator<TCandidate>, IOperator<Mutation, TCandidate>> TransformationMutatorParameter { get; } =
+        new(nameof(TransformationMutator), static creator => creator.TransformationMutator, static (creator, value) => creator with { TransformationMutator = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [SourceCreatorParameter, TransformationMutatorParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        var sourceCreator = scope.Resolve(SourceCreator);
+        var transformationMutator = scope.Resolve(TransformationMutator);
+        return new Executor(sourceCreator, transformationMutator);
+    }
+
+    private sealed class Executor(ICreationExecutor<TCandidate> creator, IMutationExecutor<TCandidate> mutator)
+        : CreationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random)
         {
-            var candidates = creator.Create(count, random, searchSpace, problem);
-            return mutator.Mutate(candidates, random, searchSpace, problem);
+            var candidates = creator.Create(count, random);
+            return mutator.Mutate(candidates, random);
         }
     }
 }
 
 public static class TransformedCreator
 {
-    public static TransformedCreator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator, IMutator<TCandidate, TSearchSpace, TProblem> mutator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> => new(creator, mutator);
+    public static TransformedCreator<TCandidate> Create<TCandidate>(IOperator<Creation, TCandidate> creator, IOperator<Mutation, TCandidate> mutator) =>
+        new(creator, mutator);
 }
 
 public static class TransformedCreatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(ICreator<TCandidate, TSearchSpace, TProblem> creator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IOperator<Creation, TCandidate> creator)
     {
-        public TransformedCreator<TCandidate, TSearchSpace, TProblem> TransformWith(IMutator<TCandidate, TSearchSpace, TProblem> mutator) =>
+        public TransformedCreator<TCandidate> TransformWith(IOperator<Mutation, TCandidate> mutator) =>
             TransformedCreator.Create(creator, mutator);
     }
 }

@@ -4,7 +4,7 @@ HeuristicLib can run inside Python through [pythonnet](https://pythonnet.github.
 
 ## Requirements
 
-- .NET 10 SDK
+- .NET 10 SDK or later
 - Python 3.10 or newer
 - A local clone of HeuristicLib
 
@@ -81,19 +81,19 @@ The interop assembly also contains helpers for symbolic regression callbacks, re
 
 ## Run the interactive example
 
-The [interactive symbolic regression demonstrator](https://github.com/heal-research/HeuristicLib/tree/dev/examples/PythonInteractiveDemonstrator) is the most complete Python example. It uses FastAPI and pythonnet to run HeuristicLib and stream each generation to a browser.
+The [interactive symbolic regression demonstrator](https://github.com/heal-research/HeuristicLib/tree/dev/python-samples/PythonInteractiveDemonstrator) is the most complete Python example. It uses FastAPI and pythonnet to run HeuristicLib and stream each generation to a browser.
 
 From the repository root:
 
 ```console
 dotnet publish src/HeuristicLib.PythonInterop --configuration Release
-python -m pip install -r examples/PythonInteractiveDemonstrator/requirements.txt
-python examples/PythonInteractiveDemonstrator/app.py
+python -m pip install -r python-samples/PythonInteractiveDemonstrator/requirements.txt
+python python-samples/PythonInteractiveDemonstrator/app.py
 ```
 
 Open `http://localhost:8765` after the server starts.
 
-The `examples/PythonInteroperability` directory contains notebooks for Python callbacks and custom symbolic regression scoring. They use the same local publish workflow.
+The `python-samples/PythonInteroperability` directory contains notebooks for Python callbacks and custom symbolic regression scoring, and `best_so_far_curve.py`, which plots a run's best quality over evaluations. They use the same local publish workflow.
 
 ## Current limitations
 

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
@@ -16,35 +17,44 @@ public enum RelativeQualityZeroBestKnownPolicy
 /// <summary>
 /// Normalizes the objective vectors produced by the child evaluator against a fixed best-known objective vector.
 /// </summary>
-public sealed record RelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record RelativeQualityEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
 {
     /// <summary>
     /// Gets the best-known objective vector used as the normalization reference.
     /// </summary>
     public ObjectiveVector BestKnown { get; init; }
 
-    /// <summary>
-    /// Gets the policy applied when a best-known objective value is zero.
-    /// </summary>
     public RelativeQualityZeroBestKnownPolicy ZeroBestKnownPolicy { get; init; } = RelativeQualityZeroBestKnownPolicy.SignedInfinity;
 
-    public RelativeQualityEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObjectiveVector bestKnown)
+    public static Parameter<RelativeQualityEvaluator<TCandidate>, ObjectiveVector> BestKnownParameter { get; } =
+        new(nameof(BestKnown), static evaluator => evaluator.BestKnown, static (evaluator, value) => evaluator with { BestKnown = value });
+
+    public static Parameter<RelativeQualityEvaluator<TCandidate>, RelativeQualityZeroBestKnownPolicy> ZeroBestKnownPolicyParameter { get; } =
+        new(nameof(ZeroBestKnownPolicy), static evaluator => evaluator.ZeroBestKnownPolicy, static (evaluator, value) => evaluator with { ZeroBestKnownPolicy = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [BestKnownParameter, ZeroBestKnownPolicyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public RelativeQualityEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ObjectiveVector bestKnown)
         : base(childEvaluator)
     {
         BestKnown = bestKnown;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
-        new Instance(childEvaluator, BestKnown, ZeroBestKnownPolicy);
-
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
-            ChildEvaluator.Evaluate(candidates, random, searchSpace, problem)
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor(childEvaluator, BestKnown, ZeroBestKnownPolicy);
+    }
+
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy)
+        : EvaluationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
+            childEvaluator.Evaluate(candidates, random)
                 .Select(objectiveVector => RelativeQuality.Normalize(objectiveVector, bestKnown, zeroBestKnownPolicy))
                 .ToArray();
     }
@@ -52,9 +62,7 @@ public sealed record RelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem
 
 public static class RelativeQualityEvaluator
 {
-    public static RelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, ObjectiveVector bestKnown)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static RelativeQualityEvaluator<TCandidate> Create<TCandidate>(IOperator<Evaluation, TCandidate> childEvaluator, ObjectiveVector bestKnown) =>
         new(childEvaluator, bestKnown);
 }
 
@@ -96,14 +104,12 @@ public static class RelativeQuality
 
 public static class RelativeQualityEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
-        public RelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithRelativeQuality(ObjectiveVector bestKnown) =>
+        public RelativeQualityEvaluator<TCandidate> ScaledToBestKnown(ObjectiveVector bestKnown) =>
             new(evaluator, bestKnown);
 
-        public RelativeQualityEvaluator<TCandidate, TSearchSpace, TProblem> WithRelativeQuality(ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
+        public RelativeQualityEvaluator<TCandidate> ScaledToBestKnown(ObjectiveVector bestKnown, RelativeQualityZeroBestKnownPolicy zeroBestKnownPolicy) =>
             new(evaluator, bestKnown) { ZeroBestKnownPolicy = zeroBestKnownPolicy };
     }
 }

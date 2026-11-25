@@ -33,7 +33,7 @@ public class SingleCandidateEvaluatorTests
     [Fact]
     public void Evaluate_CallsEvaluateCandidateOncePerCandidate()
     {
-        var counter = new ObservationCounter();
+        var counter = new CountAccumulator();
         var evaluator = new CountingEvaluator(counter);
 
         evaluator.Evaluate([1, 2, 3], RandomNumberGenerator.Create(42), DummySearchSpace<int>.Instance);
@@ -47,7 +47,7 @@ public class SingleCandidateEvaluatorTests
             new(random.NextInt(0, 1000));
     }
 
-    private sealed record CountingEvaluator(ObservationCounter Counter) : SingleCandidateEvaluator<int, DummySearchSpace<int>>
+    private sealed record CountingEvaluator(CountAccumulator Counter) : SingleCandidateEvaluator<int, DummySearchSpace<int>>
     {
         public override ObjectiveVector EvaluateCandidate(int candidate, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace)
         {

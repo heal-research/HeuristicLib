@@ -21,7 +21,7 @@ public sealed class BoundedRegressorTests
         var regressor = new BoundedRegressor(inner, lowerBound: 0.0, upperBound: 1.0);
         var inputs = DataFrame.FromMatrix(
             ["x0"],
-            new double[,]
+            new[,]
             {
                 { -2.0 },
                 { 0.5 },
@@ -45,7 +45,7 @@ public sealed class BoundedRegressorTests
             upperBound: 1.0);
         var inputs = DataFrame.FromMatrix(
             ["x0"],
-            new double[,]
+            new[,]
             {
                 { -2.0 },
                 { 0.0 },
@@ -65,7 +65,7 @@ public sealed class BoundedRegressorTests
             new InputRegressor("x0", "prediction"),
             double.NegativeInfinity,
             double.PositiveInfinity);
-        var inputs = DataFrame.FromMatrix(["x0"], new double[,] { { 1.0 } });
+        var inputs = DataFrame.FromMatrix(["x0"], new[,] { { 1.0 } });
 
         Should.Throw<ArgumentException>(() => regressor.Predict(inputs, new double[2]));
     }

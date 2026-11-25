@@ -22,6 +22,18 @@ var data = new RegressionData(
     new Series<double>("target", [5.0, 11.0]));
 ```
 
+A series and a data frame are immutable. A `DataFrame` keeps its series in insertion order, requires equally many rows in every series and addresses a series by its name. The series may differ in element type, so read one with `Get<T>(name)`. Supervised data pairs inputs with a named target and requires both to have equally many rows. It says nothing about how you use them: `RegressionData` does not mark rows as training, validation or test data, so you decide that when you split a frame and choose what to fit and what to score.
+
+## Estimators and predictors
+
+An estimator fits a predictor from training data: `estimator.Fit(trainingData, random)` returns the predictor. The estimator is the recipe and the predictor is the fitted result, so an unfitted estimator configuration is not a predictor and offers no `Predict`. A stochastic estimator receives its randomness explicitly, as an `IRandomNumberGenerator` ([Randomness](/guide/execution/randomness)). A predictor turns an input frame into predictions in one of two ways: `Predict(inputs)` returns a series named by the predictor's `PredictionName`, and `Predict(inputs, destination)` writes the predictions into a span you supply, which the built-in regressors require to hold exactly one value per input row. An `IRegressor` is a predictor of `double`, such as the `SymbolicRegressor` that `ToRegressor` creates from an expression.
+
+## Metrics
+
+A metric scores predicted values against target values and declares through `Direction` whether lower or higher is better: `Metrics.MSE` is minimized and `Metrics.R2` is maximized. A metric does not know the problem that uses it, so the same metric serves any problem. A problem such as `SymbolicRegressionProblem` fills its objective vector with the scores of its metrics.
+
+`IPredictionMetric<T>` compares predictions and targets of any element type `T`. `IRegressionMetric` is the `IPredictionMetric<double>` for regression, and the `Metrics` class offers the built-in ones. A regression metric is therefore a prediction metric, but not every prediction metric is a regression metric.
+
 ## Descriptive statistics
 
 `DescriptiveStatistics` calculates one-shot summaries directly from spans:
@@ -132,7 +144,7 @@ Series<double> predictions = scaled.Predict(testInputs);
 
 Enabling `useLinearScaling` on `SymbolicRegressionProblem` fits one
 least-squares transformation for each candidate evaluation and applies the same
-scaled predictions to every configured prediction metric. Scaling does not
+scaled predictions to every configured regression metric. Scaling does not
 modify the expression genotype and therefore does not affect expression
 identity, length, containment, mutation, or crossover.
 

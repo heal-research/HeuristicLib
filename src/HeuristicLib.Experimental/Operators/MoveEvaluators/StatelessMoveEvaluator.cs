@@ -6,23 +6,21 @@ using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.MoveEvaluators;
 
-public abstract record StatelessMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove>
-    : IMoveEvaluator<TGenotype, TSearchSpace, TProblem, TMove>,
-      IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove>
-    where TSearchSpace : class, ISearchSpace<TGenotype>
-    where TProblem : class, IProblem<TGenotype, TSearchSpace>
+/// <summary>A stateless move operator whose executor retains its bound problem.</summary>
+public abstract record StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove>
+    : Operator<MoveEvaluation<TMove>, TCandidate, TSearchSpace, TProblem, IMoveEvaluationExecutor<TCandidate, TMove>>
+    where TSearchSpace : class, ISearchSpace<TCandidate>
+    where TProblem : class, IProblem<TCandidate, TSearchSpace>
 {
-    public virtual IMoveEvaluatorInstance<TGenotype, TSearchSpace, TProblem, TMove> CreateExecutionInstance(
-        ExecutionInstanceRegistry instanceRegistry)
-        => this;
+    protected sealed override IMoveEvaluationExecutor<TCandidate, TMove> CreateExecutor<TRunSearchState>(ResolutionScope<TCandidate, TSearchSpace, TProblem, TRunSearchState> scope) => new Executor(this, scope.Problem);
 
-    public abstract ObjectiveVector Evaluate(
-        ObjectiveVector oldQuality,
-        TGenotype genotype,
-        TMove move,
-        IRandomNumberGenerator random,
-        TSearchSpace searchSpace,
-        TProblem problem);
+    public abstract ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
-    public ObjectiveVector Evaluate(TGenotype genotype, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
+    public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) => throw new NotSupportedException("A move evaluator requires an objective and a move.");
+
+    private sealed class Executor(StatelessMoveEvaluator<TCandidate, TSearchSpace, TProblem, TMove> configuration, TProblem problem) : IMoveEvaluationExecutor<TCandidate, TMove>
+    {
+        public ObjectiveVector Evaluate(ObjectiveVector oldQuality, TCandidate candidate, TMove move, IRandomNumberGenerator random) => configuration.Evaluate(oldQuality, candidate, move, random, problem.SearchSpace, problem);
+        public ObjectiveVector Evaluate(TCandidate candidate, IRandomNumberGenerator random) => configuration.Evaluate(candidate, random, problem.SearchSpace, problem);
+    }
 }

@@ -1,35 +1,24 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+/// <summary>
+/// Caches evaluation results for the bound problem's current epoch.
+/// </summary>
+/// <remarks>
+/// An epoch change invalidates cached results before the next lookup. If the epoch changes during a child evaluation,
+/// its results are returned but not cached. The batch is not retried, and results already obtained from cache are not reevaluated.
+/// </remarks>
+public sealed record DynamicCachingEvaluator<TCandidate, TKey>
+    : WrappingOperator<Evaluation, TCandidate>
     where TCandidate : notnull
     where TKey : notnull
 {
-    private sealed class ExecutionData
-    {
-        public MemoryCache Cache { get; }
-        public long HitCount { get; set; }
-
-        public ExecutionData(long? sizeLimit)
-        {
-            Cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = sizeLimit, TrackStatistics = true });
-        }
-    }
-
-    /// <summary>
-    /// Gets the dynamic problem whose epoch changes clear this evaluator's cache.
-    /// </summary>
-    public TProblem SourceProblem { get; init; }
-
     /// <summary>
     /// Gets the strategy that selects a candidate's cache key. Candidates that produce equal keys share one cached evaluation result.
     /// </summary>
@@ -40,149 +29,77 @@ public sealed record DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem,
     /// </summary>
     public long? SizeLimit { get; init; }
 
-    public DynamicCachingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem problem, ICacheKeySelector<TCandidate, TKey> keySelector)
-        : base(childEvaluator)
-    {
-        SourceProblem = problem;
-        KeySelector = keySelector;
-    }
-
     /// <summary>
     /// Gets the number of cached candidate evaluations across consecutive all-hit batches that advances the problem epoch.
     /// A batch containing any cache miss resets the accumulated count. The default effectively disables cache-driven epoch advancement.
+    /// The cache requests at most one update per epoch, even when the problem defers applying it.
     /// </summary>
     public long GraceCount { get; init; } = long.MaxValue;
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator) =>
-        new Instance(childEvaluator, SourceProblem, KeySelector, SizeLimit, GraceCount);
+    public static Parameter<DynamicCachingEvaluator<TCandidate, TKey>, ICacheKeySelector<TCandidate, TKey>> KeySelectorParameter { get; } =
+        new(nameof(KeySelector), static evaluator => evaluator.KeySelector, static (evaluator, value) => evaluator with { KeySelector = value });
 
-    private sealed class Instance : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>
+    public static Parameter<DynamicCachingEvaluator<TCandidate, TKey>, long?> SizeLimitParameter { get; } =
+        new(nameof(SizeLimit), static evaluator => evaluator.SizeLimit, static (evaluator, value) => evaluator with { SizeLimit = value });
+
+    public static Parameter<DynamicCachingEvaluator<TCandidate, TKey>, long> GraceCountParameter { get; } =
+        new(nameof(GraceCount), static evaluator => evaluator.GraceCount, static (evaluator, value) => evaluator with { GraceCount = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [KeySelectorParameter, SizeLimitParameter, GraceCountParameter];
+
+    public DynamicCachingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, ICacheKeySelector<TCandidate, TKey> keySelector)
+        : base(childEvaluator)
     {
-        private readonly ExecutionData executionData;
-        private readonly ICacheKeySelector<TCandidate, TKey> keySelector;
-        private readonly long graceCount;
+        KeySelector = keySelector;
+    }
 
-        public Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, TProblem sourceProblem, ICacheKeySelector<TCandidate, TKey> keySelector, long? sizeLimit, long graceCount)
-            : base(childEvaluator)
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public override bool Supports(ExecutionSignature execution) =>
+        base.Supports(execution)
+        && execution.Problem.IsAssignableTo(typeof(IDynamicProblem<TCandidate, ISearchSpace<TCandidate>>));
+
+    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
+        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
+    {
+        if (SizeLimit < 0)
+            throw new InvalidOperationException("The evaluation cache size limit must be nonnegative.");
+        // Supports has already accepted the run's problem, so it is a dynamic problem over TCandidate.
+        if (scope.Problem is not IDynamicProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+            throw ExecutionSignature.Mismatch(this,
+                ExecutionSignature.Describe(typeof(ISearchSpace<TCandidate>), typeof(IDynamicProblem<TCandidate, ISearchSpace<TCandidate>>)),
+                ExecutionSignature.Describe(typeof(TSearchSpace), typeof(TProblem), typeof(TSearchState)));
+        var cache = new DynamicEvaluationCache<TKey>(SizeLimit, GraceCount);
+        return new Executor(scope.Resolve(ChildOperator), problem, KeySelector, cache);
+    }
+
+    private sealed class Executor(
+        IEvaluationExecutor<TCandidate> childEvaluator,
+        IDynamicProblem<TCandidate, ISearchSpace<TCandidate>> problem,
+        ICacheKeySelector<TCandidate, TKey> keySelector,
+        DynamicEvaluationCache<TKey> cache) : EvaluationExecutor<TCandidate>
+    {
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
-            executionData = new ExecutionData(sizeLimit);
-            this.keySelector = keySelector;
-            this.graceCount = graceCount;
-            sourceProblem.EpochClock.OnEpochChange += (_, _) =>
-            {
-                executionData.Cache.Clear();
-                executionData.HitCount = 0;
-            };
-        }
-
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
-        {
-            var cache = executionData.Cache;
-            var beforeCacheStatistics = cache.GetCurrentStatistics();
-            var beforeHits = beforeCacheStatistics?.TotalHits ?? 0;
-            var beforeMisses = beforeCacheStatistics?.TotalMisses ?? 0;
-
-            var n = candidates.Count;
-            var results = new ObjectiveVector[n];
-
-            var uncachedCandidates = new List<TCandidate>();
-            var uncachedKeys = new List<TKey>();
-            var uncachedMap = new Dictionary<TKey, (int j, List<int> indices)>();
-
-            for (var i = 0; i < n; i++)
-            {
-                var candidate = candidates[i];
-                var key = keySelector.SelectKey(candidate);
-
-                if (cache.TryGetValue(key, out ObjectiveVector? cached))
-                {
-                    results[i] = cached!;
-                    continue;
-                }
-
-                if (!uncachedMap.TryGetValue(key, out var entry))
-                {
-                    var j = uncachedCandidates.Count;
-                    uncachedCandidates.Add(candidate);
-                    uncachedKeys.Add(key);
-                    uncachedMap.Add(key, (j, [i]));
-                }
-                else
-                {
-                    entry.indices.Add(i);
-                }
-            }
-
-            if (uncachedCandidates.Count > 0)
-            {
-                var newObjectiveVectors = ChildEvaluator.Evaluate(uncachedCandidates, random, searchSpace, problem);
-                for (var k = 0; k < uncachedKeys.Count; k++)
-                {
-                    cache.Set(uncachedKeys[k], newObjectiveVectors[k], new MemoryCacheEntryOptions { Size = 1 });
-                }
-
-                foreach (var (_, entry) in uncachedMap)
-                {
-                    var objectiveVector = newObjectiveVectors[entry.j];
-                    foreach (var i in entry.indices)
-                    {
-                        results[i] = objectiveVector;
-                    }
-                }
-            }
-
-            var afterCacheStatistics = cache.GetCurrentStatistics();
-            var afterHits = afterCacheStatistics?.TotalHits ?? 0;
-            var afterMisses = afterCacheStatistics?.TotalMisses ?? 0;
-
-            var uniqueEvaluatedCount = afterMisses - beforeMisses;
-            var cachedSolutionsCount = afterHits - beforeHits;
-
-            if (candidates.Count == 0)
-            {
-                return results;
-            }
-
-            if (uniqueEvaluatedCount == 0)
-            {
-                executionData.HitCount += cachedSolutionsCount;
-                if (executionData.HitCount >= graceCount)
-                {
-                    problem.EpochClock.AdvanceEpoch();
-                }
-            }
-            else
-            {
-                executionData.HitCount = 0;
-            }
-
-            return results;
+            return cache.Evaluate(candidates, keySelector, problem,
+                missing => childEvaluator.Evaluate(missing, random));
         }
     }
 }
 
 public static class DynamicCachedEvaluatorExtension
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator) where TCandidate : class
     {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache<TKey>(TProblem problem, ICacheKeySelector<TCandidate, TKey> keySelector) where TKey : notnull
+        public DynamicCachingEvaluator<TCandidate, TKey> CachedPerEpoch<TKey>(ICacheKeySelector<TCandidate, TKey> keySelector)
+            where TKey : notnull
         {
-            return new(evaluator, problem, keySelector);
+            return new(evaluator, keySelector);
         }
 
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache(TProblem problem)
+        public DynamicCachingEvaluator<TCandidate, TCandidate> CachedPerEpoch()
         {
-            return new(evaluator, problem, CacheKeySelection<TCandidate>.Identity);
+            return new(evaluator, CacheKeySelection<TCandidate>.Identity);
         }
-    }
-
-    extension<TCandidate, TSearchSpace, TProblem, TKey>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace> where TKey : notnull
-    {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TKey> WithCache(ICacheKeySelector<TCandidate, TKey> keySelector) => new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, keySelector);
-    }
-
-    extension<TCandidate, TSearchSpace, TProblem>(TProblem problem) where TCandidate : class where TSearchSpace : class, ISearchSpace<TCandidate> where TProblem : DynamicProblem<TCandidate, TSearchSpace>
-    {
-        public DynamicCachingEvaluator<TCandidate, TSearchSpace, TProblem, TCandidate> WithCache() => new(new ProblemEvaluator<TCandidate, TSearchSpace, TProblem>(), problem, CacheKeySelection<TCandidate>.Identity);
     }
 }

@@ -1,4 +1,3 @@
-using System.Collections;
 using HEAL.HeuristicLib.Objectives;
 
 namespace HEAL.HeuristicLib.Algorithms;
@@ -10,19 +9,14 @@ public static class Population
     public static Population<TCandidate> From<TCandidate>(IEnumerable<EvaluatedCandidate<TCandidate>> evaluatedCandidates) => new([.. evaluatedCandidates]);
 }
 
-public record Population<TCandidate> : IEnumerable<EvaluatedCandidate<TCandidate>>
+public record Population<TCandidate>
 {
     public ValueArray<EvaluatedCandidate<TCandidate>> EvaluatedCandidates { get; init; }
 
-    public IEnumerable<TCandidate> Candidates => EvaluatedCandidates.Select(x => x.Candidate);
+    public ValueArray<TCandidate> Candidates => EvaluatedCandidates.Select(x => x.Candidate).ToValueArray();
 
     public Population(params IReadOnlyList<EvaluatedCandidate<TCandidate>> evaluatedCandidates)
     {
         EvaluatedCandidates = evaluatedCandidates.ToValueArray();
     }
-
-    public IEnumerator<EvaluatedCandidate<TCandidate>> GetEnumerator() =>
-        ((IEnumerable<EvaluatedCandidate<TCandidate>>)EvaluatedCandidates).GetEnumerator();
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }

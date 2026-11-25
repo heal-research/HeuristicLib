@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 
@@ -11,6 +12,13 @@ public sealed record FullTreeCreator
     /// An explicit depth must be positive and feasible within the search-space depth and length limits.
     /// </summary>
     public int? Depth { get; init; }
+
+    public static Parameter<FullTreeCreator, int?> DepthParameter { get; } =
+        new(nameof(Depth), static creator => creator.Depth, static (creator, value) => creator with { Depth = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [DepthParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace) =>
         FullTreeCreation.Create(random, searchSpace, Depth);

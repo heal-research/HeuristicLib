@@ -1,15 +1,59 @@
+using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.Composite;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Inspection;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.Dynamic;
 using HEAL.HeuristicLib.Problems.TravelingSalesman;
+using HEAL.HeuristicLib.SearchSpaces;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
 namespace HEAL.HeuristicLib.Tests.Scenarios.Problems.Dynamic;
 
 public class AutoEcPaperScenarioTests
 {
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public async Task RunUntilEpochChanges_CountsAppliedUpdatesFromItsStartingEpoch(int updatesPerMove)
+    {
+        using var problem = CreateMovingPeaksProblem();
+        for (var epoch = 0; epoch < 3; epoch++)
+            problem.UpdateOnce();
+        var moves = 0;
+        var disposed = false;
+
+        var finalState = await RunUntilEpochChanges(AdvanceEpochs(), problem, 2, TestContext.Current.CancellationToken);
+
+        var expectedMoves = updatesPerMove == 1 ? 2 : 1;
+        moves.ShouldBe(expectedMoves);
+        finalState.ShouldBe($"move {expectedMoves}");
+        problem.CurrentEpoch.ShouldBe(3 + expectedMoves * updatesPerMove);
+        disposed.ShouldBeTrue();
+
+        async IAsyncEnumerable<string> AdvanceEpochs()
+        {
+            try
+            {
+                for (var move = 0; move < 3; move++)
+                {
+                    moves++;
+                    for (var update = 0; update < updatesPerMove; update++)
+                        problem.UpdateOnce();
+                    yield return $"move {moves}";
+                    await Task.CompletedTask;
+                }
+            }
+            finally
+            {
+                disposed = true;
+            }
+        }
+    }
+
     [Fact]
     public async Task DynamicRacingGa_OnActivatedTsp_UsesPaperLikeScenario()
     {
@@ -17,7 +61,7 @@ public class AutoEcPaperScenarioTests
         var concordePath = FindLocalFile("for_Agent", "Concorde", "executablescygwin", "concorde.exe");
         if (tspFile is null || concordePath is null)
         {
-            return;
+            Assert.Skip("Needs the local files tsp/eil51.tsp and for_Agent/Concorde/executablescygwin/concorde.exe in a parent directory of the test output.");
         }
 
         const int targetEpochChanges = 50;
@@ -27,28 +71,34 @@ public class AutoEcPaperScenarioTests
             RandomNumberGenerator.Create(2024),
             activationProb: 0.7,
             switchProbability: 0.25,
-            UpdatePolicy.AfterEvaluation,
-            epochLength: 120);
+            new EvaluationCountSchedule(120),
+            UpdatePolicy.AfterEachBatchEvaluation);
         var metaSpace = CreateTspHyperParameterSearchSpace();
         var metaCreator = metaSpace.CombineCreators(
             new UniformDistributedCreator(),
-            new HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator());
+            new Encodings.IntegerVectors.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.1),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator().WithDynamicRelativeQuality(
-            problem,
+        IOperator<Evaluation, Permutation> evaluator = problem.CreateEvaluator().ScaledToDynamicBestKnown(
             new ActivatedTravelingSalesmanExactBestKnownProvider(
                 new ConcordeTravelingSalesmanExactSolver(concordePath)));
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalyzer<Permutation, PermutationSearchSpace,
+                ActivatedTravelingSalesmanProblem>(
+                [evaluator]);
+        var analyzed = evaluator.Substitute(qualityCurve, bbcp);
 
         var racing = new DynamicRacingAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem,
             PopulationState<Permutation>,
-            GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>>(
+            GeneticAlgorithm<Permutation>>(
             metaSpace,
             metaCreator,
             metaMutator,
             new BestPopulationStateMerger<Permutation>(),
-            candidate => CreatePermutationGa(problem, evaluator, candidate),
+            candidate => CreatePermutationGa(problem, analyzed, candidate),
             algorithm => algorithm.Evaluator)
         {
             NoRacers = 2,
@@ -57,31 +107,18 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var qualityCurve =
-            new QualityCurvePerEpochAnalysis<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>(
-                problem,
-                evaluator);
-        var bbcp =
-            new BestBeforeChangePerformanceAnalysis<Permutation, PermutationSearchSpace,
-                ActivatedTravelingSalesmanProblem>(
-                problem,
-                [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .WithAnalyzers(qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
             problem, targetEpochChanges, TestContext.Current.CancellationToken);
-        var qualityResult = run.GetResult(qualityCurve);
-        var bbcpResult = run.GetResult(bbcp);
-
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(2);
-        bbcpResult.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
-        double.IsFinite(bbcpResult.Performance).ShouldBeTrue();
+        run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(2);
+        run.Result(bbcp).BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(1);
+        double.IsFinite(run.Result(bbcp).Performance).ShouldBeTrue();
     }
 
     [Fact]
@@ -92,19 +129,25 @@ public class AutoEcPaperScenarioTests
         var metaSpace = CreateHyperParameterSearchSpace();
         var metaCreator = metaSpace.CombineCreators(
             new UniformDistributedCreator(),
-            new HEAL.HeuristicLib.Encodings.IntegerVectors.UniformDistributedCreator());
+            new Encodings.IntegerVectors.UniformDistributedCreator());
         var metaMutator = metaSpace.CombineMutator(
             new GaussianMutator(mutationRate: 1.0, mutationStrength: 0.15),
             new UniformOnePositionMutator());
-        var evaluator = problem.CreateEvaluator();
+        IOperator<Evaluation, RealVector> evaluator = problem.CreateEvaluator();
+        var epoch = Clock.FromEpoch(problem);
+        var qualityCurve = evaluator.Invocations.Trace(o => o.Candidates.ToEvaluated(o.ObjectiveVectors).Best(o.Problem.Objective), [epoch]);
+        var bbcp =
+            new BestBeforeChangePerformanceAnalyzer<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem>(
+                [evaluator]);
+        var analyzed = evaluator.Substitute(qualityCurve, bbcp);
 
-        var racing = new DynamicRacingAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem,
-            PopulationState<RealVector>, GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>>(
+        var racing = new DynamicRacingAlgorithm<RealVector, BoundedRealVectorSearchSpace, MovingPeaksProblem,
+            PopulationState<RealVector>, GeneticAlgorithm<RealVector>>(
             metaSpace,
             metaCreator,
             metaMutator,
             new BestPopulationStateMerger<RealVector>(),
-            candidate => CreateGa(problem, evaluator, candidate),
+            candidate => CreateGa(problem, analyzed, candidate),
             algorithm => algorithm.Evaluator)
         {
             NoRacers = 2,
@@ -113,66 +156,40 @@ public class AutoEcPaperScenarioTests
             HallOfFameStrength = 0.25,
             ModelObservationInterval = 10
         };
-        var qualityCurve =
-            new QualityCurvePerEpochAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
-                problem,
-                evaluator);
-        var bbcp =
-            new BestBeforeChangePerformanceAnalysis<RealVector, RealVectorSearchSpace, MovingPeaksProblem>(
-                problem,
-                [evaluator]);
 
-        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123))
-                        .WithAnalyzers(qualityCurve, bbcp);
+        var run = racing.CreateRun(problem, RandomNumberGenerator.Create(123));
 
         var finalState = await RunUntilEpochChanges(
             run.Stream(cancellationToken: TestContext.Current.CancellationToken),
             problem, targetEpochChanges, TestContext.Current.CancellationToken);
-        var qualityResult = run.GetResult(qualityCurve);
-        var bbcpResult = run.GetResult(bbcp);
-
         finalState.Population.EvaluatedCandidates.Count.ShouldBeGreaterThan(0);
         finalState.Population.EvaluatedCandidates.ShouldAllBe(candidate =>
             problem.SearchSpace.Contains(candidate.Candidate));
-        qualityResult.BestPerEpoch.Count.ShouldBeGreaterThanOrEqualTo(3);
-        qualityResult.BestPerEpoch.Select(entry => entry.timing.Epoch).Distinct().Count()
-                     .ShouldBeGreaterThanOrEqualTo(3);
-        bbcpResult.BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
-        double.IsFinite(bbcpResult.Performance).ShouldBeTrue();
+        run.Result(qualityCurve).SampleCount.ShouldBeGreaterThanOrEqualTo(3);
+        run.Result(qualityCurve).By(epoch).Select(point => point.Time).Distinct().Count().ShouldBeGreaterThanOrEqualTo(3);
+        run.Result(bbcp).BestBeforeChange.Count.ShouldBeGreaterThanOrEqualTo(2);
+        double.IsFinite(run.Result(bbcp).Performance).ShouldBeTrue();
     }
 
-    private static async Task<TSearchState> RunUntilEpochChanges<TCandidate, TSearchSpace, TSearchState>(
+    private static async Task<TSearchState> RunUntilEpochChanges<TProblem, TCandidate, TSearchSpace, TSearchState>(
         IAsyncEnumerable<TSearchState> stream,
-        DynamicProblem<TCandidate, TSearchSpace> problem,
+        DynamicProblem<TProblem, TCandidate, TSearchSpace> problem,
         int epochChanges,
         CancellationToken cancellationToken)
-        where TSearchSpace : class, HEAL.HeuristicLib.SearchSpaces.ISearchSpace<TCandidate>
+        where TProblem : Problem<TProblem, TCandidate, TSearchSpace>
+        where TSearchSpace : class, ISearchSpace<TCandidate>
         where TSearchState : class
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(epochChanges);
 
-        var observedEpochChanges = 0;
+        var initialEpoch = problem.CurrentEpoch;
         TSearchState? finalState = null;
-
-        void OnEpochChange(object? sender, int epoch)
+        await using var enumerator = stream.GetAsyncEnumerator(cancellationToken);
+        while (problem.CurrentEpoch - initialEpoch < epochChanges)
         {
-            observedEpochChanges += 1;
-        }
-
-        problem.EpochClock.OnEpochChange += OnEpochChange;
-        try
-        {
-            await using var enumerator = stream.GetAsyncEnumerator(cancellationToken);
-            while (observedEpochChanges < epochChanges)
-            {
-                var hasNext = await enumerator.MoveNextAsync();
-                hasNext.ShouldBeTrue();
-                finalState = enumerator.Current;
-            }
-        }
-        finally
-        {
-            problem.EpochClock.OnEpochChange -= OnEpochChange;
+            var hasNext = await enumerator.MoveNextAsync();
+            hasNext.ShouldBeTrue();
+            finalState = enumerator.Current;
         }
 
         return finalState ?? throw new InvalidOperationException("The stream did not produce a state.");
@@ -194,28 +211,28 @@ public class AutoEcPaperScenarioTests
             WidthSeverity = 0.1
         },
             RandomNumberGenerator.Create(321),
-            UpdatePolicy.AfterEvaluation,
-            epochLength: 30);
+            new EvaluationCountSchedule(30),
+            UpdatePolicy.AfterEachBatchEvaluation);
 
-    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+    private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateHyperParameterSearchSpace() =>
-        new RealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
-            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+        new BoundedRealVectorSearchSpace(1, new RealVector(0.05), new RealVector(0.4))
+            .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(8), new IntegerVector(16)));
 
-    private static CompositeSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
+    private static CompositeSearchSpace<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>
         CreateTspHyperParameterSearchSpace() =>
-        new RealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
-            .WithSearchSpace<RealVector, RealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
+        new BoundedRealVectorSearchSpace(1, new RealVector(0.01), new RealVector(0.2))
+            .CombinedWith<RealVector, BoundedRealVectorSearchSpace, IntegerVector, IntegerVectorSearchSpace>(
                 new IntegerVectorSearchSpace(1, new IntegerVector(20), new IntegerVector(60)));
 
-    private static GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
+    private static GeneticAlgorithm<Permutation>
         CreatePermutationGa(
             ActivatedTravelingSalesmanProblem problem,
-            IEvaluator<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem> evaluator,
+            IOperator<Evaluation, Permutation> evaluator,
             CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
-        return new GeneticAlgorithm<Permutation, PermutationSearchSpace, ActivatedTravelingSalesmanProblem>
+        return new GeneticAlgorithm<Permutation>
         {
             Creator = new RandomPermutationCreator(),
             Crossover = new EdgeRecombinationCrossover(),
@@ -228,12 +245,12 @@ public class AutoEcPaperScenarioTests
         };
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem> CreateGa(
+    private static GeneticAlgorithm<RealVector> CreateGa(
         MovingPeaksProblem problem,
-        IEvaluator<RealVector, RealVectorSearchSpace, MovingPeaksProblem> evaluator,
+        IOperator<Evaluation, RealVector> evaluator,
         CompositeGenotype<RealVector, IntegerVector> hyperParameters)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, MovingPeaksProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Crossover = new SimulatedBinaryCrossover(),

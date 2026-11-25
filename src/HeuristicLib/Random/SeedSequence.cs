@@ -23,10 +23,10 @@ public class SeedSequence
     public SeedSequence[] Spawn(int numberOfChildren)
     {
         var children = Enumerable
-          .Range(numberOfSpawnedChildren, numberOfChildren)
-          // .Select(index => new SeedSequence(rootSeed, Hash(spawnKey, index)))
-          .Select(index => new SeedSequence(rootSeed, HashCode.Combine(spawnKey, index)))
-          .ToArray();
+            .Range(numberOfSpawnedChildren, numberOfChildren)
+            // .Select(index => new SeedSequence(rootSeed, Hash(spawnKey, index)))
+            .Select(index => new SeedSequence(rootSeed, HashCode.Combine(spawnKey, index)))
+            .ToArray();
         numberOfSpawnedChildren += numberOfChildren;
 
         return children;

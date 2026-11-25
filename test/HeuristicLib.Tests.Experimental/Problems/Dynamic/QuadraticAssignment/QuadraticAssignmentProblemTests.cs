@@ -65,7 +65,7 @@ public class QuadraticAssignmentProblemTests
         var b = QuadraticAssignmentProblemHelper.CreateDefaultB();
         var dyn = new InterpolatedQuadraticAssignmentProblem(a, b, rng, 0.0, 0.1, true);
         var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
-        var costDyn = dyn.Evaluate(sol, TestRandoms.NoRandom);
+        var costDyn = dyn.Evaluate([sol], TestRandoms.NoRandom)[0];
         var costA = new QuadraticAssignmentProblem(a).Evaluate(sol, TestRandoms.NoRandom);
         costDyn.ShouldBe(costA);
     }
@@ -80,7 +80,7 @@ public class QuadraticAssignmentProblemTests
 
         dyn.UpdateOnce();
         var sol = new Permutation(Enumerable.Range(0, a.Size).ToArray());
-        var costDyn = dyn.Evaluate(sol, TestRandoms.NoRandom);
+        var costDyn = dyn.Evaluate([sol], TestRandoms.NoRandom)[0];
         var costB = new QuadraticAssignmentProblem(b).Evaluate(sol, TestRandoms.NoRandom);
         costDyn.ShouldBe(costB);
     }
@@ -117,7 +117,7 @@ public class QuadraticAssignmentProblemTests
         var stat = new QuadraticAssignmentProblem(baseData);
 
         var sol = new Permutation(Enumerable.Range(0, baseData.Size).ToArray());
-        var c1 = dyn.Evaluate(sol, TestRandoms.NoRandom);
+        var c1 = dyn.Evaluate([sol], TestRandoms.NoRandom)[0];
         var c2 = stat.Evaluate(sol, TestRandoms.NoRandom);
 
         c1.ShouldBe(c2);
@@ -125,10 +125,10 @@ public class QuadraticAssignmentProblemTests
         // After many updates, still equal (since noise is zero)
         for (var i = 0; i < 50; i++)
         {
-            dyn.EpochClock.AdvanceEpoch();
+            dyn.RequestUpdate();
         }
 
-        var c3 = dyn.Evaluate(sol, TestRandoms.NoRandom);
+        var c3 = dyn.Evaluate([sol], TestRandoms.NoRandom)[0];
         c3.ShouldBe(c2);
     }
 }

@@ -1,9 +1,10 @@
 using System.Runtime.CompilerServices;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Interceptors;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using SinglePointCrossover = HEAL.HeuristicLib.Encodings.RealVectors.SinglePointCrossover;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
@@ -16,7 +17,7 @@ public class CycleAlgorithmTests
     public void CycleAlgorithm_RequiresAtLeastOneAlgorithm()
     {
         var exception = Should.Throw<ArgumentException>(() =>
-            new CycleAlgorithm<AdditiveStepAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>([]));
+            new CycleAlgorithm<int, PopulationState<int>>([]));
 
         exception.ParamName.ShouldBe("algorithms");
     }
@@ -35,7 +36,21 @@ public class CycleAlgorithmTests
             MaximumCycles = maximumCycles
         };
 
-        cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ShouldBeEmpty();
+        cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void CycleAlgorithm_WithoutAlgorithms_IsReportedWhenBuilt()
+    {
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var cycle = CycleAlgorithm.Create(new AdditiveStepAlgorithm(1)) with
+        {
+            Algorithms = []
+        };
+
+        Should.Throw<InvalidOperationException>(() =>
+                cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList())
+            .Message.ShouldContain("at least one algorithm");
     }
 
     [Fact]
@@ -48,46 +63,46 @@ public class CycleAlgorithmTests
             MaximumCycles = 3
         };
 
-        var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.ShouldBeEmpty();
-        algorithm.InstanceCount.ShouldBe(3);
+        algorithm.ExecutionCount.ShouldBe(3);
     }
 
     [Fact]
     public void CycleAlgorithm_ContinuesWhenALaterChildProducesProgress()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
-        IAlgorithm<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> firstAlgorithm = new NoProgressAlgorithm();
+        var firstAlgorithm = new NoProgressAlgorithm();
         var cycle = firstAlgorithm.CycleWith(new AdditiveStepAlgorithm(1), maximumCycles: 2);
 
-        var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
     }
 
     [Fact]
-    public void CycleAlgorithm_ChecksCancellationBeforeCreatingAChildInstance()
+    public void CycleAlgorithm_ChecksCancellationBeforeCreatingAChildExecution()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var cycle = CycleAlgorithm.Create(algorithm);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
-        Should.Throw<OperationCanceledException>(() => cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
+        Should.Throw<OperationCanceledException>(() => cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: cts.Token).ToList());
 
-        algorithm.InstanceCount.ShouldBe(0);
+        algorithm.ExecutionCount.ShouldBe(0);
     }
 
     [Fact]
-    public void CycleAlgorithm_Stream_RepeatsStagesAndPassesStateAcrossCycles()
+    public void CycleAlgorithm_RunStreaming_RepeatsStagesAndPassesStateAcrossCycles()
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var cycle = new AdditiveStepAlgorithm(1).CycleWith(new AdditiveStepAlgorithm(10), maximumCycles: 2);
 
-        var states = cycle.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycle.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 11, 12, 22]);
         states.Select(MetaAlgorithmTestHelpers.StateObjective).ShouldBe([1.0, 11.0, 12.0, 22.0]);
@@ -106,9 +121,9 @@ public class CycleAlgorithmTests
             MaximumCycles = 5
         };
 
-        var states = cycle.WithMaxIterations(8)
-          .Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
-          .ToList();
+        var states = cycle.TerminatedAfterIterations(8)
+            .RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken)
+            .ToList();
 
         states.Count.ShouldBe(8);
         states.Select(GetStateStamp).ShouldBe([1.0, 2.0, 3.0, 1.0, 2.0, 3.0, 1.0, 2.0]);
@@ -117,31 +132,52 @@ public class CycleAlgorithmTests
     [Theory]
     [InlineData(true, 2)]
     [InlineData(false, 1)]
-    public void CycleAlgorithm_UsesConfiguredAlgorithmInstanceLifecycleWhileReusingResolvedParentDependencies(bool newExecutionInstancesPerCycle, int expectedAlgorithmInstances)
+    public void CycleAlgorithm_SharingItsAlgorithm_KeepsOneExecutorWithPrivateChildren(bool newExecutionInstancesPerCycle, int expectedAlgorithmExecutions)
     {
         var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
-        var cycle = CycleAlgorithm.Create(algorithm) with
-        {
-            MaximumCycles = 2,
-            NewExecutionInstancesPerCycle = newExecutionInstancesPerCycle
-        };
-        var registry = new ExecutionInstanceRegistry();
-        _ = registry.Resolve(evaluator);
-        var cycleInstance = registry.Resolve(cycle);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
+        var fresh = CycleAlgorithm.Create(algorithm) with { MaximumCycles = 2 };
+        IAlgorithm<int, PopulationState<int>> cycle = newExecutionInstancesPerCycle ? fresh : fresh.Sharing(algorithm);
+        var scope = ResolutionScope.Create();
+        _ = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(evaluator, problem);
+        var cycleExecutor = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle, problem);
 
-        var states = cycleInstance.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
+        var states = cycleExecutor.RunStreaming(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).ToList();
 
         states.Select(MetaAlgorithmTestHelpers.StateCandidate).ShouldBe([1, 2]);
-        algorithm.InstanceCount.ShouldBe(expectedAlgorithmInstances);
-        evaluator.InstanceCount.ShouldBe(1);
+        algorithm.ExecutionCount.ShouldBe(expectedAlgorithmExecutions);
+        evaluator.ExecutionCount.ShouldBe(1 + expectedAlgorithmExecutions);
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateStampedGeneticAlgorithm(
+    /// <summary>
+    /// A request for a narrower problem type uses the scope's Cycle executor, which serves it, with its shared executors.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 4)]
+    [InlineData(true, 1)]
+
+    public void CycleAlgorithm_RequestedForANarrowerProblem_UsesTheExecutorOfItsScope(bool shared, int expectedAlgorithmExecutions)
+    {
+        var problem = (FuncProblem<int, DummySearchSpace<int>>)MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var algorithm = new CountingExecutionAlgorithm(1, new CountingResolutionEvaluator());
+        var fresh = CycleAlgorithm.Create(algorithm) with { MaximumCycles = 2 };
+        IAlgorithm<int, PopulationState<int>> cycle = shared ? fresh.Sharing(algorithm) : fresh;
+        var scope = ResolutionScope.Create();
+        var general = scope.Resolve<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle, problem);
+        var concrete = scope.Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>, PopulationState<int>>(cycle, problem);
+        concrete.ShouldBeSameAs(general);
+
+        general.RunStreaming(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+        concrete.RunStreaming(RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken).Count().ShouldBe(2);
+
+        algorithm.ExecutionCount.ShouldBe(expectedAlgorithmExecutions);
+    }
+
+    private static GeneticAlgorithm<RealVector> CreateStampedGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 4,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -158,19 +194,22 @@ public class CycleAlgorithmTests
       state.Population.EvaluatedCandidates[0].ObjectiveVector[0];
 
     private sealed record NoProgressAlgorithm
-        : Algorithm<NoProgressAlgorithm, int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        : Algorithm<NoProgressAlgorithm, int, PopulationState<int>>
     {
-        public int InstanceCount { get; private set; }
+        public int ExecutionCount { get; private set; }
 
-        public override AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry)
+        // Counts the executors it builds, one per activation.
+        protected override IAlgorithmExecutor<PopulationState<int>> CreateExecutor<TSearchSpace, TProblem>(
+            ResolutionScope<int, TSearchSpace, TProblem, PopulationState<int>> scope)
         {
-            InstanceCount++;
-            return new Instance();
+            ExecutionCount++;
+            return new Executor();
         }
 
-        private sealed class Instance : AlgorithmInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>>
+        private sealed class Executor : AlgorithmExecutor<PopulationState<int>>
         {
-            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IProblem<int, DummySearchSpace<int>> problem, IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
+
+            public override async IAsyncEnumerable<PopulationState<int>> RunStreamingAsync(IRandomNumberGenerator random, PopulationState<int>? initialState = null, [EnumeratorCancellation] CancellationToken ct = default)
             {
                 await Task.CompletedTask;
                 yield break;
@@ -179,32 +218,29 @@ public class CycleAlgorithmTests
     }
 
     private sealed record YieldedStateStampingInterceptor
-      : StatefulInterceptor<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>, YieldedStateStampingInterceptor.ExecutionState>
+        : Interceptor<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
-        protected override ExecutionState CreateInitialState() => new();
 
-        protected override PopulationState<RealVector> Transform(
-          PopulationState<RealVector> currentState,
-          PopulationState<RealVector>? previousState,
-          ExecutionState executionState,
-          IRandomNumberGenerator random,
-          RealVectorSearchSpace searchSpace,
-          TestFunctionProblem problem)
+        protected override IInterceptionExecutor<PopulationState<RealVector>> CreateExecutor(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>> scope) =>
+        new Executor();
+
+        private sealed class Executor
+            : InterceptionExecutor<PopulationState<RealVector>>
         {
-            executionState.YieldedStateCount++;
-            var objectiveVector = new ObjectiveVector(executionState.YieldedStateCount);
-            var stampedCandidates = currentState.Population.EvaluatedCandidates
-                            .Select(solution => EvaluatedCandidate.From(solution.Candidate, objectiveVector));
+            private int yieldedStateCount;
 
-            return currentState with
+            public override PopulationState<RealVector> Transform(PopulationState<RealVector> currentState, PopulationState<RealVector>? previousState, IRandomNumberGenerator random)
             {
-                Population = Population.From(stampedCandidates)
-            };
-        }
+                yieldedStateCount++;
+                var objectiveVector = new ObjectiveVector(yieldedStateCount);
+                var stampedCandidates = currentState.Population.EvaluatedCandidates
+                                .Select(solution => EvaluatedCandidate.From(solution.Candidate, objectiveVector));
 
-        public sealed class ExecutionState
-        {
-            public int YieldedStateCount { get; set; }
+                return currentState with
+                {
+                    Population = Population.From(stampedCandidates)
+                };
+            }
         }
     }
 }

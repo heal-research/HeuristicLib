@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Random;
 
@@ -25,6 +26,16 @@ public sealed record BalancedTreeCreator
     /// from the search-space length range.
     /// </summary>
     public IDistribution<int>? RequestedLengthDistribution { get; init; }
+
+    public static Parameter<BalancedTreeCreator, double> IrregularityParameter { get; } =
+        new(nameof(Irregularity), static creator => creator.Irregularity, static (creator, value) => creator with { Irregularity = value });
+
+    public static Parameter<BalancedTreeCreator, IDistribution<int>?> RequestedLengthDistributionParameter { get; } =
+        new(nameof(RequestedLengthDistribution), static creator => creator.RequestedLengthDistribution, static (creator, value) => creator with { RequestedLengthDistribution = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [IrregularityParameter, RequestedLengthDistributionParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public override ExpressionTree CreateCandidate(IRandomNumberGenerator random, ExpressionTreeSearchSpace searchSpace)
     {

@@ -1,10 +1,11 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Encodings.RealVectors;
 
-public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, RealVectorSearchSpace>
+public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, BoundedRealVectorSearchSpace>
 {
     /// <summary>
     /// Controls how close the offspring stays to its parents. Larger values concentrate offspring near the parents;
@@ -16,7 +17,14 @@ public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, Re
     /// </remarks>
     public double Contiguity { get; init; } = 2;
 
-    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
+    public static Parameter<SimulatedBinaryCrossover, double> ContiguityParameter { get; } =
+        new(nameof(Contiguity), static crossover => crossover.Contiguity, static (crossover, value) => crossover with { Contiguity = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [ContiguityParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => Cross(random, parents.Parent1, parents.Parent2, Contiguity);
 
     /// <summary>
     ///   Performs the simulated binary crossover on a real vector. Each position is crossed with a probability of 50% and if
@@ -24,9 +32,11 @@ public record SimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, Re
     ///   For more details refer to the paper by Deb and Agrawal.
     /// </summary>
     /// <remarks>
-    ///   The manipulated value is not restricted by the (possibly) specified lower and upper bounds. Use the
-    ///   <see cref="BoundsChecker" /> to correct the values after performing the crossover.
+    ///   The result is not restricted by the search space bounds. Clamp it afterwards where the bounds must hold.
     /// </remarks>
+    /// <param name="random">The random number generator to use.</param>
+    /// <param name="parent1">The first parent.</param>
+    /// <param name="parent2">The second parent.</param>
     /// <param name="contiguity">
     ///   Specifies how close a child should be to its parents; larger values mean closer. Typical values are in the
     ///   range [2;5]. See <see cref="Contiguity"/> for the behavior outside that range.
@@ -81,7 +91,7 @@ public static class Sbx
     ///   - Scalar eta, probVar, probBin to mirror the Python source.
     ///   Returns (child1, child2).
     /// </summary>
-    public static (RealVector child1, RealVector child2) CrossSbx(RealVector p1, RealVector p2, RealVectorSearchSpace searchSpace, double eta, double probVar, double probBin, IRandomNumberGenerator rng, double eps = 1.0e-14)
+    public static (RealVector child1, RealVector child2) CrossSbx(RealVector p1, RealVector p2, BoundedRealVectorSearchSpace searchSpace, double eta, double probVar, double probBin, IRandomNumberGenerator rng, double eps = 1.0e-14)
     {
         var nVar = p1.Count;
         var xl = searchSpace.Minimum; // IReadOnlyList<double>
@@ -167,7 +177,7 @@ public static class Sbx
     }
 }
 
-public record SelfAdaptiveSimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, RealVectorSearchSpace>
+public record SelfAdaptiveSimulatedBinaryCrossover : SingleCandidateCrossover<RealVector, BoundedRealVectorSearchSpace>
 {
     /// <summary>
     /// Probability of crossing an individual variable, normally in <c>[0,1]</c>.
@@ -205,7 +215,23 @@ public record SelfAdaptiveSimulatedBinaryCrossover : SingleCandidateCrossover<Re
     /// </remarks>
     public double ProbBin { get; init; } = 0.5;
 
-    public (RealVector child1, RealVector child2) Do(RealVector p1, RealVector p2, RealVectorSearchSpace searchSpace, IRandomNumberGenerator rng, double? eta = null, double? probVar = null, double? probBin = null)
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> ProbVarParameter { get; } =
+        new(nameof(ProbVar), static crossover => crossover.ProbVar, static (crossover, value) => crossover with { ProbVar = value });
+
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> EtaParameter { get; } =
+        new(nameof(Eta), static crossover => crossover.Eta, static (crossover, value) => crossover with { Eta = value });
+
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> ProbExchParameter { get; } =
+        new(nameof(ProbExch), static crossover => crossover.ProbExch, static (crossover, value) => crossover with { ProbExch = value });
+
+    public static Parameter<SelfAdaptiveSimulatedBinaryCrossover, double> ProbBinParameter { get; } =
+        new(nameof(ProbBin), static crossover => crossover.ProbBin, static (crossover, value) => crossover with { ProbBin = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [ProbVarParameter, EtaParameter, ProbExchParameter, ProbBinParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public (RealVector child1, RealVector child2) Do(RealVector p1, RealVector p2, BoundedRealVectorSearchSpace searchSpace, IRandomNumberGenerator rng, double? eta = null, double? probVar = null, double? probBin = null)
     {
         var e = eta ?? Eta;
         var pv = probVar ?? ProbVar;
@@ -221,5 +247,5 @@ public record SelfAdaptiveSimulatedBinaryCrossover : SingleCandidateCrossover<Re
         return (c1, c2);
     }
 
-    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace) => Do(parents.Parent1, parents.Parent2, searchSpace, random).child1;
+    public override RealVector CrossParents(Parents<RealVector> parents, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace) => Do(parents.Parent1, parents.Parent2, searchSpace, random).child1;
 }

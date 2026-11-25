@@ -7,14 +7,14 @@ namespace HEAL.HeuristicLib.Tests.Experiments;
 public class ExperimentRunTests
 {
     [Fact]
-    public void MaterializeCases_ProvidesCasesForManualInspection()
+    public void RepeatingOneConfigurationRetainsTheOriginalAlgorithm()
     {
-        var experiment = CreateExperiment();
+        var algorithm = new AdditiveStepAlgorithm(1);
+        var problem = MetaAlgorithmTestHelpers.CreateIntegerProblem();
+        var run = algorithm.Repeat(2).CreateRun(problem, RandomNumberGenerator.Create(42));
 
-        var cases = experiment.MaterializeCases();
-
-        cases.Select(experimentCase => experimentCase.Key).ShouldBe([0, 1]);
-        cases.Select(experimentCase => experimentCase.Algorithm).ShouldAllBe(algorithm => ReferenceEquals(algorithm, experiment.Algorithm));
+        run.Trials.Select(trial => (trial.ProblemPosition, trial.ParameterCandidateIndex, trial.Repetition)).ShouldBe([(0, 0, 0), (0, 0, 1)]);
+        run.Trials.ShouldAllBe(trial => ReferenceEquals(trial.Algorithm, algorithm) && ReferenceEquals(trial.Problem, problem));
     }
 
     [Fact]
@@ -22,26 +22,29 @@ public class ExperimentRunTests
     {
         var run = CreateRun();
 
-        run.ExecutionStarted.ShouldBeFalse();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Ready);
         _ = run.Stream(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
 
-        run.ExecutionStarted.ShouldBeTrue();
-        run.Trials.ShouldAllBe(trial => trial.Run.ExecutionStarted);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Running);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Running);
         Should.Throw<InvalidOperationException>(() => run.Trials[0].Run.Stream(cancellationToken: TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void CombinedExecution_CreatesExecutionInstancesBeforeEnumeration()
+    public void CombinedExecution_CreatesExecutionsBeforeEnumeration()
     {
         var evaluator = new CountingResolutionEvaluator();
-        var algorithm = new CountingInstanceAlgorithm(1, evaluator);
+        var algorithm = new CountingExecutionAlgorithm(1, evaluator);
         var experiment = algorithm.Repeat(2);
         var run = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 
+        algorithm.ExecutionCount.ShouldBe(0);
+        evaluator.ExecutionCount.ShouldBe(0);
+
         _ = run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
-        algorithm.InstanceCount.ShouldBe(2);
-        evaluator.InstanceCount.ShouldBe(2);
+        algorithm.ExecutionCount.ShouldBe(2);
+        evaluator.ExecutionCount.ShouldBe(2);
     }
 
     [Fact]
@@ -51,8 +54,8 @@ public class ExperimentRunTests
 
         _ = run.StartTrials(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.ExecutionStarted.ShouldBeTrue();
-        run.Trials.ShouldAllBe(trial => trial.Run.ExecutionStarted);
+        run.LifecycleState.ShouldNotBe(RunLifecycleState.Ready);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState != RunLifecycleState.Ready);
         Should.Throw<InvalidOperationException>(() => run.StartTrials(cancellationToken: TestContext.Current.CancellationToken));
     }
 
@@ -63,7 +66,7 @@ public class ExperimentRunTests
 
         _ = run.Trials[0].Run.Stream(cancellationToken: TestContext.Current.CancellationToken);
 
-        run.ExecutionStarted.ShouldBeTrue();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Ready);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
         _ = run.Trials[1].Run.Stream(cancellationToken: TestContext.Current.CancellationToken);
     }
@@ -77,13 +80,36 @@ public class ExperimentRunTests
 
         Should.Throw<OperationCanceledException>(() => run.Stream(cancellationToken: cancellation.Token));
 
-        run.ExecutionStarted.ShouldBeTrue();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
         Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
     }
 
-    private static RepeatedExperiment<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm> CreateExperiment() =>
+    [Fact]
+    public async Task CompleteAsync_ReportsCompletedLifecycle()
+    {
+        var run = CreateRun();
+
+        _ = await run.CompleteAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+        run.LifecycleState.ShouldBe(RunLifecycleState.Completed);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Completed);
+    }
+
+    [Fact]
+    public async Task DisposingStreamEarly_ReportsStoppedLifecycle()
+    {
+        var run = CreateRun();
+
+        await using (var stream = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
+            .GetAsyncEnumerator(TestContext.Current.CancellationToken))
+            (await stream.MoveNextAsync()).ShouldBeTrue();
+
+        run.LifecycleState.ShouldBe(RunLifecycleState.Stopped);
+    }
+
+    private static Experiment<int, AdditiveStepAlgorithm, PopulationState<int>> CreateExperiment() =>
         new AdditiveStepAlgorithm(1).Repeat(2);
 
-    private static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm, int> CreateRun() =>
+    private static ExperimentRun<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>, PopulationState<int>, AdditiveStepAlgorithm> CreateRun() =>
         CreateExperiment().CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(42));
 }

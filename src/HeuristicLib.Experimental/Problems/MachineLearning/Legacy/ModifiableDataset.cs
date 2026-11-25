@@ -104,11 +104,6 @@ public class ModifiableDataset : Dataset
             throw new ArgumentException($"Incorrect position {position} specified. The position must be between 0 and {Columns}.");
         }
 
-        if (values == null)
-        {
-            throw new ArgumentNullException(nameof(values), "Values must not be null. At least an empty list of values has to be provided.");
-        }
-
         if (values.Count != Rows)
         {
             throw new ArgumentException($"{values.Count} values are provided, but {Rows} rows are present in the dataset.");

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Creators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
@@ -11,15 +12,43 @@ public class PredefinedCandidatesCreatorTests
     {
         var random = RandomNumberGenerator.Create(42);
         var fallback = new ExpectedRandomCreator(random, 99);
-        var creator = fallback.WithPredefinedCandidates([10, 20]);
+        var creator = fallback.SeededWith([10, 20]);
         var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
-        var instance = new Execution.ExecutionInstanceRegistry().Resolve(creator);
+        var executor = ResolutionScope.Create().Resolve<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(creator, problem);
 
-        var first = instance.Create(1, random, DummySearchSpace<int>.Instance, problem);
-        var second = instance.Create(3, random, DummySearchSpace<int>.Instance, problem);
+        var first = executor.Create(1, random);
+        var second = executor.Create(3, random);
 
         first.ShouldBe([10]);
         second.ShouldBe([20, 99, 99]);
+    }
+
+    [Fact]
+    public void NewExecutorHasIndependentCursorAndContextualFallback()
+    {
+        var random = RandomNumberGenerator.Create(42);
+        IOperator<Creation, int> fallback = new ExpectedRandomCreator(random, 99);
+        var creator = fallback.SeededWith([10, 20, 30]);
+        var problem = FuncProblem.Create((int x) => x, DummySearchSpace<int>.Instance, SingleObjective.Minimize);
+        var parent = ResolutionScope.Create();
+        var outer = parent.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(creator);
+        outer.Create(1, random).ShouldBe([10]);
+        var observing = creator.Counting(fallback, out var fallbackCalls);
+        var observedFallbackCalls = parent.Results.Result(fallbackCalls);
+        var child = parent.CreateChildScope();
+        var inner = child.For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(observing);
+
+        inner.ShouldNotBeSameAs(outer);
+        inner.Create(4, random).ShouldBe([10, 20, 30, 99]);
+        observedFallbackCalls.CurrentCount.ShouldBe(1);
+        outer.Create(1, random).ShouldBe([20]);
+        observedFallbackCalls.CurrentCount.ShouldBe(1);
+        inner.Create(1, random).ShouldBe([99]);
+        observedFallbackCalls.CurrentCount.ShouldBe(2);
+
+        var independent = ResolutionScope.Create().For<int, DummySearchSpace<int>, FuncProblem<int, DummySearchSpace<int>>>(problem).Resolve(creator);
+        independent.Create(1, random).ShouldBe([10]);
+        observedFallbackCalls.CurrentCount.ShouldBe(2);
     }
 
     private sealed record ExpectedRandomCreator(IRandomNumberGenerator ExpectedRandom, int Value)

@@ -1,5 +1,6 @@
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.SearchSpaces;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 
 namespace HEAL.HeuristicLib.Tests.Operators.Refiners;
@@ -44,24 +45,24 @@ public class RefinerConfigurationEqualityTests
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithDifferentChildRefiners_IsNotEqual()
+    public void ChoosePerItemRefinement_WithDifferentChildRefiners_IsNotEqual()
     {
-        var left = ChooseOneRefiner.Create([new AddOffsetRefiner(1)], [1.0]);
-        var right = ChooseOneRefiner.Create([new AddOffsetRefiner(2)], [1.0]);
+        var left = ChoosePerItem.Create([new AddOffsetRefiner(1)], [1.0]);
+        var right = ChoosePerItem.Create([new AddOffsetRefiner(2)], [1.0]);
 
         left.ShouldNotBe(right);
     }
 
     [Fact]
-    public void ChooseOneRefiner_WithDifferentWeights_IsNotEqual()
+    public void ChoosePerItemRefinement_WithDifferentWeights_IsNotEqual()
     {
-        var children = new IRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>[]
+        var children = new IOperator<Refinement, int>[]
         {
             new AddOffsetRefiner(1),
             new AddOffsetRefiner(2),
         };
-        var left = ChooseOneRefiner.Create(children, [1.0, 2.0]);
-        var right = ChooseOneRefiner.Create(children, [2.0, 1.0]);
+        var left = ChoosePerItem.Create(children, [1.0, 2.0]);
+        var right = ChoosePerItem.Create(children, [2.0, 1.0]);
 
         left.ShouldNotBe(right);
     }
@@ -70,112 +71,22 @@ public class RefinerConfigurationEqualityTests
     public void MultiRefinerTopologies_WithEqualChildRefiners_AreNotEqualAcrossTypes()
     {
         var pipeline = PipelineRefiner.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
-        var chooseOne = ChooseOneRefiner.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
+        var chooseOne = ChoosePerItem.Create(new AddOffsetRefiner(1), new AddOffsetRefiner(2));
 
         pipeline.ShouldNotBe<object>(chooseOne);
     }
 
-    [Fact]
-    public void CountingRefiner_WithSameCounterAndMetric_IsEqual()
-    {
-        var counter = new ObservationCounter();
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(counter);
-        var right = new AddOffsetRefiner(1).CountRefinerCalls(counter);
 
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
 
-    [Fact]
-    public void CountingRefiner_WithDifferentMetric_IsNotEqual()
-    {
-        var counter = new ObservationCounter();
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(counter);
-        var right = new AddOffsetRefiner(1).CountRefinedCandidates(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingRefiner_WithDifferentCounter_IsNotEqual()
-    {
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(new ObservationCounter());
-        var right = new AddOffsetRefiner(1).CountRefinerCalls(new ObservationCounter());
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void CountingRefiner_WithDifferentChildRefiner_IsNotEqual()
-    {
-        var counter = new ObservationCounter();
-        var left = new AddOffsetRefiner(1).CountRefinerCalls(counter);
-        var right = new AddOffsetRefiner(2).CountRefinerCalls(counter);
 
-        left.ShouldNotBe(right);
-    }
 
-    [Fact]
-    public void DurationMeasuringRefiner_WithSameDurationAndTimeProvider_IsEqual()
-    {
-        var duration = new ObservationDuration();
-        var left = new AddOffsetRefiner(1).MeasureRefinerDuration(duration, TimeProvider.System);
-        var right = new AddOffsetRefiner(1).MeasureRefinerDuration(duration, TimeProvider.System);
-
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void DurationMeasuringRefiner_WithDifferentDuration_IsNotEqual()
-    {
-        var left = new AddOffsetRefiner(1).MeasureRefinerDuration(new ObservationDuration());
-        var right = new AddOffsetRefiner(1).MeasureRefinerDuration(new ObservationDuration());
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void DurationMeasuringRefiner_WithDifferentChildRefiner_IsNotEqual()
-    {
-        var duration = new ObservationDuration();
-        var left = new AddOffsetRefiner(1).MeasureRefinerDuration(duration);
-        var right = new AddOffsetRefiner(2).MeasureRefinerDuration(duration);
-
-        left.ShouldNotBe(right);
-    }
-
-    [Fact]
-    public void ObservableRefiner_WithSameObserverInstance_IsEqual()
-    {
-        var observer = new ActionRefinerObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new AddOffsetRefiner(1).ObserveWith(observer);
-        var right = new AddOffsetRefiner(1).ObserveWith(observer);
-
-        left.ShouldBe(right);
-        left.GetHashCode().ShouldBe(right.GetHashCode());
-    }
-
-    [Fact]
-    public void ObservableRefiner_WithDifferentChildRefiner_IsNotEqual()
-    {
-        var observer = new ActionRefinerObserver<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>((_, _, _, _) => { });
-        var left = new AddOffsetRefiner(1).ObserveWith(observer);
-        var right = new AddOffsetRefiner(2).ObserveWith(observer);
-
-        left.ShouldNotBe(right);
-    }
 
     // A freshly allocated action observer defeats structural equality, which is why concern types carrying only
     // value-like settings must not be expressed as an observer wrapper.
-    [Fact]
-    public void ObservableRefiner_WithSeparatelyConstructedActionObservers_IsNotEqual()
-    {
-        var left = new AddOffsetRefiner(1).ObserveWith((IReadOnlyList<int> _) => { });
-        var right = new AddOffsetRefiner(1).ObserveWith((IReadOnlyList<int> _) => { });
-
-        left.ShouldNotBe(right);
-    }
 
     [Fact]
     public void IteratedRefiner_WithEqualChildRefinerAndIterations_IsEqual()
@@ -217,13 +128,12 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void NestedRefinerComposition_WithEqualParts_IsEqual()
     {
-        var counter = new ObservationCounter();
         var left = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountRefinerCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(1).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
         var right = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountRefinerCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(1).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
 
         left.ShouldBe(right);
         left.GetHashCode().ShouldBe(right.GetHashCode());
@@ -232,13 +142,12 @@ public class RefinerConfigurationEqualityTests
     [Fact]
     public void NestedRefinerComposition_WithDifferentNestedChildRefiner_IsNotEqual()
     {
-        var counter = new ObservationCounter();
         var left = PipelineRefiner.Create(
-            new AddOffsetRefiner(1).CountRefinerCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(1).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
         var right = PipelineRefiner.Create(
-            new AddOffsetRefiner(9).CountRefinerCalls(counter),
-            new AddOffsetRefiner(2));
+            new AddOffsetRefiner(9).AsIterated(2),
+            new AddOffsetRefiner(2).AsIterated(2));
 
         left.ShouldNotBe(right);
     }
@@ -260,12 +169,12 @@ public class RefinerConfigurationEqualityTests
     {
         var first = new AddOffsetRefiner(1);
         var second = new AddOffsetRefiner(2);
-        var childRefiners = new List<IRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> { first, second };
+        var childRefiners = new List<IOperator<Refinement, int>> { first, second };
         var refiner = new FirstOfRefiner(childRefiners);
 
         childRefiners.Clear();
 
-        refiner.ChildRefiners.ShouldBe([first, second]);
+        refiner.ChildOperators.ShouldBe([first, second]);
     }
 
     private sealed record AddOffsetRefiner(int Offset) : SingleCandidateRefiner<int, DummySearchSpace<int>>
@@ -276,21 +185,25 @@ public class RefinerConfigurationEqualityTests
     // An externally authored topology with no equality attribute, generator or hand-written comparison: its structural
     // equality follows from ChildRefiners being a value array.
     private sealed record FirstOfRefiner
-        : MultiRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>
+        : MultiOperator<Refinement, int>
     {
-        public FirstOfRefiner(IReadOnlyList<IRefiner<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childRefiners)
+        public FirstOfRefiner(IReadOnlyList<IOperator<Refinement, int>> childRefiners)
             : base(childRefiners)
         {
         }
 
-        protected override MultiRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>> CreateExecutionInstance(ImmutableArray<IRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childRefiners) =>
-            new Instance(childRefiners);
-
-        private sealed class Instance(ImmutableArray<IRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>> childRefiners)
-            : MultiRefinerInstance<int, DummySearchSpace<int>, IProblem<int, DummySearchSpace<int>>>(childRefiners)
+        protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+            ResolutionScope<int, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
         {
-            public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random, DummySearchSpace<int> searchSpace, IProblem<int, DummySearchSpace<int>> problem) =>
-                ChildRefiners[0].Refine(candidates, random, searchSpace, problem);
+            ImmutableArray<IRefinementExecutor<int>> childOperators = [.. ChildOperators.Select(child => scope.Resolve(child))];
+            return new Executor(childOperators);
+        }
+
+        private sealed class Executor(ImmutableArray<IRefinementExecutor<int>> childRefiners)
+            : RefinementExecutor<int>
+        {
+            public override IReadOnlyList<int> Refine(IReadOnlyList<int> candidates, IRandomNumberGenerator random) =>
+                childRefiners[0].Refine(candidates, random);
         }
     }
 }

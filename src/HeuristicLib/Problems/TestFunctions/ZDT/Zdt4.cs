@@ -1,6 +1,6 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 /// <summary>
 ///   Note that the standard definition of ZDT4 uses values for the variables 2..n in the range [ -5, 5 ].

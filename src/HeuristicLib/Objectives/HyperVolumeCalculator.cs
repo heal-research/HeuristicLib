@@ -37,8 +37,8 @@ public static class HyperVolumeCalculator
             return Calculate2D(dominatingVectors, referencePoint, maximization);
 
         return maximization.Directions.All(x => x == ObjectiveDirection.Minimize)
-          ? CalculateMultiDimensional(dominatingVectors, referencePoint)
-          : throw new NotSupportedException("Hypervolume calculation for more than two dimensions is supported only with minimization problems.");
+            ? CalculateMultiDimensional(dominatingVectors, referencePoint)
+            : throw new NotSupportedException("Hypervolume calculation for more than two dimensions is supported only with minimization problems.");
     }
 
     private static List<ObjectiveVector> GetDominatingVectors(IEnumerable<ObjectiveVector> qualities, ObjectiveVector reference, ObjectiveDirections objective)

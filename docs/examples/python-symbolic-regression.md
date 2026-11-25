@@ -106,11 +106,11 @@ The repository also contains a FastAPI application that streams each population 
 
 <img class="example-demo" src="/interactive-symbolic-regression.gif" alt="Drawing a curve and fitting it with the interactive symbolic regression demonstrator">
 
-Run the [interactive demonstrator](https://github.com/heal-research/HeuristicLib/tree/dev/examples/PythonInteractiveDemonstrator) after publishing the interop assembly:
+Run the [interactive demonstrator](https://github.com/heal-research/HeuristicLib/tree/dev/python-samples/PythonInteractiveDemonstrator) after publishing the interop assembly:
 
 ```console
-python -m pip install -r examples/PythonInteractiveDemonstrator/requirements.txt
-python examples/PythonInteractiveDemonstrator/app.py
+python -m pip install -r python-samples/PythonInteractiveDemonstrator/requirements.txt
+python python-samples/PythonInteractiveDemonstrator/app.py
 ```
 
 Read [Python interop](/guide/interop/python) for loading rules, available helpers and current limitations.

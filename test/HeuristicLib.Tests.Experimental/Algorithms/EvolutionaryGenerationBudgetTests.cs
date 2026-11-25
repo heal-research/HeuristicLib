@@ -1,7 +1,5 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
-using HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
 using SinglePointCrossover = HEAL.HeuristicLib.Encodings.RealVectors.SinglePointCrossover;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
 
@@ -10,7 +8,7 @@ namespace HEAL.HeuristicLib.Tests.Algorithms.Evolutionary;
 public class EvolutionaryGenerationBudgetTests
 {
     [Fact]
-    public void EvolutionStrategy_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void EvolutionStrategy_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateEvolutionStrategy(problem) with
@@ -18,7 +16,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -28,7 +26,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void NSGA2_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void NSGA2_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateMultiObjectiveProblem();
         var algorithm = CreateNSGA2(problem) with
@@ -36,7 +34,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -44,12 +42,12 @@ public class EvolutionaryGenerationBudgetTests
         states.Count.ShouldBe(3);
         states.All(state => state.Population.EvaluatedCandidates.Count == 6).ShouldBeTrue();
         states.SelectMany(state => state.Population.EvaluatedCandidates)
-              .All(solution => solution.ObjectiveVector.Count == 2)
-              .ShouldBeTrue();
+            .All(solution => solution.ObjectiveVector.Count == 2)
+            .ShouldBeTrue();
     }
 
     [Fact]
-    public void AlpsGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void AlpsGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateAlpsGeneticAlgorithm(problem) with
@@ -57,7 +55,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -68,7 +66,7 @@ public class EvolutionaryGenerationBudgetTests
     }
 
     [Fact]
-    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_Stream_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
+    public void OpenEndedRelevantAllelesPreservingGeneticAlgorithm_RunStreaming_WithMaximumGenerations_YieldsConfiguredNumberOfStates()
     {
         var problem = CreateSingleObjectiveProblem();
         var algorithm = CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(problem) with
@@ -76,7 +74,7 @@ public class EvolutionaryGenerationBudgetTests
             MaximumGenerations = 3
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(42),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -92,20 +90,20 @@ public class EvolutionaryGenerationBudgetTests
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Stream_WithNonpositiveMaximumGenerations_YieldsNoStates(int maximumGenerations)
+    public void RunStreaming_WithNonpositiveMaximumGenerations_YieldsNoStates(int maximumGenerations)
     {
         var singleObjectiveProblem = CreateSingleObjectiveProblem();
         var multiObjectiveProblem = CreateMultiObjectiveProblem();
         var ct = TestContext.Current.CancellationToken;
 
         (CreateEvolutionStrategy(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
         (CreateNSGA2(multiObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(multiObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(multiObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
         (CreateAlpsGeneticAlgorithm(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
         (CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(singleObjectiveProblem) with { MaximumGenerations = maximumGenerations })
-            .Stream(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
+            .RunStreaming(singleObjectiveProblem, RandomNumberGenerator.Create(42), ct: ct).ShouldBeEmpty();
     }
 
     private static TestFunctionProblem CreateSingleObjectiveProblem()
@@ -118,10 +116,10 @@ public class EvolutionaryGenerationBudgetTests
         return new MultiObjectiveTestFunctionProblem(new Zdt1(dimension: 3));
     }
 
-    private static EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateEvolutionStrategy(
+    private static EvolutionStrategy<RealVector> CreateEvolutionStrategy(
       TestFunctionProblem problem)
     {
-        return new EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new EvolutionStrategy<RealVector>
         {
             PopulationSize = 6,
             NumberOfChildren = 6,
@@ -133,10 +131,10 @@ public class EvolutionaryGenerationBudgetTests
         };
     }
 
-    private static NSGA2<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem> CreateNSGA2(
+    private static NSGA2<RealVector> CreateNSGA2(
       MultiObjectiveTestFunctionProblem problem)
     {
-        return new NSGA2<RealVector, RealVectorSearchSpace, MultiObjectiveTestFunctionProblem>
+        return new NSGA2<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -147,10 +145,10 @@ public class EvolutionaryGenerationBudgetTests
         };
     }
 
-    private static AlpsGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlpsGeneticAlgorithm(
+    private static AlpsGeneticAlgorithm<RealVector> CreateAlpsGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new AlpsGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new AlpsGeneticAlgorithm<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -162,10 +160,10 @@ public class EvolutionaryGenerationBudgetTests
         };
     }
 
-    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(
+    private static OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector> CreateOpenEndedRelevantAllelesPreservingGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new OpenEndedRelevantAllelesPreservingGeneticAlgorithm<RealVector>
         {
             PopulationSize = 6,
             Creator = new UniformDistributedCreator(problem.SearchSpace),

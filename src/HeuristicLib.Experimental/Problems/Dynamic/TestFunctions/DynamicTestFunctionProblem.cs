@@ -1,20 +1,19 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.MetaFunctions;
 using HEAL.HeuristicLib.Random;
 
 namespace HEAL.HeuristicLib.Problems.Dynamic;
 
-public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorSearchSpace>
+public class DynamicTestFunctionProblem : DynamicProblem<DynamicTestFunctionProblem, RealVector, BoundedRealVectorSearchSpace>
 {
     private readonly TestFunctionProblem problem;
 
     public DynamicTestFunctionProblem(IRandomNumberGenerator environmentRandom,
                                       TestFunctionProblem problem,
-                                      UpdatePolicy updatePolicy = UpdatePolicy.AfterEvaluation,
-                                      int epochLength = int.MaxValue) : base(problem.Objective, problem.SearchSpace,
-        environmentRandom, updatePolicy, epochLength)
+                                      IEpochSchedule? epochSchedule = null,
+                                      UpdatePolicy updatePolicy = UpdatePolicy.AfterEachEvaluation) : base(problem.Objective, problem.SearchSpace,
+        environmentRandom, epochSchedule ?? new EvaluationCountSchedule(int.MaxValue), updatePolicy)
     {
         this.problem = problem;
         var rot = new double[problem.SearchSpace.Length, problem.SearchSpace.Length];
@@ -32,8 +31,7 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
     public State CurrentState { get; private set; }
     public required DeviationSigmas DeviationSigma { get; init; }
 
-    public override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random,
-                                             EvaluationTiming timing)
+    protected override ObjectiveVector Evaluate(RealVector solution, IRandomNumberGenerator random, int epoch)
     {
         solution = RealVector.FromOwnedArray(RotatedTestFunction.Rotate(CurrentState.Rotation, solution));
         solution *= RealVector.Create(CurrentState.InputScaling);
@@ -52,9 +50,8 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
         var rot = RandomRotationMatrix(CurrentState.Rotation, EnvironmentRandom,
             EnvironmentRandom.NextNormal(sigma: DeviationSigma.RotationStrength));
         var inScale = CurrentState.InputScaling
-                                  .Select(x =>
-                                      x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength))
-                                  .ToArray();
+            .Select(x => x + EnvironmentRandom.NextNormal(sigma: DeviationSigma.InputScalingStrength))
+            .ToArray();
         var outScale = CurrentState.OutputScaling +
                        EnvironmentRandom.NextNormal(sigma: DeviationSigma.OutputScalingStrength);
         CurrentState = new State(shift, rot, inScale, outScale);
@@ -163,7 +160,13 @@ public class DynamicTestFunctionProblem : DynamicProblem<RealVector, RealVectorS
         return Multiply(p, rot);
     }
 
-    public record State(double[] Shift, double[,] Rotation, double[] InputScaling, double OutputScaling);
+    public sealed class State(double[] Shift, double[,] Rotation, double[] InputScaling, double OutputScaling)
+    {
+        public double[] Shift { get; init; } = Shift;
+        public double[,] Rotation { get; init; } = Rotation;
+        public double[] InputScaling { get; init; } = InputScaling;
+        public double OutputScaling { get; init; } = OutputScaling;
+    }
 
     public record DeviationSigmas(
         double ShiftStrength,

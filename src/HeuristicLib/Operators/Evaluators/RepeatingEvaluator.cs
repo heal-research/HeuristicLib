@@ -3,56 +3,61 @@ using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Evaluators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators;
 
 /// <summary>
 /// Evaluates every candidate repeatedly and aggregates the resulting objective vectors.
 /// </summary>
-public sealed record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
-    : WrappingEvaluator<TCandidate, TSearchSpace, TProblem>
-    where TSearchSpace : class, ISearchSpace<TCandidate>
-    where TProblem : class, IProblem<TCandidate, TSearchSpace>
+public sealed record RepeatingEvaluator<TCandidate>
+    : WrappingOperator<Evaluation, TCandidate>
 {
     /// <summary>
     /// Gets the total number of evaluations performed for each candidate.
     /// </summary>
     public int Repetitions { get; init; }
 
-    /// <summary>
-    /// Gets the strategy used to aggregate the repeated objective vectors.
-    /// </summary>
     public IObjectiveVectorAggregator Aggregator { get; init; } = ObjectiveVectorAggregation.Mean;
 
-    /// <summary>
-    /// Gets the concurrency used to execute the repeated evaluation batches.
-    /// </summary>
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
-    public RepeatingEvaluator(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions)
+    public static Parameter<RepeatingEvaluator<TCandidate>, int> RepetitionsParameter { get; } =
+        new(nameof(Repetitions), static evaluator => evaluator.Repetitions, static (evaluator, value) => evaluator with { Repetitions = value });
+
+    public static Parameter<RepeatingEvaluator<TCandidate>, IObjectiveVectorAggregator> AggregatorParameter { get; } =
+        new(nameof(Aggregator), static evaluator => evaluator.Aggregator, static (evaluator, value) => evaluator with { Aggregator = value });
+
+    public static Parameter<RepeatingEvaluator<TCandidate>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static evaluator => evaluator.Concurrency, static (evaluator, value) => evaluator with { Concurrency = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [RepetitionsParameter, AggregatorParameter, ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
+    public RepeatingEvaluator(IOperator<Evaluation, TCandidate> childEvaluator, int repetitions)
         : base(childEvaluator)
     {
         Repetitions = repetitions;
     }
 
-    protected override WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem> CreateExecutionInstance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator)
+    protected override IExecutor CreateExecutor<TRunSearchSpace, TRunProblem, TRunSearchState>(
+        ResolutionScope<TCandidate, TRunSearchSpace, TRunProblem, TRunSearchState> scope)
     {
         if (Repetitions <= 0)
             throw new InvalidOperationException("Repetitions must be positive.");
-
-        return new Instance(childEvaluator, Repetitions, Aggregator, Concurrency);
+        var childEvaluator = scope.Resolve(ChildOperator);
+        return new Executor(childEvaluator, Repetitions, Aggregator, Concurrency, scope.Problem);
     }
 
-    private sealed class Instance(IEvaluatorInstance<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency)
-        : WrappingEvaluatorInstance<TCandidate, TSearchSpace, TProblem>(childEvaluator)
+    private sealed class Executor(IEvaluationExecutor<TCandidate> childEvaluator, int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency, IProblem problem)
+        : EvaluationExecutor<TCandidate>
     {
-        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem)
+        public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
         {
             var repetitionResults = BatchExecution.Execute(
                 repetitions,
-                (instance: this, candidates, searchSpace, problem),
-                static (itemRandom, state) => state.instance.ChildEvaluator.Evaluate(state.candidates, itemRandom, state.searchSpace, state.problem),
+                (childEvaluator, candidates),
+                static (itemRandom, state) => state.childEvaluator.Evaluate(state.candidates, itemRandom),
                 random,
                 concurrency);
 
@@ -72,9 +77,7 @@ public sealed record RepeatingEvaluator<TCandidate, TSearchSpace, TProblem>
 
 public static class RepeatingEvaluator
 {
-    public static RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> Create<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> childEvaluator, int repetitions)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace> =>
+    public static RepeatingEvaluator<TCandidate> Create<TCandidate>(IOperator<Evaluation, TCandidate> childEvaluator, int repetitions) =>
         new(childEvaluator, repetitions);
 }
 
@@ -125,20 +128,18 @@ public sealed record WorstObjectiveVectorAggregator : IObjectiveVectorAggregator
 
 public static class RepeatingEvaluatorExtensions
 {
-    extension<TCandidate, TSearchSpace, TProblem>(IEvaluator<TCandidate, TSearchSpace, TProblem> evaluator)
-        where TSearchSpace : class, ISearchSpace<TCandidate>
-        where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    extension<TCandidate>(IOperator<Evaluation, TCandidate> evaluator)
     {
-        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions) =>
+        public RepeatingEvaluator<TCandidate> AsRepeated(int repetitions) =>
             new(evaluator, repetitions);
 
-        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions, IObjectiveVectorAggregator aggregator) =>
+        public RepeatingEvaluator<TCandidate> AsRepeated(int repetitions, IObjectiveVectorAggregator aggregator) =>
             new(evaluator, repetitions) { Aggregator = aggregator };
 
-        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions, ExecutionConcurrency concurrency) =>
+        public RepeatingEvaluator<TCandidate> AsRepeated(int repetitions, ExecutionConcurrency concurrency) =>
             new(evaluator, repetitions) { Concurrency = concurrency };
 
-        public RepeatingEvaluator<TCandidate, TSearchSpace, TProblem> AsRepeated(int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency) =>
+        public RepeatingEvaluator<TCandidate> AsRepeated(int repetitions, IObjectiveVectorAggregator aggregator, ExecutionConcurrency concurrency) =>
             new(evaluator, repetitions) { Aggregator = aggregator, Concurrency = concurrency };
     }
 }

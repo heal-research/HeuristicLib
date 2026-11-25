@@ -5,6 +5,9 @@
         <Nullable>enable</Nullable>
         <WarningsAsErrors>Nullable</WarningsAsErrors>
         <DebugType>embedded</DebugType>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <NoWarn>$(NoWarn);1591</NoWarn>
+        <WarningsAsErrors>$(WarningsAsErrors);1570;1571;1572;1574;1580;1584;1587;1710;1711</WarningsAsErrors>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -13,7 +16,7 @@
         <Copyright>(c) Heuristic and Evolutionary Algorithms Laboratory (HEAL)</Copyright>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageProjectUrl>https://github.com/heal-research/HeuristicLib</PackageProjectUrl>
+        <PackageProjectUrl>https://heuristiclib.github.io/</PackageProjectUrl>
         <RepositoryUrl>https://github.com/heal-research/HeuristicLib</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageTags>metaheuristic-optimization; evolutionary-algorithms</PackageTags>
@@ -24,11 +27,11 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="SonarAnalyzer.CSharp" Version="10.19.0.132793">
+        <PackageReference Include="SonarAnalyzer.CSharp" Version="10.33.0.1635">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Nerdbank.GitVersioning" Version="3.9.50">
+        <PackageReference Include="Nerdbank.GitVersioning" Version="3.10.94">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

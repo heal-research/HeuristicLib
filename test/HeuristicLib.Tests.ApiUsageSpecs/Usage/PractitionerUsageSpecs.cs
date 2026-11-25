@@ -3,14 +3,15 @@ using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.Permutations;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Experiments;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators;
 using HEAL.HeuristicLib.Operators.Crossovers;
 using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Operators.Terminators;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Random;
 using NormalDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.NormalDistributedCreator;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
@@ -23,7 +24,7 @@ public class PractitionerUsageSpecs
     public void StatelessOperators_CanBeInvokedDirectly_WithoutInstantiation()
     {
         var problem = CreateRastriginProblem(dimension: 3);
-        var realSearchSpace = new RealVectorSearchSpace(3, [-1.0], [1.0]);
+        var realSearchSpace = new BoundedRealVectorSearchSpace(3, [-1.0], [1.0]);
         var integerSearchSpace = new IntegerVectorSearchSpace(3, [-2], [2]);
 
         var randomIntegerVector = RandomNumberGenerator.Create(2025).NextIntegerVectorUniform([-2], [2], length: 4);
@@ -200,7 +201,7 @@ public class PractitionerUsageSpecs
             maximumGenerations: 8,
             mutationRate: 0.2);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(123),
           ct: TestContext.Current.CancellationToken);
@@ -223,19 +224,15 @@ public class PractitionerUsageSpecs
         };
 
         var cannotExtendPastInternalCompletion = internallyCappedAlgorithm
-          .WithMaxIterations(5)
-          .Stream(
-            problem,
-            RandomNumberGenerator.Create(456),
-            ct: TestContext.Current.CancellationToken)
-          .ToList();
+            .TerminatedAfterIterations(5)
+            .RunStreaming(
+                problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
+            .ToList();
         var canStopEarlierThanInternalCompletion = externallyCappedAlgorithm
-          .WithMaxIterations(2)
-          .Stream(
-            problem,
-            RandomNumberGenerator.Create(456),
-            ct: TestContext.Current.CancellationToken)
-          .ToList();
+            .TerminatedAfterIterations(2)
+            .RunStreaming(
+                problem, RandomNumberGenerator.Create(456), ct: TestContext.Current.CancellationToken)
+            .ToList();
 
         cannotExtendPastInternalCompletion.Count.ShouldBe(2);
         canStopEarlierThanInternalCompletion.Count.ShouldBe(2);
@@ -253,12 +250,10 @@ public class PractitionerUsageSpecs
         };
 
         var earlyStoppedStates = algorithm
-          .WithMaxIterations(2)
-          .Stream(
-            problem,
-            RandomNumberGenerator.Create(789),
-            ct: TestContext.Current.CancellationToken)
-          .ToList();
+            .TerminatedAfterIterations(2)
+            .RunStreaming(
+                problem, RandomNumberGenerator.Create(789), ct: TestContext.Current.CancellationToken)
+            .ToList();
 
         earlyStoppedStates.Count.ShouldBe(2);
         internalTerminator.CheckedStateCount.ShouldBe(2);
@@ -277,12 +272,12 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxEvaluatorCalls(algorithm.Evaluator, 2)
-            .Stream(
+            .LimitedToInvocations(algorithm.Evaluator, 2)
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -300,19 +295,19 @@ public class PractitionerUsageSpecs
         };
 
         var statesByEvaluatorCalls = algorithm
-            .WithMaxEvaluatorCalls(algorithm.Evaluator, 2)
-            .Stream(
+            .LimitedToInvocations(algorithm.Evaluator, 2)
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
         var statesByEvaluatedCandidates = algorithm
-            .WithMaxEvaluatedCandidates(algorithm.Evaluator, 2)
-            .Stream(
+            .LimitedToCandidates(algorithm.Evaluator, 2)
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         statesByEvaluatorCalls.Count.ShouldBe(2);
         statesByEvaluatedCandidates.Count.ShouldBe(1);
@@ -329,17 +324,16 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxEvaluatorDuration(
+            .LimitedToDuration(
                 algorithm.Evaluator,
-                TimeSpan.FromSeconds(3),
-                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .Stream(
+                TimeSpan.Zero)
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
-        states.Count.ShouldBe(2);
+        states.Count.ShouldBe(1);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
@@ -353,21 +347,20 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxAlgorithmDuration(
-                TimeSpan.FromSeconds(3),
-                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .Stream(
+            .LimitedToDuration(
+                TimeSpan.Zero)
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
-        states.Count.ShouldBe(2);
+        states.Count.ShouldBe(1);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
     [Fact]
-    public void GeneticAlgorithm_TypedOperatorBudgets_CanCountMutatorCallsOrMutatedCandidates()
+    public void GeneticAlgorithm_OperatorBudgets_CanCountMutatorCallsOrMutatedCandidates()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
@@ -377,23 +370,23 @@ public class PractitionerUsageSpecs
         };
 
         var statesByMutatorCalls = algorithm
-            .WithMaxMutatorCalls(
+            .LimitedToInvocations(
                 algorithm.Mutator,
-                maximumCalls: 1)
-            .Stream(
+                maximumInvocations: 1)
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
         var statesByMutatedCandidates = algorithm
-            .WithMaxMutatedCandidates(
+            .LimitedToCandidates(
                 algorithm.Mutator,
                 maximumCandidates: 20)
-            .Stream(
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
         statesByMutatorCalls.Count.ShouldBe(2);
         statesByMutatorCalls.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
@@ -402,25 +395,23 @@ public class PractitionerUsageSpecs
     }
 
     [Fact]
-    public void InstrumentationOperators_CanBeConstructedDirectlyOrThroughFluentMethods()
+    public void InspectionWrappers_CanBeConstructedDirectlyOrThroughAnalyzerSources()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var mutator = CreateSimpleGeneticAlgorithm(problem).Mutator;
-        var counter = new ObservationCounter();
-        var duration = new ObservationDuration();
+        var counter = new Counter();
 
-        var counted = new CountingMutator<RealVector, RealVectorSearchSpace, TestFunctionProblem>(mutator, counter, OperatorCountMetric.Candidates);
-        var measured = mutator.MeasureMutatorDuration(duration);
+        var counted = mutator.Counted(counter, OperatorCountMetric.Candidates);
+        var measurement = new Duration();
 
-        counted.ChildMutator.ShouldBeSameAs(mutator);
+        counted.ChildOperator.ShouldBeSameAs(mutator);
         counted.Counter.ShouldBeSameAs(counter);
         counted.Metric.ShouldBe(OperatorCountMetric.Candidates);
-        measured.ChildMutator.ShouldBeSameAs(mutator);
-        measured.Duration.ShouldBeSameAs(duration);
+        mutator.Substitute(mutator.Invocations.Timing(measurement)).ShouldBe(mutator.Timed(measurement));
     }
 
     [Fact]
-    public void GeneticAlgorithm_TypedOperatorDurationBudget_CanMeasureMutatorWork()
+    public void GeneticAlgorithm_OperatorDurationBudget_CanMeasureMutatorWork()
     {
         var problem = CreateRastriginProblem(dimension: 4);
         var algorithm = CreateSimpleGeneticAlgorithm(problem) with
@@ -430,43 +421,16 @@ public class PractitionerUsageSpecs
         };
 
         var states = algorithm
-            .WithMaxMutatorDuration(
+            .LimitedToDuration(
                 algorithm.Mutator,
-                TimeSpan.FromSeconds(3),
-                new AdvancingTimeProvider(TimeSpan.FromSeconds(2)))
-            .Stream(
+                TimeSpan.Zero)
+            .RunStreaming(
                 problem,
                 RandomNumberGenerator.Create(987),
                 ct: TestContext.Current.CancellationToken)
-            .ToList();
+              .ToList();
 
-        states.Count.ShouldBe(3);
-        states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
-    }
-
-    [Fact]
-    public void GeneticAlgorithm_GenericOperatorBudget_CanUseCustomCountedOperatorFactory()
-    {
-        var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = CreateSimpleGeneticAlgorithm(problem) with
-        {
-            MaximumGenerations = 5,
-            MutationRate = 1.0
-        };
-
-        var states = algorithm
-            .WithMaxCount(
-                algorithm.Mutator,
-                maximumCount: 20,
-                countedOperatorFactory: static (mutator, counter) =>
-                    mutator.CountMutatedCandidates(counter))
-            .Stream(
-                problem,
-                RandomNumberGenerator.Create(987),
-                ct: TestContext.Current.CancellationToken)
-            .ToList();
-
-        states.Count.ShouldBe(3);
+        states.Count.ShouldBe(1);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
     }
 
@@ -474,44 +438,39 @@ public class PractitionerUsageSpecs
     public void GeneticAlgorithm_SharedOperatorCounter_CanDriveExternalEarlyStopping()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var counter = new ObservationCounter();
         var baseAlgorithm = CreateSimpleGeneticAlgorithm(problem) with
         {
             MaximumGenerations = 5,
             MutationRate = 1.0
         };
-        var observedAlgorithm = baseAlgorithm with
-        {
-            Crossover = baseAlgorithm.Crossover.CountCrossoverCalls(counter),
-            Mutator = baseAlgorithm.Mutator.CountMutatorCalls(counter)
-        };
-        var algorithm = observedAlgorithm.WithTerminator(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
+        // One counter counts the crossover where it is attached and the mutator where it is placed.
+        var counter = new Counter();
+        var observedAlgorithm = baseAlgorithm with { Mutator = baseAlgorithm.Mutator.Counted(counter) };
+        var algorithm = observedAlgorithm.TerminatedBy(AfterOperatorCountTerminator.For(problem, counter, maximumCount: 2));
 
-        var states = algorithm.Stream(
-            problem,
-            RandomNumberGenerator.Create(987),
-            ct: TestContext.Current.CancellationToken)
-            .ToList();
+        var run = algorithm.CreateRun(problem, RandomNumberGenerator.Create(987), [baseAlgorithm.Crossover.Invocations.Counting(counter)]);
+        var states = run.Stream(cancellationToken: TestContext.Current.CancellationToken)
+              .ToList();
 
         states.Count.ShouldBe(2);
         states.All(state => state.Population.EvaluatedCandidates.Count == 16).ShouldBeTrue();
-        counter.CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
+        run.Result(counter).CurrentCount.ShouldBeGreaterThanOrEqualTo(2);
     }
 
     [Fact]
     public async Task HillClimber_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        IAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem, SingleSolutionState<RealVector>> algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
-        }.WithMaxIterations(10);
+        }.TerminatedAfterIterations(10);
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(321),
           ct: TestContext.Current.CancellationToken);
@@ -523,7 +482,7 @@ public class PractitionerUsageSpecs
     public void HillClimber_StructuralCompletion_DoesNotRequireExternalIterationCap()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = NoChangeMutator.For(problem),
@@ -532,7 +491,7 @@ public class PractitionerUsageSpecs
             MaxNeighbors = 12
         };
 
-        var states = algorithm.Stream(
+        var states = algorithm.RunStreaming(
           problem,
           RandomNumberGenerator.Create(654),
           ct: TestContext.Current.CancellationToken).ToList();
@@ -545,23 +504,23 @@ public class PractitionerUsageSpecs
     public async Task RepeatedExecution_Example_RunsEachRepetition()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new HillClimber<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new HillClimber<RealVector>
         {
             Creator = new UniformDistributedCreator(problem.SearchSpace),
             Mutator = new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
             Direction = LocalSearchDirection.FirstImprovement,
             BatchSize = 4,
             MaxNeighbors = 12
-        }.WithMaxIterations(6);
+        }.TerminatedAfterIterations(6);
         var repeated = algorithm.Repeat(3);
 
-        var results = await repeated.CompleteAsync(
+        var results = await repeated.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(999),
           cancellationToken: TestContext.Current.CancellationToken);
 
         results.Length.ShouldBe(3);
-        results.Select(result => result.Trial.Key).ShouldBe([0, 1, 2]);
+        results.Select(result => result.Trial.Repetition).ShouldBe([0, 1, 2]);
         results.All(result => problem.SearchSpace.Contains(result.State.EvaluatedCandidate.Candidate)).ShouldBeTrue();
     }
 
@@ -569,7 +528,7 @@ public class PractitionerUsageSpecs
     public async Task EvolutionStrategy_BenchmarkExample_RunsToCompletion()
     {
         var problem = CreateRastriginProblem(dimension: 4);
-        var algorithm = new EvolutionStrategy<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        var algorithm = new EvolutionStrategy<RealVector>
         {
             PopulationSize = 8,
             NumberOfChildren = 8,
@@ -581,7 +540,7 @@ public class PractitionerUsageSpecs
             MaximumGenerations = 5
         };
 
-        var finalState = await algorithm.CompleteAsync(
+        var finalState = await algorithm.RunToCompletionAsync(
           problem,
           RandomNumberGenerator.Create(555),
           ct: TestContext.Current.CancellationToken);
@@ -595,10 +554,10 @@ public class PractitionerUsageSpecs
         return new TestFunctionProblem(new RastriginFunction(dimension));
     }
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateSimpleGeneticAlgorithm(
+    private static GeneticAlgorithm<RealVector> CreateSimpleGeneticAlgorithm(
       TestFunctionProblem problem)
     {
-        return new GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        return new GeneticAlgorithm<RealVector>
         {
             PopulationSize = 16,
             Creator = new UniformDistributedCreator(problem.SearchSpace),
@@ -611,33 +570,20 @@ public class PractitionerUsageSpecs
     }
 
     private sealed record RecordingPopulationTerminator(int StopOnCheckedStateCount)
-        : StatelessTerminator<RealVector, RealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
+        : StatelessTerminator<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, PopulationState<RealVector>>
     {
         public int CheckedStateCount { get; private set; }
         public bool HasTerminated { get; private set; }
 
         public override bool IsTerminalState(
             PopulationState<RealVector> state,
-            RealVectorSearchSpace searchSpace,
+            IRandomNumberGenerator random,
+            BoundedRealVectorSearchSpace searchSpace,
             TestFunctionProblem problem)
         {
             CheckedStateCount++;
             HasTerminated = CheckedStateCount >= StopOnCheckedStateCount;
             return HasTerminated;
-        }
-    }
-
-    private sealed class AdvancingTimeProvider(TimeSpan step) : TimeProvider
-    {
-        private long timestamp;
-
-        public override long TimestampFrequency => TimeSpan.TicksPerSecond;
-
-        public override long GetTimestamp()
-        {
-            var current = timestamp;
-            timestamp += step.Ticks;
-            return current;
         }
     }
 }

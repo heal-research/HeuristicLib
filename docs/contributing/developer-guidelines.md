@@ -10,16 +10,18 @@ Cite a section as `§ 4` and a rule as `§ 4.2`. Rule numbers are stable. Add ru
 
 Each steering document has one responsibility:
 
-| Document                                                   | Responsibility                                                                                           |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| [Requirements](/contributing/requirements)                 | What the library must support and which capability boundaries matter                                     |
-| [Design goals and principles](/contributing/design-goals)  | Which durable qualities the resulting library should have                                                |
-| [Developer guidelines](/contributing/developer-guidelines) | How contributors implement those requirements and goals                                                  |
-| [Glossary](/guide/glossary)                                | Which terminology is canonical                                                                           |
-| `plans/developer-backlog.md`                               | Which follow up work and design decisions remain unresolved and which approaches were tried and rejected |
-| `AGENTS.md`                                                | How contributors navigate and validate the repository                                                    |
+| Document                                                   | Responsibility                                                                                      |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [Requirements](/contributing/requirements)                 | What the library must support and which capability boundaries matter                                |
+| [Design goals and principles](/contributing/design-goals)  | Which durable qualities the resulting library should have                                           |
+| [Developer guidelines](/contributing/developer-guidelines) | How contributors implement those requirements and goals                                             |
+| [Glossary](/guide/glossary)                                | Which terminology is canonical                                                                      |
+| GitHub Issues                                              | Concrete problems, feature requests and design repairs, with the decisions belonging to that work   |
+| `AGENTS.md`                                                | How contributors navigate and validate the repository and which design changes agents discuss first |
 
 Topic pages must not become alternative policy documents.
+
+User-facing documentation describes current behavior and contracts. Describe how the library works without announcing that it "now" works that way.
 
 ## § 1 Project posture
 
@@ -36,10 +38,11 @@ Topic pages must not become alternative policy documents.
 ### § 2.1 Start with the user problem
 
 1. State the concrete problem.
-2. Compare meaningful alternatives.
+2. Compare meaningful alternatives, including the smallest change within the existing design and the simplest coherent design if it differs.
 3. Show the chosen tradeoffs through representative usage.
-4. Prefer designs that make intended usage obvious and misuse difficult.
-5. Update implementation, tests, API usage specs and documentation together.
+4. State the concepts each alternative adds and removes.
+5. Prefer designs that make intended usage obvious and misuse difficult.
+6. Update implementation, tests, API usage specs and documentation together.
 
 ### § 2.2 Establish important user flows with executable specs
 
@@ -48,6 +51,24 @@ Use executable API usage specs for important user flows. Keep them small and rep
 ### § 2.3 Require every pattern to have a concrete responsibility
 
 Every pattern needs a concrete responsibility. This includes streaming, explicit runs, configuration and execution separation, builders and helper base classes.
+
+### § 2.4 Review changes for overall code health
+
+Evaluate requirements and correctness, readability, architecture, relevant security risks and performance. A change should improve overall code health without requiring perfection or unrelated cleanup.
+
+- Check findings against the actual callers, contracts and tests. Cite the affected code, the relevant requirement or principle and the practical consequence.
+- For a structural concern, describe a simpler alternative and its tradeoffs. Consider deletion, inlining and consolidation as well as extraction. Explain whether complexity disappears or merely moves.
+- Judge simplicity by the concepts, ownership rules and coordination a reader or extension author must understand. Line counts, file sizes and repeated syntax are inspection signals, not automatic reasons to split or generalize.
+- Distinguish required fixes from optional suggestions, and problems introduced by the change from pre-existing concerns. Do not invent findings; no material concern is a valid conclusion.
+- Justify useful abstractions as well as questioning unnecessary ones. A pattern name or a SOLID label alone is not evidence that a design is better.
+
+### § 2.5 Express new scenarios with existing mechanisms
+
+Write a new scenario with the existing configuration nodes and rules before proposing a mechanism. Propose one only when the scenario cannot reasonably be expressed that way, and state which existing mechanism it makes redundant. A concept that users must learn needs that justification too, and removing a concept is the better outcome (§ 2.1, § 3.1).
+
+- Add behavior through configuration nodes. A convenience produces nodes and does not behave differently from them. Do not add a new way to change an executor after construction.
+- Let the executor graph follow from the configuration graph and the problem. Do not add a dependency on anything else, such as attachment order, request context or global registration, without a recorded decision.
+- Treat a new guard or ordering rule as a sign of temporal coupling. Try to remove the coupling before adding the check. Validating configured values remains the responsibility § 4.7 describes.
 
 ## § 3 Architecture and responsibility boundaries
 
@@ -67,25 +88,113 @@ Every pattern needs a concrete responsibility. This includes streaming, explicit
 
 Builders, factories, extensions and helper bases may support the conceptual core. They must not define it.
 
+### § 3.3 Treat consumer-provided types as first class
+
+An operator, operator role, algorithm, encoding, search space, problem or invariant declared in a consumer's
+assembly participates on the same terms as one shipped in the package. Shipping first is not a privilege, and there
+is no tier of built-in types that mechanisms serve better.
+
+The failure mode is a mechanism that **enumerates** the built-in cases: a base class implementing the built-in roles'
+interfaces, a switch over the known encodings, a registry seeded with the package's own types. Each works for what it
+lists and silently demotes everything else into a second tier a consumer cannot join without editing the library.
+Reach a type through what that type declares about itself, not through a list of types the library happens to know.
+
+The following settled decisions rest on this rule.
+
+- Invariant checking keys on whether a contract is declared, never on which role an operator fills. A role added by
+  a consumer participates unchanged, and a role whose output is not a candidate simply never declares one.
+- Operator recommendation resolution keys on `IRecommends<TOperator>`, never on a list of known roles. A consumer
+  defined role participates by using its own role contract as `TOperator`.
+- `TryCreateRecommendedOperator` returns `true` with a fresh, nonnull operator when the source recommends one in its
+  current state. It returns `false` with `null` to decline, which lets resolution continue to the next source.
+- `Problem<TSelf, TCandidate, TSearchSpace>` does not implement recommendation interfaces for built-in roles. A base
+  class naming them would supply those roles permanently while a consumer's role still required separate treatment.
+  Problems and search spaces implement only the recommendations they make. See
+  [Algorithms](/guide/fundamentals/algorithms#use-operator-recommendations).
+
+Built-in components follow the same rule from the other side. A built-in operator, wrapper, analyzer or clock uses only
+members that an external author can use the same way, which is why `OperationInfo.For`, `RunResults.TimeProvider`,
+`BestSoFarAnalyzer.Evaluations` and `RankAnalyzer.Genealogy` are public. An automatic path has no capability the explicit
+one lacks: whatever `CreateRun` or `Substitute` places for an analyzer, a caller can place by hand with the same result.
+When a built-in component needs an internal member, make that member public or change the design.
+
+### § 3.4 Separate membership, invariants and recommendations
+
+A search space describes which candidates belong to it and which invariants all its members satisfy. Split search
+space types when membership or data exposed to operators differ. Do not split a search space only to make different
+operators appear suitable for different problems over the same candidates.
+
+Use operator contracts to state whether an operator accepts the search space's members and keeps its outputs inside
+the space. Use problem and search space recommendations to suggest suitable starting operators. A recommendation is
+not a compatibility restriction and an operator omitted from the recommendations remains a valid experiment.
+
+`IsSubspaceOf` describes candidate membership only. Do not use it as a substitute for operator contracts or
+recommendations.
+
+### § 3.5 Keep dependencies within their layers
+
+Follow the [layering rules](/contributing/architecture/layering) when adding or moving types. Assign a type by its
+responsibility, including where a namespace contains both contracts and implementations, and keep dependencies directed
+from higher layers to lower ones. Treat configuration and executor as phases within those responsibilities.
+
+### § 3.6 Apply clean code values with judgment
+
+Use these values when designing, implementing and reviewing code. Each must explain a concrete responsibility, invariant or cost in HeuristicLib. They do not authorize changes to accepted contracts or require a particular number of classes, interfaces or patterns.
+
+| Value                                                    | Application in HeuristicLib                                                                                                                                                                                                                 |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| KISS and YAGNI                                           | Prefer the simplest coherent design that meets the requirements. Add abstractions and extension points for demonstrated needs or required capability boundaries; explain what knowledge or coordination they remove.                        |
+| DRY                                                      | Give each semantic rule one owner. Similar syntax alone does not justify combining behavior that changes for different reasons.                                                                                                             |
+| Single responsibility and cohesion                       | Keep behavior that changes for the same reasons together. Separate independent policies and state lifetimes without fragmenting cohesive behavior into trivial types.                                                                       |
+| Separation of concerns and abstraction levels            | Keep composition and resolution distinct from operation behavior. Make orchestration readable without forcing every small operation into another helper.                                                                                    |
+| Composition and substitution                             | Prefer composition for independently varying behavior. Use inheritance when subtypes preserve the behavioral contract, including preconditions, results, ownership, ordering and failure semantics.                                         |
+| Dependency inversion                                     | Keep dependencies explicit and directed according to § 3.5. Introduce an interface when it provides a meaningful policy or substitution boundary, rather than one interface per class.                                                      |
+| Interface segregation                                    | Require only capabilities a client needs. An external operation should not implement unrelated candidate or problem contracts.                                                                                                              |
+| Open/closed and external extensibility                   | Extend through declared contracts, with consumer-provided types participating as § 3.3 requires. Do not enumerate built-in cases in shared mechanisms. This does not prevent deliberate alpha API changes under § 1.1.                      |
+| Information hiding and least astonishment                | Expose necessary capabilities and predictable costs, defaults and side effects. Keep construction details and private execution state behind the responsible boundary.                                                                      |
+| Tell, don't ask and the Law of Demeter                   | Put invariant-preserving behavior with its owner and avoid callers navigating another object's internals. Value-oriented candidate and search-state data remains appropriate; do not add forwarding layers merely to shorten access chains. |
+| Component orientation and implementation reflects design | Give components coherent contracts and explicit dependencies. Organize code by the existing responsibility layers; a framework pattern or folder layout is not a design goal by itself.                                                     |
+
+### § 3.7 Introspect through declarations, not reflection
+
+Avoid reflection in library logic and tests. A walk over a configuration graph reads the declared parameters through
+`GetParameters`, and a question about a configuration is a member it answers, such as `Supports`; the declared parameter
+walk is not reflection. Comparing types with `typeof` and `IsAssignableTo` is ordinary type checking. Reflection that
+only words an exception message is acceptable. Architecture and arity tests read source through the Roslyn compilation
+the architecture tests build, and reading assembly references from metadata remains acceptable. A check that must see
+undeclared members belongs in a Roslyn analyzer, because only source shows what a declaration omits.
+
 ## § 4 Configuration and execution ownership
 
-### § 4.1 Separate reusable configurations from execution instances
+See [execution resolution](/contributing/architecture/execution-resolution) for executor construction, state sharing and contextual node binding.
 
-Configurations own immutable settings and child configurations. Execution instances own resolved children, mutable run data and behavior. Never store run data on a configuration.
+### § 4.1 Separate reusable configurations from executors
+
+Configurations own immutable settings, child configurations and analyzers. Executors own private mutable data. Share an executor explicitly with `Sharing`; analyzer results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
 Search states are public progress values. Do not use them to carry private counters, caches or other execution data.
 
-### § 4.3 Resolve declared children through the execution instance registry
+### § 4.3 Resolve declared children through the resolution scope
 
-Creation methods receive the full `ExecutionInstanceRegistry`. Resolve declared children during instance creation. Retain the registry only for child registries, replacements or delayed child algorithm creation. Do not add another resolver abstraction.
+Every configuration's construction hook receives a resolution scope: `CreateExecutor` is typed to the run for operators and algorithms, while `CreateExecutionNode` builds other execution nodes. Resolve children through it and pass them to the executor. Retain a scope only for delayed child construction. To keep one executor for a configuration across several uses, share it with `Sharing` on the node whose lifetime it should follow rather than caching executors yourself. Do not add another scope abstraction or call a child's hook directly.
 
-### § 4.4 Expose one execution instance factory
+Algorithms resolve only their configured parameters and create no operators of their own. Keep those parameters as supplied. Behavior derived from a parameter, such as a mutation rate, belongs in the algorithm's execution code. Independent operators doing real work must be parameters so observations and budgets can see them.
 
-Expose one public `CreateExecutionInstance(...)` method with the exact execution instance role as its return type. Do not add role named alternatives such as `CreateSelectorInstance` or hide the factory behind explicit interface implementation.
+A configuration an algorithm builds itself is not a declared child, so substitutions do not reach it, and analysis or budgets placed by the user miss its work. This is an authoring guideline, not a rule enforced by the resolver. A wrapper holds the configuration it wraps as a declared child. Supply concrete runtime dependencies through the wrapper's properties and pass them to its executor. Keep run-result lookup and child resolution in configuration hooks.
 
-A topology base may seal the public method and expose one protected overload after child resolution. Return the most concrete accessible instance type useful to derived authors. This rule applies to algorithms and operators.
+Constructing a node never changes the rules for its siblings. A `CreateExecutor` hook resolves its children and builds its executor; it does not change how the scope builds any other configuration. Behavior around a configuration is a wrapper in the configuration graph, so it affects only the configuration it holds and is visible before resolution begins. The one scope change during construction is `Share`, which changes only how long an executor lives and fails for a configuration that the scope or a scope below it has already resolved.
+
+### § 4.4 Expose one construction hook
+
+Every configuration exposes one construction hook, which resolution calls for every build. Operation-parameterized operators expose `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds an executor for the operation and run types. Algorithms expose `CreateExecutor<TSearchSpace, TProblem>(scope)` with a scope typed to the run and their search state. A consumer-defined role implements `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope)`. Private data belongs to executor fields. Use `Sharing` to share executors and `scope.Results.Result(configuration)` to read run results. Do not add a second initializer per operation, role-named alternatives or a competing public entry.
+
+Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor` with a scope typed to their candidate, search space, problem and search state; generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or wrap that resolved child with `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(childOperator, wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
+
+A hook resolves each child into a local variable named after its property, in the order the children must be built, and then passes the variables to the executor constructor. Only a hook that does nothing but return one resolved child returns the resolution directly.
+
+Algorithm authoring bases own the public entry and expose one protected `CreateExecutor`: run-generic for agnostic algorithms, typed to the declared search space and problem for bound ones. A wrapping algorithm resolves its `ChildAlgorithm` through the scope and builds its executor around the result, using the same executor interface for the child and result.
 
 ### § 4.5 Keep construction entry points semantically equivalent
 
@@ -98,35 +207,50 @@ A setting has one input path.
 - Required values are constructor parameters without defaults.
 - Optional values are `init` properties with defaults. Do not also put them in the constructor.
 - Every configuration property is `{ get; init; }` so `with` can vary it.
-- Execution instance children and run data are `{ get; }` because instances are not reconfigured.
+- Executor children and run data are `{ get; }` because executors are not reconfigured.
 
-### § 4.7 Validate complete configurations during instance creation
+### § 4.7 Validate complete configurations when building
 
-Retain configuration values unchanged during construction and `with`. Validate the complete configuration in `CreateExecutionInstance` and throw `InvalidOperationException` before execution begins. Do not add a separate validation API.
+Retain configuration values unchanged during construction and `with`. Validate them at the start of `CreateExecutor` and throw `InvalidOperationException` before execution begins. Bound bases validate run-type compatibility before calling the hook. Do not add a separate validation API.
 
-A derived topology configuration validates in the protected overload called after child resolution.
+For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before resolving children. `Supports` supplies preflight metadata and resolution checks each executor against its requested interface. A wrapper rejects a child it cannot serve in its constructor, or in `CreateExecutor` before it resolves the child. A construction failure ends the scope tree while retaining published results.
+
+Analyzer result creation must not depend on a requesting executor or its children. Its `CreateExecutionNode` receives a root `ResolutionScope`; recorders receive only `RunResults`. Clock readings are run results created by clocks in the root scope and obtained through `results.Result(clock)`. Failed creation publishes no result; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
 
 ### § 4.8 Represent configured behavior with value strategies
 
-Represent configured behavior with a strategy interface whose implementations are immutable values. Do not use delegates because their equality depends on method and target identity and captured state is not persistable. Delegate adapters are limited to documented runtime only APIs.
+Configurations are data: by convention they compare by value and can be serialized. Represent configured behavior with a strategy interface whose implementations are immutable values.
+
+A configuration may hold a delegate or another live object, such as a host callback. It is not forbidden, but the configuration then leaves the convention: it cannot be serialized, nor can any graph that contains it; its equality depends on the delegate's method and target; and captured state is not part of the configuration. Whether that matters is the author's decision, and many users never serialize a configuration. Document such a type as holding a runtime value, and link the [user-facing explanation](/guide/fundamentals/configurations#configurations-that-hold-delegates).
+
+Library configurations hold runtime values only when there is a technical need, such as Python interoperability, and are listed below. Construction hooks and other machinery that only runs over configurations, and is not stored on them, may use delegates.
+
+Library configurations that hold runtime values:
+
+- Analyzers and `Observing` may retain value functions and runtime callbacks, including Python callbacks, and `CreateRun` or `Substitute` may place them in a configuration. The source of a role of your own retains the function that places its wrapper, and a trace over it reaches that function.
+- `HeuristicLib.PythonInterop` operators such as `VisualizationCallbackEvaluator` hold Python-facing callbacks.
+- `EpochClock` in `HeuristicLib.Experimental` holds its live dynamic problem, so a configuration holding it is not serializable.
+- `DynamicRacingAlgorithm` and `DelegatingRacingStateMerger` in `HeuristicLib.Experimental` hold delegates that build, inspect and merge contenders.
 
 ### § 4.9 Use records only for value semantics
 
-Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, execution instance or registry.
+Use a record only when structural equality is the contract. Use a class for a carrier that holds identity bearing dependencies such as an RNG, executor or registry. Analyzers use reference identity, including when compared as properties of configuration records. Record copies retain those references.
 
 ### § 4.10 Validate operation inputs before side effects
 
-Validate problem, search space and operation inputs in the role method before random draws, state changes or substantial work. Configuration checks belong in instance creation.
+Do not add null checks for non-nullable reference parameters or properties. Trust their declared nullability contract.
+
+Validate problem, search space and operation inputs in the role method before random draws, state changes or substantial work. Configuration checks belong in execution creation.
 
 ### § 4.11 Expose configuration and hide execution machinery
 
 Configurations expose their settings and child configurations. Wrapping and multi bases own `ChildOperator` and `ChildOperators` or role specific equivalents.
 
-Execution instances keep resolved children and machinery private or protected. Use nested operator only for descendants at any depth.
+Executors keep resolved children and machinery private or protected. Use nested operator only for descendants at any depth.
 
-### § 4.12 Keep role authoring hierarchies symmetric
+### § 4.12 Keep executor dependencies explicit
 
-Keep configuration and instance authoring hierarchies symmetric. Full role, wrapping and multi bases have matching instance bases. Derived configurations and instances use the matching pair. Pass required resolved children through constructors.
+Use the role's executor base at every configuration arity, such as the candidate-only `MutationExecutor<TCandidate>`. Keep the search space, problem and other runtime dependencies the executor reads in its own constructor parameters or fields. The configuration arity determines the contracts available during construction. Executors for wrapping and multi operators also derive from the role's executor base. Only an executor serving several operations of one configuration implements their interfaces directly, because a class has one base. A concrete executor is a `private sealed class Executor` nested in its configuration; only the authoring bases are public executor types. The `WrappingOperator` and `MultiOperator` configuration bases have no executor counterparts of their own. Their hooks resolve current children and pass them to the executor.
 
 ### § 4.13 Give each child slot one public name
 
@@ -140,22 +264,26 @@ A child slot has one public name.
 Choose an authoring base by ownership. See [Operator implementation](/contributing/architecture/operator-implementation).
 
 - Use a stateless base for configuration data without mutable run data.
-- Use a stateful base for ordinary run data without execution graph dependencies.
-- Author an instance explicitly for child instances, disposable resources or custom execution structure.
-- Use a single item base for independent per item work.
-- Never put configurations, instances, registries or child bound delegates in framework managed operator state.
+- Author an executor for private mutable fields, child executors or custom execution structure.
+- Use a single-candidate base when each item of a batch is processed independently.
+- Keep mutable data in executors or run results; configurations contain no live result or executor.
+- Coordinate concurrent access across every executor sharing a resource. An executor local lock cannot protect a shared resource.
 
-### § 4.15 Keep single item batching explicit and deterministic
+Stateless leaf bases hide executor construction. There is no automatic disposal contract.
 
-A single item base seals the batch operation and exposes `ExecutionConcurrency Concurrency`. Fork each item RNG from its batch position so concurrency does not change results. `SingleCandidateMutator` is the reference.
+### § 4.15 Keep single-candidate batching explicit and deterministic
+
+A single-candidate base seals the batch operation and exposes `ExecutionConcurrency Concurrency`. Fork each item RNG from its batch position so concurrency does not change results. `SingleCandidateMutator` is the reference.
 
 ### § 4.16 Keep operator scaffolding out of the build
 
 Operator scaffolding remains checked in source. Do not add source generators, IDE actions or scaffolding commands for operator families. Coding agents may prepare ordinary source. Review, test and maintain it like handwritten code.
 
-### § 4.17 Give algorithms explicit execution instances
+### § 4.17 Give algorithms explicit executors
 
-Algorithms use a configuration paired with an explicitly authored execution instance. See [Algorithms](/guide/fundamentals/algorithms).
+Algorithms use a configuration paired with an explicitly authored executor. Private data belongs to executor fields and shared executors require explicit `Sharing`. Child operators and interceptors bind per construction. Active iterators retain their children, RNG forks, progress, timers and resources across pause/resume. See [Algorithms](/guide/fundamentals/algorithms).
+
+Iterative algorithms build an `IterativeAlgorithmExecutor<TSearchState>` in their protected `CreateExecutor`. Both configuration bases declare that return type, so an iterative algorithm cannot return an executor that skips its interceptor. The bound iterative base derives from the bound `Algorithm` base and declares its own `Interceptor`. The hook resolves the optional interceptor and other declared children through its scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before calling the hook.
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 
@@ -163,9 +291,11 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 ### § 4.19 Keep role execution contracts role specific
 
-Role instances expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
+Role executors expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TExecutionInstance>` only connects a configuration to its instance role.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation, or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Generic invocation wrappers reach no other call argument; a typed wrapper of one operation receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `IOperation<TSelf>.SupportsCandidateWork` defaults to false and the invocation's `CountCandidateWork` defaults to throwing. An operation without candidate work implements neither, and one with candidate work implements both, so `CountCandidateWork` does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
+
+A wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>`. A routed executor derives from `RoutingExecutor<TExecutor>`.
 
 ## § 5 Immutability and collection ownership
 
@@ -197,10 +327,14 @@ Choose collection types by meaning and ownership.
 | Parameter accepting a finite ordered collection        | `IReadOnlyList<T>`, snapshotted with `ToValueArray()` |
 | Mathematical coordinates with broadcasting             | `RealVector`, `IntegerVector`, `BoolVector`           |
 | Transient batch inside one operation, never retained   | `IReadOnlyList<T>`                                    |
-| Collection held by an execution instance               | `ImmutableArray<T>`                                   |
+| Collection held by an executor                         | `ImmutableArray<T>`                                   |
 | Lazy or sequence oriented API                          | `IEnumerable<T>`                                      |
 
-`ValueArray<T>` gives configuration records structural equality. `ImmutableArray<T>` compares backing array identity and belongs on execution instances, where structural equality is unnecessary.
+A record never implements `IEnumerable`, generic or not: a record is a value, not a sequence.
+
+A record has value semantics, so what it holds has value semantics too, and its declared type says so. A sequence in a record's stored state or in any of its instance properties, positional, stored or computed, is typed as a concrete type with ordered structural equality: `ValueArray<T>`, or a domain vector such as `RealVector`, `IntegerVector`, `BoolVector`, `Permutation` or `ObjectiveVector`. It is never typed as an interface such as `IEnumerable<double>` or `IReadOnlyList<T>`, whose equality is unknown. Method parameters, method returns and static members follow the general collection guidance. A record may keep private lookup caches derived from its value members when it defines its equality over those value members only, and it does not hand those caches out mutably.
+
+This member rule covers every public or protected record and every record whose equality, hashing or serialization is used. A private or internal record that nothing compares, hashes or serializes and that only carries values as a named tuple is exempt. Executors keep `ImmutableArray<T>`. Experimental code may keep arrays and mutable data in records until it is promoted (§ 9.6); the BBoB test-function data does.
 
 ### § 5.5 Construct value arrays without accidental nesting
 
@@ -292,7 +426,7 @@ Benchmark locally when a change presents a performance risk and report the numbe
 Make intended use easy and misuse difficult.
 
 - Use descriptive names. Documentation does not excuse an unclear API.
-- Public authoring bases expose required constructors, state and hooks as `protected`, not `private protected`. Otherwise do not present the type as an authoring base.
+- Public authoring bases expose required constructors, state and modules as `protected`, not `private protected`. Otherwise do not present the type as an authoring base.
 - Keep related abstractions and operator roles structurally consistent.
 - Make defaults, side effects and potentially expensive behavior visible.
 - Do not give a nullable operator slot a non-null default. `null` would then mean both "not supplied, use the default" and "deliberately absent", and a caller could no longer express the second. Either the slot stays nullable and absence is its default, or it becomes non-nullable with a no-op implementation as the default, such as an identity interceptor. A nullable _parameter_ on a factory is unaffected: it means "not supplied" for a slot that cannot itself be null.
@@ -307,11 +441,15 @@ Make intended use easy and misuse difficult.
 
 Put the ordinary contract and expected range in `<summary>`. Put unusual values and edge cases in `<remarks>`.
 
+An invariant contract states something narrower, and the two must not be conflated. The range in a contract is the range in which a **guarantee holds**, not the range that is a good choice. A blend crossover with an alpha above one is a legitimate setting that widens the search; what it stops doing is keeping candidates inside the bounds the search space states. A mutation rate of `0.9` is unusual advice and breaks no invariant, so it stays prose and never reaches a contract. Keep judgement about good values in `<summary>`, and keep guarantee ranges in the contract member, so a contract does not accumulate opinions.
+
+Where a parameter carries both, its documentation points at the member that defines the contract instead of restating the threshold. The condition is then written once, in the executable place, and prose cannot drift away from it.
+
 ### § 8.3 Use variance only when substitution is meaningful
 
 - `TCandidate` is invariant throughout the public API. It identifies the exact shared representation.
-- Operator role interfaces declare `in TSearchSpace` and `in TProblem` so general operators compose with specific problems. New roles must do the same.
-- A returned type parameter cannot be contravariant. This makes `TSearchState` contravariant on `ITerminator` but invariant on `IInterceptor`.
+- Operator executors bind the search space and problem at construction; their interfaces omit those type parameters. General operators compose with specific problems through the authoring bases' run-type checks.
+- A returned type parameter cannot be contravariant. This makes `TSearchState` contravariant on `ITerminationExecutor` but invariant on `IInterceptionExecutor`.
 - Other domain parameters use variance only for a concrete substitution requirement and use a domain specific name.
 - Sonar S3246 is disabled because permitted positions alone do not establish meaningful substitution.
 
@@ -319,22 +457,28 @@ Put the ordinary contract and expected range in `<summary>`. Put unusual values 
 
 Reduced arities let authors omit operation inputs they do not use. Keep each role family consistent.
 
+The ladder is also where the search space and problem type arguments legitimately live. They have left the role
+contract `IOperator<TOperation, TCandidate>`, but an authoring base that reads a search space or a problem still
+names it, deliberately, for two reasons. The base performs the type check, bridging the authored member into the
+candidate-only contract and reporting a mismatch when a run supplies types the operator was not written for, so the
+pair costs the author two type arguments and costs every consumer none. And a stateless operator's code lives on
+the configuration, not on an executor of its own, so it needs those values in scope where it is written. Erasing
+them from the authoring layer would force stateless operators to grow an executor purely to carry types, which is the
+boilerplate this ladder exists to remove.
+
 - A reduced configuration base derives from the next fuller configuration base.
-- A reduced instance base implements the full interface directly and forwards explicitly to one narrower abstract operation. It does not derive from the fuller instance base.
-- A reduced stateless base derives from the reduced configuration base and implements the role instance interface directly.
-- A reduced stateful base derives from the reduced configuration base. Its nested instance derives from the reduced instance base.
+- A reduced stateless base derives from the reduced configuration base. At the candidate-only arity it is its own executor, except for selection and replacement, whose base builds a private executor holding the problem to read its objective.
 
 ### § 8.5 Reduce only arities that describe operation inputs
 
 Reduce type arguments consumed by the operator's own code. Do not reduce type arguments that describe an owned child slot.
 
-| Base                                                            | Reduced arities | Why                                    |
-| --------------------------------------------------------------- | :-------------: | -------------------------------------- |
-| `Mutator`, `MutatorInstance`                                    |       Yes       | No owned child                         |
-| `StatelessMutator`, `StatefulMutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
-| `WrappingMutator`, `MultiMutator`                               |       No        | Type arguments describe child slots    |
+| Base                                                    | Reduced arities | Why                                    |
+| ------------------------------------------------------- | :-------------: | -------------------------------------- |
+| `StatelessMutator`, `Mutator`, `SingleCandidateMutator` |       Yes       | Type arguments describe operation data |
+| `WrappingOperator`, `MultiOperator`                     |       No        | Type arguments describe child slots    |
 
-Keep topology type arguments open so their children determine them. Role contracts remain full arity. Reduced arities are authoring conveniences, not separate contracts.
+Keep topology type arguments open so their children determine them. Reduced arities are authoring conveniences, not separate contracts: a role contract names only the candidate, and every rung of the ladder reaches it through the bridge described in § 8.4.
 
 ### § 8.6 Provide type inference helpers when values supply the types
 
@@ -342,25 +486,29 @@ Do not make callers spell generic arguments available values can determine.
 
 - Put public constructors on the configuration type.
 - Put `Create(...)`, `For(problem, ...)` and `For(algorithm, ...)` on a static companion named after the type.
-- Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies both the type arguments and the defaults, so every remaining parameter can be optional.
+- Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies the type arguments and may recommend omitted collaborators.
+- A recommendation based `For(...)` resolves explicit values first, then the documented recommendation sources in order. It throws `InvalidOperationException` during construction and names every required parameter left unresolved.
+- Get each required operator through `OperatorRecommendationResolution`, generic in that operator's role contract. The algorithm lists its own required parameters. Shared recommendation machinery must not group or enumerate operator roles.
 - A `Create(...)` or `For(...)` must be able to return a complete configuration. Accept every configurable member as a parameter, required in `Create` and optional in `For`, so a caller is never left finishing a partly configured result. `with` changes a configuration that already exists; it is not the way to complete one the factory could not build.
 - Anchor a `For(...)` that also takes optional operators on an invariant parameter type. A covariant anchor such as `IProblem<TCandidate, out TSearchSpace>` contributes only a lower bound, so an operator declared at a reduced arity widens the inferred search space and fails against constraints the caller never named. An invariant anchor contributes an exact bound, fixing the type from the anchor alone.
 - Treat a `For(...)` argument as a type witness unless the contract says it is retained.
 - Add a fluent extension only when its receiver becomes part of the configuration.
-- Put fluent methods in `<Type>Extensions`. A concern specific helper such as `WithRate` may use its own companion.
+- Put fluent methods in `<Type>Extensions`. A concern specific helper such as `AppliedAtRate` may use its own companion.
 - Keep direct construction when no value can supply the types.
 - Prove intended inference with API usage specs. Use architecture tests or analyzers only where each fits under § 10.1.
 
 ### § 8.7 Keep operator parameter groups in a common order
 
-Order parameters as primary inputs, RNG, search space and problem. Omit groups that do not apply. Lower level inputs that replace a search space occupy its position.
+Order an operation executor's parameters as primary inputs followed by the RNG, including termination and external operations. Bind the problem during construction through the typed scope; the executor retains what it needs. Stateless author overrides retain primary inputs, RNG, search space and problem, omitting context groups at reduced authoring arities. Lower level inputs that replace a search space occupy its position.
+
+Generic types and methods that name an operation put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, operations, authoring bases, compositions, wrappers and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
 
 ### § 8.8 Expose direct static implementations when the operation needs one
 
 Expose a direct static implementation when the candidate or genotype does not already own the operation.
 
 - Do not add a static method that only forwards to the candidate or genotype.
-- Name the static method for the operation, such as `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`. Let the instance method delegate to it.
+- Name the static method for the operation, such as `Create`, `Mutate`, `Cross`, `Select` or `Evaluate`. Let the executor method delegate to it.
 - Provide one core overload that accepts the direct inputs needed by the operation.
 - Use search space overloads as thin adapters unless the search space is the true dependency.
 - Order adapters before the core overload and delegate inward.
@@ -368,7 +516,9 @@ Expose a direct static implementation when the candidate or genotype does not al
 
 ### § 8.9 Group extensions by user facing concern
 
-Group extensions by user concern, not target type alone. Give observation, counting, duration, budget, factory and conversion helpers separate classes. Use concern names and role first names such as `MutatorDurationExtensions`.
+Group extensions by user concern, not target type alone. Give observation, counting, duration, budget, factory and conversion helpers separate classes. Use concern names, such as `OperatorDurationExtensions`.
+
+Write extensions as extension blocks. Keep a classic extension method only where a block cannot express it or would reorder its explicit type arguments, such as an operation that must stay first under § 8.7. Put an extension class in the file of the type it extends unless it is large enough to warrant its own file.
 
 Folders may group implementations without forcing a public namespace. Keep implementation wrappers private or internal unless callers need their concrete type.
 
@@ -385,6 +535,66 @@ Build random APIs from one source of base random values.
 
 Use concept first scalar names such as `NextDouble` and target first output names such as `NextRealVectorUniform`. Do not add a competing distribution layer for the same sampling behavior.
 
+### § 8.11 Let an API surface scale per role, never over hidden axes
+
+Each operation supplies one invocation over its named method. General wrappers reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper or run signature. Candidate-work semantics are supplied by the invocation (§ 4.19) and evaluated only by wrappers needing that metric. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`.
+
+Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
+role's members once from an obvious template, and no existing role is disturbed. The resolve family
+(`Resolve`, `ResolveOptional`, `TryResolve`), the observation sources beside each operation and named configuration wrappers all have this shape.
+
+What is not acceptable is a surface that multiplies over an axis the role's author does not know exists, so that
+adding one role silently obliges members for every value of some other dimension. Before adding a per-role member,
+name the axes it varies over and check that a role author can enumerate all of them.
+
+Two receivers for the same operation are not a second axis when one is defined in terms of the other.
+`scope.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the scope is generic-less and cannot
+infer the triple. `typed.Resolve(config)` goes through a `ResolutionScope` that already knows the triple, infers
+everything and relays to the canonical form. One mechanism, two spellings; keep both.
+
+Whatever the declaration count, the call site stays minimal: `typed.Resolve(config)` or
+`typed.TryResolve(config, out var executor, out var reason)`, with nothing the caller is forced to supply to make inference work.
+An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
+differently needs a separate argument.
+
+### § 8.12 Name a method for what it returns, not for what it looks like
+
+`With*` is the record convention: same type, changed slot, nothing mutated. Reserve it for exactly that.
+
+A method that returns a **different type wrapping the receiver** is named as a past participle describing the result,
+because an adjective cannot be misread as a command to modify the receiver: `algorithm.TerminatedBy(terminator)`,
+`evaluator.Cached(keySelector)`, `refiner.CheckedForImprovement()`, `mutator.AppliedAtRate(0.3)`,
+`algorithm.LimitedToCandidates(evaluator, 100_000)`. `ga.TerminatedBy(t)` is not a genetic algorithm any
+more, and the name should not suggest otherwise.
+
+A method that **mutates the receiver** is named with an imperative verb, such as `scope.Share(configuration)`, and never
+with `With*`, even when it returns the receiver for chaining. A fluent chain is not evidence that a value is being built,
+so the name has to carry that distinction on its own.
+
+This was applied across the library after `With*` was found covering three different semantics at once, one of which
+genuinely modified its receiver while reading exactly like the other two.
+
+A configuration that is not yet a run names its execution methods with `Run`: algorithms and experiments offer
+`RunStreaming`, `RunToCompletion` and `RunToCompletionAsync`, and experiments also offer `RunTrials`. Each is exactly
+`CreateRun(…)` followed by the run's method. A run uses the bare verb: `Stream`, `Complete`, `CompleteAsync`, and
+`StartTrials`, which returns before the trials finish.
+
+### § 8.13 Name a contract member for the question it answers
+
+Prefer a member name that reads as the predicate at the call site: `invariant.Holds(candidate)`,
+`exactCount.Implies(minimumCount)`, `contract.Ensures(invariant)`. Avoid names that state a mechanism
+(`IsSatisfiedBy`) or a term of art the reader must look up (`Entails`) where a plain word carries the same meaning.
+
+Name an interface for what it is about, not only for its role in a system: `ICandidateInvariant<TCandidate>` says
+which thing the invariant constrains, and `IOperatorContract<TCandidate>` says whose contract it is. Verify the verb
+covers every implementer: `Ensures` includes creators that establish an invariant as well as operators that preserve it.
+
+### § 8.14 Say item for a split call and candidate for the candidates
+
+A name says item when it belongs to splitting or routing a call, which any item operation can use, such as `IItemOperation<TSelf>` and `ChoosePerItem`. A name says candidate when it is about candidates themselves: an operation's candidate inputs and outputs (`SingleCandidateMutator`, `MutateCandidate`), candidate work (`SupportsCandidateWork`, `CountCandidateWork`, `CountingCandidates`, `LimitedToCandidates`). Rate helpers such as `AppliedAtRate` return `ChoosePerItem` and describe each operation's own unit in their documentation, such as each parent, parent group or candidate.
+
+An item does not always yield a candidate: evaluation yields an objective vector for each candidate, and a crossover item is a group of parents. That is why a name that works for every item operation says item.
+
 ## § 9 Documentation and source organization
 
 ### § 9.1 Document nonobvious public contracts
@@ -397,16 +607,19 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 
 ### § 9.2 Keep policy and public documentation in their assigned documents
 
-- Use glossary terms instead of legacy or ad hoc alternatives.
+- Use glossary terms instead of ad hoc alternatives.
 - Keep user facing namespaces focused on concepts. Folders may be more detailed.
 - Do not assume that one folder must map to one namespace.
 - Keep public behavioral explanations in topic documentation.
 - Keep contributor implementation rules in this document.
-- Keep unresolved decisions in `plans/developer-backlog.md`. Move settled decisions here or into the relevant public documentation.
 
-### § 9.3 Name types for what binds them
+### § 9.3 Name types for what binds them, place them by what they are
 
-Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem. The placement question remains in `plans/developer-backlog.md`.
+Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem.
+
+Place a type with the concept it implements, not with the representation that binds it. A problem, including an authoring base bound to one representation such as `RealVectorProblem`, belongs in `Problems`; an operator authoring base belongs in its role namespace. An encoding holds its representation's candidate types, search spaces and the operators that work with any problem over that representation. Put an operator that requires one problem beside that problem, as `NumericParameterFittingRefiner` sits in `Problems.MachineLearning`.
+
+Name a role-specific configuration interface for its role, without a `Node` suffix. `IOperator<Mutation, TCandidate>`, `IAlgorithm<TCandidate>` and `IClock` are configuration nodes by deriving from `IConfigurationNode`, and the `IConfigurationNode` interfaces are the only configuration interfaces named for the graph concept.
 
 ### § 9.4 Allow authoring dependencies required by construction
 
@@ -420,6 +633,7 @@ For example, `ExpressionDraft` takes an `ExpressionTreeSearchSpace` to resolve s
 - Use detailed namespaces only for contracts, bases and machinery that authors reach for rather than users.
 - Give a concept one namespace. Do not split it into small public namespaces that a user has to import together.
 - A source subfolder adds a namespace segment only when it changes the audience. Folders may organize implementation categories without adding a namespace segment.
+- Every namespace segment must map to its corresponding source folder. Additional grouping folders belong beneath that namespace folder: types in `HEAL.HeuristicLib.Execution` may live in `Execution/Runs` or `Execution/Concurrency` without adding a namespace segment.
 - Use architecture tests for reviewed concept boundaries. Do not enforce a mechanical namespace to path equation across the project.
 - Keep project roots free of source files. Put every type in the folder for its owning concept even when its namespace is intentionally broader than that folder.
 
@@ -433,7 +647,34 @@ Do not move empty implementations, inaccessible results or known unbounded defec
 
 Promote a feature from Experimental only when its responsibility belongs in the standard toolkit, its central API has no expected replacement, its ownership rules match this guide, its advertised behavior is complete, its normal setup has an API usage spec and its important failure behavior has unit tests. Promotion must not force unrelated experimental concepts or unsuitable dependencies into the main package.
 
-The main and Contracts packages must never reference Experimental. Experimental may reference the main package.
+The main package must never reference Experimental. Experimental may reference the main package.
+
+### § 9.7 Keep XML documentation verifiable by the build
+
+`Directory.Build.props` sets `GenerateDocumentationFile`, so the compiler parses every `///` block and resolves every
+`cref`. The generated XML file ships in the NuGet package for consumer IntelliSense, but the checks are the reason the
+flag is on.
+
+A documentation comment that states something false about the code is an error. A comment that is merely missing is not.
+
+- Errors: CS1570, CS1571, CS1572, CS1574, CS1580, CS1584, CS1587, CS1710 and CS1711. These report badly formed XML, an
+  unresolvable or malformed `cref`, a `param` or `typeparam` tag naming something that does not exist or naming it
+  twice, and a comment placed on an element that cannot carry one.
+- Warnings: CS1573 and CS1712, which report a tag that is absent rather than one that is wrong.
+- CS1591 is suppressed. It reports documentation coverage, which § 9.1 deliberately does not require.
+- Add a diagnostic to the error list only when it reports a comment that contradicts the code.
+
+An incremental build does not re-emit these diagnostics, so verification needs a clean build.
+
+### § 9.8 Use consistent Markdown emphasis
+
+Use `_italic text_` for emphasis and `**bold text**` for strong emphasis, following the repository's Prettier output. Code spans, fenced code and literal underscores retain their original meaning. Let Prettier choose an alternative delimiter only when necessary to preserve nested or intraword emphasis.
+
+### § 9.9 Keep an interface beside its primary implementation
+
+An interface with one primary implementation shares a file with that implementation, and the file is named after the implementation, as `IQuadraticAssignmentProblemData` sits in `QuadraticAssignmentProblemData.cs`. An interface with several implementations of equal standing keeps a file of its own.
+
+Question an interface that has a single implementation and will likely keep it. A concrete need justifies it, such as an external implementation, a test double or a variance requirement; without one, the class alone is the contract. This is a reason to reconsider new interfaces, not to remove published ones: a public interface ships in the package, and removing it needs its own decision.
 
 ## § 10 Enforcement and implementation style
 
@@ -448,7 +689,7 @@ The main and Contracts packages must never reference Experimental. Experimental 
 
 ### § 10.2 Follow repository validation and test placement guidance
 
-Follow `AGENTS.md` for validation order and `test/README.md` for test placement.
+Follow `test/README.md` for test placement and validation order, and `AGENTS.md` for validation commands.
 
 ### § 10.3 Use expression bodies for value producing members
 

@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Inspection;
 using HEAL.HeuristicLib.Operators.Refiners;
 using HEAL.HeuristicLib.Problems.TestFunctions;
-using HEAL.HeuristicLib.Problems.TestFunctions.SingleObjectives;
 using HEAL.HeuristicLib.Tests.TestSupport.Mocks;
 using SinglePointCrossover = HEAL.HeuristicLib.Encodings.RealVectors.SinglePointCrossover;
 using UniformDistributedCreator = HEAL.HeuristicLib.Encodings.RealVectors.UniformDistributedCreator;
@@ -31,23 +31,23 @@ public class RefinerFailureTests
     }
 
     [Fact]
-    public void InARun_AFailingRefinerPropagatesOutOfComplete()
+    public void InARun_AFailingRefinerPropagatesOutOfRunToCompletion()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingRefiner() };
 
-        Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => algorithm.RunToCompletion(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
     }
 
     [Fact]
-    public void InARun_AFailingRefinerPropagatesOutOfTheStream()
+    public void InARun_AFailingRefinerPropagatesOutOfRunStreaming()
     {
         var problem = CreateProblem();
         var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingRefiner() };
 
         Should.Throw<InvalidOperationException>(() =>
         {
-            foreach (var _ in algorithm.Stream(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
+            foreach (var _ in algorithm.RunStreaming(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken))
             {
                 // The failure happens while producing the first state.
             }
@@ -55,21 +55,21 @@ public class RefinerFailureTests
     }
 
     [Fact]
-    public void WhenARunFailsPartWay_InstrumentationKeepsWhatItRecordedBefore()
+    public void WhenARunFailsPartWay_InspectionKeepsWhatItRecordedBefore()
     {
         var problem = CreateProblem();
-        var counter = new ObservationCounter();
-        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2).CountRefinerCalls(counter) };
+        var algorithm = CreateAlgorithm(problem) with { Refiner = new FailingAfterBatchesRefiner(2) };
+        var run = algorithm.Counting(algorithm.Refiner, out var counter).CreateRun(problem, RandomNumberGenerator.Create(42));
 
-        Should.Throw<InvalidOperationException>(() => algorithm.Complete(problem, RandomNumberGenerator.Create(42), ct: TestContext.Current.CancellationToken));
+        Should.Throw<InvalidOperationException>(() => run.Complete(cancellationToken: TestContext.Current.CancellationToken));
 
         // The two completed batches are counted; the failing one is not, because the counter increments on success.
-        counter.CurrentCount.ShouldBe(2);
+        run.Result(counter).CurrentCount.ShouldBe(2);
     }
 
     private static TestFunctionProblem CreateProblem() => new(new SphereFunction(dimension: 3));
 
-    private static GeneticAlgorithm<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateAlgorithm(TestFunctionProblem problem) =>
+    private static GeneticAlgorithm<RealVector> CreateAlgorithm(TestFunctionProblem problem) =>
         new()
         {
             PopulationSize = 5,
@@ -88,27 +88,25 @@ public class RefinerFailureTests
             candidate == FailingValue ? throw new InvalidOperationException("Refinement failed.") : candidate;
     }
 
-    private sealed record FailingRefiner : StatelessRefiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record FailingRefiner : StatelessRefiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+        public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, BoundedRealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
             throw new InvalidOperationException("Refinement failed.");
     }
 
-    private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+    private sealed record FailingAfterBatchesRefiner(int SuccessfulBatches) : Refiner<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem>
     {
-        private readonly Counter counter = new();
-
-        public override IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) =>
-            new Instance(counter, SuccessfulBatches);
+        protected override IRefinementExecutor<RealVector> CreateExecutor<TRunSearchState>(ResolutionScope<RealVector, BoundedRealVectorSearchSpace, TestFunctionProblem, TRunSearchState> scope) =>
+            new Executor(new Counter(), SuccessfulBatches);
 
         private sealed class Counter
         {
             public int Batches;
         }
 
-        private sealed class Instance(Counter counter, int successfulBatches) : IRefinerInstance<RealVector, RealVectorSearchSpace, TestFunctionProblem>
+        private sealed class Executor(Counter counter, int successfulBatches) : RefinementExecutor<RealVector>
         {
-            public IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random, RealVectorSearchSpace searchSpace, TestFunctionProblem problem) =>
+            public override IReadOnlyList<RealVector> Refine(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
                 counter.Batches++ < successfulBatches ? candidates : throw new InvalidOperationException("Refinement failed.");
         }
     }

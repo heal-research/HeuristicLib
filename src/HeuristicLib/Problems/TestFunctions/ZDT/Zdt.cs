@@ -1,7 +1,7 @@
 using HEAL.HeuristicLib.Encodings.RealVectors;
 using HEAL.HeuristicLib.Objectives;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 public abstract class Zdt : IMultiObjectiveGradientTestFunction
 {
@@ -54,5 +54,5 @@ public abstract class Zdt : IMultiObjectiveGradientTestFunction
     protected abstract double H(double f1, double g);
     protected abstract (double dh_df1, double dh_dg) HGradient(double f1, double g);
 
-    public MultiObjectiveTestFunctionProblem AsProblem() => new(this, new RealVectorSearchSpace(Dimension, Min, Max));
+    public MultiObjectiveTestFunctionProblem AsProblem() => new(this, new BoundedRealVectorSearchSpace(Dimension, Min, Max));
 }

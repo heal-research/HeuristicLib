@@ -2,13 +2,13 @@ using HEAL.HeuristicLib.Encodings.BoolVectors;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Random;
 
-namespace HEAL.HeuristicLib.Problems.TestFunctions.ZDT;
+namespace HEAL.HeuristicLib.Problems.TestFunctions;
 
 /// <summary>
 ///   ZDT5 is a binary-encoded multi-objective optimization problem and therefore can not fit into the RealVector
 ///   TestFunctions
 /// </summary>
-public class Zdt5 : SingleSolutionProblem<BoolVector, BoolVectorSearchSpace>
+public class Zdt5 : SingleSolutionProblem<Zdt5, BoolVector, BoolVectorSearchSpace>
 {
     private readonly int numberOfVariables;
 

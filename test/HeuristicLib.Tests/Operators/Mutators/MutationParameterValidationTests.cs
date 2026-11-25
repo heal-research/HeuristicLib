@@ -1,5 +1,7 @@
 using HEAL.HeuristicLib.Encodings.IntegerVectors;
 using HEAL.HeuristicLib.Encodings.RealVectors;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Operators.Mutators;
 using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Tests.TestSupport.Random;
 
@@ -10,7 +12,7 @@ public sealed class MutatorParameterSemanticsTests
     private static readonly IntegerVector emptyIntegerVector = IntegerVector.Create();
     private static readonly RealVector emptyRealVector = RealVector.Create();
     private static readonly IntegerVectorSearchSpace emptyIntegerSearchSpace = new(0, IntegerVector.Create(0), IntegerVector.Create(1));
-    private static readonly RealVectorSearchSpace emptyRealSearchSpace = new(0, minimum: 0, maximum: 1);
+    private static readonly BoundedRealVectorSearchSpace emptyRealSearchSpace = new(0, minimum: 0, maximum: 1);
     private static readonly IRandomNumberGenerator random = RandomNumberGenerator.Create(42);
 
     [Theory]
@@ -52,15 +54,20 @@ public sealed class MutatorParameterSemanticsTests
     [InlineData(double.NegativeInfinity)]
     public void ArithmeticMutationSettings_PreserveUnconventionalValues(double value)
     {
-        var gaussian = new GaussianMutator(mutationRate: 1, mutationStrength: value);
+        var adaptation = new ScaleAdaptation();
+        var gaussian = new GaussianMutator(mutationRate: 1, mutationStrength: value) { MutationStrengthAdaptation = adaptation };
         var polynomial = new PolynomialMutator { Eta = value };
-        var instance = new ExecutionInstanceRegistry().Resolve<IVariableStrengthMutatorInstance<RealVector, RealVectorSearchSpace, IProblem<RealVector, RealVectorSearchSpace>>>(gaussian);
+        var scope = ResolutionScope.Create();
+        var executor = scope
+            .For<RealVector, BoundedRealVectorSearchSpace, IProblem<RealVector, BoundedRealVectorSearchSpace>>(FuncProblem.Create(static (RealVector _) => 0.0, emptyRealSearchSpace, SingleObjective.Minimize))
+            .Resolve(gaussian);
 
-        instance.CurrentMutationStrength = value;
+        scope.Resolve(adaptation).Factor *= value;
 
         gaussian.MutationStrength.ShouldBe(value);
         polynomial.Eta.ShouldBe(value);
-        instance.CurrentMutationStrength.ShouldBe(value);
+        scope.Resolve(adaptation).Factor.ShouldBe(value);
+        executor.Mutate([emptyRealVector], random).ShouldBe([emptyRealVector]);
         GaussianMutator.Mutate(emptyRealVector, random, emptyRealSearchSpace, mutationRate: 1, mutationStrength: value).ShouldBeSameAs(emptyRealVector);
         PolynomialMutator.Mutate(emptyRealVector, random, emptyRealSearchSpace, eta: value, atLeastOnce: false).ShouldBeSameAs(emptyRealVector);
     }

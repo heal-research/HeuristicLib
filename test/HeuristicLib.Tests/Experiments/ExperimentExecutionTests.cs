@@ -7,7 +7,7 @@ namespace HEAL.HeuristicLib.Tests.Experiments;
 public class ExperimentExecutionTests
 {
     [Fact]
-    public async Task SequentialExecution_StreamsTrialsInMaterializationOrder()
+    public async Task SequentialExecution_StreamsTrialsInTrialOrder()
     {
         var experiment = CreateExperiment(new ProbeAlgorithm(10), new ProbeAlgorithm(20), new ProbeAlgorithm(30));
         var run = ExperimentTestSupport.CreateRun(experiment);
@@ -15,7 +15,7 @@ public class ExperimentExecutionTests
         var entries = await run.Stream(ExecutionConcurrency.Sequential(), cancellationToken: TestContext.Current.CancellationToken)
             .ToListAsync(TestContext.Current.CancellationToken);
 
-        entries.Select(entry => entry.Trial.Key).ShouldBe([0, 1, 2]);
+        entries.Select(entry => entry.Trial.ParameterCandidateIndex).ShouldBe([0, 1, 2]);
         entries.Select(entry => MetaAlgorithmTestHelpers.StateCandidate(entry.State)).ShouldBe([10, 20, 30]);
     }
 
@@ -50,19 +50,29 @@ public class ExperimentExecutionTests
         probe.MaximumActiveExecutions.ShouldBe(4);
     }
 
-    [Fact]
-    public async Task RandomAssignments_DoNotDependOnExecutionConcurrency()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task RandomAssignments_DoNotDependOnExecutionConcurrency(bool shareRandomStreams)
     {
-        var algorithm = new ProbeAlgorithm(0, UseRandomValue: true);
-        var experiment = algorithm.Repeat(5);
-        var sequentialRun = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(123));
-        var concurrentRun = experiment.CreateRun(MetaAlgorithmTestHelpers.CreateIntegerProblem(), RandomNumberGenerator.Create(123));
+        var probe = new ExecutionProbe();
+        var algorithm = new ProbeAlgorithm(0, probe, DelayMilliseconds: 30, UseRandomValue: true);
+        var grid = algorithm.AsParameterGrid()
+            .VaryBy([0, 1], (configuration, value) => configuration with { Value = value });
+        var experiment = Experiment.Create(grid, repetitions: 3) with
+        { ShareRandomStreamsAcrossParameterCandidates = shareRandomStreams };
+        var problems = new[] { MetaAlgorithmTestHelpers.CreateIntegerProblem(), MetaAlgorithmTestHelpers.CreateIntegerProblem(), MetaAlgorithmTestHelpers.CreateIntegerProblem() };
+        var sequentialRun = experiment.CreateRun(problems, RandomNumberGenerator.Create(123));
+        var concurrentRun = experiment.CreateRun(problems, RandomNumberGenerator.Create(123));
 
         var sequential = await sequentialRun.CompleteAsync(ExecutionConcurrency.Sequential(), cancellationToken: TestContext.Current.CancellationToken);
+        probe.MaximumActiveExecutions.ShouldBe(1);
         var concurrent = await concurrentRun.CompleteAsync(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
 
-        sequential.Select(result => (result.Trial.Key, MetaAlgorithmTestHelpers.StateCandidate(result.State)))
-            .ShouldBe(concurrent.Select(result => (result.Trial.Key, MetaAlgorithmTestHelpers.StateCandidate(result.State))));
+        probe.MaximumActiveExecutions.ShouldBe(2);
+        sequential.Length.ShouldBe(18);
+        sequential.Select(result => (result.Trial.ProblemPosition, result.Trial.ParameterCandidateIndex, result.Trial.Repetition, MetaAlgorithmTestHelpers.StateCandidate(result.State)))
+            .ShouldBe(concurrent.Select(result => (result.Trial.ProblemPosition, result.Trial.ParameterCandidateIndex, result.Trial.Repetition, MetaAlgorithmTestHelpers.StateCandidate(result.State))));
     }
 
     [Fact]
@@ -75,13 +85,18 @@ public class ExperimentExecutionTests
             new ProbeAlgorithm(3, probe, DelayMilliseconds: 1_000));
         var run = ExperimentTestSupport.CreateRun(experiment);
         using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
-        cancellation.CancelAfter(TimeSpan.FromMilliseconds(30));
 
-        await Should.ThrowAsync<OperationCanceledException>(() =>
-            run.CompleteAsync(ExecutionConcurrency.Concurrent(), cancellationToken: cancellation.Token));
+        // Cancel only once every trial is active, however long the trials take to start.
+        var completion = run.CompleteAsync(ExecutionConcurrency.Concurrent(), cancellationToken: cancellation.Token);
+        await probe.WaitForExecutionsAsync(3, TestContext.Current.CancellationToken);
+        await cancellation.CancelAsync();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => completion);
 
         probe.ExecutionCount.ShouldBe(3);
         probe.ActiveExecutions.ShouldBe(0);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Canceled);
     }
 
     [Fact]
@@ -97,6 +112,7 @@ public class ExperimentExecutionTests
 
         await Should.ThrowAsync<OperationCanceledException>(() =>
             run.CompleteAsync(ExecutionConcurrency.Concurrent(2), cancellationToken: cancellation.Token));
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
     }
 
     [Fact]
@@ -113,6 +129,52 @@ public class ExperimentExecutionTests
 
         probe.ExecutionCount.ShouldBe(2);
         probe.ActiveExecutions.ShouldBe(0);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Stopped);
+        Should.Throw<InvalidOperationException>(() => run.Stream(cancellationToken: TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task DisposingStream_CancelsATrialWaitingOnItsToken()
+    {
+        var enteredWait = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var disposalCount = 0;
+        var algorithm = new DisposalTrackingAlgorithm(
+            Dispose: () =>
+            {
+                disposalCount++;
+                return ValueTask.CompletedTask;
+            },
+            MoveAfterFirstYield: async token =>
+            {
+                enteredWait.SetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, token);
+                return false;
+            });
+        var run = ExperimentTestSupport.CreateRun(algorithm.Repeat(2));
+        var testToken = TestContext.Current.CancellationToken;
+        using var callerCancellation = CancellationTokenSource.CreateLinkedTokenSource(testToken);
+        var stream = run.Stream(cancellationToken: callerCancellation.Token).GetAsyncEnumerator(testToken);
+        (await stream.MoveNextAsync()).ShouldBeTrue();
+        await enteredWait.Task.WaitAsync(testToken);
+
+        var disposal = stream.DisposeAsync().AsTask();
+        try
+        {
+            await disposal.WaitAsync(TimeSpan.FromSeconds(5), testToken);
+        }
+        finally
+        {
+            if (!disposal.IsCompleted)
+            {
+                await callerCancellation.CancelAsync();
+                await disposal.WaitAsync(TimeSpan.FromSeconds(5), testToken);
+            }
+        }
+
+        callerCancellation.IsCancellationRequested.ShouldBeFalse();
+        run.LifecycleState.ShouldBe(RunLifecycleState.Stopped);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Canceled);
+        disposalCount.ShouldBe(1);
     }
 
     [Fact]
@@ -138,6 +200,41 @@ public class ExperimentExecutionTests
     }
 
     [Fact]
+    public async Task StartTrials_CancellationSettlesPendingTasksWhenCleanupThrows()
+    {
+        var enteredWait = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var finishMove = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var disposalCount = 0;
+        var algorithm = new DisposalTrackingAlgorithm(
+            Dispose: () =>
+            {
+                disposalCount++;
+                return ValueTask.FromException(new InvalidOperationException("Disposal failed."));
+            },
+            MoveAfterFirstYield: async _ =>
+            {
+                enteredWait.SetResult();
+                await finishMove.Task;
+                return true;
+            });
+        var run = ExperimentTestSupport.CreateRun(algorithm.Repeat(2));
+        var testToken = TestContext.Current.CancellationToken;
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(testToken);
+        var tasks = run.StartTrials(cancellationToken: cancellation.Token);
+        await enteredWait.Task.WaitAsync(testToken);
+
+        await cancellation.CancelAsync();
+        finishMove.SetResult();
+        await Should.ThrowAsync<OperationCanceledException>(() => Task.WhenAll(tasks).WaitAsync(TimeSpan.FromSeconds(5), testToken));
+        await run.ExecutionCompletion.WaitAsync(testToken);
+
+        tasks.ShouldAllBe(task => task.IsCanceled);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Canceled);
+        run.Trials.ShouldAllBe(trial => trial.Run.LifecycleState == RunLifecycleState.Canceled);
+        disposalCount.ShouldBe(1);
+    }
+
+    [Fact]
     public async Task ConcurrentWithOne_LimitsActiveTrialsWithoutChangingCategory()
     {
         var probe = new ExecutionProbe();
@@ -153,7 +250,7 @@ public class ExperimentExecutionTests
     }
 
     [Fact]
-    public async Task CombinedExecution_AggregatesFailuresInMaterializationOrderAndContinuesUnaffectedTrials()
+    public async Task CombinedExecution_AggregatesFailuresInTrialOrderAndContinuesUnaffectedTrials()
     {
         var probe = new ExecutionProbe();
         var experiment = CreateExperiment(
@@ -165,14 +262,15 @@ public class ExperimentExecutionTests
         var exception = await Should.ThrowAsync<AggregateException>(() =>
             run.CompleteAsync(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken));
 
-        exception.InnerExceptions.Cast<ExperimentTrialException<int>>().Select(failure => failure.Key).ShouldBe([0, 2]);
+        exception.InnerExceptions.Cast<ExperimentTrialException>().Select(failure => failure.ParameterCandidateIndex).ShouldBe([0, 2]);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         probe.Candidates.ShouldBe([1]);
         probe.SetupCount.ShouldBe(3);
         probe.ExecutionCount.ShouldBe(2);
     }
 
     [Fact]
-    public async Task Stream_AggregatesFailuresInMaterializationOrderAndContinuesUnaffectedTrials()
+    public async Task Stream_AggregatesFailuresInTrialOrderAndContinuesUnaffectedTrials()
     {
         var probe = new ExecutionProbe();
         var experiment = CreateExperiment(
@@ -185,7 +283,8 @@ public class ExperimentExecutionTests
             _ = await run.Stream(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken)
                 .ToListAsync(TestContext.Current.CancellationToken));
 
-        exception.InnerExceptions.Cast<ExperimentTrialException<int>>().Select(failure => failure.Key).ShouldBe([0, 2]);
+        exception.InnerExceptions.Cast<ExperimentTrialException>().Select(failure => failure.ParameterCandidateIndex).ShouldBe([0, 2]);
+        run.LifecycleState.ShouldBe(RunLifecycleState.Failed);
         probe.Candidates.ShouldBe([1]);
     }
 
@@ -201,20 +300,20 @@ public class ExperimentExecutionTests
 
         var trialTasks = run.StartTrials(ExecutionConcurrency.Concurrent(2), cancellationToken: TestContext.Current.CancellationToken);
 
-        _ = await Should.ThrowAsync<ExperimentTrialException<int>>(() => Task.WhenAll(trialTasks));
+        _ = await Should.ThrowAsync<ExperimentTrialException>(() => Task.WhenAll(trialTasks));
 
         trialTasks.Select(task => task.Status).ShouldBe([TaskStatus.Faulted, TaskStatus.RanToCompletion, TaskStatus.Faulted]);
         var successfulResult = await trialTasks[1];
-        successfulResult.Trial.Key.ShouldBe(1);
+        successfulResult.Trial.ParameterCandidateIndex.ShouldBe(1);
         MetaAlgorithmTestHelpers.StateCandidate(successfulResult.State).ShouldBe(1);
-        var firstFailure = await Should.ThrowAsync<ExperimentTrialException<int>>(() => trialTasks[0]);
-        var secondFailure = await Should.ThrowAsync<ExperimentTrialException<int>>(() => trialTasks[2]);
-        new[] { firstFailure.Key, secondFailure.Key }.ShouldBe([0, 2]);
+        var firstFailure = await Should.ThrowAsync<ExperimentTrialException>(() => trialTasks[0]);
+        var secondFailure = await Should.ThrowAsync<ExperimentTrialException>(() => trialTasks[2]);
+        new[] { firstFailure.ParameterCandidateIndex, secondFailure.ParameterCandidateIndex }.ShouldBe([0, 2]);
         probe.Candidates.ShouldBe([1]);
     }
 
     [Fact]
-    public async Task StartTrials_SequentialExecutionStartsTrialsInMaterializationOrder()
+    public async Task StartTrials_SequentialExecutionStartsTrialsInTrialOrder()
     {
         var probe = new ExecutionProbe();
         var experiment = CreateExperiment(
@@ -239,8 +338,8 @@ public class ExperimentExecutionTests
         var exception = await Should.ThrowAsync<AggregateException>(() =>
             run.CompleteAsync(ExecutionConcurrency.Sequential(), cancellationToken: TestContext.Current.CancellationToken));
 
-        var trialException = exception.InnerExceptions.Single().ShouldBeOfType<ExperimentTrialException<int>>();
-        trialException.Key.ShouldBe(0);
+        var trialException = exception.InnerExceptions.Single().ShouldBeOfType<ExperimentTrialException>();
+        trialException.ParameterCandidateIndex.ShouldBe(0);
         trialException.InnerException.ShouldBeOfType<InvalidOperationException>();
     }
 
@@ -253,7 +352,7 @@ public class ExperimentExecutionTests
         var entries = await run.Stream(ExecutionConcurrency.Sequential(), cancellationToken: TestContext.Current.CancellationToken)
             .ToListAsync(TestContext.Current.CancellationToken);
 
-        entries.Select(entry => entry.Trial.Key).ShouldBe([1]);
+        entries.Select(entry => entry.Trial.ParameterCandidateIndex).ShouldBe([1]);
         entries.Select(entry => MetaAlgorithmTestHelpers.StateCandidate(entry.State)).ShouldBe([1]);
     }
 
@@ -269,9 +368,9 @@ public class ExperimentExecutionTests
         var exception = await Should.ThrowAsync<AggregateException>(() =>
             run.CompleteAsync(ExecutionConcurrency.Concurrent(), cancellationToken: TestContext.Current.CancellationToken));
 
-        exception.InnerExceptions.Cast<ExperimentTrialException<int>>().Select(failure => failure.Key).ShouldBe([0, 1]);
+        exception.InnerExceptions.Cast<ExperimentTrialException>().Select(failure => failure.ParameterCandidateIndex).ShouldBe([0, 1]);
     }
 
-    private static FixedExperiment<ProbeAlgorithm> CreateExperiment(params IReadOnlyList<ProbeAlgorithm> algorithms) =>
-        new([.. algorithms.Select((algorithm, index) => ExperimentCase.From(algorithm, index, [index]))]);
+    private static Experiment<int, ProbeAlgorithm, PopulationState<int>> CreateExperiment(params IReadOnlyList<ProbeAlgorithm> algorithms) =>
+        Experiment.Create([.. algorithms.Select(algorithm => algorithm.AsParameterGrid())]);
 }

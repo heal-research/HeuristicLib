@@ -1,53 +1,52 @@
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
 namespace HEAL.HeuristicLib.Operators.Terminators;
 
-public abstract record StatelessTerminator<TCandidate, TSearchSpace, TProblem, TSearchState>
-    : Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>, ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState>
-    where TSearchState : class, ISearchState
+public abstract record StatelessTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> : Terminator<TCandidate, TSearchSpace, TProblem, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
     where TProblem : class, IProblem<TCandidate, TSearchSpace>
+    where TSearchState : class, ISearchState
 {
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, TProblem, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override ITerminationExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => new Executor(this, scope.Problem);
 
-    public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace, TProblem problem);
+    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
+
+    private sealed class Executor(StatelessTerminator<TCandidate, TSearchSpace, TProblem, TSearchState> configuration, TProblem problem) : TerminationExecutor<TSearchState>
+    {
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => configuration.IsTerminalState(state, random, problem.SearchSpace, problem);
+    }
 }
 
-public abstract record StatelessTerminator<TCandidate, TSearchSpace, TSearchState>
-    : Terminator<TCandidate, TSearchSpace, TSearchState>, ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>
-    where TSearchState : class, ISearchState
+public abstract record StatelessTerminator<TCandidate, TSearchSpace, TSearchState> : Terminator<TCandidate, TSearchSpace, TSearchState>
     where TSearchSpace : class, ISearchSpace<TCandidate>
-{
-    public sealed override ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
-
-    public abstract bool IsTerminalState(TSearchState state, TSearchSpace searchSpace);
-
-    bool ITerminatorInstance<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState>.IsTerminalState(TSearchState state, TSearchSpace searchSpace, IProblem<TCandidate, TSearchSpace> problem) =>
-        IsTerminalState(state, searchSpace);
-}
-
-public abstract record StatelessTerminator<TCandidate, TSearchState>
-    : Terminator<TCandidate, TSearchState>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>
     where TSearchState : class, ISearchState
 {
-    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override ITerminationExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, TSearchSpace, IProblem<TCandidate, TSearchSpace>, TSearchState> scope) => new Executor(this, scope.SearchSpace);
 
-    public abstract bool IsTerminalState(TSearchState state);
+    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random, TSearchSpace searchSpace);
 
-    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState>.IsTerminalState(TSearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        IsTerminalState(state);
+    private sealed class Executor(StatelessTerminator<TCandidate, TSearchSpace, TSearchState> configuration, TSearchSpace searchSpace) : TerminationExecutor<TSearchState>
+    {
+        public override bool IsTerminalState(TSearchState state, IRandomNumberGenerator random) => configuration.IsTerminalState(state, random, searchSpace);
+    }
 }
 
-public abstract record StatelessTerminator<TCandidate>
-    : Terminator<TCandidate>, ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>
+public abstract record StatelessTerminator<TCandidate, TSearchState> : Terminator<TCandidate, TSearchState>, ITerminationExecutor<TSearchState>
+    where TSearchState : class, ISearchState
 {
-    public sealed override ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> CreateExecutionInstance(ExecutionInstanceRegistry instanceRegistry) => this;
+    protected sealed override ITerminationExecutor<TSearchState> CreateExecutor(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, TSearchState> scope) => this;
+
+    public abstract bool IsTerminalState(TSearchState state, IRandomNumberGenerator random);
+}
+
+public abstract record StatelessTerminator<TCandidate> : Terminator<TCandidate>, ITerminationExecutor<ISearchState>
+{
+    protected sealed override ITerminationExecutor<ISearchState> CreateExecutor(ResolutionScope<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState> scope) => this;
 
     public abstract bool IsTerminalState();
-
-    bool ITerminatorInstance<TCandidate, ISearchSpace<TCandidate>, IProblem<TCandidate, ISearchSpace<TCandidate>>, ISearchState>.IsTerminalState(ISearchState state, ISearchSpace<TCandidate> searchSpace, IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        IsTerminalState();
+    bool ITerminationExecutor<ISearchState>.IsTerminalState(ISearchState state, IRandomNumberGenerator random) => IsTerminalState();
 }

@@ -1,3 +1,4 @@
+using HEAL.HeuristicLib.Execution;
 using HEAL.HeuristicLib.Objectives;
 using HEAL.HeuristicLib.Operators.Replacers;
 using HEAL.HeuristicLib.Problems;
@@ -13,11 +14,17 @@ public sealed record ElitismReplacer<TCandidate>
     /// Gets the number of candidates requested from the previous population. The expected value is nonnegative.
     /// </summary>
     /// <remarks>
-    /// A nonpositive value retains no previous candidates. A negative value correspondingly increases the number
-    /// requested from the offspring population. The replacement never returns more than the requested count, so a
-    /// value above that count is capped and leaves no places for offspring.
+    /// A nonpositive value retains no previous candidates. The replacement never returns more than the requested
+    /// count, so a value above that count is capped and leaves no places for offspring.
     /// </remarks>
     public int Elites { get; init; }
+
+    public static Parameter<ElitismReplacer<TCandidate>, int> ElitesParameter { get; } =
+        new(nameof(Elites), static replacer => replacer.Elites, static (replacer, value) => replacer with { Elites = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ElitesParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public ElitismReplacer(int elites)
     {
@@ -30,12 +37,11 @@ public sealed record ElitismReplacer<TCandidate>
 
 public static class ElitismReplacer
 {
-    public static ElitismReplacer<TCandidate> For<TCandidate, TSearchSpace>(IProblem<TCandidate, TSearchSpace> problem, int elites)
-        where TSearchSpace : class, ISearchSpace<TCandidate> => new(elites);
+    public static ElitismReplacer<TCandidate> For<TCandidate>(IProblem<TCandidate, ISearchSpace<TCandidate>> problem, int elites) => new(elites);
 
     public static IReadOnlyList<EvaluatedCandidate<TCandidate>> Replace<TCandidate>(IReadOnlyList<EvaluatedCandidate<TCandidate>> previousPopulation, IReadOnlyList<EvaluatedCandidate<TCandidate>> offspringPopulation, ObjectiveDirections objective, int count, int elites)
     {
-        var eliteCount = Math.Min(elites, count);
+        var eliteCount = Math.Clamp(elites, 0, count);
         var elitesPopulation = previousPopulation.OrderBy(p => p.ObjectiveVector, objective.TotalOrderComparer).Take(eliteCount);
         var remainingCount = count - Math.Min(previousPopulation.Count, eliteCount);
         var nonElites = offspringPopulation.Take(remainingCount);

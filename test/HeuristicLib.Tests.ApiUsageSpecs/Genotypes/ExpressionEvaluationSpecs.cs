@@ -55,5 +55,5 @@ public class ExpressionEvaluationSpecs
     }
 
     private static DataFrame CreateData() =>
-        DataFrame.FromMatrix(["x"], new double[,] { { 1.0 }, { 2.0 }, { 3.0 } });
+        DataFrame.FromMatrix(["x"], new[,] { { 1.0 }, { 2.0 }, { 3.0 } });
 }

@@ -282,8 +282,8 @@ public static class Functions
             var exponent = i / (n - 1.0);
 
             var si = bestParameter[i] > 0.0
-              ? Math.Pow(baseVal, exponent)
-              : -Math.Pow(baseVal, exponent);
+                ? Math.Pow(baseVal, exponent)
+                : -Math.Pow(baseVal, exponent);
 
             // Boundary handling
             if (x[i] * bestParameter[i] < 25.0)
@@ -376,8 +376,8 @@ public static class Functions
         }
 
         var result = Math.Min(sum1, (d * n) + (s * sum2))
-          + (10.0 * (n - sum3))
-          + (1e4 * penalty);
+            + (10.0 * (n - sum3))
+            + (1e4 * penalty);
 
         return result;
     }

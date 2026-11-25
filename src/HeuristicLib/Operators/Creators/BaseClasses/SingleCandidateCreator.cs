@@ -12,6 +12,13 @@ public abstract record SingleCandidateCreator<TCandidate, TSearchSpace, TProblem
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateCreator<TCandidate, TSearchSpace, TProblem>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static creator => creator.Concurrency, static (creator, value) => creator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract TCandidate CreateCandidate(IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem);
 
     public sealed override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace, TProblem problem) =>
@@ -29,6 +36,13 @@ public abstract record SingleCandidateCreator<TCandidate, TSearchSpace>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
 
+    public static Parameter<SingleCandidateCreator<TCandidate, TSearchSpace>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static creator => creator.Concurrency, static (creator, value) => creator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+
     public abstract TCandidate CreateCandidate(IRandomNumberGenerator random, TSearchSpace searchSpace);
 
     public sealed override IReadOnlyList<TCandidate> Create(int count, IRandomNumberGenerator random, TSearchSpace searchSpace) =>
@@ -44,6 +58,13 @@ public abstract record SingleCandidateCreator<TCandidate>
     : StatelessCreator<TCandidate>
 {
     public ExecutionConcurrency Concurrency { get; init; } = ExecutionConcurrency.Sequential();
+
+    public static Parameter<SingleCandidateCreator<TCandidate>, ExecutionConcurrency> ConcurrencyParameter { get; } =
+        new(nameof(Concurrency), static creator => creator.Concurrency, static (creator, value) => creator with { Concurrency = value });
+
+    public static IReadOnlyList<IParameter> Parameters { get; } = [ConcurrencyParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     public abstract TCandidate CreateCandidate(IRandomNumberGenerator random);
 
