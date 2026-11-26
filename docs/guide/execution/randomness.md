@@ -111,5 +111,5 @@ The [experiments API](/guide/execution/experiments#compare-problems-and-control-
 
 ## Next steps
 
-- [Observability and analysis](/guide/execution/observability-and-analysis) continues the Execution path with what a run records.
-- [Running algorithms](/guide/execution/running-algorithms) covers run creation and cancellation.
+- [Analysis of algorithm runs](/guide/execution/observability-and-analysis) continues the Execution path with what a run records.
+- [Algorithm runs](/guide/execution/running-algorithms) covers run creation and cancellation.

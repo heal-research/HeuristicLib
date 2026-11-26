@@ -51,17 +51,19 @@ Choose operators designed for the candidate representation. Real vector crossove
 If a custom operator can leave the search space, repair the candidate in that operator or reject it before evaluation. Do not let invalid values silently reach domain code.
 :::
 
-## Invariants and validation
+## Validation and invariants {#invariants-and-validation}
 
-A search space can state what it requires of its members — a length, a bound, a number of set elements — and an
-operator can state which of those it guarantees of its output. Comparing the two decides whether an operator may be
-used here, and creating a run performs that check by default, so an operator that would leave this space stops the run
-before it starts instead of quietly producing invalid candidates.
+A search space can state what its members satisfy, such as a length, a bound or a number of set elements, and an
+operator can declare which of those its output keeps. Creating a run compares the two declarations by default. An
+operator that declares it does not keep one of the space's invariants stops the run before it starts. For example,
+`BitFlipMutator` is refused over a `FixedCardinalityBoolVectorSearchSpace`, and `BitSwapMutator`, which keeps the
+number of set elements, is accepted.
 
-That is the mechanism behind the warning above, and it is the answer to a question types cannot settle: preserving a
-property is a fact about an operator's output, and an output property is not part of a signature.
+The check compares declarations and does not run operators. An operator that declares nothing about an invariant is
+not reported, so the warning above still applies to custom operators. Test what an operator declares with
+`OperatorContractVerification.Verify`.
 
-See [Invariants and validation](/guide/fundamentals/invariants-and-validation) for the contracts, the two checks, how
+See [Validation and invariants](/guide/fundamentals/invariants-and-validation) for the contracts, the two checks, how
 to opt out with `validate: false`, and how to test that a declared contract actually holds.
 
 ## Custom search spaces

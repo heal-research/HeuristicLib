@@ -1,4 +1,4 @@
-# Invariants and validation
+# Validation and invariants
 
 ::: info What this answers
 Whether an operator can actually be used in a run, and how that is decided before the run starts rather than
@@ -7,23 +7,39 @@ _written for_ this run's types at all, and whether what it _guarantees about its
 search space.
 :::
 
-## The problem a type cannot solve
+## Check whether an operator fits your search space
 
-An operator's type arguments say what it **reads**. `SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>` reads a fixed cardinality space, so it can consult the cardinality.
+Two questions decide whether an operator can be used in a run:
 
-What they never say is what the operator **preserves**. Preserving a property is a statement about the operator's _output_, and an output property is not part of a signature. Two mutators over bool vectors have identical signatures whether or not they keep the number of set elements constant.
+1. **Was it written for the run's types?** An operator names the search space and problem it reads. A run over another
+   space or problem cannot use it.
+2. **Does it keep candidates inside the search space?** A search space states properties its members have, and an
+   operator states which of them its output keeps. An operator that does not keep one of them would produce
+   candidates outside the space.
 
-That gap is real and it is not a design oversight to be fixed with more type arguments:
+A slot of an algorithm only names the candidate type and the operation, so the compiler accepts every bool vector
+mutator in a mutator slot. `BitFlipMutator` flips elements independently, so it keeps the length of a `BoolVector` and
+can change the number of set elements. Over a `FixedCardinalityBoolVectorSearchSpace`, whose members all have the same
+number of set elements, it fails both checks: it is written for `BoolVectorSearchSpace`, and it declares that it does
+not keep the cardinality.
 
 ```csharp
 var constrained = new FixedCardinalityBoolVectorSearchSpace(length: 4, cardinality: 2);
 
-// Accepted by the compiler. One flip changes the number of set elements, so the
-// candidate leaves the space on the first mutation.
-IOperator<Mutation, BoolVector> slot = new FlipOneBitMutator();
+// Accepted by the compiler, refused when a run over the constrained space is created.
+IOperator<Mutation, BoolVector> flip = new BitFlipMutator();
+
+// Swaps one set and one cleared element, so the number of set elements is unchanged.
+IOperator<Mutation, BoolVector> swap = new BitSwapMutator();
 ```
 
-The invariant system closes the gap with values instead of types. Operators and search spaces each state what they mean, and the statements are compared.
+Use `BitSwapMutator` over a fixed cardinality space. Creating a run checks both questions before the run starts, as
+[When validation happens](#when-validation-happens) shows.
+
+The second check compares what the space and the operator **declare**. It does not run the operator. An operator that
+declares nothing about cardinality is not reported, even if its output can change the count, and an operator whose
+declaration is wrong is believed. [Declarations are claims, so check them](#declarations-are-claims-so-check-them)
+shows how to test a declaration against sample candidates.
 
 ## The three pieces
 
@@ -67,7 +83,7 @@ public record FixedCardinalityBoolVectorSearchSpace : SearchSpace<BoolVector>
 }
 ```
 
-The default `ValueArray<T>` is empty. A space that declares no invariants gives an operator no output invariant to answer for, so the output check passes for every operator over its candidate representation. An operator that requires an invariant is still rejected there, because nothing the space declares entails it. This is why adopting invariants is a per-space decision and why configurations written before the system existed still validate unchanged.
+The default `ValueArray<T>` is empty. A space that declares no invariants gives an operator no output invariant to answer for, so the output check passes for every operator over its candidate representation. An operator that requires an invariant is still rejected there, because nothing the space declares entails it.
 
 ### An operator states its side of the deal
 
@@ -98,9 +114,9 @@ public record BitSwapMutator
 | `false` | The output may not have it                               | Reported as an incompatibility |
 | `null`  | The operator states nothing                              | Not checked                    |
 
-So **declaring is opt-in, per invariant**. An operator that implements nothing, or answers `null`, is never reported. That keeps the system additive: adding an invariant to a search space does not invalidate operators that never claimed anything about it.
+So **declaring is opt-in, per invariant**. An operator that implements nothing, or answers `null`, is never reported. Adding an invariant to a search space therefore does not invalidate operators that make no claim about it.
 
-`Ensures` is named for what it covers. A mutator _preserves_ an invariant of its input; a creator has no input and _establishes_ one. Both are "ensures this of my output", which is why one member serves both.
+`Ensures` describes the operator's output. For a mutator, `true` means it keeps the invariant of its input; for a creator, it means every created candidate has it.
 
 The other half is `Requires`, the invariants an operator needs of the candidates handed to it:
 
@@ -108,7 +124,7 @@ The other half is `Requires`, the invariants an operator needs of the candidates
 public ValueArray<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
 ```
 
-An operator that swaps the second set element cannot be handed a candidate with fewer than two, so it is usable over a fixed cardinality space and not over an unconstrained one. That is the mirror image of the flip mutator, and it is why neither check substitutes for the other: accepting more input makes an operator more widely usable, and so does ensuring more about its output.
+An operator that swaps the second set element cannot be handed a candidate with fewer than two, so it is usable over a fixed cardinality space with a cardinality of at least two and not over an unconstrained one. A bit flip fails the other way: it accepts every bool vector, and its output can leave a fixed cardinality space. Neither check finds the other's failure, so both run.
 
 ## How the two invariant checks run
 
@@ -119,10 +135,10 @@ Given an operator and a search space:
 
 Each failure becomes a diagnostic naming the invariant that decided it, so a message says which operator to change and why.
 
-## The other question: was it written for this run at all?
+## Operator type compatibility {#the-other-question-was-it-written-for-this-run-at-all}
 
 Invariants answer what an operator _does_. A separate question comes first: can it run here at all? An operator
-authored at a bound rung names the search space and problem it was written for, and the run supplies its own:
+authored for a specific search space or problem names it in its type arguments, and the run supplies its own:
 
 ```csharp
 // Written for one specific problem.
@@ -137,79 +153,35 @@ public sealed record TravellingSalesmanSpecificCrossover
 }
 ```
 
-Put that in an algorithm running over a different permutation problem and it cannot work. That is decided entirely by
-type arguments, so nothing has to be built to find out:
+Put that crossover in an algorithm running over a different permutation problem and the run is refused. The decision
+uses only types, so nothing is built to reach it:
 
-```csharp
-public interface IConfigurationNode
-{
-    /// A configuration that names no search space, problem or search state is written for every run.
-    bool Supports(ExecutionSignature execution) => true;
-}
-```
+- An operator accepts a run whose search space and problem are its declared types or narrower ones. An operator written
+  for `BoundedRealVectorSearchSpace` accepts a run over that space or a type derived from it.
+- An operator that names no search space or problem, such as `SingleCandidateMutator<Permutation>`, accepts every run
+  over its candidate type.
+- Algorithms and terminators are also checked against the search state of the run.
 
-`ExecutionSignature` is the triple an executor is built for — its search space, its problem, and the search state it
-produces. It is built where an execution graph is created, by a run or by validation asking what a run would do, and
-passed through the configuration and parameter mappings for declared children; a configuration reads the parts it is written about and ignores
-the rest, so an ordinary operator never builds one:
-
-```csharp
-public bool Supports(ExecutionSignature execution) =>
-    execution.SearchSpace.IsAssignableTo(typeof(TSearchSpace))
-    && execution.Problem.IsAssignableTo(typeof(TProblem));
-```
-
-A mutator is not written about a search state, so it does not look at that field. A terminator is, and adds a clause
-for it — contravariant, like the other two. An interceptor _returns_ its search state, so it is invariant in it and
-compares exactly.
-
-The assignability runs toward the declared type because the authoring bases accept compatible search space
-and problem types: an operator written for `BoundedRealVectorSearchSpace` accepts a run over exactly that or narrower.
-
-A meta-algorithm that binds a child to different types states **that** execution signature on the slot of its
-child. Every signature describes that child's execution, as the next section shows.
-
-**This is the same rule the authoring bases apply when they bridge**, so a run and a validation pass cannot disagree.
-It is also cheap: two type checks, about 4 ns, paid once per operator per run rather than per iteration.
+Pre-run validation and execution apply the same type rules to configurations reached through declared parameters.
+An executor can still fail during construction, and a child created at runtime outside the declared graph is
+first checked for type compatibility when the run resolves it.
 
 ### A composition answers for what it resolves
 
-A configuration answers for itself alone. `ExecutionSignature.Supports(configuration)` asks it, then asks the children
-it declares, so a composition writes no code to answer for them:
+Validation asks each configuration about itself and then follows the children it declares as parameters, so an
+operator nested inside a composition is checked with the rest of the graph. A child is checked against its owner's
+run. A composition that resolves a child under different types declares those types on the child's parameter, and
+the child and everything below it are checked against them instead.
 
-```csharp
-public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
-{
-    public IOperator<Selection, TCandidate> SelectorForRemaining { get; init; }
+The walk reaches a child only through its declaration. A composition that leaves a child undeclared loses the check
+for that child; it does not get a wrong answer. An entry of a `ReferenceListParameter` names a configuration that lives
+elsewhere in the graph and is checked there. A value declared with a `SettingParameter` is data, even when its type
+closes over a configuration, so it is not checked.
 
-    public static Parameter<EliteSelector<TCandidate>, IOperator<Selection, TCandidate>> SelectorForRemainingParameter { get; } =
-        new(nameof(SelectorForRemaining), static selector => selector.SelectorForRemaining, static (selector, value) => selector with { SelectorForRemaining = value });
-
-    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), SelectorForRemainingParameter];
-
-    protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
-        ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope) => ...;
-}
-```
-
-A child is asked about the run of its owner, unless its parameter says otherwise. A composition that resolves a child
-under _different_ types states them on the slot, the same types it passes when it resolves the child:
-
-```csharp
-// CompositeSearchSpace<T1, TS1, T2, TS2>.Creator
-public static Parameter<Creator, IOperator<Creation, T1>> Operator1Parameter { get; } =
-    new(nameof(Operator1), static creator => creator.Operator1, static (creator, value) => creator with { Operator1 = value })
-    {
-        ChildExecution = static _ => ExecutionSignature.For<TS1, IProblem<T1, TS1>, ISearchState>()
-    };
-```
-
-The child and everything below it are then checked against those types, and never against a run they were not part of.
-
-The walk reaches a child only through its declaration, so a composition that leaves one out loses the check for that
-child rather than getting a wrong answer. An entry of a `ReferenceListParameter` names a configuration that lives
-elsewhere in the graph, so it is not asked either. Neither is a value declared with a `SettingParameter`, which is data
-even when its type closes over a configuration. Use it for a value typed by a type parameter, such as a target candidate.
+To declare children in your own composition, see
+[Authoring a composition](/guide/extending/operator-composition#authoring-a-composition). To resolve a child under
+another problem and declare that on its parameter, see
+[Resolve an operator under another objective](/guide/extending/writing-operators#resolve-an-operator-under-another-objective).
 
 ## When validation happens
 
@@ -218,11 +190,12 @@ even when its type closes over a configuration. Use it for a value typed by a ty
 ```csharp
 var run = algorithm.CreateRun(problem, random);
 // InvalidOperationException: The configuration cannot be used over this search space:
-//   - GeneticAlgorithm`1.Mutator: FlipOneBitMutator does not ensure Cardinality(2), which
+//   - GeneticAlgorithm`1.Mutator: BitFlipMutator was not written for an execution over
+//     FixedCardinalityBoolVectorSearchSpace with FuncProblem<BoolVector, ...> producing
+//     PopulationState<BoolVector>.
+//   - GeneticAlgorithm`1.Mutator: BitFlipMutator does not ensure Cardinality(2), which
 //     FixedCardinalityBoolVectorSearchSpace requires of its members, so its output may leave
 //     the search space.
-//   - GeneticAlgorithm`1.Crossover: TravellingSalesmanSpecificCrossover was not written for a
-//     run over PermutationSearchSpace with FuncProblem`2 producing PopulationState`1.
 ```
 
 `RunStreaming`, `RunToCompletion` and `RunToCompletionAsync` go through `CreateRun`, so they validate too.
@@ -251,12 +224,11 @@ foreach (var diagnostic in report.Diagnostics)
 Every form reports **every** failure it finds rather than stopping at the first, so one pass tells you everything to fix.
 
 ::: warning Resolution does not validate
-The check happens when a run is created. Reaching an executor directly through
-`ResolutionScope.Resolve` bypasses it, by design — that is the same escape hatch as `validate: false`, and
-it is how the library's own internals build operators.
+The check happens when a run is created. Resolving an executor directly through `ResolutionScope.Resolve` skips it,
+just as `validate: false` does. Call `ValidateAndThrow` first when you want the same checks as `CreateRun`.
 :::
 
-## What the walk covers
+## Validation scope {#what-the-walk-covers}
 
 Validation walks the configuration graph over declared parameters, following each configuration a parameter holds or names. It therefore reaches operators nested inside compositions, and it works for algorithms and operators written outside the library that declare their parameters. A configuration that declares nothing is a leaf to the walk.
 
@@ -265,7 +237,7 @@ Because it reads what each configuration declares rather than building anything,
 Diagnostics carry the path that leads to the operator:
 
 ```csharp
-var pipeline = PipelineMutator.Create(new BitSwapMutator(), new FlipOneBitMutator());
+var pipeline = PipelineMutator.Create(new BitSwapMutator(), new BitFlipMutator());
 var report = SearchConfigurationValidation.Validate(pipeline, constrained);
 
 Console.WriteLine(report.Diagnostics.Single().Path); // PipelineMutator`1.ChildOperators[1]
@@ -291,15 +263,24 @@ var violations = OperatorContractVerification.Verify(
 violations.ShouldBeEmpty();
 ```
 
-This is the one place `Holds` is used by the library. Compatibility checking never calls it, because it reasons about declarations rather than about particular candidates.
+Compatibility checking never calls `Holds`; it compares declarations. `Verify` is where `Holds` is applied to actual
+output.
 
-Write this test for any operator that declares a contract. A declared invariant that does not hold is worse than no declaration, because it turns validation from a safety net into a false assurance.
+Write this test for any operator that declares a contract. Validation trusts every declaration, so a declared
+invariant that does not hold lets an operator through that leaves the space.
 
-## What this system is not
+## Choose the right check
 
-- **Not a repair mechanism.** Validation refuses an incompatible configuration; it never fixes a candidate. An operator that can leave its space must repair or reject internally.
-- **Not a substitute for `Contains`.** `ISearchSpace.Contains` answers about one candidate at runtime. Invariants answer about an operator's behavior in general, before any candidate exists.
-- **Not universal.** A space stating no invariants is checked for nothing. Most built-in spaces state a few; only bool vectors currently exercise the interesting cases.
+| Question                                                  | Use                                                                   |
+| --------------------------------------------------------- | --------------------------------------------------------------------- |
+| Can this configuration be used for this problem at all?   | `CreateRun` by default, or `Validate` and `ValidateAndThrow` up front |
+| Does this one candidate belong to the search space?       | `ISearchSpace.Contains`                                               |
+| Does my operator's output actually keep what it declares? | `OperatorContractVerification.Verify` in a test of the operator       |
+
+Validation refuses an incompatible configuration and never repairs a candidate. An operator that can leave its space
+repairs or rejects the candidate itself. A search space that states no invariants gives the output check nothing to
+check. The input check still applies: an operator that `Requires` an invariant is refused over that space, because
+nothing the space states implies it.
 
 ## Next steps
 

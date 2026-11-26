@@ -31,7 +31,7 @@ Generation 50: 1.1636
 
 The counter in this example belongs to the consumer. The state contains search data while the stream position tells you how many states have been observed.
 
-The flat stretch between generations 10 and 40 is worth noticing. The best objective does not move for thirty generations and then improves, which is normal for a population based search: the population is still changing while its best member is not. Watching only the best value hides that, which is what the analyzers in [Observability and analysis](/guide/execution/observability-and-analysis) are for.
+The flat stretch between generations 10 and 40 is worth noticing. The best objective does not move for thirty generations and then improves, which is normal for a population based search: the population is still changing while its best member is not. Watching only the best value hides that, which is what the analyzers in [Analysis of algorithm runs](/guide/execution/observability-and-analysis) are for.
 
 ## Single candidate states
 

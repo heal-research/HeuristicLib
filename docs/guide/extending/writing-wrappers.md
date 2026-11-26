@@ -30,7 +30,7 @@ Run this code from an async method, passing your host application's `cancellatio
 
 The initial population is created and evaluated without mutation. The next two generations each invoke the configured mutator on four offspring, so `messages` contains call numbers one and two, each with an offspring count of four. The no-change mutator keeps the example focused on logging rather than mutation policy.
 
-A target such as `mutator` selects that configuration by reference. To cover every mutator over real vectors, select by the type of the lambda's parameter instead: `algorithm.Substitute((IOperator<Mutation, RealVector> mutator) => new LoggedMutator<RealVector>(mutator, write))`. [Configurations](/guide/fundamentals/configurations#rewriting-a-graph-with-substitute) states what each selection reaches and when `Substitute` throws, and [Observability and analysis](/guide/execution/observability-and-analysis#select-configurations-by-properties-or-names) shows selections by property and name. Whoever writes a delegate that creates configurations at run time can call `Substitute` inside it, because the outer substitution cannot reach them.
+A target such as `mutator` selects that configuration by reference. To cover every mutator over real vectors, select by the type of the lambda's parameter instead: `algorithm.Substitute((IOperator<Mutation, RealVector> mutator) => new LoggedMutator<RealVector>(mutator, write))`. [Configurations](/guide/fundamentals/configurations#rewriting-a-graph-with-substitute) states what each selection reaches and when `Substitute` throws, and [Analysis of algorithm runs](/guide/execution/observability-and-analysis#select-configurations-by-properties-or-names) shows selections by property and name. Whoever writes a delegate that creates configurations at run time can call `Substitute` inside it, because the outer substitution cannot reach them.
 
 ## Wrap every operation
 
@@ -38,7 +38,7 @@ A wrapper that does not depend on an operation's inputs, such as timing, can be 
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/CustomWrapperDocumentationSpecs.cs#general-wrapper-type{csharp}
 
-`Wrap` builds one wrapping executor around the child's executor and compiles the struct into it, so each call costs the same as a hand-written wrapper. The wrapper can call `Proceed()` several times, as retry does, and `invocation.CountCandidateWork(result)` returns the operation's candidate work when the operation reports `SupportsCandidateWork`. Every operation ends with a random number generator, which the wrapper reads as `invocation.Random`; `Proceed(executor, random)` runs the call on another executor of the same operation, or with another generator, keeping the original for an omitted argument. Each executor runs against the problem it was bound to. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor.
+`Wrap` builds one wrapping executor around the child's executor and calls the struct for each invocation. The wrapper can call `Proceed()` several times, as retry does, and `invocation.CountCandidateWork(result)` returns the operation's candidate work when the operation reports `SupportsCandidateWork`. Every operation ends with a random number generator, which the wrapper reads as `invocation.Random`; `Proceed(executor, random)` runs the call on another executor of the same operation, or with another generator, keeping the original for an omitted argument. Each executor runs against the problem it was bound to. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor.
 
 A wrapper record serves one operation, so place one for each operator, typed by that operator's operation:
 
@@ -82,7 +82,7 @@ A wrapper measures time with `scope.Results.TimeProvider`, as the library's timi
 
 Supply other concrete runtime dependencies through the wrapper's properties and pass them to its executor. A wrapper resolves only its declared children and has no resource lookup. Create a resource-dependent wrapper for each run so independent runs receive independent data.
 
-Counters and durations are configurations that wrapper placements add to. [Observability and analysis](/guide/execution/observability-and-analysis#count-time-and-observe-an-operator) shows how to create, place and read them, and [Share accounting with a terminator](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator) shows how a terminator reads the same counter.
+Counters and durations are configurations that wrapper placements add to. [Analysis of algorithm runs](/guide/execution/observability-and-analysis#count-time-and-observe-an-operator) shows how to create, place and read them, and [Share accounting with a terminator](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator) shows how a terminator reads the same counter.
 
 ## Next steps
 

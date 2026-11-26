@@ -1,6 +1,6 @@
-# Observability and analysis
+# Analysis of algorithm runs
 
-An analyzer collects typed data from the observations of a run, such as a quality curve, a count of evaluations or the offspring of an operator. This page goes from the simplest use to the most specialized: choose a tool, pass a first analyzer to `CreateRun`, then choose boundaries and clocks, keep traces, accumulate, count and time, observe cycles and rank several objectives, and finally write observations and clocks of your own.
+An analyzer collects typed data from a run, such as a quality curve, a count of evaluations or the offspring of an operator. HeuristicLib provides observability through sources that report events such as completed operator calls and yielded search states. Attach an analyzer to turn those observations into results you can read from the run.
 
 ## Choose the right tool
 
@@ -17,17 +17,29 @@ An analyzer is one of several ways to see what a run does. Pick by what you need
 
 Inspection preserves the observed computation while recording its own observations, counts, durations and clocks. Analyzers derive results from those observations. Observation callbacks must preserve the operation's inputs and outputs. Wrappers of your own may change behavior, and explicit algorithm policies such as budgets may read inspection data to decide when to stop. Wrappers forward no controls: a mutator reads its [adaptation](/guide/extending/operator-composition#adaptable-parameters) as a declared node, whichever inspection wrappers surround it.
 
-## A first analyzer
+## Best-so-far analysis {#a-first-analyzer}
 
-Create an analyzer, pass it in the list of `CreateRun` and read its result from the run. `Analyzer.BestSoFar<RealVector>()` tracks improvements, and `run.Result(best)` enumerates them. Each run owns independent data.
+Analysis involves three parts:
+
+- An **observation source** is a boundary that reports what happened, such as `algorithm.Evaluator.Invocations` for each evaluated batch or `algorithm.Iterations` for each yielded state.
+- An **analyzer** is a configuration that describes what to collect from one or more sources. It holds no data, so one analyzer serves any number of runs.
+- A **run result** holds the collected data. `CreateRun` attaches the analyzer to one run, and `run.Result(analyzer)` returns that run's result.
+
+Use a real-vector genetic algorithm, its problem, and a random source from your existing setup. In this example, `Analyzer.BestSoFar<RealVector>()` observes the algorithm's evaluator and records each improvement of the best objective. `run.Result(best)` enumerates the recorded points:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-imports{csharp}
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-simple-best{csharp}
 
-[Running algorithms](/guide/execution/running-algorithms#read-run-bound-results) covers how an analyzer is attached to a run, the lookup rules of `run.Result` and when a result can be read. To keep an instrumented configuration instead of instrumenting one run, use `Substitute`. [Configurations](/guide/fundamentals/configurations#rewriting-a-graph-with-substitute) explains it, including the type a receiver that is itself wrapped needs, and [when to use which](/guide/fundamentals/configurations#substituting-for-one-run).
+### Choose what to measure
 
-## Choose a boundary and a clock
+- **Convergence.** Read the best objective reached at several evaluation budgets. [Quality curves](/guide/getting-started#record-a-quality-curve)
+- **Operator behavior.** Count and time mutation calls, and record how many offspring each call returns. [Count, time and observe an operator](#count-time-and-observe-an-operator)
+- **Differences across trials.** Compare the median and spread of objective values over repeat runs at a common evaluation budget. [Add analysis to an experiment](/guide/execution/experiments#add-analysis)
+
+See [Read run-bound results](/guide/execution/running-algorithms#read-run-bound-results) for when results are available. Use [`Substitute`](/guide/fundamentals/configurations#rewriting-a-graph-with-substitute) to keep an instrumented configuration for later runs.
+
+## Observation sources and clocks {#choose-a-boundary-and-a-clock}
 
 Each operator offers its successful invocations as `Invocations`, and each algorithm offers its yielded states as `Iterations`. These observation sources describe a boundary; creating one installs nothing. An evaluator's `Invocations` observes one completed evaluator invocation, including the whole batch. An algorithm's `Iterations` observes a yielded state, after its interceptors have transformed that state, and needs no placeholder interceptor. A nested algorithm is a separate observation boundary.
 
@@ -79,9 +91,9 @@ Some analysis produces one mutable summary rather than a history. Use `source.Ag
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-summary-state{csharp}
 
-Read an accumulating analyzer after the run finishes, as for accumulating results such as a Pareto front or a genealogy graph. Its result spans the whole run, including Cycle turns; sharing does not narrow the result that recording and `run.Result` use. Share counters and durations, not analyzers: resolving a shared analyzer directly gives a separate result that nothing records into. For several observation types, use the class form described in [Analyzer architecture](/contributing/architecture/analyzers). Clocks and retention apply to trace entries, so they do not apply to a single mutable summary.
+Read an accumulating analyzer after the run finishes, as for accumulating results such as a Pareto front or a genealogy graph. Its result spans the whole run, including Cycle turns; sharing does not narrow the result that recording and `run.Result` use. Share counters and durations, not analyzers: resolving a shared analyzer directly gives a separate result that nothing records into. `Aggregate` and `Trace` read one observation type; to combine different types, such as mutator invocations and algorithm iterations, write [an analyzer over several observation types](#an-analyzer-over-several-observation-types). Clocks and retention apply to trace entries, so they do not apply to a single mutable summary.
 
-## Best-so-far selection and placement
+## Evaluator selection for best-so-far analysis {#best-so-far-selection-and-placement}
 
 `Analyzer.BestSoFar` keeps the best candidate across evaluator observations and records only improvements by default. Each point retains its candidate directly and gives `Evaluations`, `Value` and `Candidate`.
 
@@ -111,7 +123,7 @@ A combined trace observes each boundary once. Giving it the same source twice re
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-analyzers{csharp}
 
-Pass everything in one `CreateRun` substitutions list or one `Substitute` call; [Configurations](/guide/fundamentals/configurations#what-substitute-guarantees) explains how the substitutions of one call combine. The example lists the timing last, so it sits closest to the operator and finishes before the observation callback runs. Counting updates after success; timing also records failed calls.
+Pass everything in one `CreateRun` substitutions list or one `Substitute` call; [Configurations](/guide/fundamentals/configurations#what-substitute-guarantees) explains how the substitutions of one call combine. All three name the same mutator, and a later entry sits closer to it, so the run calls `Observe(Count(Time(mutator)))`. The timing wrapper finishes first, then the count updates, and the observation callback runs last. Listing the timing substitution, `algorithm.Mutator.Invocations.Timing(timing)`, before `observation` instead would put the observation inside the timed region, so the measured duration would include the callback. Counting updates after success; timing also records failed calls.
 
 Create counters with `new Counter()` and durations with `new Duration()`. `Invocations.Counting(counter)`, `CountingCandidates(counter)` and `Timing(duration)` return substitutions placing their wrappers; `algorithm.Iterations.Timing(duration)` times an algorithm's calls the same way. Read their accumulators through the run, as [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) shows. `Counted` and `Timed` place the same wrappers directly around a selected configuration. The wrapper decides what is counted, so pass `OperatorCountMetric.Candidates` to `Counted` to count candidate work.
 
@@ -147,6 +159,8 @@ The receiver here is an `IOperator<Mutation, RealVector>`, which fixes the opera
 
 Names compare exactly and case-sensitively. Several nodes may share a name, and all match. The wrapper and its child are separate configuration nodes: a name selects the wrapper, while a selection by role type can select both boundaries. Names do not change execution sharing or create caller paths. The child's concrete properties remain on the child configuration.
 
+A name is useful when you cannot hold a reference to the target. Configurations built separately, for example by a factory method, contain equal but distinct nodes, so a reference selection matches only one of them. A name you assigned when building each configuration selects the same logical boundary in all of them.
+
 ## Cycles and turns
 
 An algorithm observation's `Iteration` numbers the iterations of one call, as the algorithm sees them. A meta-algorithm that runs an inner algorithm again calls it again, so the inner iterations number from 1 again, whether its executor is fresh or reused. A clock over the iterations keeps counting across those calls.
@@ -165,7 +179,9 @@ Select an objective comparer explicitly when the trace needs a total order:
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-lexicographic{csharp}
 
-This makes dimension priority explicit and affects this trace's comparisons, including best-so-far accumulation. It does not change the problem or algorithm's objective. Analysis accepts the objective system's existing `IComparer<ObjectiveVector>` implementations. The `RequireTotalOrder` helper also serves callers outside analysis. Ranking is checked at observation time because installation has no problem context.
+This makes dimension priority explicit and affects this trace's comparisons, including best-so-far accumulation. It does not change the problem or algorithm's objective. Analysis accepts the objective system's existing `IComparer<ObjectiveVector>` implementations. The `RequireTotalOrder` helper also serves callers outside analysis. A missing total order is reported when an observation is ranked, because the problem is known only then.
+
+To follow progress by dominance instead of imposing an order, measure the accumulated front. [Track progress toward the front](/examples/multi-objective#track-progress-toward-the-front) traces its hypervolume with the Experimental package.
 
 ## Experiments
 
@@ -176,6 +192,24 @@ An experiment runs the parameter candidates of its grids on each problem and rep
 ### An operation of your own
 
 An operation you define becomes observable when it declares an observation record and an `Invocations` source, as each built-in operation does. Its source then works with `Analyzer.Trace` and `Observing` like any other. An observation that carries the problem of the invocation it observed lets a trace rank by that problem's objective. See [Make the operation observable](/contributing/architecture/operator-implementation#make-the-operation-observable) for a complete example.
+
+### An analyzer over several observation types
+
+An analyzer that combines different observation types derives from `Analyzer<TResult>` and implements `IObservationReceiver<TObservation>` once for each type. It needs three parts:
+
+- `CreateSubstitutions` places one observation wrapper per boundary with `source.RecordingInto(this)`.
+- `CreateExecutionNode` creates an empty result for each run. The result implements `IRunResult` and synchronizes its own updates.
+- Each `CreateRecorder` looks up the run's result with `results.Result(this)` and returns the callback for its observation type.
+
+This analyzer counts the candidates the mutator produces in each yielded iteration. Mutation observations add to a pending count, and each iteration observation closes it:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-mixed-analyzer{csharp}
+
+Attach it like any other analyzer and read its result after the run:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-mixed-analyzer-usage{csharp}
+
+The first iteration is the initial population, which the mutator has not touched, so its count is zero. `run.Result` looks a result up by the analyzer reference, so the analyzer is a class and keeps no collected data itself. The data lives in the result, which keeps independent runs, including concurrent ones, apart. [Analyzer architecture](/contributing/architecture/analyzers#accumulating-analyzers) describes the library's own analyzers of this kind, such as the Experimental genealogy analyzer.
 
 ### A clock of your own
 

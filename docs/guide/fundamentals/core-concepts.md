@@ -87,7 +87,7 @@ Read [Algorithms](/guide/fundamentals/algorithms) and [Operators](/guide/fundame
 
 Algorithms yield immutable snapshots of useful progress. A population based state contains evaluated candidates. Iteration counts come from observations or counters rather than from the state.
 
-You can consume every state for progress reporting and analysis or ask only for the final state. Read [Search states](/guide/execution/search-states) and [Running algorithms](/guide/execution/running-algorithms).
+You can consume every state for progress reporting and analysis or ask only for the final state. Read [Search states](/guide/execution/search-states) and [Algorithm runs](/guide/execution/running-algorithms).
 
 ## Randomness is an input
 

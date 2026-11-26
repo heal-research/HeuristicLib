@@ -17,6 +17,37 @@ html {
     scrollbar-gutter: stable;
 }
 
+@media (min-width: 1440px) {
+    :root {
+        --vp-layout-max-width: clamp(1440px, calc(100vw - 20px), 1584px);
+    }
+}
+
+@media (min-width: 1280px) {
+    .VPDoc.has-sidebar {
+        padding-inline: 24px;
+    }
+
+    .VPDoc.has-sidebar .container .content {
+        padding-inline: 16px;
+    }
+
+    .VPDoc.has-aside .content > .content-container {
+        max-width: 920px;
+    }
+}
+
+.vp-doc .doc-table-scroll {
+    margin: 20px 0;
+    overflow-x: auto;
+}
+
+.vp-doc .doc-table-scroll > table {
+    display: table;
+    width: 100%;
+    margin: 0;
+}
+
 .dark {
     --vp-c-brand-1: #65b2d2;
     --vp-c-brand-2: #4a9cbe;

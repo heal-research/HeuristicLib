@@ -230,5 +230,5 @@ Algorithms coordinate operators and execution flow, so they always use a configu
 - [Analyzers](/contributing/architecture/analyzers) for the observation records and sources of an operation
 - [Operators](/guide/fundamentals/operators)
 - [Operator composition](/guide/extending/operator-composition)
-- [Running algorithms](/guide/execution/running-algorithms)
+- [Algorithm runs](/guide/execution/running-algorithms)
 - [Writing algorithms](/guide/extending/writing-algorithms)

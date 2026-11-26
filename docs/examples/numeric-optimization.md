@@ -74,7 +74,19 @@ A heuristic search does not guarantee the optimum in one run. Across twenty seed
 
 `BoundedRealVectorSearchSpace` provides the bounds defined by `RastriginFunction`. `UniformDistributedCreator` samples the initial population inside those bounds. Blend crossover combines real valued parents while Gaussian mutation makes local numeric changes.
 
-Tournament selection adds selection pressure without requiring objective values to be transformed into probabilities. One elite preserves the best candidate found so far.
+Tournament selection favors candidates with better objective values. The default elite keeps the best member of the previous population in the next one.
+
+## Change the configuration
+
+`algorithm` is an immutable configuration, so every change creates a new configuration and leaves `algorithm` as it was. Which tool to use depends on where the change applies. To append this code to the program above, also add `using HEAL.HeuristicLib.Execution;` for `Substitute` and `using HEAL.HeuristicLib.Inspection;` for `Counter`:
+
+<<< ../../test/HeuristicLib.Tests.Docs/Fundamentals/ConfigurationDocumentationSpecs.cs#configuration-change-workflow{csharp}
+
+- **`with`** changes a property of the configuration you hold, here the population size of the algorithm.
+- **`Substitute`** changes configurations inside the graph. A lambda typed by `GaussianMutator` selects every Gaussian mutator, including one inside a composed operator or a stage of a cycle, where `with` on the algorithm cannot reach.
+- **The substitutions list of `CreateRun`** applies a change to one run only. Counting is instrumentation, so it belongs to the run, not to the configuration you keep. Take the evaluator from `finerMutation`, the configuration you pass to `CreateRun`.
+
+Keep `largerPopulation` and `finerMutation` when you want to run or compare them again. [Configurations](/guide/fundamentals/configurations#rewriting-a-graph-with-substitute) states the rules for selecting and replacing configurations.
 
 ## Compare repeated runs
 

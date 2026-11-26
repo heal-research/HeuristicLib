@@ -410,7 +410,7 @@ Status: `Canonical`
 
 An analyzer defines what a run collects from observations and how the observation wrappers are placed. A result-producing analyzer is an immutable configuration that creates one run result for each run, read with `run.Result(analyzer)`. It is a substitution group: pass it to `CreateRun` to analyze one run, or place it with `Substitute` to keep it in the resulting configuration.
 
-Reusing an analyzer across runs keeps their data independent. A trace analyzer records a history of values; other analyzers, such as [best-so-far](/guide/execution/observability-and-analysis#best-so-far-selection-and-placement) and [aggregate](/guide/execution/observability-and-analysis#accumulating-analyzers) analyzers, are described in observability and analysis.
+Reusing an analyzer across runs keeps their data independent. A trace analyzer records a history of values; other analyzers, such as [best-so-far](/guide/execution/observability-and-analysis#best-so-far-selection-and-placement) and [aggregate](/guide/execution/observability-and-analysis#accumulating-analyzers) analyzers, are covered in the [analysis guide](/guide/execution/observability-and-analysis).
 
 Use Roslyn analyzer for compiler diagnostics when the context could be ambiguous.
 
@@ -424,7 +424,7 @@ A trace is an ordered history of values that a trace analyzer records while a ru
 
 Do not use series for this concept. In HeuristicLib, `Series<T>` is a named column in tabular data ([Data and machine learning](/guide/domains/data-and-machine-learning#represent-regression-data)).
 
-See [observability and analysis](/guide/execution/observability-and-analysis) for retention policies and ranking.
+See [analysis of algorithm runs](/guide/execution/observability-and-analysis) for retention policies and ranking.
 
 See also: Analyzer, Clock, Observation source, Run result.
 
@@ -434,7 +434,7 @@ Status: `Canonical`
 
 A clock supplies the time axis for recorded entries. It is a configuration whose per-run reading is a run result, and it only reads. Its time is a typed value (`IClock<TTime>`), such as an iteration count, a cumulative candidate count, elapsed time or a domain quantity. A trace selects its clocks explicitly and records only those.
 
-See [observability and analysis](/guide/execution/observability-and-analysis) for clock placement, equality, counters and durations.
+See [analysis of algorithm runs](/guide/execution/observability-and-analysis) for clock placement, equality, counters and durations.
 
 See also: Iteration, Run result, Trace.
 
@@ -534,7 +534,7 @@ An observation is a read-only capture at a defined algorithm or operator boundar
 
 An observation may record data, but it must not change the observed operation's inputs, outputs, or internal computation. Explicit policies may later read observation data to make decisions, such as stopping a run after a budget is consumed.
 
-See [observability and analysis](/guide/execution/observability-and-analysis) for what each boundary reports.
+See [analysis of algorithm runs](/guide/execution/observability-and-analysis) for what each boundary reports.
 
 See also: Analyzer, Invocation wrapper, Observation source.
 

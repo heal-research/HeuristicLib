@@ -1,4 +1,4 @@
-# Running algorithms
+# Algorithm runs
 
 Running an algorithm combines an immutable configuration with one problem and one explicit random source. Each execution starts with fresh run state.
 
@@ -100,7 +100,7 @@ var finalState = await run.CompleteAsync();
 
 Completing an explicit run follows the same path as `algorithm.RunToCompletionAsync(problem, random)`. Each `CreateRun` creates independent executors and run results ([Core concepts](/guide/fundamentals/core-concepts#configurations-and-executors)). The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
 
-Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) explains how substitutions for one run differ from a configuration you keep with `Substitute`, and which configuration names their targets when a budget produced the algorithm. [Observability and analysis](/guide/execution/observability-and-analysis) shows the analyzers you can pass.
+Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) explains how substitutions for one run differ from a configuration you keep with `Substitute`, and which configuration names their targets when a budget produced the algorithm. [Analysis of algorithm runs](/guide/execution/observability-and-analysis) shows the analyzers you can pass.
 
 ## Read run-bound results
 

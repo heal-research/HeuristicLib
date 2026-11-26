@@ -90,12 +90,22 @@ Edge recombination tries to retain city adjacencies from both parents. Inversion
 
 ## Read the quality curve
 
-The best value shows the strongest tour found so far. The median shows whether improvement reaches the population rather than one elite.
+`TracePopulationCandidates` ranks the population of each generation, so the three columns describe the current population, not the whole run. The best column is the shortest tour in that generation's population. It can differ from the shortest tour evaluated so far, because an evaluated offspring that replacement discards never appears in a population; read the best found so far with `Analyzer.BestSoFar<Permutation>()`. The median shows whether improvement reaches the population rather than one elite.
 
-The run above is worth reading closely, because it does not end at the optimum. The known optimum for `berlin52` is `7542`, and seed `42` finishes at `7797`, about 3.4 percent above it. Best and median are equal from generation 300 onward, which says the selected part of the population has collapsed onto one tour and crossover has stopped producing anything new. The worst value stays near `10000` because mutation keeps generating variants, but none of them survive selection.
+The known optimum for `berlin52` is `7542`, and seed `42` finishes at `7797`, about 3.4 percent above it. The best value is `7797` at generation 300 and in every remaining row shown. The median also equals the best in those rows, so at least half of each reported population has that tour length. The worst value stays near `10000`, so those populations still contain much longer tours.
 
-That pattern is premature convergence, and it is the normal reason a permutation search stalls. The usual responses are a larger population, weaker selection pressure through a smaller tournament size, or a higher mutation rate. Everything after generation 300 in this run is wasted budget.
+Equal lengths suggest, but do not prove, that the population has converged onto one tour; different tours can have the same length. To check, trace the number of distinct tours in each generation:
+
+```csharp
+var distinctTours = algorithm.Iterations.Trace(observation =>
+    observation.State.Population.EvaluatedCandidates
+        .Select(evaluated => evaluated.Candidate)
+        .Distinct()
+        .Count());
+```
+
+Pass `distinctTours` to `CreateRun` next to `qualityAnalyzer` and read it with `run.Result(distinctTours)`. A rotation or reversal of a tour is a different permutation, so the count can overstate the number of different routes. A low count combined with a stalled best value suggests premature convergence. Compare several seeds with a larger population, a smaller tournament size, or a higher mutation rate to see whether each change helps.
 
 Repeat the run across seeds before drawing conclusions. At this configuration some seeds do reach `7542`, and one trajectory tells you very little either way.
 
-Continue with [search spaces](/guide/fundamentals/search-spaces), [operators](/guide/fundamentals/operators) and [observability and analysis](/guide/execution/observability-and-analysis).
+Continue with [search spaces](/guide/fundamentals/search-spaces), [operators](/guide/fundamentals/operators) and [analysis of algorithm runs](/guide/execution/observability-and-analysis).

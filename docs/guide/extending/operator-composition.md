@@ -160,9 +160,19 @@ parameterFitting.CheckedForImprovement(ImprovementChecking.MinimumImprovement(0.
 
 Use a threshold when a marginal improvement is not worth keeping, for example when refinement makes a candidate harder to interpret or when tiny numeric gains are noise. The margin is applied in each objective's own direction, so a positive threshold always means "better by at least this much" whether the objective is minimized or maximized. Thresholds are retained exactly as configured: zero accepts anything not worse, and a negative value deliberately tolerates a bounded worsening.
 
-A criterion is deliberately not an `IComparer<ObjectiveVector>`. It answers whether the refined result is better than the original rather than defining an ordering, so it can apply a margin in the correct objective direction. Implement `IImprovementCriterion` when acceptance depends on one dimension of a multiobjective vector while selection continues to use the whole vector.
+A criterion answers one question: is the refined objective vector an improvement on the original? Implement `IImprovementCriterion` when none of the built-in criteria expresses your acceptance rule. This criterion accepts a refinement only when the first objective improves by at least a configured margin, while selection continues to rank by the whole objective vector:
 
-Nesting decides where acceptance happens, and the two orders are genuinely different searches rather than two spellings of one:
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ImprovementCriterionDocumentationSpecs.cs#improvement-criterion-imports{csharp}
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ImprovementCriterionDocumentationSpecs.cs#improvement-criterion-type{csharp}
+
+Pass it to `CheckedForImprovement` like a built-in criterion. A criterion is a plain decision over objective vectors, so it can also be called directly, for example in a test:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ImprovementCriterionDocumentationSpecs.cs#improvement-criterion-usage{csharp}
+
+Apply the margin in the objective's direction, as the built-in criteria do, so that a positive margin always means "better by at least this much".
+
+Nesting decides where acceptance happens, and the two orders run different searches:
 
 ```csharp
 IteratedRefiner.Create(parameterFitting.CheckedForImprovement(), iterations: 5)  // memetic hill climb
@@ -272,7 +282,12 @@ var distinctMateSelector = NoSameMatesSelector.Create(selector, maximumAttempts:
 var fluentDistinctMateSelector = selector.AvoidSameMates(maximumAttempts: 10);
 ```
 
-These types should document their own batching, state and cardinality behavior because their policies are role specific.
+Each of these follows its own rule for the candidates it returns:
+
+- `PredefinedCandidatesCreator` returns its configured candidates in order across successive calls and asks the fallback creator only for the remaining places. Each executor returns each predefined candidate at most once.
+- `EliteSelector` takes up to `elites` best candidates and asks its selector only for the remaining count. When the elites fill the request, the selector is not called and consumes no random draws.
+- `GenderSpecificSelector` returns female 0, male 0, female 1, male 1 and so on. For an odd requested count, the female selector supplies the last candidate.
+- For requests of complete mate pairs, `NoSameMatesSelector` asks its child selector up to `maximumAttempts` times. It keeps pairs whose objective vectors differ and fills any remaining places with equal-vector pairs from the last attempt.
 
 ## Budgets on operator work
 
@@ -316,7 +331,7 @@ Source counters, durations, analyzers and `Observing`, placed with `Substitute`,
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work. A named configuration such as `mutator.Named("exploration")` supplies a selectable boundary around a child.
 
-See [Observability and analysis](/guide/execution/observability-and-analysis) for observation, counter, duration and selection APIs, and [Select by name](/guide/execution/observability-and-analysis#select-by-name) for named boundaries.
+See [Analysis of algorithm runs](/guide/execution/observability-and-analysis) for observation, counter, duration and selection APIs, and [Select by name](/guide/execution/observability-and-analysis#select-by-name) for named boundaries.
 
 ## Adaptable parameters
 
@@ -336,7 +351,7 @@ Every operation call receives an explicit random number generator, and compositi
 
 Child configurations resolve when each composition executor is built, and each construction has independent private fields. [Sharing](/guide/fundamentals/configurations#sharing-executors) keeps one executor across child scopes.
 
-See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
+See [Reproducible randomness](/guide/execution/randomness) and [Algorithm runs](/guide/execution/running-algorithms) for the underlying models.
 
 ## Authoring a composition
 
@@ -346,7 +361,27 @@ Derive from `Operator<TOperation, TCandidate>` when a composition coordinates di
 
 The authored executor is a private nested `Executor` that derives from the role's executor base, such as `MutationExecutor<TCandidate>`. It holds resolved children and private mutable fields. The configuration owns parameters and child configurations.
 
-The two bases declare their children. A composition deriving from `Operator<TOperation, TCandidate>` declares its own, as [the validation guide](/guide/fundamentals/invariants-and-validation#a-composition-answers-for-what-it-resolves) shows, because pre-flight validation and substitution reach a child only through its declaration.
+The two bases declare their children. A composition deriving from `Operator<TOperation, TCandidate>` declares its own, because pre-run validation and substitution reach a child only through its declaration. `EliteSelector` declares the selector that fills the remaining places as a parameter and adds it to `GetParameters`:
+
+```csharp
+public record EliteSelector<TCandidate> : Operator<Selection, TCandidate>
+{
+    public IOperator<Selection, TCandidate> SelectorForRemaining { get; init; }
+
+    public static Parameter<EliteSelector<TCandidate>, IOperator<Selection, TCandidate>>
+        SelectorForRemainingParameter { get; } = new(
+            nameof(SelectorForRemaining),
+            static selector => selector.SelectorForRemaining,
+            static (selector, value) => selector with { SelectorForRemaining = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() =>
+        [.. base.GetParameters(), SelectorForRemainingParameter];
+
+    // CreateExecutor resolves SelectorForRemaining through its scope.
+}
+```
+
+A declared child is checked against the run of its owner. A child resolved under other types states them on its parameter with `ChildExecution`; see [Resolve an operator under another objective](/guide/extending/writing-operators#resolve-an-operator-under-another-objective) and [A composition answers for what it resolves](/guide/fundamentals/invariants-and-validation#a-composition-answers-for-what-it-resolves).
 
 ### A complete stateful composition
 

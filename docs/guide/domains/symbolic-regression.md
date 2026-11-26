@@ -51,7 +51,7 @@ Numeric terminals come in two kinds:
   sampled from its initial distribution when created and changed by local mutation
   afterwards. These are the values numeric parameter fitting adjusts.
 
-Creation and local change are deliberately separate: an initial distribution samples
+Creation and local change are separate settings: an initial distribution samples
 new values, a perturbation transforms an existing one. **Neither is a bound.** An
 initial `Uniform(-1, 1)` does not constrain what later mutation or parameter fitting
 may reach; hard value bounds are out of scope.
@@ -178,7 +178,7 @@ Regression metrics are calculated once from one shared prediction vector and app
 before expression metrics in the objective vector. Either collection may be empty,
 but not both. Multiple objectives use lexicographic total order by default while
 their individual directions still govern dominance. The problem evaluates only its
-bound training data and deliberately exposes no general prediction API.
+bound training data; to predict on other data, use a [predictor](#predictors).
 
 Set `useLinearScaling: true` to fit a least-squares slope and intercept for each
 candidate evaluation. Scaling is applied to the predictions every metric sees and
@@ -247,15 +247,15 @@ when it first encounters an affected candidate.
 
 ## Compiled execution
 
-Evaluating an expression compiles it to a compact postorder `CompiledExpression` and
-interprets that against the data columns. Ordinary use never has to think about this:
+Use `Evaluate` for a one-off prediction. It compiles the expression and evaluates it
+against the data columns:
 
 ```csharp
 double[] predictions = expression.Evaluate(data.Inputs);
 ```
 
-Compile explicitly when one expression is evaluated many times, such as when scoring a
-final model or predicting repeatedly in production:
+Use `Compile` when one expression is evaluated many times, such as when scoring a final
+model or predicting repeatedly in production, so the expression is compiled once:
 
 ```csharp
 var compiled = expression.Compile(optimize: true);
@@ -266,12 +266,10 @@ double[] predictions = compiled.Evaluate(data.Inputs);
 allocation-sensitive loops. `EvaluateSingleRow` evaluates one observation from named
 values.
 
-The genotype and the compiled form are deliberately different representations: the
-tree follows the semantic structure operators need, the compiled form follows the
-execution engine. Compilation is the boundary between them, and opcode layout is not
-exposed through the tree API. Invalid numeric results follow ordinary IEEE 754
-behavior and produce `NaN` or infinity; clamping, penalties, and bounds live outside
-interpretation.
+A `CompiledExpression` is for evaluation only; edit the `ExpressionTree` and compile
+again to change it. Invalid numeric results follow ordinary IEEE 754 behavior and
+produce `NaN` or infinity. Evaluation does not clamp results; apply bounds with
+`ToBounded` on a predictor, or penalties in your objective.
 
 ## Building expressions against a search space
 

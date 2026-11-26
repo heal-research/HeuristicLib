@@ -130,10 +130,63 @@ Cheapest design holding at least 2000: radius 6.96, height 14.02, material 917.1
 
 Because the front is sorted by increasing material, the first entry meeting the volume requirement is the cheapest one that meets it. Applying the requirement now rather than as a constraint during the search means you can also see what relaxing it would buy, which a single-objective run cannot tell you.
 
+## Track progress toward the front
+
+The final front shows where the search ended, not how it got there. A single-objective run records a best-so-far curve; a multiobjective run has no single best, so measure the front instead. The `HEAL.HeuristicLib.Experimental` package provides two analyzers that work by dominance:
+
+- `TraceHyperVolume` records the hypervolume of the front accumulated from every evaluated candidate. The hypervolume is the area between the front and a fixed **reference point** that every design on the front dominates. It never decreases as the front accumulates, and it increases only when a new design dominates area that no earlier design dominated.
+- `ParetoFrontAnalyzer` keeps that accumulated front as an archive, including designs the population later lost.
+
+::: warning Experimental
+These analyzers are in the Experimental package, whose API may change between prereleases. Add it with `dotnet add package HEAL.HeuristicLib.Experimental --prerelease`.
+:::
+
+The reference point must be worse than every design you care about on both objectives. Material never exceeds about 2790 within the bounds and volume is never negative, so `(3000, 0)` works here. Keep the reference point fixed when you compare runs, because the hypervolume depends on it.
+
+```csharp
+using HEAL.HeuristicLib.Analysis;
+using HEAL.HeuristicLib.Inspection;
+
+var referencePoint = new ObjectiveVector(3000.0, 0.0);
+var evaluations = new Counter();
+
+var hyperVolume = algorithm.Evaluator.Invocations.TraceHyperVolume(
+    referencePoint,
+    clocks: [evaluations.Clock],
+    retention: TraceRetention.OnChange());
+var archive = new ParetoFrontAnalyzer<RealVector>(
+    problem.Objective,
+    referencePoint,
+    algorithm.Evaluator);
+
+var run = algorithm.CreateRun(
+    problem,
+    RandomNumberGenerator.Create(seed: 5),
+    [
+        hyperVolume,
+        archive,
+        algorithm.Evaluator.Invocations.CountingCandidates(evaluations)
+    ]);
+await run.CompleteAsync();
+
+var curve = run.Result(hyperVolume).By(evaluations.Clock);
+foreach (var budget in new[] { 1_000, 5_000, 20_000 })
+{
+    var point = curve.Last(entry => entry.Time <= budget);
+    Console.WriteLine($"Hypervolume within {budget,6} evaluations: {point.Value:F0}");
+}
+
+Console.WriteLine($"Archived nondominated designs: {run.Result(archive).Count}");
+```
+
+For seed `5` the hypervolume is `14594509` within 1000 evaluations, `14642391` within 5000 and `14648361` within 20000: most of the area is dominated early, and later evaluations add comparatively little.
+
+The counting substitution is listed last, so it counts each evaluation before the trace reads the clock. A hypervolume that stops growing long before the budget ends is the multiobjective counterpart of a flat best-so-far curve. To compare configurations, compare their hypervolume at a common evaluation budget, with the same reference point, over several seeds.
+
 ## Reporting
 
 Report the front, not one point from it. State every objective with its unit and direction, and keep the seed: a front is a stochastic result like any other, and two seeds give slightly different curves.
 
 When comparing configurations, compare fronts rather than single values. A front that is better everywhere is a clear win. A front better in one region and worse in another is a real tradeoff and needs a decision, not an average.
 
-Continue with [Objectives and evaluated candidates](/guide/fundamentals/objectives) for dominance semantics, [Model your own problem](/examples/custom-problem) for a problem type with domain data, or [Experiments](/guide/execution/experiments) to repeat this across seeds.
+Continue with [Objectives and evaluated candidates](/guide/fundamentals/objectives) for dominance semantics, [Custom problem for production planning](/examples/custom-problem) for a problem type with domain data, or [Experiments](/guide/execution/experiments) to repeat this across seeds.

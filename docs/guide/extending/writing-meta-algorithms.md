@@ -6,6 +6,22 @@ This page assumes you have read [Write an algorithm](/guide/extending/writing-al
 
 A meta-algorithm coordinates child algorithms rather than operators. It is still an algorithm: it produces search states, it can be run directly, and it can itself be a child of another meta-algorithm. `CycleAlgorithm` and `PipelineAlgorithm` are the built-in examples.
 
+## Use the built-in meta-algorithms first
+
+Two common schedules need no new type. `Then` creates a `PipelineAlgorithm` that runs each stage to completion and starts the next stage from the last state of the previous one. `CycleWith` creates a `CycleAlgorithm` that repeats its stages in order, each turn continuing from the last state:
+
+```csharp
+var explore = geneticAlgorithm with { MutationRate = 0.5, MaximumGenerations = 200 };
+var exploit = geneticAlgorithm with { MutationRate = 0.05, MaximumGenerations = 300 };
+
+var pipeline = explore.Then(exploit);
+var cycle = explore.CycleWith(exploit, maximumCycles: 3);
+```
+
+An algorithm counts the generations of each call, so every turn of `cycle` runs up to 200 or 300 generations again. Every stage of a pipeline and every turn of a cycle also resolves its algorithm in a new child scope, so private executor data, such as the count of a terminator, starts fresh. Use [`Sharing`](/guide/fundamentals/configurations#sharing-executors) on the pipeline or cycle to keep one executor for a configuration across stages or turns, such as a cache or a terminator whose count should carry over. Both meta-algorithms yield every state their stages yield, so `pipeline.Iterations` observes the whole run and `explore.Iterations` observes only that stage.
+
+Write your own meta-algorithm when the schedule is something else, such as choosing the next stage from the current state.
+
 ## The same two parts
 
 A meta-algorithm splits into a configuration record and an executor, exactly as an ordinary algorithm does. Child algorithms are configuration objects held by the record. The meta-algorithm's bound node calls their typed executors.
@@ -85,7 +101,7 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
 }
 ```
 
-Five details carry the design:
+Five details matter:
 
 - **Both children are declared as parameters.** Analysis and other substitutions reach only declared children, so an undeclared child could not be observed.
 - **Both children are resolved in `CreateExecutor`, in the one scope it received.** A configuration that both stages hold by the same reference, such as the same algorithm in both positions or an operator the two stages have in common, is built once, and its executor serves both stages, private fields included. Equal but distinct configurations get separate executors. Each build receives children with the requesting context's observations, and [sharing](/guide/fundamentals/configurations#sharing-executors) decides what a child scope or another run reuses.
@@ -112,7 +128,7 @@ var wholeRun = staged.Iterations.TracePopulationQuality();
 var run = staged.CreateRun(problem, RandomNumberGenerator.Create(seed: 42), [wholeRun]);
 ```
 
-Two type arguments, not four. The search space and the problem are supplied by `CreateRun`, so the same `staged` value composes stages written for any real vector problem. `explore` and `exploit` are copies of one `geneticAlgorithm`, so they hold its creator, mutator and evaluator by the same references, and the scope builds one executor of each for both stages. Stages that must not share an executor hold distinct configurations.
+`TwoStageAlgorithm` takes the candidate and search state types only. `CreateRun` supplies the search space and the problem, so the same `staged` value composes stages written for any real vector problem. `explore` and `exploit` are copies of one `geneticAlgorithm`, so they hold its creator, mutator and evaluator by the same references. This meta-algorithm resolves both stages in one scope, so the scope builds one executor of each for both stages. The built-in pipeline resolves each stage in a child scope instead and shares nothing unless told to. Stages of `TwoStageAlgorithm` that must not share an executor hold distinct configurations.
 
 Because the children are declared, either stage can also be observed on its own. A trace holds data once the run has produced it, so complete the run before reading the results. Run this code from an async method, passing your host application's `cancellationToken`:
 
@@ -170,4 +186,4 @@ A meta-algorithm should:
 3. Pass the cancellation token to every child stream.
 4. Keep configurations immutable, private data in executor fields and invocation progress in iterators. Use explicit `Sharing` for intentional sharing.
 
-Read [Observability and analysis](/guide/execution/observability-and-analysis) for what observing a child algorithm means for the resulting traces.
+Read [Analysis of algorithm runs](/guide/execution/observability-and-analysis) for what observing a child algorithm means for the resulting traces.

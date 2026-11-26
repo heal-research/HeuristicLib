@@ -16,9 +16,9 @@ Start with a complete optimization task. Each example provides a runnable config
 
 [Train a symbolic regression model](/examples/symbolic-regression) from generated observations. The result is an expression tree that can be inspected and compiled.
 
-## Go further
+<span id="go-further"></span>
 
-### Model your own problem
+### Custom problems {#model-your-own-problem}
 
 [Build a problem type from scratch](/examples/custom-problem) for a production planning task with domain data, integer decisions and capacity constraints. Read this one when the built-in problems stop matching your work.
 

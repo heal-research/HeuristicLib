@@ -111,9 +111,9 @@ baseline plus one `FeatureImportanceResult` per feature, each retaining the raw
 perturbed metric and importance values alongside their mean and population standard
 deviation.
 
-Row subsampling is deliberately absent: construct the `DataFrame` you want before
-calling. Population weights, parallel execution, grouped features, and categorical
-perturbation are not implemented.
+To estimate importance on a subset of rows, pass a `DataFrame` that contains only
+those rows. Features are perturbed one at a time and sequentially; grouped features
+and categorical perturbation are not supported.
 
 ## Linear scaling
 

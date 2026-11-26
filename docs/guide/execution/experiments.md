@@ -93,11 +93,13 @@ Parameter search can overfit benchmark instances. Keep separate instances for fi
 
 ## Add analysis
 
-The analyzers of [Observability and analysis](/guide/execution/observability-and-analysis) work in an experiment. Pass them in the substitutions list of `experiment.CreateRun(problem, random, [analyzer])`. They apply after variation, so a default-selecting analyzer observes whichever evaluator each parameter candidate configures. `trial.Algorithm` is the configuration produced by the grid, `trial.Run.Algorithm` adds the substitutions, and `trial.Run.Result(analyzer)` reads the trial's own result.
+The analyzers of [Analysis of algorithm runs](/guide/execution/observability-and-analysis) work in an experiment. Pass them in the substitutions list of `experiment.CreateRun(problem, random, [analyzer])`. They apply after variation, so a default-selecting analyzer observes whichever evaluator each parameter candidate configures. `trial.Algorithm` is the configuration produced by the grid, `trial.Run.Algorithm` adds the substitutions, and `trial.Run.Result(analyzer)` reads the trial's own result.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ObservabilityDocumentationSpecs.cs#observability-analyzed-grid{csharp}
 
-The update count reports how many best-so-far values the analyzer recorded in a trial. Use the recorded objective values to compare solution quality across trials.
+The example repeats each parameter candidate five times and groups the trials by `ParameterCandidateIndex`. For each trial it reads the best objective found within the same budget of 16 evaluations, because a larger population spends more evaluations per generation and would otherwise be compared on more work. It then reports the median and the range over the repetitions, so a difference between parameter candidates can be judged against the spread between seeds.
+
+The analyzer observes whole evaluated batches, so choose a budget that every compared configuration reaches at a batch boundary. Here each algorithm runs four generations, one evaluated batch each: a population of 4 reaches 16 evaluations after four batches and a population of 8 after two. With a budget of 12, the population of 4 would be read after three full batches while the population of 8 would be read after only one, since its second batch ends at 16. The point read at the budget is the last improvement retained up to it, so it may come from an earlier batch when the later ones found nothing better. The budget is small here so the example runs quickly; choose one that matches the work you want to compare.
 
 Grid variation creates new configurations, so a source named on the prototype matches only a parameter candidate that retains its target. A source named on the prototype root, such as `algorithm.Iterations`, matches the original in `algorithm.Repeat(n)`. A source named on the prototype or on a child the grid replaces fails placement when its target is absent. Use default selections on grids or name a child shared by the parameter candidates.
 

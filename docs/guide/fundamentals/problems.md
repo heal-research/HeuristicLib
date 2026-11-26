@@ -75,7 +75,7 @@ public sealed class ProductMixProblem(ProductionPlan plan)
 
 That is the [curiously recurring pattern](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern), and it is what lets the base class name the derived type in members that return a problem, so nothing hands you back a base type to cast. It is also the argument most often forgotten; the compiler reports it as CS0305, wrong number of type arguments.
 
-[Model your own problem](/examples/custom-problem) builds one end to end, including the choice of representation and how to treat candidates that violate a constraint.
+[Custom problem for production planning](/examples/custom-problem) builds one end to end, including the choice of representation and how to treat candidates that violate a constraint.
 
 Evaluation should be safe to call more than once. Parallel algorithms and experiments may evaluate different candidates concurrently. If evaluation uses randomness, derive it from the run's explicit random source rather than hidden global state.
 

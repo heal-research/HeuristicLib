@@ -65,7 +65,7 @@ For each required operator, `For(problem, ...)` checks these sources in order:
 
 `For(searchSpace, ...)` uses the same order without the problem step. A source may decline to recommend an operator for its current state. The factory then continues to the next source. If any required operator remains missing, the factory throws `InvalidOperationException` and names all missing parameters.
 
-The current built in recommendations are deliberately small:
+### Built-in recommendations
 
 | Source                     | Creator                    | Crossover                    | Mutator            |
 | -------------------------- | -------------------------- | ---------------------------- | ------------------ |
@@ -106,7 +106,7 @@ await foreach (var state in algorithm.RunStreaming(problem, random))
 }
 ```
 
-Each call starts a fresh run. See [Running algorithms](/guide/execution/running-algorithms) for cancellation, budgets and reproducibility.
+Each call starts a fresh run. See [Algorithm runs](/guide/execution/running-algorithms) for cancellation, budgets and reproducibility.
 
 ## Compare algorithms fairly
 
@@ -125,4 +125,4 @@ Most domain customization belongs in a problem or operator. Create an algorithm 
 ## Next steps
 
 - [Configurations](/guide/fundamentals/configurations) continues the Fundamentals path with reading, rewriting and sharing the configurations an algorithm holds.
-- [Running algorithms](/guide/execution/running-algorithms) covers streaming, cancellation and budgets.
+- [Algorithm runs](/guide/execution/running-algorithms) covers streaming, cancellation and budgets.

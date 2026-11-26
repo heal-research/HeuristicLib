@@ -61,7 +61,7 @@ Operator records are reusable configuration. Do not store counters, caches or ot
 
 Author an executor for mutable counters, cursors and adaptation values. A leaf operator with an explicit executor overrides `CreateExecutor`, which receives a typed scope exposing its bound `Problem` and `SearchSpace`, and returns a private nested `Executor` that derives from the role's executor base, such as `MutationExecutor<TCandidate>`. The executor keeps what it reads, such as the problem or the search space, in its own constructor parameters, and its mutable data in fields. Each separate construction starts with independent fields. [Configurations](/guide/fundamentals/configurations#sharing-executors) explains how `Sharing` keeps one executor across child scopes.
 
-An operator you write is observed through its operation's `Invocations` source, such as `mutator.Invocations`, exactly like a built-in one. See [Observability and analysis](/guide/execution/observability-and-analysis).
+An operator you write is observed through its operation's `Invocations` source, such as `mutator.Invocations`, exactly like a built-in one. See [Analysis of algorithm runs](/guide/execution/observability-and-analysis).
 
 The contributor guide covers [operator implementation internals](/contributing/architecture/operator-implementation), explicit executors and the repository analyzer rules.
 
@@ -81,7 +81,7 @@ The algorithm's `CreateExecutor` creates that problem once and resolves the sele
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/OperatorObjectiveDocumentationSpecs.cs#operator-objective-resolution{csharp}
 
-Four rules carry the design:
+Four rules apply:
 
 - **One problem object is the single source of the objective** for everything resolved under it: the operator, its child operators, refiners and observation records all read the objective of that problem.
 - **Create the problem once per `CreateExecutor`**, not per call. A scope keeps one executor for each configuration and problem object, so every new problem object gets new executors that the scope retains. See [Sharing executors](/guide/fundamentals/configurations#sharing-executors).

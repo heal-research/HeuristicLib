@@ -87,6 +87,6 @@ A custom algorithm should:
 4. Keep simultaneous runs independent.
 5. Work with interceptors when it derives from `IterativeAlgorithm`.
 
-Read [Running algorithms](/guide/execution/running-algorithms) for the consumer model and [Execution nodes](/contributing/architecture/execution-nodes) for the internal ownership rules.
+Read [Algorithm runs](/guide/execution/running-algorithms) for the consumer model and [Execution nodes](/contributing/architecture/execution-nodes) for the internal ownership rules.
 
 To write an algorithm that coordinates other algorithms rather than operators, continue with [Write a meta-algorithm](/guide/extending/writing-meta-algorithms).

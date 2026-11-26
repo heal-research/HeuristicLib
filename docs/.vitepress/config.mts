@@ -13,6 +13,13 @@ export default defineConfig({
             dark: "dark-plus",
         },
         lineNumbers: true,
+        tableTabIndex: false,
+        config(md) {
+            md.renderer.rules.table_open = (tokens, index, options, _env, renderer) =>
+                '<div class="doc-table-scroll" tabindex="0">' + renderer.renderToken(tokens, index, options);
+            md.renderer.rules.table_close = (tokens, index, options, _env, renderer) =>
+                renderer.renderToken(tokens, index, options) + "</div>\n";
+        },
     },
     themeConfig: {
         nav: [
@@ -40,19 +47,16 @@ export default defineConfig({
                         { text: "Operators", link: "/guide/fundamentals/operators" },
                         { text: "Algorithms", link: "/guide/fundamentals/algorithms" },
                         { text: "Configurations", link: "/guide/fundamentals/configurations" },
-                        { text: "Invariants and validation", link: "/guide/fundamentals/invariants-and-validation" },
+                        { text: "Validation and invariants", link: "/guide/fundamentals/invariants-and-validation" },
                     ],
                 },
                 {
                     text: "Execution",
                     items: [
-                        { text: "Running algorithms", link: "/guide/execution/running-algorithms" },
+                        { text: "Algorithm runs", link: "/guide/execution/running-algorithms" },
+                        { text: "Analysis", link: "/guide/execution/observability-and-analysis" },
                         { text: "Search states", link: "/guide/execution/search-states" },
                         { text: "Randomness", link: "/guide/execution/randomness" },
-                        {
-                            text: "Observability and analysis",
-                            link: "/guide/execution/observability-and-analysis",
-                        },
                         { text: "Experiments", link: "/guide/execution/experiments" },
                     ],
                 },
@@ -95,12 +99,7 @@ export default defineConfig({
                         { text: "Numeric optimization", link: "/examples/numeric-optimization" },
                         { text: "Traveling salesperson", link: "/examples/traveling-salesperson" },
                         { text: "Symbolic regression", link: "/examples/symbolic-regression" },
-                    ],
-                },
-                {
-                    text: "Go further",
-                    items: [
-                        { text: "Model your own problem", link: "/examples/custom-problem" },
+                        { text: "Custom problems", link: "/examples/custom-problem" },
                         { text: "Multiobjective optimization", link: "/examples/multi-objective" },
                     ],
                 },

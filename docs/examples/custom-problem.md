@@ -1,4 +1,4 @@
-# Model your own problem
+# Custom problem for production planning
 
 The built-in problems are useful for learning, but real work starts when the objective comes from your own domain. This example builds a problem type from scratch: a workshop decides how many of each product to build this week, given limited machine hours.
 
