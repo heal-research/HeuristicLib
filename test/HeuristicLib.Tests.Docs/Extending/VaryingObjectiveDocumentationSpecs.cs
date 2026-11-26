@@ -12,8 +12,10 @@ namespace HEAL.HeuristicLib.Tests.Docs.Extending;
 // The scalarization is a value strategy of the algorithm: immutable weights, no state.
 public sealed record Tchebycheff(ValueArray<double> Weights)
 {
-    public double Scalarize(ObjectiveVector vector, ObjectiveVector idealPoint) =>
-        Enumerable.Range(0, Weights.Count).Max(i => Weights[i] * Math.Abs(vector[i] - idealPoint[i]));
+    public double Scalarize(ObjectiveVector vector, ObjectiveVector idealPoint)
+    {
+        return Enumerable.Range(0, Weights.Count).Max(i => Weights[i] * Math.Abs(vector[i] - idealPoint[i]));
+    }
 }
 
 // The ideal point is executor state: it moves whenever an evaluation improves an objective.
@@ -21,7 +23,10 @@ public sealed class IdealPoint(int objectives)
 {
     public ObjectiveVector Value { get; private set; } = new(Enumerable.Repeat(double.PositiveInfinity, objectives));
 
-    public void Observe(ObjectiveVector evaluated) => Value = new(Value.Zip(evaluated, Math.Min));
+    public void Observe(ObjectiveVector evaluated)
+    {
+        Value = new(Value.Zip(evaluated, Math.Min));
+    }
 }
 #endregion varying-objective-strategy
 

@@ -42,8 +42,10 @@ public sealed class MutationsPerIterationAnalyzer<TCandidate, TSearchState>(
     where TSearchState : class, ISearchState
 {
     // One observation wrapper per boundary, both recording into this analyzer.
-    protected override IReadOnlyList<ISubstitution> CreateSubstitutions() =>
-        [mutator.Invocations.RecordingInto(this), algorithm.Iterations.RecordingInto(this)];
+    protected override IReadOnlyList<ISubstitution> CreateSubstitutions()
+    {
+        return [mutator.Invocations.RecordingInto(this), algorithm.Iterations.RecordingInto(this)];
+    }
 
     // Every run creates an empty result of its own.
     public override MutationsPerIteration CreateExecutionNode(ResolutionScope scope) => new();

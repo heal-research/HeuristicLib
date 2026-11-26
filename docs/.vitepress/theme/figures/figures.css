@@ -1,0 +1,581 @@
+/* Figure system: cards, diagrams and charts. Colors come from VitePress tokens where one exists. */
+:root {
+    --hl-fig-brand-soft: rgba(23, 96, 130, 0.1);
+    --hl-fig-brand-line: rgba(23, 96, 130, 0.45);
+    --hl-fig-accent: #df6a2e;
+    --hl-fig-ord-1: #0b5f8f;
+    --hl-fig-ord-2: #3a8bba;
+    --hl-fig-ord-3: #7fb9d8;
+    --hl-fig-grid: #ececee;
+    --hl-fig-axis: #c9cacd;
+    --hl-fig-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.06);
+    --hl-fig-series-1: #0b6ea6;
+    --hl-fig-context: #b9bcc2;
+    --hl-fig-bg-mute: #eeeef0;
+    --hl-fig-heat-lo: #f2f8fc;
+    --hl-fig-heat-hi: #4f8fb4;
+    --hl-fig-dot-ring: #ffffff;
+    --hl-fig-seq-lo: #e2eff7;
+    --hl-fig-seq-hi: #0b4f78;
+    --hl-fig-seq-on-hi: #ffffff;
+}
+
+.dark {
+    --hl-fig-brand-soft: rgba(101, 178, 210, 0.14);
+    --hl-fig-brand-line: rgba(101, 178, 210, 0.5);
+    --hl-fig-accent: #d8682f;
+    --hl-fig-ord-1: #8fcbe8;
+    --hl-fig-ord-2: #3f90bf;
+    --hl-fig-ord-3: #1f5f86;
+    --hl-fig-grid: #2a2a2e;
+    --hl-fig-axis: #3c3d42;
+    --hl-fig-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.35);
+    --hl-fig-series-1: #3a95c6;
+    --hl-fig-context: #4b4d54;
+    --hl-fig-bg-mute: #2a2b31;
+    --hl-fig-heat-lo: #2e6a8c;
+    --hl-fig-heat-hi: #1a1d22;
+    --hl-fig-dot-ring: rgba(255, 255, 255, 0.6);
+    --hl-fig-seq-lo: #1f3340;
+    --hl-fig-seq-hi: #8fcbe8;
+    --hl-fig-seq-on-hi: #1b1b1f;
+}
+
+.vp-doc figure.hl-fig {
+    margin: 20px 0;
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 12px;
+    background: var(--vp-c-bg);
+    overflow: hidden;
+}
+
+.hl-fig__body {
+    position: relative;
+    padding: 18px 18px 10px;
+}
+
+.hl-fig__body svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+}
+
+.vp-doc figure.hl-fig figcaption {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 10px 18px 12px;
+    border-top: 1px solid var(--vp-c-divider);
+    background: var(--vp-c-bg-soft);
+    font-size: 13px;
+    color: var(--vp-c-text-2);
+    line-height: 1.5;
+}
+
+.hl-fig__num {
+    flex: none;
+    font-weight: 600;
+    color: var(--vp-c-text-1);
+}
+
+.hl-fig__cap {
+    flex: 1;
+}
+
+.hl-fig__cap p {
+    margin: 0;
+    line-height: inherit;
+}
+
+.hl-fig__data {
+    flex: none;
+    font: inherit;
+    font-size: 12px;
+    color: var(--vp-c-brand-1);
+    background: none;
+    border: 1px solid var(--hl-fig-brand-line);
+    border-radius: 999px;
+    padding: 2px 10px;
+    cursor: pointer;
+}
+
+.hl-fig__data:focus-visible {
+    outline: 2px solid var(--vp-c-brand-1);
+    outline-offset: 2px;
+}
+
+.hl-fig__table {
+    max-height: 260px;
+    overflow: auto;
+    border-top: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc .hl-fig__table table {
+    display: table;
+    width: 100%;
+    margin: 0;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+}
+
+.vp-doc .hl-fig__table th,
+.vp-doc .hl-fig__table td {
+    text-align: right;
+    padding: 4px 14px;
+    border: none;
+    border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc .hl-fig__table th {
+    position: sticky;
+    top: 0;
+    background: var(--vp-c-bg-soft);
+    color: var(--vp-c-text-2);
+    font-weight: 600;
+}
+
+.vp-doc .hl-fig__table tr {
+    background: none;
+    border: none;
+}
+
+.hl-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    margin: 0 0 8px;
+    font-size: 12.5px;
+    color: var(--vp-c-text-2);
+}
+
+.hl-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.hl-legend i {
+    display: inline-block;
+    width: 16px;
+    height: 2px;
+    border-radius: 1px;
+}
+
+.hl-legend i.dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+
+.hl-legend i.box {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+}
+
+.hl-legend i.tick {
+    width: 2px;
+    height: 11px;
+}
+
+.hl-chart text {
+    font-family: var(--vp-font-family-base);
+    font-size: 11px;
+    fill: var(--vp-c-text-3);
+    font-variant-numeric: tabular-nums;
+}
+
+.hl-chart .title {
+    font-size: 11.5px;
+    fill: var(--vp-c-text-2);
+}
+
+.hl-chart .grid {
+    stroke: var(--hl-fig-grid);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.hl-chart .axis {
+    stroke: var(--hl-fig-axis);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.hl-chart .line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.hl-chart .endlabel {
+    fill: var(--vp-c-text-2);
+    font-size: 11.5px;
+}
+
+.hl-chart .note {
+    fill: var(--vp-c-text-1);
+    font-size: 11.5px;
+}
+
+.hl-chart .note-line {
+    stroke: var(--hl-fig-accent);
+    stroke-width: 1.25;
+    fill: none;
+}
+
+.hl-chart .note-dot {
+    fill: var(--hl-fig-accent);
+    stroke: var(--vp-c-bg);
+    stroke-width: 2;
+}
+
+.hl-chart .ref {
+    stroke: var(--vp-c-text-3);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.hl-chart .reflabel {
+    fill: var(--vp-c-text-2);
+}
+
+.hl-chart .celltext {
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.hl-chart .cross {
+    stroke: var(--vp-c-text-3);
+    stroke-width: 1;
+    shape-rendering: crispEdges;
+}
+
+.hl-chart .hoverdot {
+    stroke: var(--vp-c-bg);
+    stroke-width: 2;
+}
+
+.hl-tip {
+    position: absolute;
+    z-index: 5;
+    pointer-events: none;
+    background: var(--vp-c-bg);
+    border: 1px solid var(--vp-c-divider);
+    border-radius: 8px;
+    box-shadow: var(--hl-fig-shadow);
+    padding: 8px 10px;
+    font-size: 12px;
+    line-height: 1.45;
+    min-width: 150px;
+}
+
+.hl-tip .hd {
+    color: var(--vp-c-text-2);
+    margin-bottom: 3px;
+}
+
+.hl-tip .row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hl-tip .key {
+    width: 12px;
+    height: 2px;
+    border-radius: 1px;
+    flex: none;
+}
+
+.hl-tip .key.dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.hl-tip .val {
+    font-weight: 600;
+    color: var(--vp-c-text-1);
+    font-variant-numeric: tabular-nums;
+}
+
+.hl-tip .lab {
+    color: var(--vp-c-text-2);
+}
+
+/* Small multiples: one panel per snapshot, with a header line. */
+.hl-multiples {
+    display: grid;
+    gap: 12px;
+}
+
+.hl-multiples .panel {
+    border-radius: 10px;
+    background: var(--vp-c-bg-soft);
+    padding: 8px 10px 6px;
+}
+
+.hl-multiples .ph {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--vp-c-text-2);
+}
+
+.hl-multiples .ph b {
+    color: var(--vp-c-text-1);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.hl-split {
+    display: grid;
+    grid-template-columns: 232px 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+@media (max-width: 600px) {
+    .hl-split {
+        grid-template-columns: 1fr;
+    }
+
+    .hl-split > :first-child {
+        max-width: 232px;
+    }
+}
+
+/* Diagrams: nodes, chips, edges and labels. */
+.hl-dg text {
+    font-family: var(--vp-font-family-base);
+}
+
+.hl-dg .node {
+    fill: var(--vp-c-bg);
+    stroke: var(--vp-c-divider);
+    stroke-width: 1;
+}
+
+.hl-dg .node.primary {
+    fill: var(--hl-fig-brand-soft);
+    stroke: var(--hl-fig-brand-line);
+}
+
+.hl-dg .node.soft {
+    fill: var(--vp-c-bg-soft);
+}
+
+.hl-dg .node.terminal {
+    fill: var(--vp-c-bg-soft);
+    stroke: var(--vp-c-text-3);
+    stroke-width: 1.25;
+}
+
+.hl-dg .shadow {
+    filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.06)) drop-shadow(0 3px 8px rgba(0, 0, 0, 0.05));
+}
+
+.dark .hl-dg .shadow {
+    filter: none;
+}
+
+.hl-dg .t {
+    font-size: 13px;
+    font-weight: 600;
+    fill: var(--vp-c-text-1);
+}
+
+.hl-dg .s {
+    font-size: 11.5px;
+    fill: var(--vp-c-text-2);
+}
+
+.hl-dg .m,
+.hl-dg .mm {
+    font-family: var(--vp-font-family-mono);
+    font-size: 11.5px;
+    fill: var(--vp-c-text-1);
+}
+
+.hl-dg .mm {
+    font-size: 11px;
+    fill: var(--vp-c-text-2);
+}
+
+.hl-dg .chip {
+    fill: var(--hl-fig-bg-mute);
+}
+
+.hl-dg .edge {
+    fill: none;
+    stroke: var(--vp-c-text-3);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+}
+
+.hl-dg .edge.accent {
+    stroke: var(--hl-fig-accent);
+}
+
+.hl-dg .el {
+    font-size: 11.5px;
+    fill: var(--vp-c-text-2);
+    paint-order: stroke;
+    stroke: var(--vp-c-bg);
+    stroke-width: 5px;
+    stroke-linejoin: round;
+}
+
+.hl-dg .el.m {
+    font-family: var(--vp-font-family-mono);
+    font-size: 11px;
+    fill: var(--vp-c-text-1);
+}
+
+.hl-dg .badge {
+    fill: var(--hl-fig-accent);
+}
+
+.hl-dg .badge-t {
+    font-size: 11px;
+    font-weight: 700;
+    fill: #fff;
+}
+
+.hl-dg .bar {
+    fill: var(--vp-c-brand-1);
+}
+
+.hl-dg .band {
+    fill: var(--vp-c-bg-soft);
+    stroke: var(--vp-c-divider);
+}
+
+.hl-dg .layer0 {
+    fill: var(--vp-c-bg);
+    stroke: var(--vp-c-divider);
+}
+
+.hl-dg .layer1 {
+    fill: var(--vp-c-bg-soft);
+    stroke: var(--vp-c-divider);
+}
+
+.hl-dg .layer2 {
+    fill: var(--hl-fig-bg-mute);
+    stroke: var(--vp-c-divider);
+}
+
+.hl-dg .arrowhead {
+    fill: none;
+    stroke: var(--vp-c-text-3);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.hl-dg .arrowhead.accent {
+    stroke: var(--hl-fig-accent);
+}
+
+/* The home hero holds a figure instead of an image: no glow, no offsets that assume a transparent picture. */
+.VPHero .image:has(.hl-hero) {
+    margin: 0 0 32px;
+}
+
+.VPHero .image-container:has(.hl-hero) {
+    width: auto;
+    height: auto;
+    transform: none;
+}
+
+.VPHero .image-container:has(.hl-hero) .image-bg {
+    display: none;
+}
+
+@media (min-width: 960px) {
+    .VPHero .image:has(.hl-hero) {
+        margin: 0;
+    }
+}
+
+/* Cells of a candidate, such as vector positions, and an emphasized title in code font. */
+.hl-dg .cell {
+    fill: var(--vp-c-bg);
+    stroke: var(--hl-fig-axis);
+    stroke-width: 1;
+}
+
+.hl-dg .cell.on {
+    fill: var(--hl-fig-series-1);
+    stroke: var(--hl-fig-series-1);
+}
+
+.hl-dg .cell.mute {
+    fill: var(--hl-fig-bg-mute);
+}
+
+.hl-dg .cell-t {
+    font-family: var(--vp-font-family-mono);
+    font-size: 11.5px;
+    fill: var(--vp-c-text-1);
+}
+
+.hl-dg .cell-t.on {
+    fill: var(--hl-fig-seq-on-hi);
+}
+
+.hl-dg .mt {
+    font-family: var(--vp-font-family-mono);
+    font-size: 12.5px;
+    font-weight: 600;
+    fill: var(--vp-c-text-1);
+}
+
+.hl-dg .track {
+    stroke: var(--hl-fig-axis);
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.hl-dg .tick-mark {
+    fill: var(--hl-fig-accent);
+}
+
+.hl-dg .divider {
+    stroke: var(--vp-c-divider);
+    stroke-width: 1;
+}
+
+.hl-dg .region {
+    fill: var(--hl-fig-brand-soft);
+}
+
+.hl-dg .region.mute {
+    fill: var(--hl-fig-bg-mute);
+}
+
+.hl-dg .dot {
+    fill: var(--hl-fig-series-1);
+    stroke: var(--vp-c-bg);
+    stroke-width: 1.5;
+}
+
+.hl-dg .dot.accent {
+    fill: var(--hl-fig-accent);
+}
+
+.hl-dg .dot.context {
+    fill: var(--hl-fig-context);
+}
+
+.hl-dg .axis-line {
+    fill: none;
+    stroke: var(--vp-c-text-3);
+    stroke-width: 1;
+}

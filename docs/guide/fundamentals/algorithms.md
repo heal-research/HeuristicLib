@@ -35,7 +35,7 @@ All three forms work with any problem. `For(...)` chooses each required operator
 
 ```csharp
 var algorithm = GeneticAlgorithm.Create(
-    new UniformDistributedCreator(problem.SearchSpace),
+    new UniformDistributedCreator(),
     new AlphaBetaBlendCrossover { Alpha = 0.7 },
     new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
     selector: TournamentSelector.For(problem, tournamentSize: 2),
@@ -45,6 +45,12 @@ var algorithm = GeneticAlgorithm.Create(
 ```
 
 Algorithm owned settings such as `MaximumGenerations` describe ordinary run behavior. The operators make search policy visible and replaceable. `Create(...)` infers the generic arguments from those operators.
+
+<GaGeneration>
+
+One generation of this configuration. Each chip names the setting that controls the step. An optional `Refiner` runs between mutation and evaluation, and `Terminator` can end the run after any generation.
+
+</GaGeneration>
 
 ## Use operator recommendations
 
@@ -74,11 +80,11 @@ For each required operator, `For(problem, ...)` checks these sources in order:
 
 This means the example uses order crossover from `TravelingSalesmanProblem`, then random creation and inversion mutation from `PermutationSearchSpace`. The problem recommendation wins over the search space recommendation for crossover.
 
-Each standard algorithm has a public defaults class, such as `GeneticAlgorithmDefaults` or `NSGA2Defaults`. Direct record construction, `Create(...)` and `For(...)` read the same values for omitted algorithm settings. Switching construction forms therefore does not change an omitted population size, selector or evaluator. Operator recommendations are separate because a problem or search space owns the information needed to make them.
+Each standard algorithm has a public defaults class, such as `GeneticAlgorithmDefaults` or `NSGA2Defaults`. Direct record construction, `Create(...)` and `For(...)` read the same values for omitted algorithm settings. Switching construction forms therefore does not change an omitted population size, selector or evaluator. Operator recommendations are separate because a problem or search space owns the information needed to make them. [Algorithms and defaults](/reference/algorithms) lists every default.
 
 `For(searchSpace, ...)` returns a configuration that can run against any compatible problem. `GeneticAlgorithm` and `NSGA2` request a creator, crossover and mutator. `EvolutionStrategy` and `HillClimber` request a creator and mutator. Optional operators are not populated from recommendations. For example, `EvolutionStrategy.Crossover` remains `null` unless the caller supplies it.
 
-Recommendation discovery uses `IRecommends<TOperator>`, where `TOperator` is the requested operator role. `TryCreateRecommendedOperator` returns `true` with a fresh, nonnull operator. It returns `false` with `null` when the source declines for its current state. A problem or search space can implement this contract for built in or consumer defined roles. Consumer algorithms can use `OperatorRecommendationResolution` to apply the same precedence and aggregate missing parameter error.
+A problem or search space of your own can recommend operators too. [Write an algorithm](/extend/writing-algorithms#recommend-operators) shows the contract.
 
 Recommendations are documented starting points. They are not tuned for every instance and changing them can change results. State important choices explicitly when a configuration must remain independent of future recommendation changes:
 
@@ -116,13 +122,13 @@ Each call starts a fresh run. See [Algorithm runs](/guide/execution/running-algo
 - Include a simple baseline.
 - Avoid tuning on the same instances used for the final comparison.
 
-The [Experiments](/guide/execution/experiments) API helps express repetitions and parameter grids.
+The [Experiments](/guide/execution/experiments) API helps express repetitions and parameter grids. [Compare algorithms](/examples/compare-algorithms) applies these rules to a genetic algorithm and a hill climber.
 
 ## Custom algorithms
 
-Most domain customization belongs in a problem or operator. Create an algorithm only when the state transition or control flow itself is new. Read [Writing algorithms](/guide/extending/writing-algorithms) before implementing one.
+Most domain customization belongs in a problem or operator. Create an algorithm only when the state transition or control flow itself is new. Read [Writing algorithms](/extend/writing-algorithms) before implementing one.
 
 ## Next steps
 
-- [Configurations](/guide/fundamentals/configurations) continues the Fundamentals path with reading, rewriting and sharing the configurations an algorithm holds.
+- [Configurations](/guide/fundamentals/configurations) continues the guide with reading, rewriting and sharing the configurations an algorithm holds.
 - [Algorithm runs](/guide/execution/running-algorithms) covers streaming, cancellation and budgets.

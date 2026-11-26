@@ -190,7 +190,7 @@ dotnet add package HEAL.HeuristicLib.Experimental --prerelease
 ## Documentation
 
 - [Build your first optimizer](https://heuristiclib.github.io/guide/getting-started.html)
-- [Understand the core concepts](https://heuristiclib.github.io/guide/fundamentals/core-concepts.html)
+- [Understand the core concepts](https://heuristiclib.github.io/guide/)
 - [Choose an algorithm](https://heuristiclib.github.io/guide/fundamentals/algorithms.html)
 - [Run repeatable experiments](https://heuristiclib.github.io/guide/execution/experiments.html)
 - [Train symbolic regression models](https://heuristiclib.github.io/examples/symbolic-regression.html)

@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using HEAL.HeuristicLib.Algorithms;
 using HEAL.HeuristicLib.Analysis;
 using HEAL.HeuristicLib.Encodings.RealVectors;
@@ -59,5 +60,51 @@ public sealed class GettingStartedDocumentationSpecs
         curve.Select(entry => entry.Value[0]).ShouldBeInOrder(SortDirection.Descending);
         printed.ShouldBeInOrder(SortDirection.Descending);
         last.Value[0].ShouldBeLessThanOrEqualTo(finalBest);
+    }
+
+    [Fact]
+    public async Task TheProgressFigureShowsEveryGenerationOfTheStreamedRun()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
+        var algorithm = GeneticAlgorithm.Create(
+            new UniformDistributedCreator(),
+            new AlphaBetaBlendCrossover { Alpha = 0.7 },
+            new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            populationSize: 200,
+            maximumGenerations: 500,
+            mutationRate: 0.2);
+
+        var generations = new List<int>();
+        var best = new List<double>();
+        var median = new List<double>();
+        var worst = new List<double>();
+        await foreach (var state in algorithm.RunStreaming(
+                           problem, RandomNumberGenerator.Create(seed: 123), ct: TestContext.Current.CancellationToken))
+        {
+            var values = state.Population.EvaluatedCandidates
+                .Select(candidate => candidate.ObjectiveVector[0])
+                .Order()
+                .ToArray();
+            generations.Add(generations.Count + 1);
+            best.Add(values[0]);
+            median.Add(values[values.Length / 2]);
+            worst.Add(values[^1]);
+        }
+
+        // The page prints the best objective of every hundredth generation.
+        double[] printed = [0.00034423, 0.00001563, 0.00000121, 0.00000014, 0.00000004];
+        for (var i = 0; i < printed.Length; i++)
+            Math.Round(best[(i + 1) * 100 - 1], 8).ShouldBe(printed[i]);
+
+        FigureData.Verify("getting-started-convergence", new JsonObject
+        {
+            ["x"] = FigureData.Numbers(generations),
+            ["series"] = new JsonObject
+            {
+                ["best"] = FigureData.Numbers(best),
+                ["median"] = FigureData.Numbers(median),
+                ["worst"] = FigureData.Numbers(worst)
+            }
+        });
     }
 }

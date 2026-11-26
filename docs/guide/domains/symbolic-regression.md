@@ -13,8 +13,8 @@ input features. HeuristicLib composes it from parts that each own one concern:
 | `SymbolicRegressor`              | The fitted predictor used after the search.                                               |
 
 The genotype owns structure only. Search spaces and operators produce and validate
-candidates; evaluators and the problem score them without changing them;
-variation operators and refiners produce transformed candidates.
+candidates. Evaluators and the problem score them without changing them.
+Variation operators and refiners produce transformed candidates.
 
 ## Search space
 
@@ -53,22 +53,25 @@ Numeric terminals come in two kinds:
 
 Creation and local change are separate settings: an initial distribution samples
 new values, a perturbation transforms an existing one. **Neither is a bound.** An
-initial `Uniform(-1, 1)` does not constrain what later mutation or parameter fitting
-may reach; hard value bounds are out of scope.
+initial `UniformDoubleDistribution(-1, 1)` does not constrain what later mutation or parameter fitting
+may reach. Hard value bounds are out of scope.
 
-`NumericPerturbation` provides:
+The perturbations derive from `NumericPerturbation`:
 
-| Perturbation                    | Effect                                                             |
-| ------------------------------- | ------------------------------------------------------------------ |
-| `Additive(delta)`               | `value + delta`                                                    |
-| `Multiplicative(relativeDelta)` | `value * (1 + delta)`, relative to the current value               |
-| `Resample(distribution)`        | discard the value, sample the given distribution                   |
-| `ResampleInitial()`             | discard the value, sample the owning symbol's initial distribution |
-| `Choose(weighted)`              | pick one perturbation by weight; nestable                          |
-| `Chain(perturbations)`          | apply in sequence and change nothing if any stage is inapplicable  |
+| Perturbation                                                   | Effect                                                             |
+| -------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `AdditiveNumericPerturbation(deltaDistribution)`               | `value + delta`                                                    |
+| `MultiplicativeNumericPerturbation(relativeDeltaDistribution)` | `value * (1 + delta)`, relative to the current value               |
+| `ResampleNumericPerturbation(distribution)`                    | discard the value, sample the given distribution                   |
+| `ResampleInitialNumericPerturbation()`                         | discard the value, sample the owning symbol's initial distribution |
+| `ChooseNumericPerturbation(options)`                           | pick one perturbation by weight. Nestable                          |
+| `ChainNumericPerturbation(stages)`                             | apply in sequence and change nothing if any stage is inapplicable  |
 
-`NumericPerturbation.Default` is `Choose(80% Multiplicative(Uniform(-0.1, 0.1)), 20%
-ResampleInitial())` over a `Uniform(-1, 1)` initial distribution. The resampling branch
+`NumericPerturbation.Default` chooses a `MultiplicativeNumericPerturbation` over
+`UniformDoubleDistribution(-0.1, 0.1)` with weight `0.8` and a
+`ResampleInitialNumericPerturbation` with weight `0.2`. `Symbols.Constant()` uses it
+together with a `UniformDoubleDistribution(-1, 1)` initial distribution when neither is
+supplied. The resampling branch
 exists so an exact zero can escape an otherwise multiplicative step. Distributions
 support weighted mixtures and may be nested.
 
@@ -109,21 +112,21 @@ never mutate their inputs.
 | `ProbabilisticTreeCreator`     | Luke's PTC2. Targets a requested length, drawn uniformly from the search-space range unless a distribution is supplied.                   |
 
 Depth settings are nullable and inherit the search-space limits when left unset. An
-explicit setting must stay feasible within those limits; a larger candidate domain
+explicit setting must stay feasible within those limits. A larger candidate domain
 needs a larger search space, not a larger operator setting.
 
 ### Crossover and mutation
 
 `SubtreeCrossover` selects one destination point and one valid donor without retry
-loops. Its `InternalNodeProbability` defaults to uniform selection over all nodes;
-setting `0.9` gives the conventional Koza-style bias toward internal nodes.
+loops. Its `InternalNodeProbability` defaults to uniform selection over all nodes.
+Setting `0.9` gives the conventional Koza-style bias toward internal nodes.
 
 | Mutator                    | Behavior                                                                                                                                                                     |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `NodeReplacementMutator`   | Replaces a symbol while keeping the children, when arity allows.                                                                                                             |
 | `SubtreeMutator`           | Replaces one occurrence with a freshly created subtree that fits the exact remaining budget.                                                                                 |
 | `ShrinkSubtreeMutator`     | Replaces an operation occurrence with a terminal, so length strictly decreases.                                                                                              |
-| `LocalPerturbationMutator` | Perturbs numeric and variable payloads. `One`, `All`, and `Each(probability)` select how many points are touched; the perturbation itself belongs to the originating symbol. |
+| `LocalPerturbationMutator` | Perturbs numeric and variable payloads. `One`, `All`, and `Each(probability)` select how many points are touched. The perturbation itself belongs to the originating symbol. |
 
 Combine them with the general `ChoosePerItem` rather than a symbolic-expression
 specific multi-mutator:
@@ -146,7 +149,7 @@ var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
 ```
 
 Two metric families are available. **Regression metrics** (`IRegressionMetric`)
-compare predictions with the target; **expression metrics** (`IExpressionMetric`)
+compare predictions with the target. **expression metrics** (`IExpressionMetric`)
 inspect the genotype without predicting anything:
 
 ```csharp
@@ -178,7 +181,7 @@ Regression metrics are calculated once from one shared prediction vector and app
 before expression metrics in the objective vector. Either collection may be empty,
 but not both. Multiple objectives use lexicographic total order by default while
 their individual directions still govern dominance. The problem evaluates only its
-bound training data; to predict on other data, use a [predictor](#predictors).
+bound training data. To predict on other data, use a [predictor](#predictors).
 
 Set `useLinearScaling: true` to fit a least-squares slope and intercept for each
 candidate evaluation. Scaling is applied to the predictions every metric sees and
@@ -202,6 +205,12 @@ var algorithm = GeneticAlgorithm.Create(
 
 var finalState = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(123));
 ```
+
+<ExpressionFit>
+
+The best expression of a run on 31 noisy samples of `0.5x² - x + 1`, with 100 candidates, 30 generations and numeric parameter fitting for a quarter of them. The tree reads `0.47x(x - 2.14) + 1.07`. Point at the chart to compare a sample with the model.
+
+</ExpressionFit>
 
 ## Numeric parameter fitting
 
@@ -239,7 +248,7 @@ Refiner = new NumericParameterFittingRefiner().AppliedAtRate(0.25)
 `.CheckedForImprovement()` keeps a fit only when it actually improved the candidate.
 Refiner composition, evaluation accounting, and the cost measurements behind these
 recommendations are covered in
-[operator composition](/guide/extending/operator-composition#refiner-composition).
+[operator composition](/guide/fundamentals/operator-composition#refiner-composition).
 
 A search space may allow operations the differentiable compiler cannot lower. Pre-run
 validation does not check differentiability, so the refiner reports the incompatibility
@@ -266,9 +275,9 @@ double[] predictions = compiled.Evaluate(data.Inputs);
 allocation-sensitive loops. `EvaluateSingleRow` evaluates one observation from named
 values.
 
-A `CompiledExpression` is for evaluation only; edit the `ExpressionTree` and compile
+A `CompiledExpression` is for evaluation only. Edit the `ExpressionTree` and compile
 again to change it. Invalid numeric results follow ordinary IEEE 754 behavior and
-produce `NaN` or infinity. Evaluation does not clamp results; apply bounds with
+produce `NaN` or infinity. Evaluation does not clamp results. Apply bounds with
 `ToBounded` on a predictor, or penalties in your objective.
 
 ## Building expressions against a search space
@@ -277,7 +286,7 @@ produce `NaN` or infinity. Evaluation does not clamp results; apply bounds with
 `Build(searchSpace)` instead resolves each draft term against the search space's
 symbols, so the resulting nodes carry the origins that search-space-aware operators
 expect. Resolution succeeds only when every unbound term has exactly one viable
-symbol; zero or multiple matches are an error rather than an arbitrary choice.
+symbol. Zero or multiple matches are an error rather than an arbitrary choice.
 `TryBuild` gives the same resolution without throwing.
 
 Pass an explicit symbol when several would match with `Variable(name, variableSymbol)`.

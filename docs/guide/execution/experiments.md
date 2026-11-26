@@ -14,16 +14,17 @@ Summarize the distribution across repetitions.
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-summary{csharp}
 
-For example, a 100-generation genetic algorithm on the Rastrigin function can produce a distribution like this.
+The examples on this page run a genetic algorithm on the four-dimensional Rastrigin function with a population of 100, 100 generations, a blend crossover with `Alpha = 0.7` and a Gaussian mutator with rate and strength `0.2` and `0.15`. Twenty repetitions with seed `999` print:
 
 ```text
 trials:  20
 best:    0.0000
-median:  0.0009
-worst:   2.6617
+median:  0.0010
+worst:   0.9965
+reached below 0.01: 13 of 20
 ```
 
-The spread is the finding. The best trial reaches the optimum to the displayed precision and the worst is still at `2.66`, so quoting either number alone would misdescribe this configuration. Retain the seed and trial positions so you can reproduce an unusual run.
+The spread is the finding. The best trial reaches the optimum to the displayed precision, while seven of twenty stop near `0.995`, the nearest local minimum, so quoting either end alone would misdescribe this configuration. Retain the seed and trial positions so you can reproduce an unusual run.
 
 ## Explore a parameter grid
 
@@ -37,19 +38,29 @@ Group by typed settings and compare the distribution within each group. `BestOf`
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-grid-summary{csharp}
 
-An illustrative comparison on Rastrigin can look like this.
+With the same seed, the grid prints:
 
 ```text
 population  mutation   median      best
-        50       0.1   1.0024    0.0000
-        50       0.3   1.9899    1.9899
-       100       0.1   0.0019    0.0003
-       100       0.3   0.9951    0.0001
-       200       0.1   0.0030    0.0007
+        50       0.1   0.9953    0.0060
+        50       0.3   1.9899    0.9950
+       100       0.1   0.9955    0.0013
+       100       0.3   0.9950    0.0000
+       200       0.1   0.0000    0.0000
        200       0.3   0.0000    0.0000
 ```
 
-Read the median column, not the best column, to judge typical performance. The best column describes a single trial. At mutation rate `0.3`, even the best trial with a population of 50 stays near `1.99`, while the median with a population of 200 reaches the displayed optimum. The two settings interact. A high mutation rate needs a population large enough to hold onto good candidates while exploring, and judging either parameter on its own would miss that.
+<script setup>
+import grid from "../../.vitepress/figures/experiments-grid";
+</script>
+
+<ExperimentGrid v-bind="grid">
+
+Every trial of the grid. The heatmap shows the median of each configuration and the dot plot its five trials. With a population of 200 both rates reach the optimum in most trials.
+
+</ExperimentGrid>
+
+Read the median column, not the best column, to judge typical performance. The best column describes a single trial: with a population of 100 and mutation rate `0.3`, one trial reaches the optimum while the median stops at `0.995`. The two settings interact. With a population of 50, raising the mutation rate to `0.3` doubles the median, while with a population of 200 both rates reach the displayed optimum. A high mutation rate needs a population large enough to hold onto good candidates while exploring, and judging either parameter on its own would miss that.
 
 ## Combine grids
 
@@ -71,7 +82,7 @@ Create an explicit run when you want to process trials as they finish. Import `H
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Execution/ExperimentDocumentationSpecs.cs#experiment-concurrency{csharp}
 
-`ExecutionConcurrency` states how much independent work may overlap, such as the trials of an experiment or the candidates of an operator batch. `Sequential()` finishes each item in input order before it starts the next. `Concurrent()` allows all items to overlap, and `Concurrent(max)` caps how many are active at once without guaranteeing any order. None of them reserves or creates dedicated threads; they only limit overlap, and the runtime decides which threads run the work. Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
+`ExecutionConcurrency` states how much independent work may overlap, such as the trials of an experiment or the candidates of an operator batch. `Sequential()` finishes each item in input order before it starts the next. `Concurrent()` allows all items to overlap, and `Concurrent(max)` caps how many are active at once without guaranteeing any order. None of them reserves or creates dedicated threads. They only limit overlap, and the runtime decides which threads run the work. Limit concurrency when evaluation is CPU heavy or uses a constrained external resource.
 
 ## Run lifecycle
 
@@ -99,7 +110,7 @@ The analyzers of [Analysis of algorithm runs](/guide/execution/observability-and
 
 The example repeats each parameter candidate five times and groups the trials by `ParameterCandidateIndex`. For each trial it reads the best objective found within the same budget of 16 evaluations, because a larger population spends more evaluations per generation and would otherwise be compared on more work. It then reports the median and the range over the repetitions, so a difference between parameter candidates can be judged against the spread between seeds.
 
-The analyzer observes whole evaluated batches, so choose a budget that every compared configuration reaches at a batch boundary. Here each algorithm runs four generations, one evaluated batch each: a population of 4 reaches 16 evaluations after four batches and a population of 8 after two. With a budget of 12, the population of 4 would be read after three full batches while the population of 8 would be read after only one, since its second batch ends at 16. The point read at the budget is the last improvement retained up to it, so it may come from an earlier batch when the later ones found nothing better. The budget is small here so the example runs quickly; choose one that matches the work you want to compare.
+The analyzer observes whole evaluated batches, so choose a budget that every compared configuration reaches at a batch boundary. Here each algorithm runs four generations, one evaluated batch each: a population of 4 reaches 16 evaluations after four batches and a population of 8 after two. With a budget of 12, the population of 4 would be read after three full batches while the population of 8 would be read after only one, since its second batch ends at 16. The point read at the budget is the last improvement retained up to it, so it may come from an earlier batch when the later ones found nothing better. The budget is small here so the example runs quickly. Choose one that matches the work you want to compare.
 
 Grid variation creates new configurations, so a source named on the prototype matches only a parameter candidate that retains its target. A source named on the prototype root, such as `algorithm.Iterations`, matches the original in `algorithm.Repeat(n)`. A source named on the prototype or on a child the grid replaces fails placement when its target is absent. Use default selections on grids or name a child shared by the parameter candidates.
 

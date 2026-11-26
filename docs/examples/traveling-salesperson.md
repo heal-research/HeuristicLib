@@ -14,52 +14,9 @@ Download [`berlin52.tsp`](https://github.com/heal-research/HeuristicLib/blob/mai
 
 ## Configure the search
 
-```csharp
-using HEAL.HeuristicLib.Algorithms;
-using HEAL.HeuristicLib.Random;
-using HEAL.HeuristicLib.Analysis;
-using HEAL.HeuristicLib.Inspection;
-using HEAL.HeuristicLib.Encodings.Permutations;
-using HEAL.HeuristicLib.Operators;
-using HEAL.HeuristicLib.Problems.TravelingSalesman;
+<<< ../../test/HeuristicLib.Tests.Docs/Examples/TravelingSalespersonDocumentationSpecs.cs#traveling-salesperson-imports{csharp}
 
-var instance = TsplibTspInstanceProvider.LoadData(
-    "berlin52.tsp",
-    bestQuality: 7542);
-var problem = new TravelingSalesmanProblem(instance.ToCoordinatesData());
-
-var algorithm = GeneticAlgorithm.For(
-    problem,
-    crossover: new EdgeRecombinationCrossover(),
-    selector: TournamentSelector.For(problem, tournamentSize: 3),
-    populationSize: 300,
-    maximumGenerations: 1000,
-    mutationRate: 0.25);
-
-var qualityAnalyzer = algorithm.Iterations.TracePopulationCandidates();
-var run = algorithm.CreateRun(
-    problem, RandomNumberGenerator.Create(seed: 42), [qualityAnalyzer]);
-
-await run.CompleteAsync();
-
-var qualityCurve = run.Result(qualityAnalyzer).Snapshot().Values;
-var best = run.Result(qualityAnalyzer).RequireLatestValue().Best;
-
-Console.WriteLine($"Execution: {instance.Name}");
-Console.WriteLine($"Best tour length: {best.ObjectiveVector[0]:F0}");
-
-foreach (var (entry, generation) in
-         qualityCurve.Select((entry, index) => (entry, index + 1)))
-{
-    if (generation % 100 != 0) continue;
-
-    Console.WriteLine(
-        $"{generation,4}: " +
-        $"best {entry.Best.ObjectiveVector[0],8:F0}  " +
-        $"median {entry.Median.ObjectiveVector[0],8:F0}  " +
-        $"worst {entry.Worst.ObjectiveVector[0],8:F0}");
-}
-```
+<<< ../../test/HeuristicLib.Tests.Docs/Examples/TravelingSalespersonDocumentationSpecs.cs#traveling-salesperson-program{csharp}
 
 Run it with `dotnet run`. The search takes a few seconds:
 
@@ -78,6 +35,17 @@ Best tour length: 7797
 1000: best     7797  median     7797  worst    10181
 ```
 
+<script setup>
+import tours from "../.vitepress/figures/traveling-salesperson-tours";
+import curve from "../.vitepress/figures/traveling-salesperson-curve";
+</script>
+
+<TourPanels v-bind="tours">
+
+The best tour of the population at four generations of this run. The known optimum is 7542. Point at a city to see its coordinates and where each tour visits it.
+
+</TourPanels>
+
 ## Recommendations and the explicit crossover
 
 A valid tour contains each city once. Permutation creators and variation operators preserve that invariant. A real or integer vector operator could introduce duplicate cities and omit others.
@@ -90,11 +58,17 @@ Edge recombination tries to retain city adjacencies from both parents. Inversion
 
 ## Read the quality curve
 
-`TracePopulationCandidates` ranks the population of each generation, so the three columns describe the current population, not the whole run. The best column is the shortest tour in that generation's population. It can differ from the shortest tour evaluated so far, because an evaluated offspring that replacement discards never appears in a population; read the best found so far with `Analyzer.BestSoFar<Permutation>()`. The median shows whether improvement reaches the population rather than one elite.
+`TracePopulationCandidates` ranks the population of each generation, so the three columns describe the current population, not the whole run. The best column is the shortest tour in that generation's population. It can differ from the shortest tour evaluated so far, because an evaluated offspring that replacement discards never appears in a population. Read the best found so far with `Analyzer.BestSoFar<Permutation>()`. The median shows whether improvement reaches the population rather than one elite.
+
+<LineChart v-bind="curve">
+
+Every generation of the same run, as distance above the known optimum on a log scale. Best and median meet and stay together while the worst tour keeps varying.
+
+</LineChart>
 
 The known optimum for `berlin52` is `7542`, and seed `42` finishes at `7797`, about 3.4 percent above it. The best value is `7797` at generation 300 and in every remaining row shown. The median also equals the best in those rows, so at least half of each reported population has that tour length. The worst value stays near `10000`, so those populations still contain much longer tours.
 
-Equal lengths suggest, but do not prove, that the population has converged onto one tour; different tours can have the same length. To check, trace the number of distinct tours in each generation:
+Equal lengths suggest, but do not prove, that the population has converged onto one tour. Different tours can have the same length. To check, trace the number of distinct tours in each generation:
 
 ```csharp
 var distinctTours = algorithm.Iterations.Trace(observation =>

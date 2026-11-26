@@ -4,9 +4,9 @@ Start with a complete optimization task. Each example provides a runnable config
 
 ## Solve a problem
 
-### Numeric optimization
+### Compare algorithms
 
-[Minimize the Rastrigin function](/examples/numeric-optimization) with a genetic algorithm over real vectors. This is the shortest example and a good first test of an installation.
+[Compare a genetic algorithm with a hill climber](/examples/compare-algorithms) on a smooth and a multimodal function, at the same evaluation budget over twenty seeds. The example shows how to judge which algorithm suits a problem.
 
 ### Traveling salesperson
 
@@ -32,4 +32,4 @@ Start with a complete optimization task. Each example provides a runnable config
 
 [Fit an expression from Python](/examples/python-symbolic-regression) through pythonnet. The example configures a run, observes each population and reads the best model without hiding the .NET boundary.
 
-To define a new problem or write a reusable component, read [Problems](/guide/fundamentals/problems), [Writing operators](/guide/extending/writing-operators) and [Writing algorithms](/guide/extending/writing-algorithms).
+To define a new problem or write a reusable component, read [Problems](/guide/fundamentals/problems) and [Extend HeuristicLib](/extend/).

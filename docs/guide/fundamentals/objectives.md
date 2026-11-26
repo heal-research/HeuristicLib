@@ -50,5 +50,5 @@ Repeated experiments should summarize distributions across runs. A median and sp
 
 ## Next steps
 
-- [Operators](/guide/fundamentals/operators) continues the Fundamentals path with the roles that produce and change candidates.
+- [Operators](/guide/fundamentals/operators) continues the guide with the roles that produce and change candidates.
 - [Experiments](/guide/execution/experiments) summarizes repeated runs.

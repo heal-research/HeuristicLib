@@ -25,8 +25,10 @@ public sealed class ProblemWithObjective<TCandidate, TSearchSpace>(
 
     public IReadOnlyList<ObjectiveVector> Evaluate(
         IReadOnlyList<TCandidate> candidates,
-        IRandomNumberGenerator random) =>
-        problem.Evaluate(candidates, random);
+        IRandomNumberGenerator random)
+    {
+        return problem.Evaluate(candidates, random);
+    }
 }
 #endregion operator-objective-problem
 

@@ -2,15 +2,6 @@
 
 Use this reference when a term is unfamiliar or has a specific meaning in HeuristicLib. It holds the most important concepts in tiers, from fundamental to specialized. The guide introduces the same concepts through working examples, and the contributor architecture pages describe the machinery behind them.
 
-## Status labels
-
-Glossary entries may identify related terms by status:
-
-- `Canonical`: the preferred project term.
-- `Alias`: an accepted alternate term that may be useful in prose.
-- `Avoid`: a term that should not be used for this concept, usually because it has a different meaning or creates ambiguity.
-- `Provisional`: a current term or candidate term that may change after further design discussion.
-
 ## Fundamental concepts
 
 ### Problem
@@ -47,7 +38,7 @@ Status: `Canonical`
 
 A search space is the algorithm-facing domain of valid candidates.
 
-The search space defines which candidates algorithms and operators may create, transform, and evaluate. It is not necessarily the same as the broader domain-facing solution space; their relationship depends on the representation used for search.
+The search space defines which candidates algorithms and operators may create, transform, and evaluate. It is not necessarily the same as the broader domain-facing solution space. Their relationship depends on the representation used for search.
 
 Related terms:
 
@@ -171,7 +162,7 @@ Status: `Canonical`
 
 A refiner is the operator role that works on existing candidates to improve a chosen aspect of them, such as fitting candidate parameters, repairing invalid candidates, simplifying representations or applying local improvement.
 
-A refiner may use an evaluator when objective values guide the refinement. Continuing the search with the refined candidate is Lamarckian refinement; refinement evaluation instead evaluates a temporary refined candidate and associates its objective vector with the original candidate, providing Baldwinian refinement.
+A refiner may use an evaluator when objective values guide the refinement. Continuing the search with the refined candidate is Lamarckian refinement. Refinement evaluation instead evaluates a temporary refined candidate and associates its objective vector with the original candidate, providing Baldwinian refinement.
 
 See also: Creator, Evaluator, Mutator, Operator.
 
@@ -284,7 +275,7 @@ A configuration graph is the graph of reusable configuration nodes connected by 
 
 A configuration node is a configuration considered as a node in that graph. Its identity is the configuration object's reference, not its value equality or one occurrence along a caller path, so several configurations may refer to the same child node. Configuration is accepted shorthand for configuration node when the context is clear.
 
-Use graph rather than tree because the same configuration object may be shared from more than one place. Do not use DAG as the glossary term; ordinary configuration graphs are expected to be acyclic, but the glossary term should not encode that stricter shape.
+Use graph rather than tree because the same configuration object may be shared from more than one place. Do not use DAG as the glossary term. Ordinary configuration graphs are expected to be acyclic, but the glossary term should not encode that stricter shape.
 
 See also: Child operator, Configuration, Resolution scope, Substitution.
 
@@ -310,7 +301,7 @@ See also: Configuration graph, Invocation wrapper, Substitution group.
 
 Status: `Canonical`
 
-A substitution group holds substitutions that belong together, such as the parts of an analyzer. A part may itself be a group; a group containing itself is an error. Later parts sit closer to their targets.
+A substitution group holds substitutions that belong together, such as the parts of an analyzer. A part may itself be a group. A group containing itself is an error. Later parts sit closer to their targets.
 
 See also: Analyzer, Clock, Substitution.
 
@@ -346,7 +337,7 @@ A meta-algorithm is an algorithm whose search process is defined by coordinating
 
 A meta-algorithm is still an algorithm: it produces search states as part of a run and may be used wherever an algorithm is expected. The distinction is that a meta-algorithm coordinates algorithms, not just operators.
 
-Do not confuse a meta-algorithm with an experiment. A meta-algorithm composes child algorithms inside one run; an experiment coordinates multiple independent runs.
+Do not confuse a meta-algorithm with an experiment. A meta-algorithm composes child algorithms inside one run. An experiment coordinates multiple independent runs.
 
 Related terms:
 
@@ -410,7 +401,7 @@ Status: `Canonical`
 
 An analyzer defines what a run collects from observations and how the observation wrappers are placed. A result-producing analyzer is an immutable configuration that creates one run result for each run, read with `run.Result(analyzer)`. It is a substitution group: pass it to `CreateRun` to analyze one run, or place it with `Substitute` to keep it in the resulting configuration.
 
-Reusing an analyzer across runs keeps their data independent. A trace analyzer records a history of values; other analyzers, such as [best-so-far](/guide/execution/observability-and-analysis#best-so-far-selection-and-placement) and [aggregate](/guide/execution/observability-and-analysis#accumulating-analyzers) analyzers, are covered in the [analysis guide](/guide/execution/observability-and-analysis).
+Reusing an analyzer across runs keeps their data independent. A trace analyzer records a history of values. Other analyzers, such as [best-so-far](/guide/execution/observability-and-analysis#best-so-far-selection-and-placement) and [aggregate](/guide/execution/observability-and-analysis#accumulating-analyzers) analyzers, are covered in the [analysis guide](/guide/execution/observability-and-analysis).
 
 Use Roslyn analyzer for compiler diagnostics when the context could be ambiguous.
 
@@ -492,7 +483,7 @@ An operation is distinct from the executor that performs it: one executor can su
 
 Related terms:
 
-- `Call`, `operation call`: `Alias`. Plain prose may say call; names say invocation.
+- `Call`, `operation call`: `Alias`. Plain prose may say call. Names say invocation.
 
 See also: Executor, Invocation wrapper, Operator, Operator roles.
 
@@ -564,3 +555,12 @@ A problem instance is the concrete domain data or parameterization for a problem
 Do not use problem instance to mean an ordinary programming-language object instance of a problem class.
 
 See also: Problem.
+
+## Status labels
+
+Glossary entries may identify related terms by status:
+
+- `Canonical`: the preferred project term.
+- `Alias`: an accepted alternate term that may be useful in prose.
+- `Avoid`: a term that should not be used for this concept, usually because it has a different meaning or creates ambiguity.
+- `Provisional`: a current term or candidate term that may change after further design discussion.

@@ -57,4 +57,4 @@ Search states are not automatically durable checkpoints. If an application needs
 
 ## Next steps
 
-- [Randomness](/guide/execution/randomness) continues the Execution path with seeds and independent streams.
+- [Randomness](/guide/execution/randomness) continues the guide with seeds and independent streams.

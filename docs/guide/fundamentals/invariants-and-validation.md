@@ -38,102 +38,18 @@ Use `BitSwapMutator` over a fixed cardinality space. Creating a run checks both 
 
 The second check compares what the space and the operator **declare**. It does not run the operator. An operator that
 declares nothing about cardinality is not reported, even if its output can change the count, and an operator whose
-declaration is wrong is believed. [Declarations are claims, so check them](#declarations-are-claims-so-check-them)
+declaration is wrong is believed. [Declarations are claims, so check them](/extend/declaring-invariants#declarations-are-claims-so-check-them)
 shows how to test a declaration against sample candidates.
 
-## The three pieces
+## Operator invariants
 
-### An invariant is a property a candidate can have
+The second check compares declarations. An **invariant** is a property a candidate can have. A **search space** states the invariants its members satisfy. An **operator** states which invariants its output keeps and which its input needs. [Declaring invariants](/extend/declaring-invariants) shows how to declare them for a search space or operator of your own and how to test that a declaration holds.
 
-`ICandidateInvariant<TCandidate>` is a named property, ordinarily a record so equality is by value:
+<InvariantCheck>
 
-```csharp
-public sealed record BoolVectorCardinality(int Cardinality) : ICandidateInvariant<BoolVector>
-{
-    public string Name => $"Cardinality({Cardinality})";
+The invariants a fixed cardinality space states, against what three mutators declare about their output. An operator that declares it does not keep an invariant is refused. One that declares nothing is not reported.
 
-    public bool Holds(BoolVector candidate) => candidate.TrueCount() == Cardinality;
-}
-```
-
-`Implies` is the one member with a non-obvious job. It answers whether holding _this_ invariant is enough to guarantee another one, and defaults to value equality. Override it where one invariant is strictly stronger:
-
-```csharp
-public bool Implies(ICandidateInvariant<BoolVector> other) => other switch
-{
-    BoolVectorCardinality cardinality => cardinality.Cardinality == Cardinality,
-    BoolVectorMinimumSetElements minimum => Cardinality >= minimum.Minimum,
-    _ => false
-};
-```
-
-An exact cardinality of 5 implies "at least 2", so an operator requiring the latter is satisfied by a space guaranteeing the former.
-
-Nothing enumerates invariants. Any type may declare a new one, and a custom search space is expected to.
-
-### A search space states what its members satisfy
-
-```csharp
-public record FixedCardinalityBoolVectorSearchSpace : SearchSpace<BoolVector>
-{
-    // ... constructor, Length and Cardinality properties, and Contains override omitted.
-
-    public override ValueArray<ICandidateInvariant<BoolVector>> Invariants =>
-        [new BoolVectorLength(Length), new BoolVectorCardinality(Cardinality)];
-}
-```
-
-The default `ValueArray<T>` is empty. A space that declares no invariants gives an operator no output invariant to answer for, so the output check passes for every operator over its candidate representation. An operator that requires an invariant is still rejected there, because nothing the space declares entails it.
-
-### An operator states its side of the deal
-
-`IOperatorContract<TCandidate>` has two halves, and they decide two independent checks:
-
-```csharp
-public record BitSwapMutator
-    : SingleCandidateMutator<BoolVector, FixedCardinalityBoolVectorSearchSpace>, IOperatorContract<BoolVector>
-{
-    public bool? Ensures(ICandidateInvariant<BoolVector> invariant) => invariant switch
-    {
-        BoolVectorLength or BoolVectorCardinality => true,
-        _ => null
-    };
-
-    public override BoolVector MutateCandidate(
-        BoolVector parent,
-        IRandomNumberGenerator random,
-        FixedCardinalityBoolVectorSearchSpace searchSpace) => ...;
-}
-```
-
-`Ensures` is three-valued, and the third value is the important one:
-
-| Answer  | Meaning                                                  | Effect                         |
-| ------- | -------------------------------------------------------- | ------------------------------ |
-| `true`  | Every candidate this operator produces has the invariant | Compatible for that invariant  |
-| `false` | The output may not have it                               | Reported as an incompatibility |
-| `null`  | The operator states nothing                              | Not checked                    |
-
-So **declaring is opt-in, per invariant**. An operator that implements nothing, or answers `null`, is never reported. Adding an invariant to a search space therefore does not invalidate operators that make no claim about it.
-
-`Ensures` describes the operator's output. For a mutator, `true` means it keeps the invariant of its input; for a creator, it means every created candidate has it.
-
-The other half is `Requires`, the invariants an operator needs of the candidates handed to it:
-
-```csharp
-public ValueArray<ICandidateInvariant<BoolVector>> Requires => [new BoolVectorMinimumSetElements(2)];
-```
-
-An operator that swaps the second set element cannot be handed a candidate with fewer than two, so it is usable over a fixed cardinality space with a cardinality of at least two and not over an unconstrained one. A bit flip fails the other way: it accepts every bool vector, and its output can leave a fixed cardinality space. Neither check finds the other's failure, so both run.
-
-## How the two invariant checks run
-
-Given an operator and a search space:
-
-1. **Output check.** For each invariant the space states of its members, if the operator's `Ensures` answers `false`, the operator's output may leave the space.
-2. **Input check.** For each invariant in `Requires`, if no invariant the space states `Implies` it, the operator may be handed a candidate it cannot accept.
-
-Each failure becomes a diagnostic naming the invariant that decided it, so a message says which operator to change and why.
+</InvariantCheck>
 
 ## Operator type compatibility {#the-other-question-was-it-written-for-this-run-at-all}
 
@@ -149,7 +65,10 @@ public sealed record TravellingSalesmanSpecificCrossover
         Parents<Permutation> parents,
         IRandomNumberGenerator random,
         PermutationSearchSpace searchSpace,
-        TravelingSalesmanProblem problem) => ...;
+        TravelingSalesmanProblem problem)
+    {
+        // ...
+    }
 }
 ```
 
@@ -166,22 +85,7 @@ Pre-run validation and execution apply the same type rules to configurations rea
 An executor can still fail during construction, and a child created at runtime outside the declared graph is
 first checked for type compatibility when the run resolves it.
 
-### A composition answers for what it resolves
-
-Validation asks each configuration about itself and then follows the children it declares as parameters, so an
-operator nested inside a composition is checked with the rest of the graph. A child is checked against its owner's
-run. A composition that resolves a child under different types declares those types on the child's parameter, and
-the child and everything below it are checked against them instead.
-
-The walk reaches a child only through its declaration. A composition that leaves a child undeclared loses the check
-for that child; it does not get a wrong answer. An entry of a `ReferenceListParameter` names a configuration that lives
-elsewhere in the graph and is checked there. A value declared with a `SettingParameter` is data, even when its type
-closes over a configuration, so it is not checked.
-
-To declare children in your own composition, see
-[Authoring a composition](/guide/extending/operator-composition#authoring-a-composition). To resolve a child under
-another problem and declare that on its parameter, see
-[Resolve an operator under another objective](/guide/extending/writing-operators#resolve-an-operator-under-another-objective).
+Validation follows the children a composition declares, so nested operators are checked with the rest of the graph. [A composition answers for what it resolves](/extend/declaring-invariants#a-composition-answers-for-what-it-resolves) states how a composition declares a child resolved under other types.
 
 ## When validation happens
 
@@ -232,7 +136,7 @@ just as `validate: false` does. Call `ValidateAndThrow` first when you want the 
 
 Validation walks the configuration graph over declared parameters, following each configuration a parameter holds or names. It therefore reaches operators nested inside compositions, and it works for algorithms and operators written outside the library that declare their parameters. A configuration that declares nothing is a leaf to the walk.
 
-Because it reads what each configuration declares rather than building anything, it reaches operators a run would only construct much later. A cycling algorithm resolves each stage lazily, once per cycle and during the run; an operator at fault inside one of those stages is still reported before the run starts.
+Because it reads what each configuration declares rather than building anything, it reaches operators a run would only construct much later. A cycling algorithm resolves each stage lazily, once per cycle and during the run. An operator at fault inside one of those stages is still reported before the run starts.
 
 Diagnostics carry the path that leads to the operator:
 
@@ -246,28 +150,6 @@ Console.WriteLine(report.Diagnostics.Single().Path); // PipelineMutator`1.ChildO
 A composition's own failure is suppressed when a child already reported the same invariant. A composed operator inherits its children's limits, so repeating them would bury the one diagnostic naming the operator you actually have to change.
 
 The walk runs once per validation and never during a run, so it costs nothing per iteration.
-
-## Declarations are claims, so check them
-
-Nothing forces `Ensures` to be truthful. An operator can claim to preserve cardinality and not do it, and the compatibility check will believe it — the check compares declarations, it does not execute operators.
-
-`OperatorContractVerification.Verify` closes that loop by running the operator over sample candidates and testing the result with `Holds`:
-
-```csharp
-var violations = OperatorContractVerification.Verify(
-    mutator,
-    constrained,
-    samples,
-    candidate => mutator.MutateCandidate(candidate, random, constrained));
-
-violations.ShouldBeEmpty();
-```
-
-Compatibility checking never calls `Holds`; it compares declarations. `Verify` is where `Holds` is applied to actual
-output.
-
-Write this test for any operator that declares a contract. Validation trusts every declaration, so a declared
-invariant that does not hold lets an operator through that leaves the space.
 
 ## Choose the right check
 
@@ -284,7 +166,9 @@ nothing the space states implies it.
 
 ## Next steps
 
+- [Algorithm runs](/guide/execution/running-algorithms) continues the guide with running a configuration.
 - [Configurations](/guide/fundamentals/configurations) — the configuration graph that validation walks.
 - [Search spaces](/guide/fundamentals/search-spaces) — the spaces these invariants describe.
 - [Operators](/guide/fundamentals/operators) — choosing operators for a representation.
-- [Operator composition](/guide/extending/operator-composition) — how composed operators combine their children's contracts.
+- [Operator composition](/guide/fundamentals/operator-composition) — how composed operators combine their children's contracts.
+- [Declaring invariants](/extend/declaring-invariants) — invariants and contracts for components of your own.

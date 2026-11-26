@@ -1,6 +1,6 @@
 # Configurations
 
-An algorithm and its operators are **configurations**: immutable data that describe what to run. A run builds **executors** from them and holds all runtime state there ([Core concepts](/guide/fundamentals/core-concepts#configurations-and-executors)). This page covers what you can do with a configuration before it runs: read it, rewrite it and decide which executors a run shares.
+An algorithm and its operators are **configurations**: immutable data that describe what to run. A run builds **executors** from them and holds all runtime state there ([Introduction](/guide/#configurations-and-executors)). This page covers what you can do with a configuration before it runs: read it, rewrite it and decide which executors a run shares.
 
 ## The configuration graph
 
@@ -10,7 +10,7 @@ Identity in the graph is the object reference. Two `GaussianMutator` configurati
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Fundamentals/ConfigurationDocumentationSpecs.cs#configuration-graph{csharp}
 
-Every configuration declares its settings and children as **parameters**. A parameter reports the child configurations it holds for a given owner with `GetChildren`. The graph consists of what the declared parameters reach, so a configuration that declares no parameters is a leaf. [Why the configuration declares its properties](/guide/extending/writing-algorithms#why-the-configuration-declares-its-properties) explains how authors declare them.
+Every configuration declares its settings and children as **parameters**. A parameter reports the child configurations it holds for a given owner with `GetChildren`. The graph consists of what the declared parameters reach, so a configuration that declares no parameters is a leaf. [Why the configuration declares its properties](/extend/writing-algorithms#why-the-configuration-declares-its-properties) explains how authors declare them.
 
 ## Declared parameters
 
@@ -30,7 +30,7 @@ By convention a configuration is data: it compares by value and can be serialize
 
 Library configurations that hold delegates run your code, such as `Observing` callbacks and `Trace` functions, so the same consequences apply to a graph that contains them.
 
-## Substitution with `Substitute` {#rewriting-a-graph-with-substitute}
+## Change a configuration {#change-the-configuration}
 
 Three tools change a configuration, and each suits a different reach:
 
@@ -40,7 +40,17 @@ Three tools change a configuration, and each suits a different reach:
 | Configurations anywhere in the graph, kept for later runs | `Substitute`                             |
 | Instrumentation or another change for one run only        | The substitutions list of `CreateRun`    |
 
-[Change the configuration](/examples/numeric-optimization#change-the-configuration) uses all three on one algorithm.
+A configuration is immutable, so every change creates a new configuration and leaves the original as it was. This example applies all three to `algorithm`, a genetic algorithm like the one in [Getting started](/guide/getting-started), on its `problem`. Add `using HEAL.HeuristicLib.Execution;` for `Substitute` and `using HEAL.HeuristicLib.Inspection;` for `Counter`:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Fundamentals/ConfigurationDocumentationSpecs.cs#configuration-change-workflow{csharp}
+
+- **`with`** changes a property of the configuration you hold, here the population size of the algorithm.
+- **`Substitute`** changes configurations inside the graph. A lambda typed by `GaussianMutator` selects every Gaussian mutator, including one inside a composed operator or a stage of a cycle, where `with` on the algorithm cannot reach.
+- **The substitutions list of `CreateRun`** applies a change to one run only. Counting is instrumentation, so it belongs to the run, not to the configuration you keep. Take the evaluator from `finerMutation`, the configuration you pass to `CreateRun`.
+
+Keep `largerPopulation` and `finerMutation` when you want to run or compare them again. The next sections state the rules for `Substitute` and for the substitutions list.
+
+## Substitution with `Substitute` {#rewriting-a-graph-with-substitute}
 
 `Substitute` rewrites a configuration graph before it runs. It returns a new configuration with the selected configurations replaced and leaves the receiver unchanged. The result has the receiver's static type, so a replacement of the receiver itself must be assignable to that type. The role interface, such as `IOperator<Evaluation, RealVector>`, is the usual type for a receiver that a wrapper replaces, and a compatible base type also works. A wrapper does not fit a receiver typed by a concrete configuration it does not derive from, and `Substitute` throws `InvalidOperationException`. The result is an ordinary configuration, equal by value to the same graph written by hand, as far as its nodes have value equality. It is the configuration that runs, so run it like any other. Whether you can compare or store it depends on what the graph contains: a `Counter` compares by reference, and a node that holds a delegate cannot be persisted.
 
@@ -77,7 +87,7 @@ When you cannot hold a reference to the target, for example because a factory me
 - A replacement must fit the slot of the configuration it replaces. Otherwise `Substitute` throws `InvalidOperationException`.
 - A substitution is never stored. It is applied once and only its result exists, so persist the configuration it produced. A node of that result that holds a delegate, such as a `Trace` function or an `Observing` callback, cannot be persisted. The state a callback captures belongs to you and survives reuse of the configuration across runs.
 
-[Operator composition](/guide/extending/operator-composition) and [Writing wrappers](/guide/extending/writing-wrappers) show how authors write substitutions that wrap operators, and [Analysis of algorithm runs](/guide/execution/observability-and-analysis) shows the counters, clocks and analyzers that run through them.
+[Operator composition](/guide/fundamentals/operator-composition) and [Writing wrappers](/extend/writing-wrappers) show how authors write substitutions that wrap operators, and [Analysis of algorithm runs](/guide/execution/observability-and-analysis) shows the counters, clocks and analyzers that run through them.
 
 ## Substituting for one run
 
@@ -101,11 +111,11 @@ Counters and durations follow the same rule with one difference. The accumulator
 
 Share only what should persist. Sharing a cached evaluator of a cycle, for example, keeps the cache across turns while terminators and budgets restart. `Sharing` does not synchronize concurrent use.
 
-`Substitute` keeps a `Sharing` entry pointing at the configuration it shares. When a substitution replaces a shared configuration outright, the entry names the replacement. When it wraps the shared configuration, for example with a counter, the entry keeps naming the inner configuration, which the wrapper still contains. When a substitution changes a child of the shared configuration, the entry names the changed copy. Naming a configuration that appears only in a `Sharing` entry, and in no slot, throws. [Writing meta-algorithms](/guide/extending/writing-meta-algorithms) and [execution resolution](/contributing/architecture/execution-resolution#shared-configurations) describe the scope rules and the author's responsibilities.
+`Substitute` keeps a `Sharing` entry pointing at the configuration it shares. When a substitution replaces a shared configuration outright, the entry names the replacement. When it wraps the shared configuration, for example with a counter, the entry keeps naming the inner configuration, which the wrapper still contains. When a substitution changes a child of the shared configuration, the entry names the changed copy. Naming a configuration that appears only in a `Sharing` entry, and in no slot, throws. [Writing meta-algorithms](/extend/writing-meta-algorithms) and [execution resolution](/contributing/architecture/execution-resolution#shared-configurations) describe the scope rules and the author's responsibilities.
 
 ## Next steps
 
-- [Validation and invariants](/guide/fundamentals/invariants-and-validation) continues the Fundamentals path with what a run checks before it starts.
+- [Operator composition](/guide/fundamentals/operator-composition) continues the guide with configurations that combine operators.
 - [Algorithm runs](/guide/execution/running-algorithms) and [Experiments](/guide/execution/experiments) use configurations in runs and in comparisons.
-- [Operator composition](/guide/extending/operator-composition) and [Writing wrappers](/guide/extending/writing-wrappers) show how to author configurations that wrap and compose others.
-- The [glossary](/guide/glossary) defines configuration, configuration graph, parameter, substitution and shared configuration.
+- [Operator composition](/guide/fundamentals/operator-composition) and [Writing wrappers](/extend/writing-wrappers) show how to author configurations that wrap and compose others.
+- The [glossary](/reference/glossary) defines configuration, configuration graph, parameter, substitution and shared configuration.

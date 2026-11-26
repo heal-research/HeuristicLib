@@ -2,7 +2,7 @@
 
 This is the canonical implementation and architecture guide for HeuristicLib contributors. It turns the [design goals](/contributing/design-goals) into rules for code, public APIs and repository changes.
 
-Use the [Glossary](/guide/glossary) for terminology and `AGENTS.md` for repository workflow. Topic documentation owns public contracts and examples.
+Use the [Glossary](/reference/glossary) for terminology and `AGENTS.md` for repository workflow. Topic documentation owns public contracts and examples.
 
 Cite a section as `§ 4` and a rule as `§ 4.2`. Rule numbers are stable. Add rules at the end of their section and do not reuse removed numbers.
 
@@ -15,7 +15,7 @@ Each steering document has one responsibility:
 | [Requirements](/contributing/requirements)                 | What the library must support and which capability boundaries matter                                |
 | [Design goals and principles](/contributing/design-goals)  | Which durable qualities the resulting library should have                                           |
 | [Developer guidelines](/contributing/developer-guidelines) | How contributors implement those requirements and goals                                             |
-| [Glossary](/guide/glossary)                                | Which terminology is canonical                                                                      |
+| [Glossary](/reference/glossary)                            | Which terminology is canonical                                                                      |
 | GitHub Issues                                              | Concrete problems, feature requests and design repairs, with the decisions belonging to that work   |
 | `AGENTS.md`                                                | How contributors navigate and validate the repository and which design changes agents discuss first |
 
@@ -59,7 +59,7 @@ Evaluate requirements and correctness, readability, architecture, relevant secur
 - Check findings against the actual callers, contracts and tests. Cite the affected code, the relevant requirement or principle and the practical consequence.
 - For a structural concern, describe a simpler alternative and its tradeoffs. Consider deletion, inlining and consolidation as well as extraction. Explain whether complexity disappears or merely moves.
 - Judge simplicity by the concepts, ownership rules and coordination a reader or extension author must understand. Line counts, file sizes and repeated syntax are inspection signals, not automatic reasons to split or generalize.
-- Distinguish required fixes from optional suggestions, and problems introduced by the change from pre-existing concerns. Do not invent findings; no material concern is a valid conclusion.
+- Distinguish required fixes from optional suggestions, and problems introduced by the change from pre-existing concerns. Do not invent findings. No material concern is a valid conclusion.
 - Justify useful abstractions as well as questioning unnecessary ones. A pattern name or a SOLID label alone is not evidence that a design is better.
 
 ### § 2.5 Express new scenarios with existing mechanisms
@@ -143,7 +143,7 @@ Use these values when designing, implementing and reviewing code. Each must expl
 
 | Value                                                    | Application in HeuristicLib                                                                                                                                                                                                                 |
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| KISS and YAGNI                                           | Prefer the simplest coherent design that meets the requirements. Add abstractions and extension points for demonstrated needs or required capability boundaries; explain what knowledge or coordination they remove.                        |
+| KISS and YAGNI                                           | Prefer the simplest coherent design that meets the requirements. Add abstractions and extension points for demonstrated needs or required capability boundaries. Explain what knowledge or coordination they remove.                        |
 | DRY                                                      | Give each semantic rule one owner. Similar syntax alone does not justify combining behavior that changes for different reasons.                                                                                                             |
 | Single responsibility and cohesion                       | Keep behavior that changes for the same reasons together. Separate independent policies and state lifetimes without fragmenting cohesive behavior into trivial types.                                                                       |
 | Separation of concerns and abstraction levels            | Keep composition and resolution distinct from operation behavior. Make orchestration readable without forcing every small operation into another helper.                                                                                    |
@@ -152,13 +152,13 @@ Use these values when designing, implementing and reviewing code. Each must expl
 | Interface segregation                                    | Require only capabilities a client needs. An external operation should not implement unrelated candidate or problem contracts.                                                                                                              |
 | Open/closed and external extensibility                   | Extend through declared contracts, with consumer-provided types participating as § 3.3 requires. Do not enumerate built-in cases in shared mechanisms. This does not prevent deliberate alpha API changes under § 1.1.                      |
 | Information hiding and least astonishment                | Expose necessary capabilities and predictable costs, defaults and side effects. Keep construction details and private execution state behind the responsible boundary.                                                                      |
-| Tell, don't ask and the Law of Demeter                   | Put invariant-preserving behavior with its owner and avoid callers navigating another object's internals. Value-oriented candidate and search-state data remains appropriate; do not add forwarding layers merely to shorten access chains. |
-| Component orientation and implementation reflects design | Give components coherent contracts and explicit dependencies. Organize code by the existing responsibility layers; a framework pattern or folder layout is not a design goal by itself.                                                     |
+| Tell, don't ask and the Law of Demeter                   | Put invariant-preserving behavior with its owner and avoid callers navigating another object's internals. Value-oriented candidate and search-state data remains appropriate. Do not add forwarding layers merely to shorten access chains. |
+| Component orientation and implementation reflects design | Give components coherent contracts and explicit dependencies. Organize code by the existing responsibility layers. A framework pattern or folder layout is not a design goal by itself.                                                     |
 
 ### § 3.7 Introspect through declarations, not reflection
 
 Avoid reflection in library logic and tests. A walk over a configuration graph reads the declared parameters through
-`GetParameters`, and a question about a configuration is a member it answers, such as `Supports`; the declared parameter
+`GetParameters`, and a question about a configuration is a member it answers, such as `Supports`. The declared parameter
 walk is not reflection. Comparing types with `typeof` and `IsAssignableTo` is ordinary type checking. Reflection that
 only words an exception message is acceptable. Architecture and arity tests read source through the Roslyn compilation
 the architecture tests build, and reading assembly references from metadata remains acceptable. A check that must see
@@ -170,7 +170,7 @@ See [execution resolution](/contributing/architecture/execution-resolution) for 
 
 ### § 4.1 Separate reusable configurations from executors
 
-Configurations own immutable settings, child configurations and analyzers. Executors own private mutable data. Share an executor explicitly with `Sharing`; analyzer results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
+Configurations own immutable settings, child configurations and analyzers. Executors own private mutable data. Share an executor explicitly with `Sharing`. Analyzer results belong to one run. Invocation-local values stay in the operation or iterator. Never store mutable execution data on a configuration.
 
 ### § 4.2 Keep execution data out of search states
 
@@ -184,13 +184,13 @@ Algorithms resolve only their configured parameters and create no operators of t
 
 A configuration an algorithm builds itself is not a declared child, so substitutions do not reach it, and analysis or budgets placed by the user miss its work. This is an authoring guideline, not a rule enforced by the resolver. A wrapper holds the configuration it wraps as a declared child. Supply concrete runtime dependencies through the wrapper's properties and pass them to its executor. Keep run-result lookup and child resolution in configuration hooks.
 
-Constructing a node never changes the rules for its siblings. A `CreateExecutor` hook resolves its children and builds its executor; it does not change how the scope builds any other configuration. Behavior around a configuration is a wrapper in the configuration graph, so it affects only the configuration it holds and is visible before resolution begins. The one scope change during construction is `Share`, which changes only how long an executor lives and fails for a configuration that the scope or a scope below it has already resolved.
+Constructing a node never changes the rules for its siblings. A `CreateExecutor` hook resolves its children and builds its executor. It does not change how the scope builds any other configuration. Behavior around a configuration is a wrapper in the configuration graph, so it affects only the configuration it holds and is visible before resolution begins. The one scope change during construction is `Share`, which changes only how long an executor lives and fails for a configuration that the scope or a scope below it has already resolved.
 
 ### § 4.4 Expose one construction hook
 
 Every configuration exposes one construction hook, which resolution calls for every build. Operation-parameterized operators expose `CreateExecutor<TSearchSpace, TProblem, TSearchState>(scope)`, which builds an executor for the operation and run types. Algorithms expose `CreateExecutor<TSearchSpace, TProblem>(scope)` with a scope typed to the run and their search state. A consumer-defined role implements `IConfigurationNode<TExecutionNode>.CreateExecutionNode(ResolutionScope)`. Private data belongs to executor fields. Use `Sharing` to share executors and `scope.Results.Result(configuration)` to read run results. Do not add a second initializer per operation, role-named alternatives or a competing public entry.
 
-Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor` with a scope typed to their candidate, search space, problem and search state; generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or wrap that resolved child with `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(childOperator, wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
+Operator authoring bases own the public entry. Fixed-signature leaves override protected `CreateExecutor` with a scope typed to their candidate, search space, problem and search state. Generic compositions override the protected run-generic `CreateExecutor` and resolve current children through its typed scope. Transparent generic wrappers return `scope.ResolveOperator(ChildOperator)` or wrap that resolved child with `TOperation.Wrap<TCandidate, TSearchState, TWrapper>(childOperator, wrapper)`. Their canonical configuration properties are `ChildOperator` and `ChildOperators`.
 
 A hook resolves each child into a local variable named after its property, in the order the children must be built, and then passes the variables to the executor constructor. Only a hook that does nothing but return one resolved child returns the resolution directly.
 
@@ -215,13 +215,13 @@ Retain configuration values unchanged during construction and `with`. Validate t
 
 For operation parameterized operators, validate immutable configuration at the start of `CreateExecutor` before resolving children. `Supports` supplies preflight metadata and resolution checks each executor against its requested interface. A wrapper rejects a child it cannot serve in its constructor, or in `CreateExecutor` before it resolves the child. A construction failure ends the scope tree while retaining published results.
 
-Analyzer result creation must not depend on a requesting executor or its children. Its `CreateExecutionNode` receives a root `ResolutionScope`; recorders receive only `RunResults`. Clock readings are run results created by clocks in the root scope and obtained through `results.Result(clock)`. Failed creation publishes no result; a later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
+Analyzer result creation must not depend on a requesting executor or its children. Its `CreateExecutionNode` receives a root `ResolutionScope`. Recorders receive only `RunResults`. Clock readings are run results created by clocks in the root scope and obtained through `results.Result(clock)`. Failed creation publishes no result. A later lookup can retry. A failure during executor construction ends the scope tree, while published results remain readable.
 
 ### § 4.8 Represent configured behavior with value strategies
 
 Configurations are data: by convention they compare by value and can be serialized. Represent configured behavior with a strategy interface whose implementations are immutable values.
 
-A configuration may hold a delegate or another live object, such as a host callback. It is not forbidden, but the configuration then leaves the convention: it cannot be serialized, nor can any graph that contains it; its equality depends on the delegate's method and target; and captured state is not part of the configuration. Whether that matters is the author's decision, and many users never serialize a configuration. Document such a type as holding a runtime value, and link the [user-facing explanation](/guide/fundamentals/configurations#configurations-that-hold-delegates).
+A configuration may hold a delegate or another live object, such as a host callback. It is not forbidden, but the configuration then leaves the convention: it cannot be serialized, nor can any graph that contains it. Its equality depends on the delegate's method and target. And captured state is not part of the configuration. Whether that matters is the author's decision, and many users never serialize a configuration. Document such a type as holding a runtime value, and link the [user-facing explanation](/guide/fundamentals/configurations#configurations-that-hold-delegates).
 
 Library configurations hold runtime values only when there is a technical need, such as Python interoperability, and are listed below. Construction hooks and other machinery that only runs over configurations, and is not stored on them, may use delegates.
 
@@ -250,7 +250,7 @@ Executors keep resolved children and machinery private or protected. Use nested 
 
 ### § 4.12 Keep executor dependencies explicit
 
-Use the role's executor base at every configuration arity, such as the candidate-only `MutationExecutor<TCandidate>`. Keep the search space, problem and other runtime dependencies the executor reads in its own constructor parameters or fields. The configuration arity determines the contracts available during construction. Executors for wrapping and multi operators also derive from the role's executor base. Only an executor serving several operations of one configuration implements their interfaces directly, because a class has one base. A concrete executor is a `private sealed class Executor` nested in its configuration; only the authoring bases are public executor types. The `WrappingOperator` and `MultiOperator` configuration bases have no executor counterparts of their own. Their hooks resolve current children and pass them to the executor.
+Use the role's executor base at every configuration arity, such as the candidate-only `MutationExecutor<TCandidate>`. Keep the search space, problem and other runtime dependencies the executor reads in its own constructor parameters or fields. The configuration arity determines the contracts available during construction. Executors for wrapping and multi operators also derive from the role's executor base. Only an executor serving several operations of one configuration implements their interfaces directly, because a class has one base. A concrete executor is a `private sealed class Executor` nested in its configuration. Only the authoring bases are public executor types. The `WrappingOperator` and `MultiOperator` configuration bases have no executor counterparts of their own. Their hooks resolve current children and pass them to the executor.
 
 ### § 4.13 Give each child slot one public name
 
@@ -266,7 +266,7 @@ Choose an authoring base by ownership. See [Operator implementation](/contributi
 - Use a stateless base for configuration data without mutable run data.
 - Author an executor for private mutable fields, child executors or custom execution structure.
 - Use a single-candidate base when each item of a batch is processed independently.
-- Keep mutable data in executors or run results; configurations contain no live result or executor.
+- Keep mutable data in executors or run results. Configurations contain no live result or executor.
 - Coordinate concurrent access across every executor sharing a resource. An executor local lock cannot protect a shared resource.
 
 Stateless leaf bases hide executor construction. There is no automatic disposal contract.
@@ -283,7 +283,7 @@ Operator scaffolding remains checked in source. Do not add source generators, ID
 
 Algorithms use a configuration paired with an explicitly authored executor. Private data belongs to executor fields and shared executors require explicit `Sharing`. Child operators and interceptors bind per construction. Active iterators retain their children, RNG forks, progress, timers and resources across pause/resume. See [Algorithms](/guide/fundamentals/algorithms).
 
-Iterative algorithms build an `IterativeAlgorithmExecutor<TSearchState>` in their protected `CreateExecutor`. Both configuration bases declare that return type, so an iterative algorithm cannot return an executor that skips its interceptor. The bound iterative base derives from the bound `Algorithm` base and declares its own `Interceptor`. The hook resolves the optional interceptor and other declared children through its scope and passes them to the executor constructor. Derived algorithm authors own this wiring; the executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before calling the hook.
+Iterative algorithms build an `IterativeAlgorithmExecutor<TSearchState>` in their protected `CreateExecutor`. Both configuration bases declare that return type, so an iterative algorithm cannot return an executor that skips its interceptor. The bound iterative base derives from the bound `Algorithm` base and declares its own `Interceptor`. The hook resolves the optional interceptor and other declared children through its scope and passes them to the executor constructor. Derived algorithm authors own this wiring. The executor base applies the interceptor in its iteration loop. Bound bases check run-type compatibility before calling the hook.
 
 ### § 4.18 Treat Roslyn analyzers as guardrails
 
@@ -293,7 +293,7 @@ Roslyn analyzers catch recognizable mistakes. They do not prove ownership invari
 
 Role executors expose their named operation, such as `Mutate`, `Cross`, `Select` or `Evaluate`. Do not add a generic invocation path, shared problem context carrier or generic bridge between role methods.
 
-Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`; it does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation, or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Generic invocation wrappers reach no other call argument; a typed wrapper of one operation receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `IOperation<TSelf>.SupportsCandidateWork` defaults to false and the invocation's `CountCandidateWork` defaults to throwing. An operation without candidate work implements neither, and one with candidate work implements both, so `CountCandidateWork` does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
+Matching signatures do not satisfy another nominal role. `IOperator<TOperation, TCandidate>` selects an operation through its `IOperation<TSelf>`. It does not change executor-interface membership. An operation's static `Wrap` connects its named method to `IInvocationWrapper` during executor construction, and its static `IsExecutor` lets resolution check an executor without a `Type`. Each wrapping executor passes a call to its struct wrapper as the operation's private `Invocation` struct, an `IInvocation<TResult>`. Its `Random` is the call's random number generator, `Proceed(executor, random)` calls the named method, optionally on another executor of the same operation, or with another random number generator, and `CountCandidateWork` supplies the operation's counting rule. A wrapper that needs the problem reads the typed `scope.Problem` in its own `CreateExecutor` and retains it in its wrapper struct or executor. Generic invocation wrappers reach no other call argument. A typed wrapper of one operation receives every argument. Keep `Proceed` without a default interface implementation, which would box the invocation on every call. `IOperation<TSelf>.SupportsCandidateWork` defaults to false and the invocation's `CountCandidateWork` defaults to throwing. An operation without candidate work implements neither, and one with candidate work implements both, so `CountCandidateWork` does not box where it is used. Routing a call's items is a capability of an item operation, not of its invocation: `IItemOperation<TSelf>.Route` returns a routed executor. No invocation method is added to executor interfaces.
 
 A wrapping executor derives from `WrappingExecutor<TExecutor, TWrapper>`. A routed executor derives from `RoutingExecutor<TExecutor>`.
 
@@ -334,7 +334,7 @@ A record never implements `IEnumerable`, generic or not: a record is a value, no
 
 A record has value semantics, so what it holds has value semantics too, and its declared type says so. A sequence in a record's stored state or in any of its instance properties, positional, stored or computed, is typed as a concrete type with ordered structural equality: `ValueArray<T>`, or a domain vector such as `RealVector`, `IntegerVector`, `BoolVector`, `Permutation` or `ObjectiveVector`. It is never typed as an interface such as `IEnumerable<double>` or `IReadOnlyList<T>`, whose equality is unknown. Method parameters, method returns and static members follow the general collection guidance. A record may keep private lookup caches derived from its value members when it defines its equality over those value members only, and it does not hand those caches out mutably.
 
-This member rule covers every public or protected record and every record whose equality, hashing or serialization is used. A private or internal record that nothing compares, hashes or serializes and that only carries values as a named tuple is exempt. Executors keep `ImmutableArray<T>`. Experimental code may keep arrays and mutable data in records until it is promoted (§ 9.6); the BBoB test-function data does.
+This member rule covers every public or protected record and every record whose equality, hashing or serialization is used. A private or internal record that nothing compares, hashes or serializes and that only carries values as a named tuple is exempt. Executors keep `ImmutableArray<T>`. Experimental code may keep arrays and mutable data in records until it is promoted (§ 9.6). The BBoB test-function data does.
 
 ### § 5.5 Construct value arrays without accidental nesting
 
@@ -441,14 +441,14 @@ Make intended use easy and misuse difficult.
 
 Put the ordinary contract and expected range in `<summary>`. Put unusual values and edge cases in `<remarks>`.
 
-An invariant contract states something narrower, and the two must not be conflated. The range in a contract is the range in which a **guarantee holds**, not the range that is a good choice. A blend crossover with an alpha above one is a legitimate setting that widens the search; what it stops doing is keeping candidates inside the bounds the search space states. A mutation rate of `0.9` is unusual advice and breaks no invariant, so it stays prose and never reaches a contract. Keep judgement about good values in `<summary>`, and keep guarantee ranges in the contract member, so a contract does not accumulate opinions.
+An invariant contract states something narrower, and the two must not be conflated. The range in a contract is the range in which a **guarantee holds**, not the range that is a good choice. A blend crossover with an alpha above one is a legitimate setting that widens the search. What it stops doing is keeping candidates inside the bounds the search space states. A mutation rate of `0.9` is unusual advice and breaks no invariant, so it stays prose and never reaches a contract. Keep judgement about good values in `<summary>`, and keep guarantee ranges in the contract member, so a contract does not accumulate opinions.
 
 Where a parameter carries both, its documentation points at the member that defines the contract instead of restating the threshold. The condition is then written once, in the executable place, and prose cannot drift away from it.
 
 ### § 8.3 Use variance only when substitution is meaningful
 
 - `TCandidate` is invariant throughout the public API. It identifies the exact shared representation.
-- Operator executors bind the search space and problem at construction; their interfaces omit those type parameters. General operators compose with specific problems through the authoring bases' run-type checks.
+- Operator executors bind the search space and problem at construction. Their interfaces omit those type parameters. General operators compose with specific problems through the authoring bases' run-type checks.
 - A returned type parameter cannot be contravariant. This makes `TSearchState` contravariant on `ITerminationExecutor` but invariant on `IInterceptionExecutor`.
 - Other domain parameters use variance only for a concrete substitution requirement and use a domain specific name.
 - Sonar S3246 is disabled because permitted positions alone do not establish meaningful substitution.
@@ -489,7 +489,7 @@ Do not make callers spell generic arguments available values can determine.
 - Use `Create(...)` when the caller supplies the required collaborators and they determine the type arguments. Use `For(anchor, ...)` when an anchor value supplies the type arguments and may recommend omitted collaborators.
 - A recommendation based `For(...)` resolves explicit values first, then the documented recommendation sources in order. It throws `InvalidOperationException` during construction and names every required parameter left unresolved.
 - Get each required operator through `OperatorRecommendationResolution`, generic in that operator's role contract. The algorithm lists its own required parameters. Shared recommendation machinery must not group or enumerate operator roles.
-- A `Create(...)` or `For(...)` must be able to return a complete configuration. Accept every configurable member as a parameter, required in `Create` and optional in `For`, so a caller is never left finishing a partly configured result. `with` changes a configuration that already exists; it is not the way to complete one the factory could not build.
+- A `Create(...)` or `For(...)` must be able to return a complete configuration. Accept every configurable member as a parameter, required in `Create` and optional in `For`, so a caller is never left finishing a partly configured result. `with` changes a configuration that already exists. It is not the way to complete one the factory could not build.
 - Anchor a `For(...)` that also takes optional operators on an invariant parameter type. A covariant anchor such as `IProblem<TCandidate, out TSearchSpace>` contributes only a lower bound, so an operator declared at a reduced arity widens the inferred search space and fails against constraints the caller never named. An invariant anchor contributes an exact bound, fixing the type from the anchor alone.
 - Treat a `For(...)` argument as a type witness unless the contract says it is retained.
 - Add a fluent extension only when its receiver becomes part of the configuration.
@@ -499,7 +499,7 @@ Do not make callers spell generic arguments available values can determine.
 
 ### § 8.7 Keep operator parameter groups in a common order
 
-Order an operation executor's parameters as primary inputs followed by the RNG, including termination and external operations. Bind the problem during construction through the typed scope; the executor retains what it needs. Stateless author overrides retain primary inputs, RNG, search space and problem, omitting context groups at reduced authoring arities. Lower level inputs that replace a search space occupy its position.
+Order an operation executor's parameters as primary inputs followed by the RNG, including termination and external operations. Bind the problem during construction through the typed scope. The executor retains what it needs. Stateless author overrides retain primary inputs, RNG, search space and problem, omitting context groups at reduced authoring arities. Lower level inputs that replace a search space occupy its position.
 
 Generic types and methods that name an operation put it first: `TOperation, TCandidate, TSearchSpace, TProblem, TSearchState, ...`, omitting parameters that do not apply. Keep managed `TState` last. Apply this order across operator contracts, operations, authoring bases, compositions, wrappers and resolution methods. For example, use `IOperator<Mutation, RealVector>`. Families without an operation parameter retain their established order.
 
@@ -537,7 +537,7 @@ Use concept first scalar names such as `NextDouble` and target first output name
 
 ### § 8.11 Let an API surface scale per role, never over hidden axes
 
-Each operation supplies one invocation over its named method. General wrappers reuse `TOperation.Wrap` and `IInvocationWrapper`; do not add another matrix per wrapper or run signature. Candidate-work semantics are supplied by the invocation (§ 4.19) and evaluated only by wrappers needing that metric. Do not add operation or invocation members for retry, timing, counting or other individual behaviors; per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`.
+Each operation supplies one invocation over its named method. General wrappers reuse `TOperation.Wrap` and `IInvocationWrapper`. Do not add another matrix per wrapper or run signature. Candidate-work semantics are supplied by the invocation (§ 4.19) and evaluated only by wrappers needing that metric. Do not add operation or invocation members for retry, timing, counting or other individual behaviors. Per-item choice uses an item operation's `Route`, and a per-invocation choice uses the invocation's `Random` and `Proceed`.
 
 Duplicating a member once per operator role is acceptable. Adding a role is a deliberate act, its author writes the
 role's members once from an obvious template, and no existing role is disturbed. The resolve family
@@ -550,11 +550,11 @@ name the axes it varies over and check that a role author can enumerate all of t
 Two receivers for the same operation are not a second axis when one is defined in terms of the other.
 `scope.Resolve<TCandidate, TSearchSpace, TProblem>(config)` is canonical — the scope is generic-less and cannot
 infer the triple. `typed.Resolve(config)` goes through a `ResolutionScope` that already knows the triple, infers
-everything and relays to the canonical form. One mechanism, two spellings; keep both.
+everything and relays to the canonical form. One mechanism, two spellings. Keep both.
 
 Whatever the declaration count, the call site stays minimal: `typed.Resolve(config)` or
 `typed.TryResolve(config, out var executor, out var reason)`, with nothing the caller is forced to supply to make inference work.
-An overload that exists so a type argument can be inferred is justified; one that exists only so a call site reads
+An overload that exists so a type argument can be inferred is justified. One that exists only so a call site reads
 differently needs a separate argument.
 
 ### § 8.12 Name a method for what it returns, not for what it looks like
@@ -617,7 +617,7 @@ Add XML documentation only for a nonobvious contract, invariant, lifecycle, fail
 
 Name a type for the narrowest domain or representation that binds it. Use genotype names for types that work with any problem over that genotype. Use domain names for types that require one problem.
 
-Place a type with the concept it implements, not with the representation that binds it. A problem, including an authoring base bound to one representation such as `RealVectorProblem`, belongs in `Problems`; an operator authoring base belongs in its role namespace. An encoding holds its representation's candidate types, search spaces and the operators that work with any problem over that representation. Put an operator that requires one problem beside that problem, as `NumericParameterFittingRefiner` sits in `Problems.MachineLearning`.
+Place a type with the concept it implements, not with the representation that binds it. A problem, including an authoring base bound to one representation such as `RealVectorProblem`, belongs in `Problems`. An operator authoring base belongs in its role namespace. An encoding holds its representation's candidate types, search spaces and the operators that work with any problem over that representation. Put an operator that requires one problem beside that problem, as `NumericParameterFittingRefiner` sits in `Problems.MachineLearning`.
 
 Name a role-specific configuration interface for its role, without a `Node` suffix. `IOperator<Mutation, TCandidate>`, `IAlgorithm<TCandidate>` and `IClock` are configuration nodes by deriving from `IConfigurationNode`, and the `IConfigurationNode` interfaces are the only configuration interfaces named for the graph concept.
 
@@ -674,7 +674,7 @@ Use `_italic text_` for emphasis and `**bold text**` for strong emphasis, follow
 
 An interface with one primary implementation shares a file with that implementation, and the file is named after the implementation, as `IQuadraticAssignmentProblemData` sits in `QuadraticAssignmentProblemData.cs`. An interface with several implementations of equal standing keeps a file of its own.
 
-Question an interface that has a single implementation and will likely keep it. A concrete need justifies it, such as an external implementation, a test double or a variance requirement; without one, the class alone is the contract. This is a reason to reconsider new interfaces, not to remove published ones: a public interface ships in the package, and removing it needs its own decision.
+Question an interface that has a single implementation and will likely keep it. A concrete need justifies it, such as an external implementation, a test double or a variance requirement. Without one, the class alone is the contract. This is a reason to reconsider new interfaces, not to remove published ones: a public interface ships in the package, and removing it needs its own decision.
 
 ## § 10 Enforcement and implementation style
 
@@ -691,9 +691,9 @@ Question an interface that has a single implementation and will likely keep it. 
 
 Follow `test/README.md` for test placement and validation order, and `AGENTS.md` for validation commands.
 
-### § 10.3 Use expression bodies for value producing members
+### § 10.3 Use block bodies for methods
 
-Use an expression body for a value producing or forwarding member. Use a block body for constructors, state changes and side effects. IDE0021 enforces this for constructors. Review other methods manually.
+Give methods a block body. Use an expression body only for a trivial member that fits on one line, such as a forwarding call or a property getter. A body that spans several lines is a block, even when it only forwards. IDE0021 enforces block bodies for constructors. Review other methods manually.
 
 ### § 10.4 Keep diagnostic exceptions narrow
 

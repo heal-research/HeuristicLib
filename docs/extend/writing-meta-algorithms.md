@@ -1,10 +1,6 @@
 # Writing meta-algorithms
 
-::: info Advanced extension
-This page assumes you have read [Write an algorithm](/guide/extending/writing-algorithms) and [Execution nodes](/contributing/architecture/execution-nodes).
-:::
-
-A meta-algorithm coordinates child algorithms rather than operators. It is still an algorithm: it produces search states, it can be run directly, and it can itself be a child of another meta-algorithm. `CycleAlgorithm` and `PipelineAlgorithm` are the built-in examples.
+A meta-algorithm coordinates child algorithms rather than operators. It is still an algorithm: it produces search states, it can be run directly, and it can itself be a child of another meta-algorithm. `CycleAlgorithm` and `PipelineAlgorithm` are the built-in examples. This page builds on [Write an algorithm](/extend/writing-algorithms) and [Execution nodes](/contributing/architecture/execution-nodes).
 
 ## Use the built-in meta-algorithms first
 
@@ -50,21 +46,13 @@ using HEAL.HeuristicLib.Problems;
 using HEAL.HeuristicLib.Random;
 using HEAL.HeuristicLib.SearchSpaces;
 
-public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
+public sealed partial record TwoStageAlgorithm<TCandidate, TSearchState>
     : Algorithm<TwoStageAlgorithm<TCandidate, TSearchState>, TCandidate, TSearchState>
     where TSearchState : class, ISearchState
 {
     public required IAlgorithm<TCandidate, TSearchState> First { get; init; }
 
     public required IAlgorithm<TCandidate, TSearchState> Second { get; init; }
-
-    public static Parameter<TwoStageAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> FirstParameter { get; } =
-        new(nameof(First), static algorithm => algorithm.First, static (algorithm, value) => algorithm with { First = value });
-
-    public static Parameter<TwoStageAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> SecondParameter { get; } =
-        new(nameof(Second), static algorithm => algorithm.Second, static (algorithm, value) => algorithm with { Second = value });
-
-    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), FirstParameter, SecondParameter];
 
     protected override IAlgorithmExecutor<TSearchState> CreateExecutor<TSearchSpace, TProblem>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -100,6 +88,23 @@ public sealed record TwoStageAlgorithm<TCandidate, TSearchState>
     }
 }
 ```
+
+::: details Parameter declarations
+
+```csharp
+public sealed partial record TwoStageAlgorithm<TCandidate, TSearchState>
+{
+    public static Parameter<TwoStageAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> FirstParameter { get; } =
+        new(nameof(First), static algorithm => algorithm.First, static (algorithm, value) => algorithm with { First = value });
+
+    public static Parameter<TwoStageAlgorithm<TCandidate, TSearchState>, IAlgorithm<TCandidate, TSearchState>> SecondParameter { get; } =
+        new(nameof(Second), static algorithm => algorithm.Second, static (algorithm, value) => algorithm with { Second = value });
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), FirstParameter, SecondParameter];
+}
+```
+
+:::
 
 Five details matter:
 
@@ -161,7 +166,7 @@ Pipeline resolves a fresh executor for each stage. Cycle resolves fresh executor
 var cycle = first.CycleWith(second, maximumCycles: 3).Sharing(first, second);
 ```
 
-`Sharing` on the Cycle keeps one executor for a configuration across turns. [Configurations](/guide/fundamentals/configurations#sharing-executors) states which configurations it shares, who owns the executor and what a separately constructed Cycle starts with. A Cycle turn is one call of an inner algorithm; [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns) shows how to observe the calls of the inner algorithms.
+`Sharing` on the Cycle keeps one executor for a configuration across turns. [Configurations](/guide/fundamentals/configurations#sharing-executors) states which configurations it shares, who owns the executor and what a separately constructed Cycle starts with. A Cycle turn is one call of an inner algorithm. [Cycles and turns](/guide/execution/observability-and-analysis#cycles-and-turns) shows how to observe the calls of the inner algorithms.
 
 ### A new problem object for each turn
 
@@ -169,11 +174,11 @@ A scope keeps one executor for each configuration and problem object. A meta-alg
 
 Use these imports in a C# project with implicit system usings enabled:
 
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/MetaAlgorithmDocumentationSpecs.cs#meta-algorithm-turns-imports{csharp}
+<<< ../../test/HeuristicLib.Tests.Docs/Extending/MetaAlgorithmDocumentationSpecs.cs#meta-algorithm-turns-imports{csharp}
 
 The example resolves a creator that remembers how many predefined candidates it has returned. `subproblem` and `anotherSubproblem` are two distinct problem objects over one search space, and `random` is the call's random number generator:
 
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/MetaAlgorithmDocumentationSpecs.cs#new-problem-per-turn{csharp}
+<<< ../../test/HeuristicLib.Tests.Docs/Extending/MetaAlgorithmDocumentationSpecs.cs#new-problem-per-turn{csharp}
 
 The second problem object restarts the creator with its first candidate, and the scope still holds the executor of the first problem, which continues with the second candidate when it is requested again. The child scope builds a third executor.
 

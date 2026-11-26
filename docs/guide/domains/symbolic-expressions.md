@@ -93,7 +93,7 @@ Unquoted identifiers start with a letter or underscore and continue with letters
 `sensor ``A```
 ````
 
-The infix formatter applies this escaping automatically. Backticks are specific to HeuristicLib's generic infix notation; C#, Python, and LaTeX formatters follow their target language instead.
+The infix formatter applies this escaping automatically. Backticks are specific to HeuristicLib's generic infix notation. C#, Python, and LaTeX formatters follow their target language instead.
 
 ## Formatting and round trips
 

@@ -1,147 +1,122 @@
 # Multiobjective optimization with NSGA-II
 
-Most real decisions have more than one goal, and the goals disagree. A cheaper design holds less. A faster schedule costs more. There is no single best answer, only a set of answers where improving one goal must cost you another.
+Many decisions have goals that disagree. A cheaper design holds less. A faster schedule costs more. There is no single best answer, only a set of answers where improving one goal costs another.
 
-This example designs a cylindrical container. It minimizes the material in the walls and maximizes the volume held, and it returns the whole tradeoff curve rather than one compromise.
+This example designs a cylindrical container. It minimizes the wall material, maximizes the volume and returns the whole tradeoff curve.
 
 ## Why not just combine the objectives
 
-The tempting shortcut is to score each design with something like `volume - 0.5 * material` and run a normal genetic algorithm. That works, but it answers a different question. Picking the weight picks the answer, and you have to pick it before seeing what the tradeoffs look like.
+A score such as `volume - 0.5 * material` turns the problem into a single-objective one. The weight then picks the answer, and you choose it before seeing the tradeoffs. A weighted sum also cannot reach designs on a concave part of the curve at any weight.
 
-Multiobjective search inverts the order. It gives you the tradeoff curve first, and you choose from it afterwards with the numbers in front of you. Weighted sums also cannot reach designs on a concave part of a tradeoff curve at any weight, so some good answers are unreachable no matter how you tune.
-
-Use a weighted sum when your domain genuinely supplies the weights, such as a real price. Use multiobjective search when the weights are a guess.
+Multiobjective search returns the curve first, and you choose from it afterwards. Use a weighted sum when the domain supplies the weights, such as a real price. Use multiobjective search when the weights are a guess.
 
 ## Dominance and the Pareto front
 
-One design **dominates** another when it is at least as good on every objective and strictly better on at least one. A design nobody dominates is **nondominated**, and the set of nondominated designs is the **Pareto front**.
+One design **dominates** another when it is at least as good on every objective and strictly better on at least one. A design that no other design dominates is **nondominated**. The nondominated designs form the **Pareto front**.
 
-A container using less material and holding more is strictly better, so it dominates. A container using less material but holding less is not comparable; both belong on the front. That is why `MultiObjective` directions carry no total order comparer. Asking for "the best" candidate is not a well-formed question here, and the API declines to answer it rather than inventing a ranking.
+<DominanceRegions>
+
+The designs around A. Designs that cost less and hold less, or cost more and hold more, are not comparable with A. Both can belong to the front.
+
+</DominanceRegions>
+
+`MultiObjective` directions therefore have no total order comparer. The API does not invent a ranking to answer which candidate is best.
 
 ## Define the problem
 
-Two decisions, radius and height, so a candidate is a `RealVector` of length two. Evaluation returns two values instead of one.
+A candidate is a `RealVector` of radius and height. Evaluation returns two values.
 
-```csharp
-var searchSpace = new BoundedRealVectorSearchSpace(
-    length: 2,
-    minimum: [2.0, 2.0],
-    maximum: [12.0, 25.0]);
+<<< ../../test/HeuristicLib.Tests.Docs/Examples/MultiObjectiveDocumentationSpecs.cs#multi-objective-imports{csharp}
 
-var problem = new FuncProblem<RealVector, BoundedRealVectorSearchSpace>(
-    (RealVector candidate) =>
-    {
-        var radius = candidate[0];
-        var height = candidate[1];
+<<< ../../test/HeuristicLib.Tests.Docs/Examples/MultiObjectiveDocumentationSpecs.cs#multi-objective-problem{csharp}
 
-        var material = 2 * Math.PI * radius * radius + 2 * Math.PI * radius * height;
-        var volume = Math.PI * radius * radius * height;
-
-        return new[] { material, volume };
-    },
-    searchSpace,
-    MultiObjective.Create(ObjectiveDirection.Minimize, ObjectiveDirection.Maximize));
-```
-
-`MultiObjective.Create` takes one direction per objective, and the order must match the order of the returned array. Here material is minimized and volume is maximized. Mixing directions in one problem is fine; nothing has to be rewritten as a minimization.
+`MultiObjective.Create` takes one direction per objective, in the order of the returned array. Directions can differ, so volume needs no rewrite as a minimization.
 
 ## Configure NSGA-II
 
-`NSGA2` takes the same creator, crossover and mutator as a genetic algorithm. Two things differ: selection and replacement must both understand dominance, and there is no `Elites` setting because the replacer already keeps the best fronts.
+`NSGA2` takes the same creator, crossover and mutator as a genetic algorithm. Selection and replacement rank by dominance, and the replacer keeps the best fronts, so there is no `Elites` setting.
 
-```csharp
-var algorithm = NSGA2.Create(
-    new UniformDistributedCreator(),
-    new AlphaBetaBlendCrossover { Alpha = 0.7 },
-    new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.1),
-    selector: ParetoCrowdingTournamentSelector.For(problem, dominateOnEqualities: false, tournamentSize: 2),
-    replacer: ParetoCrowdingReplacer.For(problem, dominateOnEqualities: false),
-    populationSize: 100,
-    maximumGenerations: 200);
-```
+<<< ../../test/HeuristicLib.Tests.Docs/Examples/MultiObjectiveDocumentationSpecs.cs#multi-objective-algorithm{csharp}
 
-Both operators rank by dominance first and break ties by crowding distance, preferring candidates in sparse regions. That second criterion is what spreads the population along the front instead of letting it bunch up in one attractive corner.
-
-The population size is also the resolution of your answer. A hundred candidates can describe at most a hundred points on the curve.
+Both operators break ties by crowding distance and prefer candidates in sparse regions. This spreads the population along the front. The population size limits the resolution of the answer. A hundred candidates describe at most a hundred points.
 
 ## Run and read the front
 
-```csharp
-var finalState = await algorithm.RunToCompletionAsync(problem, RandomNumberGenerator.Create(seed: 5));
+<<< ../../test/HeuristicLib.Tests.Docs/Examples/MultiObjectiveDocumentationSpecs.cs#multi-objective-front{csharp}
 
-var front = ParetoFront.ExtractFrom(finalState.Population.EvaluatedCandidates, problem.Objective)
-    .OrderBy(candidate => candidate.ObjectiveVector[0])
-    .ToList();
-
-Console.WriteLine($"Nondominated: {front.Count} of {finalState.Population.EvaluatedCandidates.Count}");
-Console.WriteLine();
-Console.WriteLine(" material    volume   radius   height    h/r");
-
-foreach (var candidate in front.Where((_, index) => index % 12 == 0))
-{
-    var radius = candidate.Candidate[0];
-    var height = candidate.Candidate[1];
-
-    Console.WriteLine(
-        $"{candidate.ObjectiveVector[0],9:F1}{candidate.ObjectiveVector[1],10:F1}" +
-        $"{radius,9:F2}{height,9:F2}{height / radius,7:F2}");
-}
-```
-
-`ParetoFront.ExtractFrom` filters a population down to its nondominated members. NSGA-II drives the whole population toward the front, so late in a run most of it already qualifies, but extracting explicitly is still the correct step because nothing guarantees it.
+`ParetoFront.ExtractFrom` keeps the nondominated members of a population. Late in a run most of an NSGA-II population qualifies, but nothing guarantees it.
 
 ```
 Nondominated: 100 of 100
 
  material    volume   radius   height    h/r
      89.7      63.3     2.48     3.28   1.32
-    365.4     535.3     4.55     8.22   1.80
-    859.9    1936.1     6.76    13.48   1.99
-   1206.5    3217.0     7.93    16.28   2.05
-   1563.7    4745.5     8.96    18.83   2.10
-   1861.2    6161.4     9.75    20.64   2.12
-   2120.8    7493.2    10.38    22.15   2.13
-   2347.2    8723.4    10.90    23.39   2.15
-   2568.7    9986.5    11.38    24.53   2.15
+    455.5     745.7     5.03     9.38   1.86
+    743.2    1555.5     6.31    12.44   1.97
+   1126.7    2903.4     7.67    15.70   2.05
+   1524.2    4567.2     8.86    18.53   2.09
+   1828.9    6001.6     9.66    20.45   2.12
+   2134.8    7567.7    10.41    22.23   2.14
+   2343.0    8700.3    10.89    23.37   2.15
+   2518.4    9694.2    11.27    24.29   2.15
 ```
 
-Every row is a legitimate answer. Nine rows are shown; the front holds one hundred.
+Every row is a valid answer. The table shows nine of the hundred.
 
-The last column is the interesting one, and it is why this problem makes a good example. For a cylinder of fixed volume, the shape using least material has height exactly twice the radius. Nothing in the code says so. The search rediscovers it: through the middle of the front `h/r` sits within a few percent of `2`. It drifts at both ends because the extreme points have fewer neighbours to be crossed with and converge more slowly, not because the geometry changes.
+<script setup>
+import front from "../.vitepress/figures/multi-objective-front";
+import ratio from "../.vitepress/figures/multi-objective-ratio";
+import hyperVolume from "../.vitepress/figures/multi-objective-hypervolume";
+</script>
 
-That is a useful habit when checking multiobjective results. A front that spans the objectives but violates a property you can derive by hand has not converged, however smooth the curve looks.
+<ScatterChart v-bind="ratio">
+
+Height over radius for every design on the front. For a fixed volume the least material needs `h = 2r`.
+
+</ScatterChart>
+
+For a fixed volume, the cylinder with the least material has a height of twice its radius. The code does not state this, and the search finds it. Through the middle of the front, `h/r` stays within a few percent of `2`. The ends drift because extreme designs have fewer neighbors to cross with and converge more slowly.
+
+Check a front against such a property when you can derive one. A front that violates it has not converged, however smooth it looks.
 
 ## Choose a design
 
-The front is the input to a decision, not the decision. Once the tradeoff is visible, a constraint from the domain usually picks the point.
+The front is the input to a decision. A requirement from the domain usually picks the design.
 
-```csharp
-var choice = front.First(candidate => candidate.ObjectiveVector[1] >= 2000);
-
-Console.WriteLine(
-    $"Cheapest design holding at least 2000: " +
-    $"radius {choice.Candidate[0]:F2}, height {choice.Candidate[1]:F2}, " +
-    $"material {choice.ObjectiveVector[0]:F1}");
-```
+<<< ../../test/HeuristicLib.Tests.Docs/Examples/MultiObjectiveDocumentationSpecs.cs#multi-objective-choice{csharp}
 
 ```
-Cheapest design holding at least 2000: radius 6.96, height 14.02, material 917.1
+Cheapest design holding at least 2000: radius 6.89, height 13.85, material 898.5
 ```
 
-Because the front is sorted by increasing material, the first entry meeting the volume requirement is the cheapest one that meets it. Applying the requirement now rather than as a constraint during the search means you can also see what relaxing it would buy, which a single-objective run cannot tell you.
+<ScatterChart v-bind="front">
+
+The initial population and the final front of seed 5. The requirement picks one design from the front.
+
+</ScatterChart>
+
+The front is sorted by material, so the first design meeting the requirement is the cheapest one. Applying the requirement after the search also shows what relaxing it would save.
 
 ## Track progress toward the front
 
-The final front shows where the search ended, not how it got there. A single-objective run records a best-so-far curve; a multiobjective run has no single best, so measure the front instead. The `HEAL.HeuristicLib.Experimental` package provides two analyzers that work by dominance:
+A single-objective run records a best-so-far curve. A multiobjective run has no single best, so it measures the front instead. The **hypervolume** is the area that the front dominates up to a fixed **reference point**. It grows only when a new design dominates area that no earlier design dominated.
 
-- `TraceHyperVolume` records the hypervolume of the front accumulated from every evaluated candidate. The hypervolume is the area between the front and a fixed **reference point** that every design on the front dominates. It never decreases as the front accumulates, and it increases only when a new design dominates area that no earlier design dominated.
-- `ParetoFrontAnalyzer` keeps that accumulated front as an archive, including designs the population later lost.
+<LineChart v-bind="hyperVolume">
+
+The hypervolume of the nondominated designs that the populations of seed 5 held so far, with the reference point `(3000, 0)`. Most of the area is dominated within the first generations.
+
+</LineChart>
+
+The `HEAL.HeuristicLib.Experimental` package provides two analyzers that work by dominance:
+
+- `TraceHyperVolume` records the hypervolume of the front accumulated from every evaluated candidate.
+- `ParetoFrontAnalyzer` keeps that front as an archive, including designs the population later lost.
 
 ::: warning Experimental
 These analyzers are in the Experimental package, whose API may change between prereleases. Add it with `dotnet add package HEAL.HeuristicLib.Experimental --prerelease`.
 :::
 
-The reference point must be worse than every design you care about on both objectives. Material never exceeds about 2790 within the bounds and volume is never negative, so `(3000, 0)` works here. Keep the reference point fixed when you compare runs, because the hypervolume depends on it.
+The reference point must be worse than every relevant design on both objectives. Material stays below about 2790 within the bounds and volume is never negative, so `(3000, 0)` works here. Keep it fixed when you compare runs, because the hypervolume depends on it.
 
 ```csharp
 using HEAL.HeuristicLib.Analysis;
@@ -179,14 +154,14 @@ foreach (var budget in new[] { 1_000, 5_000, 20_000 })
 Console.WriteLine($"Archived nondominated designs: {run.Result(archive).Count}");
 ```
 
-For seed `5` the hypervolume is `14594509` within 1000 evaluations, `14642391` within 5000 and `14648361` within 20000: most of the area is dominated early, and later evaluations add comparatively little.
+For seed `5` the hypervolume is `14594509` within 1000 evaluations, `14642391` within 5000 and `14648361` within 20000.
 
-The counting substitution is listed last, so it counts each evaluation before the trace reads the clock. A hypervolume that stops growing long before the budget ends is the multiobjective counterpart of a flat best-so-far curve. To compare configurations, compare their hypervolume at a common evaluation budget, with the same reference point, over several seeds.
+The counting substitution is listed last, so it counts each evaluation before the trace reads the clock. A hypervolume that stops growing early is the multiobjective counterpart of a flat best-so-far curve. Compare configurations by their hypervolume at a common evaluation budget, with the same reference point, over several seeds.
 
 ## Reporting
 
-Report the front, not one point from it. State every objective with its unit and direction, and keep the seed: a front is a stochastic result like any other, and two seeds give slightly different curves.
+Report the front, not one point from it. State every objective with its unit and direction, and record the seed. Two seeds give slightly different fronts.
 
-When comparing configurations, compare fronts rather than single values. A front that is better everywhere is a clear win. A front better in one region and worse in another is a real tradeoff and needs a decision, not an average.
+Compare configurations by their fronts. A front that is better everywhere is a clear win. A front that is better in one region and worse in another is a tradeoff that needs a decision, not an average.
 
 Continue with [Objectives and evaluated candidates](/guide/fundamentals/objectives) for dominance semantics, [Custom problem for production planning](/examples/custom-problem) for a problem type with domain data, or [Experiments](/guide/execution/experiments) to repeat this across seeds.

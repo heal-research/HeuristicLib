@@ -12,6 +12,12 @@ A search space describes valid candidates. Algorithms use it as a shared contrac
 | `BoolVector`    | `FixedCardinalityBoolVectorSearchSpace` | Selection of exactly _k_ items out of _n_        |
 | `Permutation`   | `PermutationSearchSpace`                | Orders, tours and assignments without duplicates |
 
+<EncodingGallery>
+
+One candidate from each built-in search space. The dots under the real vector mark each value within the bounds of the Rastrigin space, `-5.12` to `5.12`.
+
+</EncodingGallery>
+
 Choose a representation that makes invalid candidates difficult to express. A permutation is a better model for a tour than an integer vector that needs a duplicate removal rule.
 
 ## Define a real vector space
@@ -36,14 +42,16 @@ var mixedSpace = new BoundedRealVectorSearchSpace(
 
 ## Search spaces and operators
 
-Creators need the search space to produce valid initial candidates. Some mutation and crossover operators also need it to clamp, repair or scale changes.
+Creators need the search space to produce valid initial candidates. Some mutation and crossover operators also need it to clamp, repair or scale changes. The run supplies its search space to every operator call, so operators are configured without one:
 
 ```csharp
-var creator = new UniformDistributedCreator(space);
+var creator = new UniformDistributedCreator();
 var mutator = new GaussianMutator(
     mutationRate: 0.2,
     mutationStrength: 0.15);
 ```
+
+Passing a space to `UniformDistributedCreator` pins its bounds to that space instead of the run's.
 
 Choose operators designed for the candidate representation. Real vector crossover has different validity rules from permutation crossover.
 
@@ -74,6 +82,6 @@ Before adding a custom representation, ask whether a built-in vector plus a deco
 
 ## Next steps
 
-- [Objectives and candidates](/guide/fundamentals/objectives) continues the Fundamentals path with objective direction and evaluated candidates.
+- [Objectives and candidates](/guide/fundamentals/objectives) continues the guide with objective direction and evaluated candidates.
 - [Choose compatible operators](/guide/fundamentals/operators)
 - [Define evaluation and objective direction](/guide/fundamentals/problems)

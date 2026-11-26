@@ -12,10 +12,12 @@ public sealed record FirstObjectiveImprovement(double Margin) : IImprovementCrit
     public bool IsImprovement(
         ObjectiveVector refined,
         ObjectiveVector original,
-        ObjectiveDirections objectiveDirections) =>
-        objectiveDirections.Directions[0] == ObjectiveDirection.Minimize
+        ObjectiveDirections objectiveDirections)
+    {
+        return objectiveDirections.Directions[0] == ObjectiveDirection.Minimize
             ? original[0] - refined[0] >= Margin
             : refined[0] - original[0] >= Margin;
+    }
 }
 #endregion improvement-criterion-type
 

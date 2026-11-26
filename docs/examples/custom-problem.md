@@ -70,6 +70,11 @@ Derive from `SingleSolutionProblem<TSelf, TCandidate, TSearchSpace>` and impleme
 The first type argument is the problem's own type. That is the [curiously recurring pattern](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern): it lets the base class name the derived type in members that return or accept the problem, so a factory hands back a `ProductMixProblem` rather than something you have to cast. You write the class name twice and get nothing else to think about.
 
 ```csharp
+using HEAL.HeuristicLib.Encodings.IntegerVectors;
+using HEAL.HeuristicLib.Objectives;
+using HEAL.HeuristicLib.Problems;
+using HEAL.HeuristicLib.Random;
+
 public sealed class ProductMixProblem(ProductionPlan plan)
     : SingleSolutionProblem<ProductMixProblem, IntegerVector, IntegerVectorSearchSpace>(
         SingleObjective.Maximize,
@@ -90,7 +95,7 @@ public sealed class ProductMixProblem(ProductionPlan plan)
 
 Three things are worth pointing at.
 
-The constructor passes `SingleObjective.Maximize` because more profit is better. Nothing else in the configuration has to know the direction; selectors and analyzers read it from the problem.
+The constructor passes `SingleObjective.Maximize` because more profit is better. Nothing else in the configuration has to know the direction. Selectors and analyzers read it from the problem.
 
 `Evaluate` returns an `ObjectiveVector`, and a single `double` converts to one implicitly. A multiobjective problem returns several values from the same method.
 
@@ -111,10 +116,15 @@ Penalizing has one consequence you must handle at the end: a penalized candidate
 ## Configure and run
 
 ::: tip Project layout
-Put `ProductionPlan` and `ProductMixProblem` in their own files. If you keep everything in `Program.cs`, the top-level statements below must come before the two type declarations, because C# does not allow top-level statements after a type.
+Put `ProductionPlan` and `ProductMixProblem` in their own files. If you keep everything in `Program.cs`, move all `using` directives to the top of the file and put the top-level statements below before the two type declarations, because C# does not allow top-level statements after a type.
 :::
 
 ```csharp
+using HEAL.HeuristicLib.Algorithms;
+using HEAL.HeuristicLib.Encodings.IntegerVectors;
+using HEAL.HeuristicLib.Operators;
+using HEAL.HeuristicLib.Random;
+
 var workshop = new ProductionPlan(
     Products: ["stool", "chair", "table", "shelf"],
     ProfitPerUnit: [10, 18, 40, 14],
@@ -175,9 +185,15 @@ Profit: 1270
   assembly  140 / 140 hours
 ```
 
+<CapacityBars>
+
+Machine hours of the plan. Tables take most of both machines. Assembly is full, and cutting has 18 hours spare.
+
+</CapacityBars>
+
 The plan drops stools and chairs entirely. Both consume assembly time that a table or a shelf turns into more profit, and assembly is the binding constraint at 140 of 140 hours while cutting still has 18 hours spare. Identifying the bottleneck is usually more valuable to the person who asked than the profit number itself.
 
-This instance is small enough to check by exhaustive search, and `1270` is the true optimum. Six of ten seeds reach it; the others stop at `1258`, a local optimum one unit away. That ratio is worth knowing before you trust a single run, and it is why the [experiments API](/guide/execution/experiments) exists.
+This instance is small enough to check by exhaustive search, and `1270` is the true optimum. Six of ten seeds reach it. The others stop at `1258`, a local optimum one unit away. That ratio is worth knowing before you trust a single run, and it is why the [experiments API](/guide/execution/experiments) exists.
 
 ## Adapting this
 
@@ -185,4 +201,4 @@ The shape carries over to most custom problems. Put domain data in its own type,
 
 Two changes are worth trying on this example. Give each product a setup cost that applies only when its quantity is above zero, which makes the objective discontinuous and much harder for a smooth search. Or replace the penalty with a repair operator that scales a plan down until it fits, and compare how the two formulations behave across seeds.
 
-Continue with [Problems](/guide/fundamentals/problems) for the full problem contract, [Writing operators](/guide/extending/writing-operators) to build that repair operator, or [Multiobjective optimization](/examples/multi-objective) to optimize profit and machine load at the same time.
+Continue with [Problems](/guide/fundamentals/problems) for the full problem contract, [Writing operators](/extend/writing-operators) to build that repair operator, or [Multiobjective optimization](/examples/multi-objective) to optimize profit and machine load at the same time.

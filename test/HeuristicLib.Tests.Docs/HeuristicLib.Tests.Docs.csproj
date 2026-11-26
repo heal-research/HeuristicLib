@@ -22,6 +22,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Include="..\HeuristicLib.Tests.Scenarios\TestData\berlin52.tsp" Link="berlin52.tsp" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Using Include="Shouldly" />
         <Using Include="Xunit" />
     </ItemGroup>
