@@ -44,9 +44,7 @@ internal static class LevenbergMarquardt
             var targetVector = new DenseVector(targets.ToArray());
             var unusedIndependentVariables = new DenseVector(rowCount);
             var objective = ObjectiveFunction.NonlinearModel(EvaluateModel, EvaluateJacobian, unusedIndependentVariables, targetVector);
-            var minimizer = new LevenbergMarquardtMinimizer(maximumIterations: maximumIterations);
-            var minimum = minimizer.FindMinimum(objective, new DenseVector(initialParameters.ToArray()));
-            result = new LevenbergMarquardtResult(ValueArray.FromOwnedArray(minimum.MinimizingPoint.ToArray()), minimum.ModelInfoAtMinimum.Value / rowCount);
+            result = Minimize(objective, new DenseVector(initialParameters.ToArray()), rowCount, maximumIterations, cancellationToken);
             failure = null;
             return true;
         }
@@ -56,6 +54,75 @@ internal static class LevenbergMarquardt
             failure = new LevenbergMarquardtFailure(exception.Message);
             return false;
         }
+    }
+
+    private static LevenbergMarquardtResult Minimize(IObjectiveModel objective, Vector<double> parameters, int rowCount, int maximumIterations, CancellationToken cancellationToken)
+    {
+        // Use the unbounded LM update directly. MathNet's minimizer also computes
+        // a covariance by SVD when constructing its result, which can stall on finite data.
+        const double tolerance = 1e-15;
+        objective.SetParameters(parameters);
+        objective.EvaluateAt(parameters);
+        var error = objective.Value;
+
+        double damping = 0;
+        for (var iteration = 0; iteration < maximumIterations && error > tolerance; iteration++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var gradient = objective.Gradient;
+            var gradientNorm = gradient.InfinityNorm();
+            if (!double.IsFinite(gradientNorm))
+                throw new ArithmeticException("The least-squares gradient is non-finite.");
+            if (gradientNorm <= tolerance)
+                break;
+
+            var system = objective.Hessian.Clone();
+            var diagonal = system.Diagonal();
+            if (iteration == 0)
+                damping = 1e-3 * diagonal.Maximum();
+
+            var accepted = false;
+            double multiplier = 2;
+            for (var retry = 0; retry < 64 && double.IsFinite(damping); retry++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                system.SetDiagonal(diagonal + damping);
+                var step = system.Solve(-gradient);
+                if (step.L2Norm() <= tolerance * (parameters.L2Norm() + tolerance))
+                    break;
+
+                var trial = parameters + step;
+                objective.EvaluateAt(trial);
+                var trialError = objective.Value;
+                var predictedReduction = step.DotProduct(damping * step - gradient);
+                if (trialError < error && predictedReduction > 0)
+                {
+                    var gain = (error - trialError) / predictedReduction;
+                    parameters = trial;
+                    error = trialError;
+                    // Nielsen's damping update for accepted steps (Madsen et al., 2004, Eq. 2.21).
+                    // Reuse its lower bound if overflow makes the gain non-finite.
+                    const double minimumDampingFactor = 1.0 / 3.0;
+                    damping *= double.IsFinite(gain)
+                        ? Math.Max(minimumDampingFactor, 1 - Math.Pow(2 * gain - 1, 3))
+                        : minimumDampingFactor;
+                    accepted = true;
+                    break;
+                }
+
+                damping *= multiplier;
+                multiplier *= 2;
+            }
+
+            if (!accepted)
+                break;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        if (double.IsInfinity(error))
+            throw new ArithmeticException("The final residual sum of squares is infinite.");
+
+        return new LevenbergMarquardtResult(ValueArray.FromOwnedArray(parameters.ToArray()), error / rowCount);
     }
 
     private static double[] GetParameterValues(Vector<double> parameters) => parameters is DenseVector denseParameters ? denseParameters.Values : parameters.ToArray();

@@ -50,6 +50,67 @@ public sealed class LevenbergMarquardtTests
         result.MeanSquaredError.ShouldBe(0.0, 1e-12);
     }
 
+    [Theory]
+    [InlineData(1.17, -1.6e-109, 50.0, false)]
+    [InlineData(1.0, 1.0, 1.0, true)]
+    public void TryMinimizeReturnsFiniteExponentialFit(double offset, double scale, double rate, bool expectImprovement)
+    {
+        var random = new System.Random(1);
+        var input = Enumerable.Range(0, 1000).Select(_ => 1 + 4 * random.NextDouble()).ToArray();
+        var targets = input.Select(x => x * x * x / (Math.Exp(x) - 1)).ToArray();
+        var builder = new Builder();
+        var x = builder.Input();
+        var a = builder.Parameter();
+        var b = builder.Parameter();
+        var c = builder.Parameter();
+        var program = builder.Build(builder.Add(a, builder.Multiply(b, builder.Exp(builder.Multiply(c, x)))));
+        using var execution = program.CreateExecution([input], input.Length);
+        double[] initial = [offset, scale, rate];
+        var outputs = new double[input.Length];
+        execution.Evaluate(initial, outputs);
+        double MeanSquaredError() => outputs.Zip(targets, (output, target) => Math.Pow(output - target, 2)).Average();
+        var initialError = MeanSquaredError();
+
+        LevenbergMarquardt.TryMinimize(execution, initial, targets, 10, out var result, TestContext.Current.CancellationToken).ShouldBeTrue();
+
+        result.ShouldNotBeNull();
+        execution.Evaluate(result.Parameters.AsSpan(), outputs);
+        result.MeanSquaredError.ShouldBe(MeanSquaredError(), 1e-10);
+        result.MeanSquaredError.ShouldBeLessThanOrEqualTo(initialError + 1e-12);
+        if (expectImprovement)
+            result.MeanSquaredError.ShouldBeLessThan(initialError);
+    }
+
+    [Fact]
+    public void TryMinimizeRecoversFromInfiniteInitialResidualSumOfSquares()
+    {
+        const double target = 1e154;
+        const double parameterTolerance = target * 1e-12;
+        var builder = new Builder();
+        using var execution = builder.Build(builder.Parameter()).CreateExecution([], rowCount: 2);
+
+        var success = LevenbergMarquardt.TryMinimize(execution, [0.0], [target, target], 10, out var result, out var failure, TestContext.Current.CancellationToken);
+
+        success.ShouldBeTrue();
+        failure.ShouldBeNull();
+        result.ShouldNotBeNull();
+        result.Parameters[0].ShouldBe(target, parameterTolerance);
+        result.MeanSquaredError.ShouldBe(0.0, parameterTolerance * parameterTolerance);
+    }
+
+    [Fact]
+    public void TryMinimizeFailsWhenResidualSumOfSquaresRemainsInfinite()
+    {
+        var builder = new Builder();
+        using var execution = builder.Build(builder.Parameter()).CreateExecution([], rowCount: 2);
+
+        var success = LevenbergMarquardt.TryMinimize(execution, [0.0], [1e155, -1e155], 10, out var result, out var failure, TestContext.Current.CancellationToken);
+
+        success.ShouldBeFalse();
+        result.ShouldBeNull();
+        failure.ShouldNotBeNull();
+    }
+
     [Fact]
     public void TryMinimizeReportsMeanSquaredErrorForNoisyData()
     {
