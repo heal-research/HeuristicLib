@@ -12,6 +12,12 @@ A search space describes valid candidates. Algorithms use it as a shared contrac
 | `BoolVector`    | `FixedCardinalityBoolVectorSearchSpace` | Selection of exactly _k_ items out of _n_        |
 | `Permutation`   | `PermutationSearchSpace`                | Orders, tours and assignments without duplicates |
 
+<EncodingGallery>
+
+One candidate from each built-in search space. The dots under the real vector mark each value within the bounds of the Rastrigin space, `-5.12` to `5.12`.
+
+</EncodingGallery>
+
 Choose a representation that makes invalid candidates difficult to express. A permutation is a better model for a tour than an integer vector that needs a duplicate removal rule.
 
 ## Define a real vector space
@@ -36,14 +42,16 @@ var mixedSpace = new BoundedRealVectorSearchSpace(
 
 ## Search spaces and operators
 
-Creators need the search space to produce valid initial candidates. Some mutation and crossover operators also need it to clamp, repair or scale changes.
+Creators need the search space to produce valid initial candidates. Some mutation and crossover operators also need it to clamp, repair or scale changes. The run supplies its search space to every operator call, so operators are configured without one:
 
 ```csharp
-var creator = new UniformDistributedCreator(space);
+var creator = new UniformDistributedCreator();
 var mutator = new GaussianMutator(
     mutationRate: 0.2,
     mutationStrength: 0.15);
 ```
+
+Passing a space to `UniformDistributedCreator` pins its bounds to that space instead of the run's.
 
 Choose operators designed for the candidate representation. Real vector crossover has different validity rules from permutation crossover.
 
@@ -51,17 +59,19 @@ Choose operators designed for the candidate representation. Real vector crossove
 If a custom operator can leave the search space, repair the candidate in that operator or reject it before evaluation. Do not let invalid values silently reach domain code.
 :::
 
-## Invariants and validation
+## Validation and invariants {#invariants-and-validation}
 
-A search space can state what it requires of its members — a length, a bound, a number of set elements — and an
-operator can state which of those it guarantees of its output. Comparing the two decides whether an operator may be
-used here, and creating a run performs that check by default, so an operator that would leave this space stops the run
-before it starts instead of quietly producing invalid candidates.
+A search space can state what its members satisfy, such as a length, a bound or a number of set elements, and an
+operator can declare which of those its output keeps. Creating a run compares the two declarations by default. An
+operator that declares it does not keep one of the space's invariants stops the run before it starts. For example,
+`BitFlipMutator` is refused over a `FixedCardinalityBoolVectorSearchSpace`, and `BitSwapMutator`, which keeps the
+number of set elements, is accepted.
 
-That is the mechanism behind the warning above, and it is the answer to a question types cannot settle: preserving a
-property is a fact about an operator's output, and an output property is not part of a signature.
+The check compares declarations and does not run operators. An operator that declares nothing about an invariant is
+not reported, so the warning above still applies to custom operators. Test what an operator declares with
+`OperatorContractVerification.Verify`.
 
-See [Invariants and validation](/guide/fundamentals/invariants-and-validation) for the contracts, the two checks, how
+See [Validation and invariants](/guide/fundamentals/invariants-and-validation) for the contracts, the two checks, how
 to opt out with `validate: false`, and how to test that a declared contract actually holds.
 
 ## Custom search spaces
@@ -72,6 +82,6 @@ Before adding a custom representation, ask whether a built-in vector plus a deco
 
 ## Next steps
 
-- [Objectives and candidates](/guide/fundamentals/objectives) continues the Fundamentals path with objective direction and evaluated candidates.
+- [Objectives and candidates](/guide/fundamentals/objectives) continues the guide with objective direction and evaluated candidates.
 - [Choose compatible operators](/guide/fundamentals/operators)
 - [Define evaluation and objective direction](/guide/fundamentals/problems)

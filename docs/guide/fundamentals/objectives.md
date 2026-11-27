@@ -29,7 +29,7 @@ A candidate **dominates** another when it is no worse on every objective and bet
 
 Do not invent a total ordering unless your domain supplies a real preference, such as a weighted utility function. A display order is not automatically an optimization objective.
 
-`MultiObjective.Create` builds directions for several objectives, and multiobjective directions carry no total order comparer, so `TotalOrderComparer` is unavailable by design. Use `ParetoFront.ExtractFrom` to reduce a population to its nondominated members. [Multiobjective optimization](/examples/multi-objective) works through a complete NSGA-II run and shows how to read and use the resulting front.
+`MultiObjective.Create` builds directions for several objectives. Multiobjective directions carry no total order comparer, so code that asks for `TotalOrderComparer` cannot pick a single best candidate. Choose what the result should be instead: use `ParetoFront.ExtractFrom` to reduce a population to its nondominated members, or supply an explicit comparer, such as `LexicographicComparer`, when a report needs one ranking. [Multiobjective optimization](/examples/multi-objective) works through a complete NSGA-II run and shows how to read and use the resulting front.
 
 When dimension priority is deliberate, `LexicographicComparer` compares objectives in the supplied `order`, or ascending index order when it is omitted. A supplied order must contain every objective index exactly once. Duplicate, missing or out-of-range indices, including an order of the wrong length, are rejected at construction. The comparer snapshots both the directions and order. Supplying this comparer to analysis changes that analysis's ordering, not the problem's optimization objective.
 
@@ -50,5 +50,5 @@ Repeated experiments should summarize distributions across runs. A median and sp
 
 ## Next steps
 
-- [Operators](/guide/fundamentals/operators) continues the Fundamentals path with the roles that produce and change candidates.
+- [Operators](/guide/fundamentals/operators) continues the guide with the roles that produce and change candidates.
 - [Experiments](/guide/execution/experiments) summarizes repeated runs.

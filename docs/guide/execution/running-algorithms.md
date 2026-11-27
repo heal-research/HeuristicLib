@@ -1,4 +1,4 @@
-# Running algorithms
+# Algorithm runs
 
 Running an algorithm combines an immutable configuration with one problem and one explicit random source. Each execution starts with fresh run state.
 
@@ -15,30 +15,11 @@ Start with a completion method when you only need the final state. Choose stream
 
 Executor construction happens automatically. You do not need to manage those steps to use any of these entry points.
 
-<div class="flow-chart flow-chart--execution" role="img" aria-label="An algorithm configuration, problem and random source create a fresh run. Stream observes every state while CompleteAsync returns the final state.">
-  <section class="flow-card">
-    <h3>Run inputs</h3>
-    <p>Algorithm configuration</p>
-    <p>Problem</p>
-    <p>Random source</p>
-  </section>
-  <div class="flow-arrow" aria-hidden="true"><span>create</span><strong>↓</strong></div>
-  <section class="flow-card flow-card--primary">
-    <h3>Algorithm run</h3>
-    <p>Independent run results</p>
-  </section>
-  <div class="flow-arrow" aria-hidden="true"><span>consume with</span><strong>↓</strong></div>
-  <div class="flow-chart__outputs">
-    <section class="flow-card flow-card--output">
-      <h3><code>Stream</code></h3>
-      <p>Observe every state</p>
-    </section>
-    <section class="flow-card flow-card--output">
-      <h3><code>CompleteAsync</code></h3>
-      <p>Receive the final state</p>
-    </section>
-  </div>
-</div>
+<ModelDiagram>
+
+`RunStreaming` yields every search state of a fresh run. `RunToCompletionAsync` consumes the same stream and returns its last state.
+
+</ModelDiagram>
 
 ## Run to completion or stream
 
@@ -66,7 +47,7 @@ Each call on the configuration starts a new run. To continue an execution after 
 
 ## Stopping budgets
 
-Prefer an algorithm's own budget for normal configuration. A genetic algorithm exposes `MaximumGenerations`, which defaults to `GeneticAlgorithmDefaults.MaximumGenerations` (1000) rather than to no limit; set it to `null` for a run that should end on a terminator alone. Other algorithms may use iterations, evaluations or a domain specific condition.
+Prefer an algorithm's own budget for normal configuration. A genetic algorithm exposes `MaximumGenerations`, which defaults to `GeneticAlgorithmDefaults.MaximumGenerations` (1000) rather than to no limit. Set it to `null` for a run that should end on a terminator alone. Other algorithms may use iterations, evaluations or a domain specific condition.
 
 External wrappers are useful when an experiment must impose the same budget across algorithms that expose different controls. When comparing methods, evaluation count is often fairer than generation count because one generation can perform very different amounts of work.
 
@@ -98,23 +79,29 @@ var run = algorithm.CreateRun(problem, random);
 var finalState = await run.CompleteAsync();
 ```
 
-Completing an explicit run follows the same path as `algorithm.RunToCompletionAsync(problem, random)`. Each `CreateRun` creates independent executors and run results ([Core concepts](/guide/fundamentals/core-concepts#configurations-and-executors)). The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
+Completing an explicit run follows the same path as `algorithm.RunToCompletionAsync(problem, random)`. Each `CreateRun` creates independent executors and run results ([Introduction](/guide/#configurations-and-executors)). The explicit form gives access to the run lifecycle and `run.Result(configuration)`.
 
-Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) explains how substitutions for one run differ from a configuration you keep with `Substitute`, and which configuration names their targets when a budget produced the algorithm. [Observability and analysis](/guide/execution/observability-and-analysis) shows the analyzers you can pass.
+Pass analysis to `algorithm.CreateRun(problem, random, [analyzer])`. [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) explains how substitutions for one run differ from a configuration you keep with `Substitute`, and which configuration names their targets when a budget produced the algorithm. [Analysis of algorithm runs](/guide/execution/observability-and-analysis) shows the analyzers you can pass.
 
 ## Read run-bound results
 
-An analyzer creates one result per run. Pass it to `algorithm.CreateRun(problem, random, [analyzer])`, then read it with `run.Result(analyzer)`. An analyzer that places wrappers must be held by the run's algorithm, or lookup throws unless a declared delegate prevents proving it absent. A lookup before execution creates the result lazily; execution and later reads use the same object. Reusing an analyzer across runs gives each run independent data, and one run keeps one result for all placements of an analyzer, also across child activations such as the turns of a cycle. Counters and durations also create run results, read through their configurations in the same way.
+An analyzer creates one result per run. Pass it to `algorithm.CreateRun(problem, random, [analyzer])`, then read it with `run.Result(analyzer)`. An analyzer that places wrappers must be held by the run's algorithm, or lookup throws unless a declared delegate prevents proving it absent. A lookup before execution creates the result lazily. Execution and later reads use the same object. Reusing an analyzer across runs gives each run independent data, and one run keeps one result for all placements of an analyzer, also across child activations such as the turns of a cycle. Counters and durations also create run results, read through their configurations in the same way.
 
 A result stays readable after completion, cancellation, failure and pausing. Whether a read during execution is safe depends on the result type: a trace supports snapshots, while an accumulating result is read once execution has stopped.
 
-Private execution data, such as a cache, belongs to its executor, and [Sharing](/guide/fundamentals/configurations#sharing-executors) keeps one executor across child scopes. Runs provide no live-object supply API.
+Private execution data, such as a cache, belongs to an executor, not to the run. [How execution works](/extend/how-execution-works) explains the difference.
 
 ## Pause and resume an explicit run
 
 An explicit `AlgorithmRun` is returned in `Ready` without constructing the executor graph. Its `LifecycleState` is `Ready`, `Running`, `Paused`, `Completed`, `Canceled` or `Failed`. The run accepts no further analyzers after `CreateRun` returns. Consume each returned stream only once and finish or dispose it before requesting another stream from the run. Requesting another stream while one is active throws without changing the active execution.
 
-Ending enumeration early, including disposing the stream, leaves the run `Paused`. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained iterator, executors and run-bound results. The root algorithm is resolved only on the first start; resuming continues the retained iterator. Supply an initial state only on that first start.
+Ending enumeration early, including disposing the stream, leaves the run `Paused`. Cancellation through the ordinary stream or enumeration token also pauses it. Call `Stream` again on the same run to resume its retained iterator, executors and run-bound results. The root algorithm is resolved only on the first start. Resuming continues the retained iterator. Supply an initial state only on that first start.
+
+<RunLifecycle>
+
+`AlgorithmRun` states. Each returned stream has one consumer. A failed or canceled run cannot resume.
+
+</RunLifecycle>
 
 Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup failure sets `Failed` and propagates the exception. If the executor throws during iteration, including an `OperationCanceledException`, the explicit run sets `Failed`, disposes the iterator and propagates the execution exception. Cancellation thrown during execution-graph setup sets `Canceled`. A failed or canceled run cannot resume. A construction failure also ends its resolution scope tree.
 
@@ -122,4 +109,4 @@ Natural completion sets `Completed` after iterator cleanup succeeds. A cleanup f
 
 ## Next steps
 
-- [Search states](/guide/execution/search-states) continues the Execution path with what a run yields.
+- [Search states](/guide/execution/search-states) continues the guide with what a run yields.

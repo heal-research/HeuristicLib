@@ -164,7 +164,7 @@ The trained candidate is an expression tree. Inspect it, format it as infix, C#,
 Draw a target curve in the Python demonstrator and watch HeuristicLib evolve candidate expressions. The browser displays each generation and the final tradeoff between fit and expression complexity.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/heal-research/HeuristicLib/main/python-samples/PythonInteractiveDemonstrator/documentation/demo.gif" alt="Interactive symbolic regression demonstrator" width="480">
+  <a href="https://heuristiclib.github.io/examples/python-symbolic-regression.html#interactive-application"><img src="https://raw.githubusercontent.com/heal-research/HeuristicLib/main/docs/public/interactive-symbolic-regression.webp" alt="Interactive symbolic regression demonstrator. Open the documentation to watch it run." width="480"></a>
 </p>
 
 The complete application is in [`python-samples/PythonInteractiveDemonstrator`](https://github.com/heal-research/HeuristicLib/tree/main/python-samples/PythonInteractiveDemonstrator). It uses pythonnet to host HeuristicLib from a FastAPI application.
@@ -190,7 +190,7 @@ dotnet add package HEAL.HeuristicLib.Experimental --prerelease
 ## Documentation
 
 - [Build your first optimizer](https://heuristiclib.github.io/guide/getting-started.html)
-- [Understand the core concepts](https://heuristiclib.github.io/guide/fundamentals/core-concepts.html)
+- [Understand the core concepts](https://heuristiclib.github.io/guide/)
 - [Choose an algorithm](https://heuristiclib.github.io/guide/fundamentals/algorithms.html)
 - [Run repeatable experiments](https://heuristiclib.github.io/guide/execution/experiments.html)
 - [Train symbolic regression models](https://heuristiclib.github.io/examples/symbolic-regression.html)

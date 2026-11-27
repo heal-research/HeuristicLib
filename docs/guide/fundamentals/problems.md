@@ -39,10 +39,11 @@ Keep search policy in the algorithm configuration. Population size, mutation str
 
 The library includes benchmark and domain problems that are useful for learning, tests and comparisons. `TestFunctionProblem` wraps numerical benchmarks such as Rastrigin. Other namespaces cover traveling salesperson and machine learning tasks.
 
-Built-in problems expose their search space, so creators can use the same bounds:
+Built-in problems expose their search space, and a run hands it to every operator. A creator therefore needs no search space argument. Passing one pins its bounds instead of taking them from the run:
 
 ```csharp
-var creator = new UniformDistributedCreator(problem.SearchSpace);
+var creator = new UniformDistributedCreator();
+var pinnedCreator = new UniformDistributedCreator(problem.SearchSpace);
 ```
 
 ## Single and multiple objectives
@@ -73,9 +74,9 @@ public sealed class ProductMixProblem(ProductionPlan plan)
         new IntegerVectorSearchSpace(plan.Products.Length, 0, plan.MaximumBatchSize))
 ```
 
-That is the [curiously recurring pattern](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern), and it is what lets the base class name the derived type in members that return a problem, so nothing hands you back a base type to cast. It is also the argument most often forgotten; the compiler reports it as CS0305, wrong number of type arguments.
+That is the [curiously recurring pattern](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern), and it is what lets the base class name the derived type in members that return a problem, so nothing hands you back a base type to cast. It is also the argument most often forgotten. The compiler reports it as CS0305, wrong number of type arguments.
 
-[Model your own problem](/examples/custom-problem) builds one end to end, including the choice of representation and how to treat candidates that violate a constraint.
+[Custom problem for production planning](/examples/custom-problem) builds one end to end, including the choice of representation and how to treat candidates that violate a constraint.
 
 Evaluation should be safe to call more than once. Parallel algorithms and experiments may evaluate different candidates concurrently. If evaluation uses randomness, derive it from the run's explicit random source rather than hidden global state.
 
@@ -92,5 +93,5 @@ Before choosing an algorithm, verify that:
 
 ## Next steps
 
-- [Search spaces](/guide/fundamentals/search-spaces) continues the Fundamentals path with the candidates a problem accepts.
+- [Search spaces](/guide/fundamentals/search-spaces) continues the guide with the candidates a problem accepts.
 - [Objectives and candidates](/guide/fundamentals/objectives) covers objective direction and evaluated candidates.

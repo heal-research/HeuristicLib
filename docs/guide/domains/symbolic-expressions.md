@@ -44,7 +44,7 @@ var editedFromPoint = point.ReplaceWith(replacementNode);
 
 `ExpressionTree.Replace` accepts either a replacement node or a replacement tree. `ReplaceMany` applies non-overlapping edits in one operation and rebuilds every affected ancestor at most once. `WithVariable` and `WithConstant` provide domain-specific tree edits.
 
-Child-rebuilding methods on nodes are implementation details. Keeping those methods internal ensures that public edits retain tree ownership checks, occurrence semantics, and efficient structural sharing.
+Use points from the tree you are editing. `Replace` checks that a point belongs to the tree, replaces exactly the occurrence it identifies, and reuses every unaffected node.
 
 ## Parsing infix expressions
 
@@ -93,7 +93,7 @@ Unquoted identifiers start with a letter or underscore and continue with letters
 `sensor ``A```
 ````
 
-The infix formatter applies this escaping automatically. Backticks are specific to HeuristicLib's generic infix notation; C#, Python, and LaTeX formatters follow their target language instead.
+The infix formatter applies this escaping automatically. Backticks are specific to HeuristicLib's generic infix notation. C#, Python, and LaTeX formatters follow their target language instead.
 
 ## Formatting and round trips
 

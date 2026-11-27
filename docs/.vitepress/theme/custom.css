@@ -17,14 +17,47 @@ html {
     scrollbar-gutter: stable;
 }
 
+@media (min-width: 1440px) {
+    :root {
+        --vp-layout-max-width: clamp(1440px, calc(100vw - 20px), 1584px);
+    }
+}
+
+@media (min-width: 1280px) {
+    .VPDoc.has-sidebar {
+        padding-inline: 24px;
+    }
+
+    .VPDoc.has-sidebar .container .content {
+        padding-inline: 16px;
+    }
+
+    .VPDoc.has-aside .content > .content-container {
+        max-width: 920px;
+    }
+}
+
+.vp-doc .doc-table-scroll {
+    margin: 20px 0;
+    overflow-x: auto;
+}
+
+.vp-doc .doc-table-scroll > table {
+    display: table;
+    width: 100%;
+    margin: 0;
+}
+
 .dark {
     --vp-c-brand-1: #65b2d2;
     --vp-c-brand-2: #4a9cbe;
     --vp-c-brand-3: #3284a7;
 }
 
-.VPHomeHero .text {
-    max-width: 720px;
+/* Keep "modern C#" together and balance the hero lines. */
+.VPHero .heading .text,
+.VPHero .tagline {
+    text-wrap: balance;
 }
 
 .VPFeature {
@@ -63,91 +96,4 @@ html {
     margin: 1.5rem auto;
     border: 1px solid var(--vp-c-divider);
     border-radius: 12px;
-}
-
-.flow-chart {
-    display: grid;
-    justify-items: center;
-    width: min(100%, 920px);
-    margin: 2rem auto;
-    padding: clamp(1rem, 3vw, 2rem);
-    border: 1px solid var(--vp-c-divider);
-    border-radius: 12px;
-    background: var(--vp-c-bg-soft);
-}
-
-.flow-chart__inputs,
-.flow-chart__outputs {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    width: 100%;
-}
-
-.flow-chart__outputs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.flow-card {
-    width: 100%;
-    padding: 1rem 1.125rem;
-    border: 1px solid var(--vp-c-divider);
-    border-radius: 10px;
-    background: var(--vp-c-bg);
-    box-shadow: var(--vp-shadow-1);
-}
-
-.flow-card--primary,
-.flow-card--output {
-    width: min(100%, 420px);
-    border-color: color-mix(in srgb, var(--vp-c-brand-1) 55%, var(--vp-c-divider));
-}
-
-.flow-card--primary {
-    background: var(--vp-c-brand-soft);
-}
-
-.flow-card--output {
-    width: 100%;
-}
-
-.flow-card h3 {
-    margin: 0 0 0.5rem;
-    border: 0;
-    color: var(--vp-c-text-1);
-    font-size: 1rem;
-}
-
-.flow-card p {
-    margin: 0.2rem 0;
-    color: var(--vp-c-text-2);
-    font-size: 0.875rem;
-    line-height: 1.45;
-}
-
-.flow-arrow {
-    display: grid;
-    justify-items: center;
-    gap: 0.15rem;
-    padding: 0.6rem 0;
-    color: var(--vp-c-brand-1);
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-}
-
-.flow-arrow strong {
-    font-size: 1.4rem;
-    line-height: 1;
-}
-
-.flow-chart--execution > .flow-card {
-    width: min(100%, 420px);
-}
-
-@media (max-width: 700px) {
-    .flow-chart__inputs,
-    .flow-chart__outputs {
-        grid-template-columns: 1fr;
-    }
 }

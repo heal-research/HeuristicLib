@@ -25,9 +25,11 @@ public sealed record OptimumGapEvaluator<TCandidate> : WrappingOperator<Evaluati
     {
     }
 
-    public override bool Supports(ExecutionSignature execution) =>
-        base.Supports(execution)
+    public override bool Supports(ExecutionSignature execution)
+    {
+        return base.Supports(execution)
         && execution.Problem.IsAssignableTo(typeof(IHasKnownOptimum));
+    }
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -51,8 +53,10 @@ public sealed record OptimumGapEvaluator<TCandidate> : WrappingOperator<Evaluati
     {
         public override IReadOnlyList<ObjectiveVector> Evaluate(
             IReadOnlyList<TCandidate> candidates,
-            IRandomNumberGenerator random) =>
-            [.. child.Evaluate(candidates, random).Select(objective => new ObjectiveVector(objective[0] - problem.Optimum))];
+            IRandomNumberGenerator random)
+        {
+            return [.. child.Evaluate(candidates, random).Select(objective => new ObjectiveVector(objective[0] - problem.Optimum))];
+        }
     }
 }
 #endregion agnostic-wrapper-type
@@ -65,8 +69,10 @@ public sealed class ShiftedSphereProblem()
 {
     public double Optimum => 1.0;
 
-    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random) =>
-        [.. candidates.Select(candidate => new ObjectiveVector((candidate[0] * candidate[0]) + Optimum))];
+    public override IReadOnlyList<ObjectiveVector> Evaluate(IReadOnlyList<RealVector> candidates, IRandomNumberGenerator random)
+    {
+        return [.. candidates.Select(candidate => new ObjectiveVector((candidate[0] * candidate[0]) + Optimum))];
+    }
 }
 #endregion agnostic-wrapper-problem
 

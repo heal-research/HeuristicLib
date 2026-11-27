@@ -69,7 +69,7 @@ span is no longer available. `Count` is a `long` because running statistics can
 merge multiple batches even though one span is limited to `int` length.
 
 Population properties divide by `Count`. Sample variance and covariance divide
-by `Count - 1`; sample skewness and kurtosis apply their corresponding
+by `Count - 1`. Sample skewness and kurtosis apply their corresponding
 finite-sample corrections. A statistic returns `double.NaN` when it is not
 defined, including empty input and sample statistics with too few observations.
 Paired calculations reject spans with different lengths.
@@ -111,9 +111,9 @@ baseline plus one `FeatureImportanceResult` per feature, each retaining the raw
 perturbed metric and importance values alongside their mean and population standard
 deviation.
 
-Row subsampling is deliberately absent: construct the `DataFrame` you want before
-calling. Population weights, parallel execution, grouped features, and categorical
-perturbation are not implemented.
+To estimate importance on a subset of rows, pass a `DataFrame` that contains only
+those rows. Features are perturbed one at a time and sequentially. Grouped features
+and categorical perturbation are not supported.
 
 ## Linear scaling
 
@@ -151,7 +151,7 @@ identity, length, containment, mutation, or crossover.
 Least-squares scaling is authoritative when enabled even if the problem also
 uses metrics such as mean absolute error. It minimizes squared error and is not
 guaranteed to improve every other metric. Non-finite observations follow normal
-IEEE floating-point propagation; a broader invalid-prediction policy remains a
+IEEE floating-point propagation. A broader invalid-prediction policy remains a
 separate problem-evaluation concern.
 
 Continue with [Symbolic regression](/guide/domains/symbolic-regression) to train expressions from data or [Symbolic expressions](/guide/domains/symbolic-expressions) to build and inspect expression candidates directly.

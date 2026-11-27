@@ -1,12 +1,8 @@
 # Operator composition
 
-::: info Advanced extension
-Start with [built-in operators](/guide/fundamentals/operators) and [Write an operator](/guide/extending/writing-operators). Compose operators when several reusable policies should behave as one operator in an algorithm configuration.
-:::
-
 Operator composition builds a new operator configuration from one or more existing operator configurations. The resulting configuration remains reusable and resolves its child executors as part of the execution graph.
 
-Composition policies describe how child operations are coordinated. `WrappingOperator` and `MultiOperator` are authoring infrastructure for implementing those policies. They do not prescribe behavior by themselves.
+Composition policies describe how child operations are coordinated. `WrappingOperator` and `MultiOperator` are authoring infrastructure for implementing those policies and do not prescribe behavior by themselves. [Write a composition](/extend/writing-compositions) covers them.
 
 The built in composition overview is:
 
@@ -24,7 +20,13 @@ The built in composition overview is:
 | Fallback composition                 | Handles part of a request directly and delegates the remainder                                                | `PredefinedCandidatesCreator`                                                                               | Creators                                                     |
 | Specialized coordination             | Applies a policy whose meaning depends on one operator contract                                               | Caching, repetition and evaluation limits, elite inclusion, mate restrictions and gender specific selection | Evaluators and selectors                                     |
 | Operator work budgets                | Stops an algorithm when the counted or timed work of selected operators reaches a limit                       | `LimitedToInvocations`, `LimitedToCandidates`, `LimitedToCount`, `LimitedToDuration`                        | Algorithms                                                   |
-| Inspection                           | Wraps a selected execution boundary to observe, count or measure calls                                        | `Observing`, source counters and source durations                                                           | Role-specific observations; counting and timing across roles |
+| Inspection                           | Wraps a selected execution boundary to observe, count or measure calls                                        | `Observing`, source counters and source durations                                                           | Role-specific observations. Counting and timing across roles |
+
+<CompositionTrees>
+
+Four compositions as trees. The composed configuration sits on top and holds its children as parameters.
+
+</CompositionTrees>
 
 A missing helper usually means that the role does not provide the inputs needed by that policy or that the intermediate result has no single clear meaning. It does not prohibit authors from implementing a domain specific composition with explicit semantics.
 
@@ -48,11 +50,17 @@ Individual composition policies may require a stronger contract. A composition m
 
 This order restoration requires every selected child to return exactly one result for each assigned item, so a child creator returns the assigned count and every other child preserves its assigned batch size. Selection, replacement, termination and interception calls have no independent items. Their operations are not marked with `IItemOperation<TSelf>`, so `ChoosePerItem` does not compile for them.
 
-Weights are retained exactly as configured. Omitting weights selects uniformly across all children. Positive finite weights participate proportionally; zero, negative finite weights, negative infinity and `NaN` mean never. Positive infinity overrides finite weights, with multiple positive-infinity children selected uniformly. If no child is selectable, selection falls back to uniform across all children. Configured weights are compiled once for repeated sampling rather than normalized or recalculated for every choice.
+Weights are retained exactly as configured. Omitting weights selects uniformly across all children. Positive finite weights participate proportionally. Zero, negative finite weights, negative infinity and `NaN` mean never. Positive infinity overrides finite weights, with multiple positive-infinity children selected uniformly. If no child is selectable, selection falls back to uniform across all children. Configured weights are compiled once for repeated sampling rather than normalized or recalculated for every choice.
 
 `ChoosePerInvocation<Selection, TCandidate>` and `ChoosePerInvocation<Replacement, TCandidate>` make one weighted choice for each complete selection or replacement call. The selected child receives the complete population inputs and requested count. This preserves the meaning of a selector or replacer policy as a decision over a complete population instead of mixing fragments from several policies.
 
 `ChoosePerInvocation` makes the same per-invocation choice for any operator using `IOperator<TOperation, TCandidate>`, including mutation, evaluation and operations defined outside the library. Each call samples one child with the call's random number generator and runs on that child with the same generator, unchanged inputs and the run's search space and problem. Use it when a batch should stay with one policy, such as evaluating a complete batch with either an exact or a surrogate evaluator, and use `ChoosePerItem` when each item should choose independently. Its weights follow the rules above, and building its executor rejects an empty child collection or a weight count that differs from the child count.
+
+<ChoiceGranularity>
+
+One mutation call of six candidates with two children, A and B. `ChoosePerItem` draws for each candidate and calls each chosen child once. `ChoosePerInvocation` draws once for the call.
+
+</ChoiceGranularity>
 
 ```csharp
 var creator = ChoosePerItem.Create(
@@ -160,9 +168,19 @@ parameterFitting.CheckedForImprovement(ImprovementChecking.MinimumImprovement(0.
 
 Use a threshold when a marginal improvement is not worth keeping, for example when refinement makes a candidate harder to interpret or when tiny numeric gains are noise. The margin is applied in each objective's own direction, so a positive threshold always means "better by at least this much" whether the objective is minimized or maximized. Thresholds are retained exactly as configured: zero accepts anything not worse, and a negative value deliberately tolerates a bounded worsening.
 
-A criterion is deliberately not an `IComparer<ObjectiveVector>`. It answers whether the refined result is better than the original rather than defining an ordering, so it can apply a margin in the correct objective direction. Implement `IImprovementCriterion` when acceptance depends on one dimension of a multiobjective vector while selection continues to use the whole vector.
+A criterion answers one question: is the refined objective vector an improvement on the original? Implement `IImprovementCriterion` when none of the built-in criteria expresses your acceptance rule. This criterion accepts a refinement only when the first objective improves by at least a configured margin, while selection continues to rank by the whole objective vector:
 
-Nesting decides where acceptance happens, and the two orders are genuinely different searches rather than two spellings of one:
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ImprovementCriterionDocumentationSpecs.cs#improvement-criterion-imports{csharp}
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ImprovementCriterionDocumentationSpecs.cs#improvement-criterion-type{csharp}
+
+Pass it to `CheckedForImprovement` like a built-in criterion. A criterion is a plain decision over objective vectors, so it can also be called directly, for example in a test:
+
+<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ImprovementCriterionDocumentationSpecs.cs#improvement-criterion-usage{csharp}
+
+Apply the margin in the objective's direction, as the built-in criteria do, so that a positive margin always means "better by at least this much".
+
+Nesting decides where acceptance happens, and the two orders run different searches:
 
 ```csharp
 IteratedRefiner.Create(parameterFitting.CheckedForImprovement(), iterations: 5)  // memetic hill climb
@@ -181,7 +199,7 @@ This example runs one generation of four distinct predefined candidates. It shar
 
 <<< ../../../test/HeuristicLib.Tests.Docs/Extending/SharedCacheDocumentationSpecs.cs#shared-cache{csharp}
 
-`cache.Invocations.CountingCandidates(requests)` counts every candidate that the algorithm and the improvement check ask the cache to evaluate, hits included. The check evaluates the four candidates before and after refinement, and the algorithm evaluates them again, so `evaluationRequests` is twelve. `problemEvaluator.Invocations.CountingCandidates(solves)` counts only the candidates that reach the problem, so `problemEvaluations` is four: each distinct candidate misses once and the other eight requests are hits. Two caches, one for the algorithm and one for the check, would send eight candidates to the problem, because each cache misses once for every candidate. A counter selects an existing configuration. It does not return an evaluator that could be placed inside the cache. [Count, time and observe an operator](/guide/execution/observability-and-analysis#count-time-and-observe-an-operator) shows how to place counters, and [Author a concurrent cache wrapper](#author-a-concurrent-cache-wrapper) shows how to write a cache of your own.
+`cache.Invocations.CountingCandidates(requests)` counts every candidate that the algorithm and the improvement check ask the cache to evaluate, hits included. The check evaluates the four candidates before and after refinement, and the algorithm evaluates them again, so `evaluationRequests` is twelve. `problemEvaluator.Invocations.CountingCandidates(solves)` counts only the candidates that reach the problem, so `problemEvaluations` is four: each distinct candidate misses once and the other eight requests are hits. Two caches, one for the algorithm and one for the check, would send eight candidates to the problem, because each cache misses once for every candidate. A counter selects an existing configuration. It does not return an evaluator that could be placed inside the cache. [Count, time and observe an operator](/guide/execution/observability-and-analysis#count-time-and-observe-an-operator) shows how to place counters, and [A concurrent cache wrapper](/extend/writing-compositions#a-concurrent-cache-wrapper) shows how to write a cache of your own.
 
 To attribute the refinement effort separately instead, give the improvement check an evaluator configuration of its own and count that one. The algorithm's evaluator is a different configuration, so its calls do not contribute to that count.
 
@@ -191,6 +209,12 @@ To attribute the refinement effort separately instead, give the improvement chec
 problemEvaluator.Cached(keySelector).LimitEvaluations(100_000) // cache hits consume budget
 problemEvaluator.LimitEvaluations(100_000).Cached(keySelector) // cache hits do not consume budget
 ```
+
+<CacheLimitOrder>
+
+The two orders as layers. A request enters the outer layer, and a cache hit returns from the cache layer without reaching the layers inside it.
+
+</CacheLimitOrder>
 
 With the limit outside, the budget means evaluation requests, so a refiner re-evaluating a candidate the cache already knows still spends from it. With the cache outside, a hit never reaches the limit and the budget means actual problem evaluations. Once the allowance is spent, a miss reaches the limiter, which returns its fallback objective vector, and the outer cache stores that fallback as the candidate's result.
 
@@ -244,7 +268,7 @@ Terminator checks may update execution data. Each composition invokes its child 
 
 For an empty child collection, `AnyTerminator` returns false and `AllTerminator` returns true.
 
-See [Termination](/guide/glossary#termination) for algorithm-owned termination and external early stopping.
+See [Termination](/reference/glossary#termination) for algorithm-owned termination and external early stopping.
 
 ## Specialized wrappers
 
@@ -272,11 +296,16 @@ var distinctMateSelector = NoSameMatesSelector.Create(selector, maximumAttempts:
 var fluentDistinctMateSelector = selector.AvoidSameMates(maximumAttempts: 10);
 ```
 
-These types should document their own batching, state and cardinality behavior because their policies are role specific.
+Each of these follows its own rule for the candidates it returns:
+
+- `PredefinedCandidatesCreator` returns its configured candidates in order across successive calls and asks the fallback creator only for the remaining places. Each executor returns each predefined candidate at most once.
+- `EliteSelector` takes up to `elites` best candidates and asks its selector only for the remaining count. When the elites fill the request, the selector is not called and consumes no random draws.
+- `GenderSpecificSelector` returns female 0, male 0, female 1, male 1 and so on. For an odd requested count, the female selector supplies the last candidate.
+- For requests of complete mate pairs, `NoSameMatesSelector` asks its child selector up to `maximumAttempts` times. It keeps pairs whose objective vectors differ and fills any remaining places with equal-vector pairs from the last attempt.
 
 ## Budgets on operator work
 
-A budget stops an algorithm when the counted or timed work of selected operators reaches a limit. Budgets are ordinary configurations: `OperatorCountBudgetAlgorithm` and `OperatorDurationBudgetAlgorithm` hold the algorithm with the wrappers already in place, the `Counter` or `Duration` the wrappers add to, and the limit. Each extension places a counter or a timer around the selected operator inside the budgeted algorithm and stops the algorithm once the count or the duration reaches the limit. Invocation and duration budgets apply to any operator, whatever its operation; a candidate budget needs an operation that reports candidate work:
+A budget stops an algorithm when the counted or timed work of selected operators reaches a limit. Budgets are ordinary configurations: `OperatorCountBudgetAlgorithm` and `OperatorDurationBudgetAlgorithm` hold the algorithm with the wrappers already in place, the `Counter` or `Duration` the wrappers add to, and the limit. Each extension places a counter or a timer around the selected operator inside the budgeted algorithm and stops the algorithm once the count or the duration reaches the limit. Invocation and duration budgets apply to any operator, whatever its operation. A candidate budget needs an operation that reports candidate work:
 
 ```csharp
 var calls = algorithm.LimitedToInvocations(algorithm.Mutator, 1_000);
@@ -299,7 +328,7 @@ var timed = algorithm.LimitedToDuration(TimeSpan.FromSeconds(10), (ga, time) => 
 
 The placement runs during the call and is not stored. Each `Counting` states what it counts, so `ga.Evaluator.Invocations.CountingCandidates(calls)` adds evaluated candidates where the default adds successful calls. Each `Counting` or `Timing` places one wrapper, so naming a target twice counts it twice, and an operator implementing several operations takes one call for each operation to count. Duration is the sum of invocation durations, including overlapping and nested time, rather than wall clock time for the algorithm.
 
-The counter or duration lives inside the budget and starts again each time the budget is built, such as in each Cycle turn, while a counter placed outside the budget with `Invocations.Counting(counter)` spans the run; [Sharing executors](/guide/fundamentals/configurations#sharing-executors) explains this rule for counters and durations. Name the targets of an analysis from the budgeted configuration, as [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) states. A duration budget excludes observer time only when it times the retained inner operator, the configuration an observation wraps, and not the observed wrapper. Place the analysis with `Substitute` first, then budget the original operator by its own reference, so that the timer sits closer to the operator than the observer. A budget that names the observed wrapper, or one applied before the analysis, measures the observer too. To stop on a counter you placed yourself, use a terminator, as [Share accounting with a terminator](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator) shows.
+The counter or duration lives inside the budget and starts again each time the budget is built, such as in each Cycle turn, while a counter placed outside the budget with `Invocations.Counting(counter)` spans the run. [Sharing executors](/guide/fundamentals/configurations#sharing-executors) explains this rule for counters and durations. Name the targets of an analysis from the budgeted configuration, as [Configurations](/guide/fundamentals/configurations#substituting-for-one-run) states. A duration budget excludes observer time only when it times the retained inner operator, the configuration an observation wraps, and not the observed wrapper. Place the analysis with `Substitute` first, then budget the original operator by its own reference, so that the timer sits closer to the operator than the observer. A budget that names the observed wrapper, or one applied before the analysis, measures the observer too. To stop on a counter you placed yourself, use a terminator, as [Share accounting with a terminator](/guide/execution/observability-and-analysis#share-accounting-with-a-terminator) shows.
 
 A budget holds a copy of the algorithm, so a separate run of the original algorithm neither counts against the budget nor shares its executors. A budget built by hand takes the algorithm with a wrapper already placed:
 
@@ -316,7 +345,7 @@ Source counters, durations, analyzers and `Observing`, placed with `Substitute`,
 
 Selecting a complete composition observes its outer operation boundary and includes nested work. Selecting one child observes only calls reaching that child. For example, measuring a `TransformedCrossover` includes crossover and mutation work, while measuring its child crossover includes only crossover work. A named configuration such as `mutator.Named("exploration")` supplies a selectable boundary around a child.
 
-See [Observability and analysis](/guide/execution/observability-and-analysis) for observation, counter, duration and selection APIs, and [Select by name](/guide/execution/observability-and-analysis#select-by-name) for named boundaries.
+See [Analysis of algorithm runs](/guide/execution/observability-and-analysis) for observation, counter, duration and selection APIs, and [Select by name](/guide/execution/observability-and-analysis#select-by-name) for named boundaries.
 
 ## Adaptable parameters
 
@@ -328,7 +357,7 @@ The strategy's slot is `ScaleAdaptation?`, the form its 1/5 success rule writes.
 
 A scope resolves one runtime adaptation per configuration reference, and independent runs remain independent. To retain an adaptation across Cycle turns, [share](/guide/fundamentals/configurations#sharing-executors) the adaptation on the Cycle. Sharing the mutator also requires sharing the adaptation: otherwise the retained mutator reads its original adaptation while each fresh strategy writes a different one. The resolver does not detect unused links.
 
-`Retry(3)` includes the first attempt. It catches only a directly thrown `RetryableOperationException`; cancellation, ordinary failures and aggregate exceptions propagate. Every attempt receives the same arguments, child and RNG. Failed attempts retain their random draws, state changes and inspection effects; retry provides no rollback.
+`Retry(3)` includes the first attempt. It catches only a directly thrown `RetryableOperationException`. Cancellation, ordinary failures and aggregate exceptions propagate. Every attempt receives the same arguments, child and RNG. Failed attempts retain their random draws, state changes and inspection effects. Retry provides no rollback.
 
 ## Randomness and executors
 
@@ -336,63 +365,11 @@ Every operation call receives an explicit random number generator, and compositi
 
 Child configurations resolve when each composition executor is built, and each construction has independent private fields. [Sharing](/guide/fundamentals/configurations#sharing-executors) keeps one executor across child scopes.
 
-See [Reproducible randomness](/guide/execution/randomness) and [Running algorithms](/guide/execution/running-algorithms) for the underlying models.
-
-## Authoring a composition
-
-Use `WrappingOperator<TOperation, TCandidate>` for one child and `MultiOperator<TOperation, TCandidate>` for several.
-
-Derive from `Operator<TOperation, TCandidate>` when a composition coordinates different operations or declares children with specific domain responsibilities. `TransformedCreator` and `TransformedCrossover` follow this path because each coordinates both a source operator and a mutator.
-
-The authored executor is a private nested `Executor` that derives from the role's executor base, such as `MutationExecutor<TCandidate>`. It holds resolved children and private mutable fields. The configuration owns parameters and child configurations.
-
-The two bases declare their children. A composition deriving from `Operator<TOperation, TCandidate>` declares its own, as [the validation guide](/guide/fundamentals/invariants-and-validation#a-composition-answers-for-what-it-resolves) shows, because pre-flight validation and substitution reach a child only through its declaration.
-
-### A complete stateful composition
-
-This `RoundRobinMutator` sends each complete batch to the next child in a fixed order. Unlike weighted selection, it remembers which child should run next. Its cursor advances only after a successful child call, including a successful empty batch.
-
-Use these imports in a C# project with implicit system usings enabled:
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-imports{csharp}
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-type{csharp}
-
-The multi base snapshots the configured child collection. `CreateExecutor` validates it, resolves current children through the typed scope and constructs an executor with its own cursor field. Every separate construction starts at the first child.
-
-The executor retains its contextual children and cursor. `offspring` is local to one invocation. This example expects sequential calls on one executor. Authors must coordinate any concurrent calls that mutate the same fields.
-
-#### Construct another observation context
-
-Two distinct no-change mutators make the selection order visible through counters without changing candidate values:
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-usage{csharp}
-
-The results read through `observedScope.Results.Result(firstCalls)` and `observedScope.Results.Result(secondCalls)` have counts one and zero. The observed executor starts at the first child. The original executor continues to its second child with its original unobserved children.
-
-An independent root prepares a fresh cursor:
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/StatefulCompositionDocumentationSpecs.cs#stateful-composition-independent{csharp}
-
-`independentScope.Results.Result(independentFirstCalls).CurrentCount` is one. A fresh child scope builds its own executors unless they are [shared](/guide/fundamentals/configurations#sharing-executors). See [Execution resolution](/contributing/architecture/execution-resolution#results-and-construction).
-
-### Author a concurrent cache wrapper
-
-This executable example keeps an `EvaluationCache<int>` in its executor. `EvaluationCache<TKey>` uses MemoryCache for concurrent storage, key equality and eviction, with an optional entry count limit. The wrapper keeps its child executor private and evaluates outside cache storage operations. Lookup, evaluation and publication are separate operations, so overlapping misses may evaluate the same key more than once. The wrapper assumes immutable keys and deterministic evaluation with compatible semantics for every use of the shared executor: a cache cannot make incompatible problems, parameter settings or stochastic results interchangeable. Cache admission is not guaranteed at capacity, and eviction order is not part of the evaluator contract.
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-imports{csharp}
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-authoring{csharp}
-
-The following usage resolves the wrapper twice in one scope, so both resolutions receive one executor and one cache, and calls it concurrently. Separate RNGs belong to the separate calls. `Substitute` places the count on the child evaluator in the configuration, so the shared executor counts through it.
-
-<<< ../../../test/HeuristicLib.Tests.Docs/Extending/ResourceCachingDocumentationSpecs.cs#resource-cache-usage{csharp}
-
-Sharing does not synchronize calls. When the executor of an operator you write may be shared, use concurrency safe operations on its data or synchronize the complete invariant you need to preserve. Every participant must use the same synchronization object, and a lock must cover every path to the data. Prefer keeping synchronization inside the data structure itself. A cache with epoch metadata, for example, must coordinate invalidation and result publication with that epoch. Choose a simple lock, a read/write lock or concurrent storage according to those requirements, and avoid holding a shared lock across expensive child evaluation when validity can instead be checked before publication. Safe storage alone does not guarantee one evaluation per key or a strict shared evaluation budget. Child evaluators, key selectors and other dependencies must support the concurrency the author permits.
-
-Executors have no disposal lifecycle, so keep only data that needs no deterministic cleanup in executor fields. `EvaluationCache<TKey>` uses MemoryCache with statistics and linked entry tracking disabled and without expiration tokens or callbacks, so it requires none.
+See [Reproducible randomness](/guide/execution/randomness) and [Algorithm runs](/guide/execution/running-algorithms) for the underlying models.
 
 ## Next steps
 
-- [Write wrappers](/guide/extending/writing-wrappers) places runtime policies around the executors of selected operators and algorithms.
+- [Validation and invariants](/guide/fundamentals/invariants-and-validation) continues the guide with what a run checks before it starts.
+- [Write a composition](/extend/writing-compositions) when no built-in composition expresses the policy you need.
+- [Write wrappers](/extend/writing-wrappers) places runtime policies around the executors of selected operators and algorithms.
 - [Configurations](/guide/fundamentals/configurations#sharing-executors) explains how `Sharing` keeps an executor, such as a cache, across child scopes.

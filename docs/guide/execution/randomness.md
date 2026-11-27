@@ -9,6 +9,8 @@ var finalState = await algorithm.RunToCompletionAsync(problem, random);
 
 Keep the seed with the algorithm configuration, package version and problem data. The same inputs reproduce the same random sequence.
 
+Floating-point results can still differ in their last digits between processors, because the library computes with the widest vector instructions a processor offers. A search whose decisions hinge on such digits, such as symbolic regression with fitted constants, can then take another path on another machine. On one machine, the same inputs reproduce the same run.
+
 ## Draw values
 
 Methods such as `NextInt()` and `NextDouble()` advance the generator. Changing the order or number of calls changes every value that follows.
@@ -68,6 +70,12 @@ Do not derive fork keys from task completion order, thread IDs or timestamps. Th
 
 Iterative algorithms fork the run's generator once per iteration, keyed by the iteration index, and pass that fork to the step's operators, the interceptor and their own terminator. A terminator added with `TerminatedBy` receives a separate stream, forked from the run's generator under a dedicated key and then once per yielded state. In both placements a terminator that draws leaves the algorithm's random sequence unchanged.
 
+<ForkTree>
+
+Streams derived from one root seed. A loop over runs forks the root once per run. Inside a run, the algorithm forks one stream per iteration and passes it to that iteration's step.
+
+</ForkTree>
+
 The two placements give the same terminator different random numbers. A terminator that draws can therefore stop the same seeded run at a different state when it moves between an algorithm's `Terminator` setting and `TerminatedBy`. The built-in terminators draw nothing and behave identically in both placements.
 
 ## Parallel work
@@ -111,5 +119,5 @@ The [experiments API](/guide/execution/experiments#compare-problems-and-control-
 
 ## Next steps
 
-- [Observability and analysis](/guide/execution/observability-and-analysis) continues the Execution path with what a run records.
-- [Running algorithms](/guide/execution/running-algorithms) covers run creation and cancellation.
+- [Analysis of algorithm runs](/guide/execution/observability-and-analysis) continues the guide with what a run records.
+- [Algorithm runs](/guide/execution/running-algorithms) covers run creation and cancellation.

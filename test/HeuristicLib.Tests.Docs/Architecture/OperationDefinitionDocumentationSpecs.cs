@@ -22,14 +22,20 @@ public interface IEstimationExecutor<TCandidate> : IExecutor
 #region operation-type
 public sealed class Estimation : IItemOperation<Estimation>
 {
-    static bool IOperation<Estimation>.IsExecutor<TCandidate, TSearchState>(IExecutor executor) =>
-        executor is IEstimationExecutor<TCandidate>;
+    static bool IOperation<Estimation>.IsExecutor<TCandidate, TSearchState>(IExecutor executor)
+    {
+        return executor is IEstimationExecutor<TCandidate>;
+    }
 
-    static IExecutor IOperation<Estimation>.Wrap<TCandidate, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper) =>
-        new WrappedExecutor<TCandidate, TWrapper>(executor, wrapper);
+    static IExecutor IOperation<Estimation>.Wrap<TCandidate, TSearchState, TWrapper>(IExecutor executor, TWrapper wrapper)
+    {
+        return new WrappedExecutor<TCandidate, TWrapper>(executor, wrapper);
+    }
 
-    static IExecutor IItemOperation<Estimation>.Route<TCandidate, TSearchState>(WeightedRouter<IExecutor> children) =>
-        new RoutedExecutor<TCandidate>(children);
+    static IExecutor IItemOperation<Estimation>.Route<TCandidate, TSearchState>(WeightedRouter<IExecutor> children)
+    {
+        return new RoutedExecutor<TCandidate>(children);
+    }
 
     private readonly struct Invocation<TCandidate>(IEstimationExecutor<TCandidate> executor,
         IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) : IInvocation<IReadOnlyList<double>>
@@ -39,23 +45,29 @@ public sealed class Estimation : IItemOperation<Estimation>
 
         public IRandomNumberGenerator Random => random;
 
-        public IReadOnlyList<double> Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null) =>
-            ((IEstimationExecutor<TCandidate>?)executor ?? this.executor).Estimate(candidates, random ?? this.random);
+        public IReadOnlyList<double> Proceed(IExecutor? executor = null, IRandomNumberGenerator? random = null)
+        {
+            return ((IEstimationExecutor<TCandidate>?)executor ?? this.executor).Estimate(candidates, random ?? this.random);
+        }
     }
 
     private sealed class WrappedExecutor<TCandidate, TWrapper>(IExecutor executor, TWrapper wrapper)
         : WrappingExecutor<IEstimationExecutor<TCandidate>, TWrapper>(executor, wrapper), IEstimationExecutor<TCandidate>
         where TWrapper : struct, IInvocationWrapper
     {
-        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
-            Wrapper.Invoke<Invocation<TCandidate>, IReadOnlyList<double>>(new(Executor, candidates, random));
+        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
+        {
+            return Wrapper.Invoke<Invocation<TCandidate>, IReadOnlyList<double>>(new(Executor, candidates, random));
+        }
     }
 
     private sealed class RoutedExecutor<TCandidate>(WeightedRouter<IExecutor> children)
         : RoutingExecutor<IEstimationExecutor<TCandidate>>(children), IEstimationExecutor<TCandidate>
     {
-        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random) =>
-            Children.Route(candidates, random, (child, batch) => child.Estimate(batch, random));
+        public IReadOnlyList<double> Estimate(IReadOnlyList<TCandidate> candidates, IRandomNumberGenerator random)
+        {
+            return Children.Route(candidates, random, (child, batch) => child.Estimate(batch, random));
+        }
     }
 }
 #endregion operation-type
@@ -67,12 +79,16 @@ public static class EstimationResolutionExtensions
         where TSearchSpace : class, ISearchSpace<TCandidate>
         where TProblem : class, IProblem<TCandidate, TSearchSpace>
     {
-        public IEstimationExecutor<TCandidate> Resolve(IOperator<Estimation, TCandidate> source) =>
-            (IEstimationExecutor<TCandidate>)scope.ResolveOperator(source);
+        public IEstimationExecutor<TCandidate> Resolve(IOperator<Estimation, TCandidate> source)
+        {
+            return (IEstimationExecutor<TCandidate>)scope.ResolveOperator(source);
+        }
 
         public bool TryResolve(IOperator<Estimation, TCandidate> source,
-            [NotNullWhen(true)] out IEstimationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason) =>
-            scope.TryResolveOperator(source, out executor, out reason);
+            [NotNullWhen(true)] out IEstimationExecutor<TCandidate>? executor, [NotNullWhen(false)] out string? reason)
+        {
+            return scope.TryResolveOperator(source, out executor, out reason);
+        }
     }
 }
 #endregion operation-resolution
@@ -88,8 +104,10 @@ public sealed record EstimationObservation<TCandidate>(
 {
     static IExecutor IInvocationObservation<Estimation, TCandidate, EstimationObservation<TCandidate>>.Wrap<TSearchState>(
         IExecutor executor, IOperator<Estimation, TCandidate> source, Action<EstimationObservation<TCandidate>> record,
-        IProblem<TCandidate, ISearchSpace<TCandidate>> problem) =>
-        new Executor((IEstimationExecutor<TCandidate>)executor, source, record, problem);
+        IProblem<TCandidate, ISearchSpace<TCandidate>> problem)
+    {
+        return new Executor((IEstimationExecutor<TCandidate>)executor, source, record, problem);
+    }
 
     private sealed class Executor(IEstimationExecutor<TCandidate> executor,
         IOperator<Estimation, TCandidate> estimator, Action<EstimationObservation<TCandidate>> observe,
@@ -112,8 +130,10 @@ public static class EstimationObservations
         public InvocationSource<Estimation, TCandidate, EstimationObservation<TCandidate>> Invocations =>
             ObservationSource.Create<Estimation, TCandidate, EstimationObservation<TCandidate>>(estimator);
 
-        public Observed<Estimation, TCandidate, EstimationObservation<TCandidate>> Observed(IObservationReceiver<EstimationObservation<TCandidate>> receiver) =>
-            new(estimator, receiver);
+        public Observed<Estimation, TCandidate, EstimationObservation<TCandidate>> Observed(IObservationReceiver<EstimationObservation<TCandidate>> receiver)
+        {
+            return new(estimator, receiver);
+        }
     }
 }
 #endregion operation-observation

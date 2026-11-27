@@ -4,14 +4,17 @@ Operators are focused search steps that algorithms combine. Most users configure
 
 ## Common operator roles
 
-| Role      | Input and output                         | Purpose                             |
-| --------- | ---------------------------------------- | ----------------------------------- |
-| Creator   | Search space to candidate                | Build an initial solution           |
-| Evaluator | Candidate to objective vector            | Measure solution quality            |
-| Selector  | Population to selected candidates        | Choose candidates for the next step |
-| Crossover | Parent candidates to offspring           | Recombine information               |
-| Mutator   | Candidate to changed candidate           | Introduce local variation           |
-| Replacer  | Current and new candidates to population | Decide what survives                |
+| Role        | Input and output                         | Purpose                                    |
+| ----------- | ---------------------------------------- | ------------------------------------------ |
+| Creator     | Search space to candidate                | Build an initial solution                  |
+| Evaluator   | Candidate to objective vector            | Measure solution quality                   |
+| Selector    | Population to selected candidates        | Choose candidates for the next step        |
+| Crossover   | Parent candidates to offspring           | Recombine information                      |
+| Mutator     | Candidate to changed candidate           | Introduce local variation                  |
+| Replacer    | Current and new candidates to population | Decide what survives                       |
+| Refiner     | Candidate to improved candidate          | Improve a candidate after variation        |
+| Interceptor | Search state to search state             | Transform a state before it is yielded     |
+| Terminator  | Search state to stop decision            | Decide whether the run stops after a state |
 
 ## A genetic algorithm step
 
@@ -19,7 +22,7 @@ A typical generation selects parents, crosses them, mutates offspring, evaluates
 
 ```csharp
 var algorithm = GeneticAlgorithm.Create(
-    new UniformDistributedCreator(problem.SearchSpace),
+    new UniformDistributedCreator(),
     new AlphaBetaBlendCrossover { Alpha = 0.7 },
     new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
     selector: TournamentSelector.For(problem, tournamentSize: 2),
@@ -27,6 +30,17 @@ var algorithm = GeneticAlgorithm.Create(
     maximumGenerations: 100,
     mutationRate: 0.2);
 ```
+
+## Terminator ownership
+
+A terminator can be owned in two places, and the owner decides what stopping means.
+
+- **Algorithm owned.** An iterative algorithm's `Terminator` setting is part of its own configuration. The algorithm checks it after each step, once the interceptor has transformed the new state, and yields that state before it stops.
+- **External.** `algorithm.TerminatedBy(terminator)` wraps any algorithm in a new configuration that checks the terminator after every state the inner algorithm yields. Use it to impose the same stopping rule on algorithms that expose different settings, or on an algorithm with no terminator setting at all.
+
+Both forms yield the state that satisfied the terminator, so the final state is the one that met the criterion. The two placements receive different random streams. See [Streams that algorithms pass to operators](/guide/execution/randomness#streams-that-algorithms-pass-to-operators). The built-in terminators draw nothing and behave identically in both.
+
+An interceptor is always algorithm owned. It transforms each new state before the state is yielded, observed or checked by a terminator. Use analyzers for read-only inspection instead.
 
 ## Choose compatible operators
 
@@ -49,7 +63,8 @@ A selection executor takes `Select(population, count, random)`. A replacement ex
 
 ## Next steps
 
-- [Algorithms](/guide/fundamentals/algorithms) continues the Fundamentals path and shows how algorithms run operators.
+- [Algorithms](/guide/fundamentals/algorithms) continues the guide and shows how algorithms run operators.
 - [Use operator recommendations](/guide/fundamentals/algorithms#use-operator-recommendations)
-- [Compose several operators](/guide/extending/operator-composition)
-- [Write an operator](/guide/extending/writing-operators)
+- [Compose several operators](/guide/fundamentals/operator-composition)
+- [Operators by encoding](/reference/operators) lists every built-in operator
+- [Write an operator](/extend/writing-operators)

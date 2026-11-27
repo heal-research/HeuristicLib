@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: HeuristicLib
-  text: Build optimization algorithms in modern C#
+  text: Build optimization algorithms in modern&nbsp;C#
   tagline: Define a problem, configure an algorithm and inspect each search state.
   actions:
     - theme: brand

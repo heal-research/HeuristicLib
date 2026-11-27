@@ -162,6 +162,49 @@ public sealed class ConfigurationDocumentationSpecs
         keptRun.Result(kept).CurrentCount.ShouldBe(5);
     }
 
+    [Fact]
+    public async Task ChangingAConfigurationUsesWithSubstituteOrCreateRun()
+    {
+        var problem = new TestFunctionProblem(new RastriginFunction(dimension: 4));
+        var algorithm = GeneticAlgorithm.Create(
+            new UniformDistributedCreator(),
+            new AlphaBetaBlendCrossover { Alpha = 0.7 },
+            new GaussianMutator(mutationRate: 0.2, mutationStrength: 0.15),
+            selector: TournamentSelector.For(problem, tournamentSize: 2),
+            populationSize: 200,
+            maximumGenerations: 500,
+            mutationRate: 0.2);
+
+#pragma warning disable xUnit1051 // The displayed program has no cancellation token.
+        #region configuration-change-workflow
+        // A setting of the algorithm itself: `with` creates a changed copy.
+        var largerPopulation = algorithm with { PopulationSize = 400 };
+
+        // Every GaussianMutator in the graph, wherever it sits: Substitute.
+        var finerMutation = algorithm.Substitute(
+            (GaussianMutator gaussian) => gaussian with { MutationStrength = 0.05 });
+
+        // Instrumentation for one run only: the substitutions list of CreateRun.
+        var evaluations = new Counter();
+        var run = finerMutation.CreateRun(
+            problem,
+            RandomNumberGenerator.Create(seed: 123),
+            [finerMutation.Evaluator.Invocations.CountingCandidates(evaluations)]);
+        await run.CompleteAsync();
+
+        Console.WriteLine($"Evaluated candidates: {run.Result(evaluations).CurrentCount}");
+        #endregion configuration-change-workflow
+#pragma warning restore xUnit1051
+
+        largerPopulation.PopulationSize.ShouldBe(400);
+        algorithm.PopulationSize.ShouldBe(200);
+        ((GaussianMutator)finerMutation.Mutator).MutationStrength.ShouldBe(0.05);
+        ((GaussianMutator)algorithm.Mutator).MutationStrength.ShouldBe(0.15);
+        finerMutation.Evaluator.ShouldBeSameAs(algorithm.Evaluator);
+        run.Algorithm.ShouldNotBeSameAs(finerMutation);
+        run.Result(evaluations).CurrentCount.ShouldBeGreaterThan(0);
+    }
+
     private static GeneticAlgorithm<RealVector> CreateAlgorithm(GaussianMutator mutator, int? maximumGenerations = 100)
     {
         var problem = new TestFunctionProblem(new RastriginFunction(2));

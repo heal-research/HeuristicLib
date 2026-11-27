@@ -12,7 +12,7 @@ using HEAL.HeuristicLib.Random;
 namespace HEAL.HeuristicLib.Tests.Docs.Extending;
 
 #region custom-wrapper-type
-public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCandidate>
+public sealed partial record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCandidate>
 {
     public LoggedMutator(IOperator<Mutation, TCandidate> childMutator, Action<IOperator<Mutation, TCandidate>, int, int> write)
         : base(childMutator)
@@ -21,13 +21,6 @@ public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCan
     }
 
     public Action<IOperator<Mutation, TCandidate>, int, int> Write { get; init; }
-
-    public static Parameter<LoggedMutator<TCandidate>, Action<IOperator<Mutation, TCandidate>, int, int>> WriteParameter { get; } =
-        new(nameof(Write), static wrapper => wrapper.Write, static (wrapper, value) => wrapper with { Write = value });
-
-    public new static IReadOnlyList<IParameter> Parameters { get; } = [WriteParameter];
-
-    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -54,8 +47,20 @@ public sealed record LoggedMutator<TCandidate> : WrappingOperator<Mutation, TCan
 }
 #endregion custom-wrapper-type
 
+#region custom-wrapper-parameters
+public sealed partial record LoggedMutator<TCandidate>
+{
+    public static Parameter<LoggedMutator<TCandidate>, Action<IOperator<Mutation, TCandidate>, int, int>> WriteParameter { get; } =
+        new(nameof(Write), static wrapper => wrapper.Write, static (wrapper, value) => wrapper with { Write = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [WriteParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+}
+#endregion custom-wrapper-parameters
+
 #region general-wrapper-type
-public sealed record SlowCallReporter<TOperation, TCandidate> : WrappingOperator<TOperation, TCandidate>
+public sealed partial record SlowCallReporter<TOperation, TCandidate> : WrappingOperator<TOperation, TCandidate>
     where TOperation : IOperation<TOperation>
 {
     public SlowCallReporter(IOperator<TOperation, TCandidate> childOperator, TimeSpan threshold,
@@ -68,16 +73,6 @@ public sealed record SlowCallReporter<TOperation, TCandidate> : WrappingOperator
 
     public TimeSpan Threshold { get; init; }
     public Action<IOperator, TimeSpan> Report { get; init; }
-
-    public static Parameter<SlowCallReporter<TOperation, TCandidate>, TimeSpan> ThresholdParameter { get; } =
-        new(nameof(Threshold), static wrapper => wrapper.Threshold, static (wrapper, value) => wrapper with { Threshold = value });
-
-    public static Parameter<SlowCallReporter<TOperation, TCandidate>, Action<IOperator, TimeSpan>> ReportParameter { get; } =
-        new(nameof(Report), static wrapper => wrapper.Report, static (wrapper, value) => wrapper with { Report = value });
-
-    public new static IReadOnlyList<IParameter> Parameters { get; } = [ThresholdParameter, ReportParameter];
-
-    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
 
     protected override IExecutor CreateExecutor<TSearchSpace, TProblem, TSearchState>(
         ResolutionScope<TCandidate, TSearchSpace, TProblem, TSearchState> scope)
@@ -101,6 +96,21 @@ public sealed record SlowCallReporter<TOperation, TCandidate> : WrappingOperator
     }
 }
 #endregion general-wrapper-type
+
+#region general-wrapper-parameters
+public sealed partial record SlowCallReporter<TOperation, TCandidate>
+{
+    public static Parameter<SlowCallReporter<TOperation, TCandidate>, TimeSpan> ThresholdParameter { get; } =
+        new(nameof(Threshold), static wrapper => wrapper.Threshold, static (wrapper, value) => wrapper with { Threshold = value });
+
+    public static Parameter<SlowCallReporter<TOperation, TCandidate>, Action<IOperator, TimeSpan>> ReportParameter { get; } =
+        new(nameof(Report), static wrapper => wrapper.Report, static (wrapper, value) => wrapper with { Report = value });
+
+    public new static IReadOnlyList<IParameter> Parameters { get; } = [ThresholdParameter, ReportParameter];
+
+    public override IReadOnlyList<IParameter> GetParameters() => [.. base.GetParameters(), .. Parameters];
+}
+#endregion general-wrapper-parameters
 
 public sealed class CustomWrapperDocumentationSpecs
 {

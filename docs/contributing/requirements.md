@@ -2,7 +2,7 @@
 
 This page records the high level capability baseline for HeuristicLib. It states what the library must support without defining the architecture or repeating individual system contracts.
 
-Use the [Glossary](/guide/glossary) for terminology, [Core concepts](/guide/fundamentals/core-concepts) for the public model and the focused topic pages for detailed behavior.
+Use the [Glossary](/reference/glossary) for terminology, [Introduction](/guide/) for the public model and the focused topic pages for detailed behavior.
 
 ## Purpose and scope
 
