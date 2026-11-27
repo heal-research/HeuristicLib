@@ -82,6 +82,36 @@ public sealed class LevenbergMarquardtTests
     }
 
     [Fact]
+    public void TryMinimizeRecoversFromInfiniteInitialResidualSumOfSquares()
+    {
+        const double target = 1e154;
+        const double parameterTolerance = target * 1e-12;
+        var builder = new Builder();
+        using var execution = builder.Build(builder.Parameter()).CreateExecution([], rowCount: 2);
+
+        var success = LevenbergMarquardt.TryMinimize(execution, [0.0], [target, target], 10, out var result, out var failure, TestContext.Current.CancellationToken);
+
+        success.ShouldBeTrue();
+        failure.ShouldBeNull();
+        result.ShouldNotBeNull();
+        result.Parameters[0].ShouldBe(target, parameterTolerance);
+        result.MeanSquaredError.ShouldBe(0.0, parameterTolerance * parameterTolerance);
+    }
+
+    [Fact]
+    public void TryMinimizeFailsWhenResidualSumOfSquaresRemainsInfinite()
+    {
+        var builder = new Builder();
+        using var execution = builder.Build(builder.Parameter()).CreateExecution([], rowCount: 2);
+
+        var success = LevenbergMarquardt.TryMinimize(execution, [0.0], [1e155, -1e155], 10, out var result, out var failure, TestContext.Current.CancellationToken);
+
+        success.ShouldBeFalse();
+        result.ShouldBeNull();
+        failure.ShouldNotBeNull();
+    }
+
+    [Fact]
     public void TryMinimizeReportsMeanSquaredErrorForNoisyData()
     {
         double[] input = [-2.0, -1.0, 0.0, 1.0, 2.0];

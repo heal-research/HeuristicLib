@@ -64,8 +64,6 @@ internal static class LevenbergMarquardt
         objective.SetParameters(parameters);
         objective.EvaluateAt(parameters);
         var error = objective.Value;
-        if (double.IsInfinity(error))
-            throw new ArithmeticException("The initial residual sum of squares is infinite.");
 
         double damping = 0;
         for (var iteration = 0; iteration < maximumIterations && error > tolerance; iteration++)
@@ -102,7 +100,12 @@ internal static class LevenbergMarquardt
                     var gain = (error - trialError) / predictedReduction;
                     parameters = trial;
                     error = trialError;
-                    damping *= Math.Max(1.0 / 3.0, 1 - Math.Pow(2 * gain - 1, 3));
+                    // Nielsen's damping update for accepted steps (Madsen et al., 2004, Eq. 2.21).
+                    // Reuse its lower bound if overflow makes the gain non-finite.
+                    const double minimumDampingFactor = 1.0 / 3.0;
+                    damping *= double.IsFinite(gain)
+                        ? Math.Max(minimumDampingFactor, 1 - Math.Pow(2 * gain - 1, 3))
+                        : minimumDampingFactor;
                     accepted = true;
                     break;
                 }
@@ -116,6 +119,9 @@ internal static class LevenbergMarquardt
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        if (double.IsInfinity(error))
+            throw new ArithmeticException("The final residual sum of squares is infinite.");
+
         return new LevenbergMarquardtResult(ValueArray.FromOwnedArray(parameters.ToArray()), error / rowCount);
     }
 
