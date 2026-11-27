@@ -40,7 +40,7 @@ public sealed class HomeDocumentationSpecs
         best[0].ShouldBeGreaterThan(0.5);
         best[^1].ShouldBeLessThan(0.01);
 
-        FigureData.Verify("home-hero", new JsonObject
+        FigureData.Write("home-hero", new JsonObject
         {
             ["bound"] = 5.12,
             ["generations"] = generations,

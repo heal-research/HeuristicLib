@@ -208,7 +208,7 @@ var finalState = await algorithm.RunToCompletionAsync(problem, RandomNumberGener
 
 <ExpressionFit>
 
-The best expression of a run on 31 noisy samples of `0.5x² - x + 1`, with 100 candidates, 30 generations and numeric parameter fitting for a quarter of them. The tree reads `0.47x(x - 2.14) + 1.07`. Point at the chart to compare a sample with the model.
+The best expression of a run on 31 noisy samples of `0.5x² - x + 1`, with 100 candidates, 30 generations and numeric parameter fitting for a quarter of them. The tree computes `0.47x(x - 2.14) + 1.07`. Point at the chart to compare a sample with the model.
 
 </ExpressionFit>
 

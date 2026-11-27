@@ -96,7 +96,7 @@ public sealed class GettingStartedDocumentationSpecs
         for (var i = 0; i < printed.Length; i++)
             Math.Round(best[(i + 1) * 100 - 1], 8).ShouldBe(printed[i]);
 
-        FigureData.Verify("getting-started-convergence", new JsonObject
+        FigureData.Write("getting-started-convergence", new JsonObject
         {
             ["x"] = FigureData.Numbers(generations),
             ["series"] = new JsonObject

@@ -6,7 +6,9 @@ This example is part of the [HeuristicLib](../../README.md) project. It uses the
 
 ## Demo
 
-![Demo](./documentation/demo.gif)
+[![Demo](../../docs/public/interactive-symbolic-regression.webp)](../../docs/public/interactive-symbolic-regression.mp4)
+
+Select the picture to watch the recording.
 
 ## How It Works
 

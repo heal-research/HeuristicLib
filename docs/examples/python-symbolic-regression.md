@@ -104,7 +104,7 @@ The callback receives every evaluated population. It returns the objective value
 
 The repository also contains a FastAPI application that streams each population to a browser:
 
-<img class="example-demo" src="/interactive-symbolic-regression.gif" alt="Drawing a curve and fitting it with the interactive symbolic regression demonstrator">
+<video class="example-demo" src="/interactive-symbolic-regression.mp4" poster="/interactive-symbolic-regression.webp" autoplay loop muted playsinline controls aria-label="Drawing a curve and fitting it with the interactive symbolic regression demonstrator"></video>
 
 Run the [interactive demonstrator](https://github.com/heal-research/HeuristicLib/tree/dev/python-samples/PythonInteractiveDemonstrator) after publishing the interop assembly:
 

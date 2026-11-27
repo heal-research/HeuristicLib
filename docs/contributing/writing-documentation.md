@@ -39,7 +39,7 @@ The suite compiles and runs that code, and the build fails when a path or region
 
 ## Add a figure
 
-A chart reads its data from `docs/.vitepress/figure-data`. A documentation spec computes that data and calls `FigureData.Verify`, which fails when the committed file differs. Set `HEURISTICLIB_UPDATE_FIGURE_DATA=1` to write the files, then review them.
+A chart reads its data from `docs/.vitepress/figure-data`. A documentation spec computes that data and calls `FigureData.Write`, which writes the file on every run. When a change to the library alters a documented run, the file changes in your working tree. Commit it with the change, together with any output or caption the page quotes from that run, so the pull request review sees it.
 
 Each figure has a settings file in `docs/.vitepress/figures` that imports its data and says how to draw it. The page imports the settings file and passes it to a component, with the caption as content:
 

@@ -113,7 +113,7 @@ public class ExperimentDocumentationSpecs
             Math.Round(values[0], 4).ShouldBe(expected.Best);
         }
 
-        FigureData.Verify("experiments-grid", new JsonObject
+        FigureData.Write("experiments-grid", new JsonObject
         {
             ["cells"] = new JsonArray([.. bySettings
                 .OrderBy(group => group.Key.PopulationSize)

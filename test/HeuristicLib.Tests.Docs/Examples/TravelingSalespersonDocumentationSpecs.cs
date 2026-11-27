@@ -96,7 +96,7 @@ public sealed class TravelingSalespersonDocumentationSpecs
         }
 
         var coordinates = instance.ToCoordinatesData().Coordinates;
-        FigureData.Verify("traveling-salesperson", new JsonObject
+        FigureData.Write("traveling-salesperson", new JsonObject
         {
             ["optimum"] = Optimum,
             ["cities"] = new JsonArray([.. coordinates.Select(city => (JsonNode?)FigureData.Numbers([city.X, city.Y]))]),

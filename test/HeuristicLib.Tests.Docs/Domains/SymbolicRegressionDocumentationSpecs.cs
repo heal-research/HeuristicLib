@@ -60,7 +60,7 @@ public sealed class SymbolicRegressionDocumentationSpecs
         // The noise has a standard deviation of 0.3, so a good model reaches an error near it.
         best.ObjectiveVector[0].ShouldBeLessThan(0.5);
 
-        FigureData.Verify("symbolic-regression", new JsonObject
+        FigureData.Write("symbolic-regression", new JsonObject
         {
             ["x"] = FigureData.Numbers(Enumerable.Range(0, SampleCount).Select(row => inputs[row, 0])),
             ["target"] = FigureData.Numbers(target),

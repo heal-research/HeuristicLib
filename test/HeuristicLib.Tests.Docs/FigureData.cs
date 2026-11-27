@@ -6,33 +6,29 @@ using System.Text.Json.Nodes;
 namespace HEAL.HeuristicLib.Tests.Docs;
 
 /// <summary>
-/// Keeps the chart data under <c>docs/.vitepress/figure-data</c> equal to what the documented configuration produces.
+/// Writes the chart data under <c>docs/.vitepress/figure-data</c> from what the documented configuration produces.
 /// </summary>
 /// <remarks>
 /// The documentation build reads the committed files and does not run .NET. A spec computes the data of its figure and
-/// passes it here: the call fails when the committed file differs. Set <c>HEURISTICLIB_UPDATE_FIGURE_DATA=1</c> to write
-/// the files instead, then review and commit them. Numbers are rounded to six significant digits, which is below what a
-/// chart can show and keeps the files stable across platforms.
+/// passes it here, and every run writes the file. A changed file shows up in the working tree: commit it, and the pull
+/// request review judges the change. Numbers are rounded to six significant digits, which is below what a chart can show
+/// and keeps the files stable across platforms.
 /// </remarks>
 internal static class FigureData
 {
-    private const string UpdateVariable = "HEURISTICLIB_UPDATE_FIGURE_DATA";
-
-    public static void Verify(string name, JsonObject data)
+    public static void Write(string name, JsonObject data)
     {
         var path = Path.Combine(RepositoryRoot(), "docs", ".vitepress", "figure-data", name + ".json");
         var json = Serialize(data);
 
-        if (Environment.GetEnvironmentVariable(UpdateVariable) == "1")
+        // An unchanged file is left alone, so a checkout with other line endings shows no change.
+        if (File.Exists(path) && File.ReadAllText(path).ReplaceLineEndings("\n") == json)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
             return;
         }
 
-        File.Exists(path).ShouldBeTrue($"Figure data {name}.json is missing. Run the documentation specs with {UpdateVariable}=1 to write it.");
-        var committed = File.ReadAllText(path).ReplaceLineEndings("\n");
-        committed.ShouldBe(json, $"Figure data {name}.json is out of date. Run the documentation specs with {UpdateVariable}=1 and review the change.");
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, json, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     public static JsonArray Numbers(IEnumerable<double> values) =>

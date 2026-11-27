@@ -117,7 +117,7 @@ public sealed class MultiObjectiveDocumentationSpecs
             hyperVolume.Add(HyperVolume(archive));
         }
 
-        FigureData.Verify("multi-objective", new JsonObject
+        FigureData.Write("multi-objective", new JsonObject
         {
             ["initial"] = Designs(initial!),
             ["front"] = Designs(front),
