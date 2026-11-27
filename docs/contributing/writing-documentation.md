@@ -36,6 +36,7 @@ The suite compiles and runs that code, and the build fails when a path or region
 - Give methods a block body, as [developer guidelines](/contributing/developer-guidelines) § 10.3 states.
 - Put `Parameter` declarations in a second part of a `partial record`. Show them in a collapsed `::: details` block, so the first part shows what the component does.
 - When a page quotes output, the spec asserts the same text.
+- Output that differs between processors, such as a tree that genetic programming finds, is shown as an example. The spec asserts its properties instead, such as an error below a bound, and compares computed numbers with a tolerance.
 
 ## Add a figure
 

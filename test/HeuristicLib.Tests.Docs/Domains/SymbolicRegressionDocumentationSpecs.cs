@@ -33,7 +33,7 @@ public sealed class SymbolicRegressionDocumentationSpecs
         var searchSpace = new ExpressionTreeSearchSpace(
             maximumLength: 15,
             maximumDepth: 4,
-            operations: Symbols.MinimalOperations,
+            operations: [Symbols.Addition, Symbols.Subtraction, Symbols.Multiplication],
             variables: ["x"]);
         var problem = new SymbolicRegressionProblem(data, Metrics.RMSE, searchSpace);
         var algorithm = GeneticAlgorithm.Create(
@@ -58,7 +58,9 @@ public sealed class SymbolicRegressionDocumentationSpecs
         var predictions = best.Candidate.Evaluate(data.Inputs);
 
         // The noise has a standard deviation of 0.3, so a good model reaches an error near it.
+        // Which tree the search finds depends on the processor's vector width, so the caption names no tree.
         best.ObjectiveVector[0].ShouldBeLessThan(0.5);
+        predictions.ShouldAllBe(prediction => double.IsFinite(prediction));
 
         FigureData.Write("symbolic-regression", new JsonObject
         {

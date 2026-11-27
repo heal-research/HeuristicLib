@@ -73,7 +73,7 @@ public sealed class SymbolicRegressionExampleDocumentationSpecs
         var compiledModel = best.Candidate.Compile(optimize: true);
         var predictions = compiledModel.Evaluate(trainingData.Inputs);
 
-        Console.WriteLine($"Training MSE: {best.ObjectiveVector[0]:G6}");
+        Console.WriteLine($"Training MSE: {best.ObjectiveVector[0]:F6}");
         Console.WriteLine($"Model: {best.Candidate.ToInfixString()}");
         Console.WriteLine();
         Console.WriteLine("    x        y  prediction");
@@ -89,18 +89,27 @@ public sealed class SymbolicRegressionExampleDocumentationSpecs
         Console.WriteLine(compiledModel.ToInfixString());
         #endregion symbolic-regression-compiled
 
-        // The page quotes this output and explains how the printed tree computes 2.5x + 1.3. Update both together.
-        PrintedOutput.Lines().ShouldBe([
-            "Training MSE: 3.75599E-28",
-            "Model: ((((x * 1.581138830091886) * 1.5811388300764972) - (0.39441562410836661 * 2.3229346002388009)) + 2.2162017001161143)",
+        // The search recovers 2.5x + 1.3 on every row.
+        best.ObjectiveVector[0].ShouldBeLessThan(1e-20);
+        foreach (var row in Enumerable.Range(0, x.Length))
+        {
+            predictions[row].ShouldBe(y[row], 1e-9);
+        }
+
+        // Which tree the search finds depends on the processor's vector width, so the page shows the two trees on
+        // lines 1 and 9 as an example. Every other line the page quotes is the same on every processor.
+        var lines = PrintedOutput.Lines();
+        lines.Length.ShouldBe(10);
+        lines[1].ShouldStartWith("Model: ");
+        lines.Where((_, index) => index is not (1 or 9)).ShouldBe([
+            "Training MSE: 0.000000",
             "",
             "    x        y  prediction",
             "-5.00  -11.200     -11.200",
             "-4.75  -10.575     -10.575",
             "-4.50   -9.950      -9.950",
             "-4.25   -9.325      -9.325",
-            "-4.00   -8.700      -8.700",
-            "((((x * 1.581138830091886) * 1.5811388300764972) - 0.9162017001161058) + 2.2162017001161143)"
+            "-4.00   -8.700      -8.700"
         ]);
     }
 }

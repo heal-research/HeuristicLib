@@ -28,10 +28,10 @@ The creator generates trees of different shapes and depths. Crossover exchanges 
 
 <<< ../../test/HeuristicLib.Tests.Docs/Examples/SymbolicRegressionExampleDocumentationSpecs.cs#symbolic-regression-run{csharp}
 
-Run it with `dotnet run`:
+Run it with `dotnet run`. One run printed:
 
 ```
-Training MSE: 3.75599E-28
+Training MSE: 0.000000
 Model: ((((x * 1.581138830091886) * 1.5811388300764972) - (0.39441562410836661 * 2.3229346002388009)) + 2.2162017001161143)
 
     x        y  prediction
@@ -42,11 +42,13 @@ Model: ((((x * 1.581138830091886) * 1.5811388300764972) - (0.39441562410836661 *
 -4.00   -8.700      -8.700
 ```
 
-The predictions reproduce the targets exactly, and the mean squared error is at the limit of double precision. The search recovered the underlying function.
+The predictions reproduce the targets, and the mean squared error is zero to six decimals. The search recovered the underlying function.
 
-The printed tree does not look like `2.5x + 1.3`, because nothing simplifies it algebraically. It multiplies `x` by `1.581` twice, and `1.581²` is `2.5`. Its constants compute `2.216 - 0.394 * 2.323`, which is `1.3`. Genetic programming finds numerically correct models in structurally redundant forms, and the redundancy is normal rather than a defect.
+Your tree can differ from this one. The library computes with the widest vector instructions your processor offers, so fitted constants can differ in their last digits between processors, and the search then takes another path. Every tree it returns here still computes `2.5x + 1.3`.
 
-`Compile(optimize: true)` folds constant subtrees such as `0.394 * 2.323` into one constant. It does not reorder the tree, so the slope and the intercept stay split:
+The printed tree does not look like `2.5x + 1.3`, because nothing simplifies it algebraically. This one multiplies `x` by `1.581` twice, and `1.581²` is `2.5`. Its constants compute `2.216 - 0.394 * 2.323`, which is `1.3`. Genetic programming finds numerically correct models in structurally redundant forms, and the redundancy is normal rather than a defect.
+
+`Compile(optimize: true)` folds constant subtrees such as `0.394 * 2.323` into one constant. It does not reorder the tree, so here the slope and the intercept stay split:
 
 <<< ../../test/HeuristicLib.Tests.Docs/Examples/SymbolicRegressionExampleDocumentationSpecs.cs#symbolic-regression-compiled{csharp}
 

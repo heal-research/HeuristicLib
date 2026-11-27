@@ -9,6 +9,8 @@ var finalState = await algorithm.RunToCompletionAsync(problem, random);
 
 Keep the seed with the algorithm configuration, package version and problem data. The same inputs reproduce the same random sequence.
 
+Floating-point results can still differ in their last digits between processors, because the library computes with the widest vector instructions a processor offers. A search whose decisions hinge on such digits, such as symbolic regression with fitted constants, can then take another path on another machine. On one machine, the same inputs reproduce the same run.
+
 ## Draw values
 
 Methods such as `NextInt()` and `NextDouble()` advance the generator. Changing the order or number of calls changes every value that follows.
